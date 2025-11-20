@@ -1,3 +1,0 @@
-# Guide detaille Phase 3 - AccessCity Scene Editor
-
-Ce document...

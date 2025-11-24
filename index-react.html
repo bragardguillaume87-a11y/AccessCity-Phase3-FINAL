@@ -321,6 +321,7 @@
             const [characters, setCharacters] = useState(SAMPLE_DATA.characters);
             const [selectedSceneId, setSelectedSceneId] = useState(null);
             const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Inclusion: 50, Stress: 50 });
+            const [editingCharacter, setEditingCharacter] = useState(null);
             
             const eventBusRef = useRef(new EventBus());
             const variableManagerRef = useRef(new VariableManager());
@@ -342,6 +343,24 @@
                 if (!scene) return;
                 setSelectedSceneId(sceneId);
                 setMode('player');
+            };
+            
+            const saveCharacter = (updatedCharacter) => {
+                setCharacters(chars => chars.map(c => c.id === updatedCharacter.id ? updatedCharacter : c));
+                setEditingCharacter(null);
+                eventBusRef.current.emit('character:updated', updatedCharacter);
+            };
+            
+            const addNewCharacter = () => {
+                const newChar = {
+                    id: `custom_${Date.now()}`,
+                    name: 'Nouveau personnage',
+                    description: 'Un nouveau personnage',
+                    sprites: { neutral: '', happy: '', sad: '', professional: '' },
+                    moods: ['neutral']
+                };
+                setCharacters([...characters, newChar]);
+                setEditingCharacter(newChar);
             };
             
             return (
@@ -406,13 +425,24 @@
                     
                     <div className="container mx-auto px-4 py-8">
                         {mode === 'editor' && (
-                            <EditorMode 
-                                scenes={scenes} 
-                                characters={characters}
-                                variables={variables}
-                                onPlayScene={playScene}
-                                currentLayout={currentLayout}
-                            />
+                            <>
+                                <EditorMode 
+                                    scenes={scenes} 
+                                    characters={characters}
+                                    variables={variables}
+                                    onPlayScene={playScene}
+                                    onEditCharacter={setEditingCharacter}
+                                    onAddCharacter={addNewCharacter}
+                                    currentLayout={currentLayout}
+                                />
+                                {editingCharacter && (
+                                    <CharacterEditor 
+                                        character={editingCharacter}
+                                        onSave={saveCharacter}
+                                        onClose={() => setEditingCharacter(null)}
+                                    />
+                                )}
+                            </>
                         )}
                         {mode === 'player' && selectedSceneId && (
                             <PlayerMode 
@@ -431,7 +461,7 @@
         
         // ==================== EDITOR MODE ====================
         
-        function EditorMode({ scenes, characters, variables, onPlayScene, currentLayout }) {
+        function EditorMode({ scenes, characters, variables, onPlayScene, onEditCharacter, onAddCharacter, currentLayout }) {
             // Layout descriptions
             const layoutDescriptions = {
                 standard: "Vue complete : scenes, sentiments et personnages visibles",
@@ -507,17 +537,163 @@
                     {/* Characters - Hidden in accessibility mode */}
                     {currentLayout !== 'accessibility' && (
                     <div className="bg-white rounded-xl shadow-md p-6 card-hover">
-                        <h2 className="text-xl font-bold mb-4 text-primary">👥 Mes personnages</h2>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-primary">👥 Mes personnages</h2>
+                            <button 
+                                onClick={onAddCharacter}
+                                className="bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-hover transition-all text-sm"
+                            >
+                                + Nouveau
+                            </button>
+                        </div>
                         <div className="space-y-3">
                             {characters.map(char => (
-                                <div key={char.id} className="border-2 border-gray-200 rounded-lg p-3">
-                                    <h3 className="font-semibold">{char.name}</h3>
-                                    <p className="text-xs text-gray-500">{char.moods.length} humeurs disponibles</p>
+                                <div key={char.id} className="border-2 border-gray-200 rounded-lg p-3 hover:border-primary transition-all cursor-pointer" onClick={() => onEditCharacter(char)}>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-semibold">{char.name}</h3>
+                                            <p className="text-xs text-gray-500">{char.moods.length} humeurs disponibles</p>
+                                        </div>
+                                        <span className="text-2xl">✏️</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                     )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // ==================== CHARACTER EDITOR ====================
+        
+        function CharacterEditor({ character, onSave, onClose }) {
+            const [editedChar, setEditedChar] = useState({ ...character });
+            const [selectedMood, setSelectedMood] = useState('neutral');
+            const [previewUrl, setPreviewUrl] = useState('');
+            
+            const handleFileUpload = (mood, event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setEditedChar({
+                        ...editedChar,
+                        sprites: { ...editedChar.sprites, [mood]: e.target.result }
+                    });
+                    if (mood === selectedMood) {
+                        setPreviewUrl(e.target.result);
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            
+            const handleAddMood = () => {
+                const newMood = prompt('Nom de la nouvelle humeur (ex: angry, surprised):');
+                if (newMood && !editedChar.moods.includes(newMood)) {
+                    setEditedChar({
+                        ...editedChar,
+                        moods: [...editedChar.moods, newMood],
+                        sprites: { ...editedChar.sprites, [newMood]: '' }
+                    });
+                }
+            };
+            
+            const handleSave = () => {
+                onSave(editedChar);
+            };
+            
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="gradient-bg text-white p-6 rounded-t-xl flex justify-between items-center">
+                            <h2 className="text-2xl font-bold">✏️ Editer {editedChar.name}</h2>
+                            <button onClick={onClose} className="text-white text-3xl hover:opacity-75">&times;</button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            {/* Basic Info */}
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Nom du personnage</label>
+                                <input 
+                                    type="text"
+                                    value={editedChar.name}
+                                    onChange={(e) => setEditedChar({ ...editedChar, name: e.target.value })}
+                                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-primary outline-none"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Description</label>
+                                <textarea 
+                                    value={editedChar.description}
+                                    onChange={(e) => setEditedChar({ ...editedChar, description: e.target.value })}
+                                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-primary outline-none h-20"
+                                />
+                            </div>
+                            
+                            {/* Mood Selector */}
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-sm font-semibold">Humeurs disponibles</label>
+                                    <button 
+                                        onClick={handleAddMood}
+                                        className="bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary-hover text-sm"
+                                    >
+                                        + Ajouter humeur
+                                    </button>
+                                </div>
+                                <div className="flex gap-2 flex-wrap">
+                                    {editedChar.moods.map(mood => (
+                                        <button 
+                                            key={mood}
+                                            onClick={() => {
+                                                setSelectedMood(mood);
+                                                setPreviewUrl(editedChar.sprites[mood] || '');
+                                            }}
+                                            className={'px-4 py-2 rounded-lg transition-all ' + (selectedMood === mood ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-gray-300')}
+                                        >
+                                            {mood}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Sprite Upload */}
+                            <div className="border-2 border-dashed border-primary rounded-lg p-6">
+                                <label className="block text-sm font-semibold mb-2">Image pour l'humeur: {selectedMood}</label>
+                                <input 
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleFileUpload(selectedMood, e)}
+                                    className="w-full mb-4"
+                                />
+                                {previewUrl && (
+                                    <div className="text-center">
+                                        <p className="text-xs text-gray-500 mb-2">Apercu:</p>
+                                        <img src={previewUrl} alt="Preview" className="max-w-full max-h-64 mx-auto rounded-lg shadow-md" />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Actions */}
+                            <div className="flex gap-4 justify-end pt-4 border-t-2">
+                                <button 
+                                    onClick={onClose}
+                                    className="px-6 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all"
+                                >
+                                    Annuler
+                                </button>
+                                <button 
+                                    onClick={handleSave}
+                                    className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all"
+                                >
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );

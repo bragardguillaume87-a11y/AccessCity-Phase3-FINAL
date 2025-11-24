@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AccessCity 5.0 - Éditeur</title>
+    <style>
+        /* ==================== Design Tokens ==================== */
+        :root {
+            /* Palette principale */
+            --color-bg-primary: #1e1e1e;
+            --color-bg-secondary: #252526;
+            --color-bg-tertiary: #1a1a1a;
+            --color-bg-elevated: #333;
+            
+            --color-surface: #2d2d30;
+            --color-border: #3e3e42;
+            --color-border-strong: #555;
+            
+            --color-text-primary: #e0e0e0;
+            --color-text-secondary: #cccccc;
+            --color-text-muted: #aaa;
+            
+            --color-accent: #0e639c;
+            --color-accent-hover: #1177bb;
+            --color-accent-active: #094771;
+            
+            --color-danger: #dc3545;
+            --color-danger-hover: #c82333;
+            
+            --color-success: #4CAF50;
+            --color-warning: #ff9800;
+            
+            /* Espacements */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 16px;
+            --space-xl: 24px;
+            
+            /* Rayons */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            
+            /* Ombres */
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+            
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-base: 250ms ease;
+        }
+
+        /* ==================== Reset & Base ==================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body { 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--color-bg-primary); 
+            color: var(--color-text-primary); 
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        body[data-stage-variant="immersive"] {
+            background-color: #0a0a0a;
+        }
+
+        body[data-stage-variant="immersive"] #stage-background {
+            filter: saturate(1.15) brightness(1.08);
+        }
+
+        /* ==================== Navigation ==================== */
+        #main-nav {
+            background: var(--color-bg-elevated);
+            padding: 0 var(--space-md);
+            height: 48px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            flex-shrink: 0;
+        }
+
+        #main-nav button {
+            background: transparent;
+            border: none;
+            color: var(--color-text-muted);
+            padding: 0 var(--space-lg);
+            height: 100%;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+            border-top: 2px solid transparent;
+        }
+
+        #main-nav button:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--color-text-primary);
+        }
+
+        #main-nav button:focus-visible {
+            outline: 2px solid var(--color-accent);
+            outline-offset: -2px;
+        }
+
+        #main-nav button.active {
+            background: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            border-top-color: var(--color-accent);
+        }
+
+        #layout-switcher {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            color: var(--color-text-secondary);
+            font-size: 13px;
+        }
+
+        #layout-switcher span {
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        #layout-selector {
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border-strong);
+            border-radius: var(--radius-sm);
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: border-color var(--transition-fast);
+        }
+
+        #layout-selector:hover {
+            border-color: var(--color-accent);
+        }
+
+        #layout-selector:focus {
+            outline: 2px solid var(--color-accent);
+            outline-offset: 1px;
+        }
+
+        /* ==================== Layout Principal ==================== */
+        #app { 
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            flex: 1;
+            overflow: hidden;
+            gap: 1px;
+            background: var(--color-border);
+        }
+
+        .view-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            grid-column: 1 / -1;
+        }
+
+        .view-container.active {
+            display: grid;
+            grid-template-columns: subgrid;
+        }
+
+        #view-scenes {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ==================== Composants Panels ==================== */
+        .panel { 
+            border: none;
+            padding: var(--space-md);
+            background: var(--color-bg-secondary);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel h3 {
+            margin: 0 0 var(--space-md) 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #scene-list { 
+            min-width: 240px;
+            width: 260px;
+        }
+
+        #inspector { 
+            flex: 1;
+            min-width: 400px;
+        }
+
+        #devtools {
+            min-width: 280px;
+            width: 320px;
+            background: var(--color-bg-tertiary);
+            transition: opacity var(--transition-base);
+        }
+
+        #devtools[data-mode="minimal"] {
+            font-size: 12px;
+            opacity: 0.92;
+        }
+
+        #devtools[data-mode="expanded"] {
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+        }
+
+        #devtools[data-mode="hidden"] {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        #dialogues {
+            height: 220px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        /* ==================== Items & Lists ==================== */
+        .scene-item, .dialogue-item {
+            padding: var(--space-md);
+            margin: var(--space-xs) 0;
+            background: var(--color-surface);
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .scene-item:hover, .dialogue-item:hover {
+            background: var(--color-bg-elevated);
+            border-color: var(--color-border-strong);
+            transform: translateX(2px);
+        }
+
+        .scene-item:focus-visible, .dialogue-item:focus-visible {
+            outline: 2px solid var(--color-accent);
+            outline-offset: 2px;
+        }
+
+        .scene-item.active {
+            background: var(--color-accent);
+            border-color: var(--color-accent-active);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ==================== Boutons ==================== */
+        button {
+            background: var(--color-accent);
+            color: white;
+            border: none;
+            padding: var(--space-sm) var(--space-lg);
+            margin: var(--space-xs);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-sm);
+        }
+
+        button:hover {
+            background: var(--color-accent-hover);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            background: var(--color-accent-active);
+            transform: translateY(0);
+        }
+
+        button:focus-visible {
+            outline: 2px solid white;
+            outline-offset: 2px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ==================== Formulaires ==================== */
+        input, textarea, select {
+            width: 100%;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border-strong);
+            color: var(--color-text-primary);
+            padding: var(--space-sm);
+            margin: var(--space-xs) 0;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color var(--transition-fast);
+        }
+
+        input:hover, textarea:hover, select:hover {
+            border-color: var(--color-accent);
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px rgba(14, 99, 156, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* ==================== Éléments Narratifs ==================== */
+        #character-portrait-left, #character-portrait-right {
+            position: fixed;
+            bottom: 0;
+            width: 320px;
+            height: 520px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #character-portrait-left { left: 60px; }
+        #character-portrait-right { right: 60px; }
+        
+        #dialogue-area {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 840px;
+            max-width: 90vw;
+            height: 260px;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <nav id="main-nav">
+        <button id="nav-scenes" class="active">🎬 Scènes</button>
+        <button id="nav-characters">👤 Personnages</button>
+        <div id="layout-switcher">
+            <span>Disposition :</span>
+            <select id="layout-selector" aria-label="Sélectionner une disposition">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+    </nav>
+
+    <div id="app">
+        <!-- Vue Éditeur de Scènes -->
+        <div id="view-scenes" class="view-container active">
+            <div id="scene-list" class="panel"></div>
+            <div id="inspector" class="panel"></div>
+            <div id="devtools" class="panel" style="display:none;"></div>
+        </div>
+
+        <!-- Vue Éditeur de Personnages -->
+        <div id="view-characters" class="view-container panel">
+            <!-- CharacterEditor injectera son contenu ici -->
+        </div>
+    </div>
+    <div id="dialogues" class="panel" style="display:none;"></div>
+    
+    <!-- Narrative Elements -->
+    <div id="stage-background" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; background-size: cover; background-position: center;"></div>
+    <div id="stage-hud" style="display:none; position:fixed; top:20px; left:20px; z-index:100; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; color:white;">
+        <div style="margin-bottom:5px;">Moral: <span id="hud-moral-val">50</span>% <div style="width:100px; height:10px; background:#333; display:inline-block;"><div id="hud-moral-bar" style="width:50%; height:100%; background: #4CAF50;"></div></div></div>
+        <div>Physique: <span id="hud-physique-val">50</span>% <div style="width:100px; height:10px; background:#333; display:inline-block;"><div id="hud-physique-bar" style="width:50%; height:100%; background: #2196F3;"></div></div></div>
+    </div>
+
+    <character-portrait id="character-portrait-left" style="display:none;" alignment="left"></character-portrait>
+    <character-portrait id="character-portrait-right" style="display:none;" alignment="right"></character-portrait>
+    <dialogue-area id="dialogue-area" style="display:none;"></dialogue-area>
+
+    <div style="position:fixed; bottom:10px; right:10px; z-index:1000;">
+        <button id="export-btn" title="Sauvegarder le projet sur votre ordinateur">💾 Exporter le projet</button>
+        <button id="import-btn" title="Charger un projet depuis votre ordinateur">📂 Importer un projet</button>
+        <input type="file" id="import-file" accept=".json" style="display:none;">
+    </div>
+    <script type="module" src="./ui/CharacterPortrait.js"></script>
+    <script type="module" src="./ui/DialogueArea.js"></script>
+    <script type="module" src="./core/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#87CEEB"/>
+   <stop offset="1" stop-color="#E0F7FA"/>
+  </linearGradient>
+  <linearGradient id="building" x1="0" y1="0" x2="1" y2="0">
+   <stop offset="0" stop-color="#ccc"/>
+   <stop offset="0.5" stop-color="#eee"/>
+   <stop offset="1" stop-color="#ccc"/>
+  </linearGradient>
+ </defs>
+ <rect width="800" height="600" fill="url(#sky)"/>
+ <rect x="0" y="400" width="800" height="200" fill="#777"/> <!-- Road -->
+ <rect x="0" y="380" width="800" height="20" fill="#555"/> <!-- Sidewalk -->
+ 
+ <!-- Buildings -->
+ <rect x="50" y="100" width="200" height="300" fill="url(#building)" stroke="#555" stroke-width="2"/>
+ <rect x="300" y="50" width="150" height="350" fill="#d8d8d8" stroke="#555" stroke-width="2"/>
+ <rect x="550" y="150" width="200" height="250" fill="#e0e0e0" stroke="#555" stroke-width="2"/>
+ 
+ <!-- Windows -->
+ <rect x="70" y="120" width="40" height="40" fill="#87CEFA"/>
+ <rect x="130" y="120" width="40" height="40" fill="#87CEFA"/>
+ <rect x="70" y="180" width="40" height="40" fill="#87CEFA"/>
+ <rect x="130" y="180" width="40" height="40" fill="#87CEFA"/>
+ 
+ <!-- Tree -->
+ <rect x="500" y="250" width="20" height="150" fill="#8B4513"/>
+ <circle cx="510" cy="250" r="50" fill="#228B22"/>
+</svg>

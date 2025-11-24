@@ -1,8 +1,10 @@
 {
-  "name": "accesscity-phase4.5",
-  "version": "4.5.0",
+  "name": "accesscity-phase5",
+  "version": "5.0.0",
   "type": "module",
   "scripts": {
-    "test": "node test/ascii-check.js"
+    "test": "node test/ascii-check.js && node test/test-integration-v5.js",
+    "summary": "node tools/generate_summary.js --help",
+    "dev": "python -m http.server 8000"
   }
 }

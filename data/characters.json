@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "characters": [
+    {
+      "id": "player",
+      "name": "Joueur",
+      "description": "Le personnage principal incarne par l'utilisateur.",
+      "sprites": {
+        "neutral": "assets/characters/player/neutral.svg",
+        "happy": "assets/characters/player/neutral.svg",
+        "sad": "assets/characters/player/neutral.svg",
+        "thoughtful": "assets/characters/player/neutral.svg"
+      },
+      "moods": ["neutral", "happy", "sad", "thoughtful"]
+    },
+    {
+      "id": "counsellor",
+      "name": "Conseiller municipal",
+      "description": "Le conseiller en accessibilite de la mairie.",
+      "sprites": {
+        "neutral": "assets/characters/counsellor/neutral.svg",
+        "professional": "assets/characters/counsellor/neutral.svg",
+        "helpful": "assets/characters/counsellor/neutral.svg"
+      },
+      "moods": ["neutral", "professional", "helpful"]
+    },
+    {
+      "id": "narrator",
+      "name": "Narrateur",
+      "description": "La voix off qui decrit les actions et le contexte.",
+      "sprites": {
+        "neutral": "assets/characters/narrator/icon.svg"
+      },
+      "moods": ["neutral"]
+    }
+  ]
+}

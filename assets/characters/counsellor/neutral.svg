@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400">
+  <rect width="200" height="400" fill="#50e3c2"/>
+  <circle cx="100" cy="100" r="60" fill="#ffe0bd"/>
+  <rect x="40" y="160" width="120" height="240" rx="20" fill="#555"/>
+  <text x="100" y="350" font-family="Arial" font-size="24" fill="white" text-anchor="middle">COUNSELLOR</text>
+  <text x="100" y="380" font-family="Arial" font-size="16" fill="white" text-anchor="middle">(Neutral)</text>
+</svg>

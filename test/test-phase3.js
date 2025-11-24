@@ -1,1 +1,0 @@
-console.log('Phase 3 tests passed (legacy)');

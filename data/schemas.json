@@ -1,16 +1,147 @@
 {
-  "scene": {
+  "scenes": {
     "type": "object",
-    "required": [
-      "id",
-      "title"
-    ],
+    "required": ["scenes"],
     "properties": {
-      "id": {
-        "type": "string"
-      },
-      "title": {
-        "type": "string"
+      "scenes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "title"],
+          "properties": {
+            "id": {"type": "string"},
+            "title": {"type": "string"},
+            "description": {"type": "string"},
+            "dialogues": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["speaker", "text"],
+                "properties": {
+                  "speaker": {"type": "string"},
+                  "text": {"type": "string"},
+                  "mood": {"type": "string"},
+                  "background": {"type": "string"},
+                  "conditions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["variable", "operator", "value"],
+                      "properties": {
+                        "variable": {"type": "string"},
+                        "operator": {"type": "string"},
+                        "value": {"type": ["string", "number", "boolean"]}
+                      }
+                    }
+                  },
+                  "choices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["text"],
+                      "properties": {
+                        "text": {"type": "string"},
+                        "targetScene": {"type": "string"},
+                        "effects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["variable"],
+                            "properties": {
+                              "variable": {"type": "string"},
+                              "value": {"type": ["string", "number", "boolean"]},
+                              "operation": {"type": "string"},
+                              "min": {"type": "number"},
+                              "max": {"type": "number"}
+                            }
+                          }
+                        },
+                        "conditions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["variable", "operator", "value"],
+                            "properties": {
+                              "variable": {"type": "string"},
+                              "operator": {"type": "string"},
+                              "value": {"type": ["string", "number", "boolean"]}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "uiLayout": {
+    "type": "object",
+    "required": ["version", "defaultLayout", "layouts"],
+    "additionalProperties": false,
+    "properties": {
+      "version": {"type": "string"},
+      "defaultLayout": {"type": "string"},
+      "activeLayout": {"type": "string"},
+      "layouts": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "patternProperties": {
+          "^.+$": {
+            "type": "object",
+            "required": ["panels"],
+            "additionalProperties": false,
+            "properties": {
+              "description": {"type": "string"},
+              "panels": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["id", "visible", "position"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {"type": "string"},
+                    "visible": {"type": "boolean"},
+                    "position": {"type": "string"},
+                    "width": {"type": "number"},
+                    "height": {"type": "number"},
+                    "flex": {"type": "number"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "characters": {
+    "type": "object",
+    "required": ["version", "characters"],
+    "properties": {
+      "version": {"type": "string"},
+      "characters": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "name", "sprites", "moods"],
+          "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "sprites": {"type": "object"},
+            "moods": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        }
       }
     }
   }

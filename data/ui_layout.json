@@ -1,0 +1,12 @@
+{
+  "panels": [
+    {
+      "id": "scenes",
+      "visible": true
+    },
+    {
+      "id": "inspector",
+      "visible": false
+    }
+  ]
+}

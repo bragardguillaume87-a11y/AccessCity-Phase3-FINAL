@@ -1,0 +1,24 @@
+{
+  "scenes": [
+    {
+      "id": "s1",
+      "title": "Main Square",
+      "dialogues": [
+        {
+          "speaker": "Guard",
+          "text": "Halt!"
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "Tavern",
+      "dialogues": [
+        {
+          "speaker": "Barman",
+          "text": "What can I get you?"
+        }
+      ]
+    }
+  ]
+}

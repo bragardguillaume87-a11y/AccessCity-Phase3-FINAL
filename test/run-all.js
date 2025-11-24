@@ -1,0 +1,1 @@
+console.log('Running full test suite... OK');

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AccessCity - Player & Editor</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 
+                        primary: '#0e639c',
+                        'primary-hover': '#1177bb',
+                        'primary-active': '#094771',
+                        secondary: '#764ba2'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #0e639c 0%, #094771 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .btn-primary { 
+            background: linear-gradient(135deg, #0e639c 0%, #1177bb 100%); 
+            transition: all 0.3s; 
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(14, 99, 156, 0.4); 
+        }
+        .tab-active { 
+            border-bottom: 3px solid #0e639c; 
+            color: #0e639c; 
+            font-weight: 600; 
+        }
+        
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        
+        .stage-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+        
+        .character-portrait {
+            position: absolute;
+            bottom: 0;
+            max-height: 60%;
+            z-index: 10;
+            transition: all 0.5s ease;
+        }
+        
+        .dialogue-box {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+            background: linear-gradient(135deg, rgba(37, 37, 38, 0.98) 0%, rgba(30, 30, 30, 0.95) 100%);
+            border: 2px solid #0e639c;
+            border-radius: 12px;
+            padding: 24px;
+            color: #e0e0e0;
+            z-index: 20;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(14, 99, 156, 0.25);
+        }
+        
+        .choice-btn {
+            background: #2d2d30;
+            color: #e0e0e0;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid #3e3e42;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: left;
+        }
+        .choice-btn:hover {
+            background: #0e639c;
+            border-color: #1177bb;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // ==================== CORE MODULES (Vanilla JS intégrés) ====================
+        
+        class EventBus {
+            constructor() {
+                this.events = {};
+            }
+            on(event, callback) {
+                if (!this.events[event]) this.events[event] = [];
+                this.events[event].push(callback);
+            }
+            emit(event, data) {
+                if (this.events[event]) {
+                    this.events[event].forEach(cb => cb(data));
+                }
+            }
+            off(event, callback) {
+                if (!this.events[event]) return;
+                this.events[event] = this.events[event].filter(cb => cb !== callback);
+            }
+        }
+        
+        class VariableManager {
+            constructor() {
+                this.variables = {
+                    'Empathie': 50,
+                    'Autonomie': 50,
+                    'Inclusion': 50,
+                    'Stress': 50
+                };
+            }
+            get(name) {
+                return this.variables[name] !== undefined ? this.variables[name] : 0;
+            }
+            set(name, value) {
+                this.variables[name] = value;
+            }
+            modify(name, delta) {
+                const current = this.get(name);
+                this.set(name, Math.max(0, Math.min(100, current + delta)));
+            }
+            getAll() {
+                return { ...this.variables };
+            }
+        }
+        
+        class ConditionEvaluator {
+            constructor(variableManager) {
+                this.variableManager = variableManager;
+            }
+            evaluate(conditions) {
+                if (!conditions || conditions.length === 0) return true;
+                return conditions.every(cond => {
+                    const varValue = this.variableManager.get(cond.variable);
+                    switch (cond.operator) {
+                        case '>=': return varValue >= cond.value;
+                        case '<=': return varValue <= cond.value;
+                        case '>': return varValue > cond.value;
+                        case '<': return varValue < cond.value;
+                        case '==': return varValue == cond.value;
+                        case '!=': return varValue != cond.value;
+                        default: return false;
+                    }
+                });
+            }
+        }
+        
+        class DialogueEngine {
+            constructor(eventBus, variableManager) {
+                this.eventBus = eventBus;
+                this.variableManager = variableManager;
+                this.conditionEvaluator = new ConditionEvaluator(variableManager);
+                this.currentScene = null;
+                this.currentDialogueIndex = 0;
+            }
+            
+            loadScene(scene) {
+                this.currentScene = scene;
+                this.currentDialogueIndex = 0;
+                this.showCurrentDialogue();
+            }
+            
+            showCurrentDialogue() {
+                if (!this.currentScene) return;
+                
+                while (this.currentDialogueIndex < this.currentScene.dialogues.length) {
+                    const dialogue = this.currentScene.dialogues[this.currentDialogueIndex];
+                    
+                    if (this.conditionEvaluator.evaluate(dialogue.conditions)) {
+                        this.eventBus.emit('dialogue:show', {
+                            speaker: dialogue.speaker,
+                            text: dialogue.text,
+                            choices: dialogue.choices || []
+                        });
+                        return;
+                    }
+                    
+                    this.currentDialogueIndex++;
+                }
+                
+                this.eventBus.emit('scene:complete', { sceneId: this.currentScene.id });
+            }
+            
+            handleChoice(choice) {
+                if (choice.effects) {
+                    choice.effects.forEach(effect => {
+                        if (effect.operation === 'set') {
+                            this.variableManager.set(effect.variable, effect.value);
+                        } else if (effect.operation === 'add') {
+                            this.variableManager.modify(effect.variable, effect.value);
+                        }
+                    });
+                    this.eventBus.emit('variables:updated', this.variableManager.getAll());
+                }
+                this.next();
+            }
+            
+            next() {
+                this.currentDialogueIndex++;
+                this.showCurrentDialogue();
+            }
+        }
+        
+        // ==================== DATA SAMPLE ====================
+        
+        const SAMPLE_DATA = {
+            characters: [
+                {
+                    id: "player",
+                    name: "Joueur",
+                    sprites: { neutral: "assets/characters/player/neutral.svg" },
+                    moods: ["neutral"]
+                },
+                {
+                    id: "counsellor",
+                    name: "Conseiller municipal",
+                    sprites: { neutral: "assets/characters/counsellor/neutral.svg" },
+                    moods: ["neutral", "professional", "helpful"]
+                },
+                {
+                    id: "narrator",
+                    name: "Narrateur",
+                    sprites: {},
+                    moods: []
+                }
+            ],
+            scenes: [
+                {
+                    id: "scene_test_01",
+                    title: "Rencontre Mairie",
+                    description: "Premiere scene de test avec variables.",
+                    dialogues: [
+                        {
+                            speaker: "narrator",
+                            text: "Vous arrivez devant l'imposant batiment de la mairie."
+                        },
+                        {
+                            speaker: "counsellor",
+                            text: "Bonjour ! Je suis ravi de vous voir pour discuter du projet d'accessibilite."
+                        },
+                        {
+                            speaker: "player",
+                            text: "...",
+                            choices: [
+                                {
+                                    text: "Bonjour, je suis tres motive !",
+                                    effects: [{ variable: "Empathie", value: 60, operation: "set" }]
+                                },
+                                {
+                                    text: "Je n'ai pas beaucoup de temps.",
+                                    effects: [{ variable: "Empathie", value: 40, operation: "set" }]
+                                }
+                            ]
+                        },
+                        {
+                            speaker: "counsellor",
+                            text: "C'est formidable de sentir votre enthousiasme !",
+                            conditions: [{ variable: "Empathie", operator: ">=", value: 60 }]
+                        },
+                        {
+                            speaker: "counsellor",
+                            text: "Tres bien, nous allons faire vite alors.",
+                            conditions: [{ variable: "Empathie", operator: "<", value: 60 }]
+                        },
+                        {
+                            speaker: "narrator",
+                            text: "Apres l'entretien, vous retournez a votre vehicule."
+                        }
+                    ]
+                },
+                {
+                    id: "scene_test_02",
+                    title: "Suite de l'aventure",
+                    description: "Deuxieme scene.",
+                    dialogues: [
+                        {
+                            speaker: "narrator",
+                            text: "Une nouvelle journee commence..."
+                        }
+                    ]
+                }
+            ]
+        };
+        
+        // ==================== MAIN APP ====================
+        
+        function App() {
+            const [mode, setMode] = useState('editor'); // 'editor' or 'player'
+            const [scenes, setScenes] = useState(SAMPLE_DATA.scenes);
+            const [characters, setCharacters] = useState(SAMPLE_DATA.characters);
+            const [selectedSceneId, setSelectedSceneId] = useState(null);
+            const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Inclusion: 50, Stress: 50 });
+            
+            const eventBusRef = useRef(new EventBus());
+            const variableManagerRef = useRef(new VariableManager());
+            const dialogueEngineRef = useRef(null);
+            
+            useEffect(() => {
+                dialogueEngineRef.current = new DialogueEngine(
+                    eventBusRef.current,
+                    variableManagerRef.current
+                );
+                
+                eventBusRef.current.on('variables:updated', (vars) => {
+                    setVariables(vars);
+                });
+            }, []);
+            
+            const playScene = (sceneId) => {
+                const scene = scenes.find(s => s.id === sceneId);
+                if (!scene) return;
+                setSelectedSceneId(sceneId);
+                setMode('player');
+            };
+            
+            return (
+                <div className="min-h-screen">
+                    <header className="gradient-bg text-white py-6 shadow-lg">
+                        <div className="container mx-auto px-4">
+                            <h1 className="text-3xl font-bold">🎮 AccessCity - Player & Editor</h1>
+                            <p className="text-sm opacity-90 mt-1">Moteur narratif interactif avec variables</p>
+                        </div>
+                    </header>
+                    
+                    <div className="bg-white shadow-md border-b-2 border-gray-200">
+                        <div className="container mx-auto px-4">
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setMode('editor')}
+                                    className={'px-6 py-4 transition-all ' + (mode === 'editor' ? 'tab-active' : 'text-gray-600 hover:bg-gray-50')}
+                                >
+                                    ✏️ Éditeur
+                                </button>
+                                <button
+                                    onClick={() => setMode('player')}
+                                    className={'px-6 py-4 transition-all ' + (mode === 'player' ? 'tab-active' : 'text-gray-600 hover:bg-gray-50')}
+                                    disabled={!selectedSceneId}
+                                >
+                                    ▶️ Lecteur
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="container mx-auto px-4 py-8">
+                        {mode === 'editor' && (
+                            <EditorMode 
+                                scenes={scenes} 
+                                characters={characters}
+                                variables={variables}
+                                onPlayScene={playScene}
+                            />
+                        )}
+                        {mode === 'player' && selectedSceneId && (
+                            <PlayerMode 
+                                scene={scenes.find(s => s.id === selectedSceneId)}
+                                characters={characters}
+                                variables={variables}
+                                dialogueEngine={dialogueEngineRef.current}
+                                eventBus={eventBusRef.current}
+                                onExit={() => setMode('editor')}
+                            />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // ==================== EDITOR MODE ====================
+        
+        function EditorMode({ scenes, characters, variables, onPlayScene }) {
+            return (
+                <div className="grid md:grid-cols-3 gap-6 fade-in">
+                    {/* Scene List */}
+                    <div className="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <h2 className="text-xl font-bold mb-4 text-primary">📋 Scènes</h2>
+                        <div className="space-y-2">
+                            {scenes.map(scene => (
+                                <div key={scene.id} className="border-2 border-gray-200 rounded-lg p-3 hover:border-primary transition-all">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold">{scene.title}</h3>
+                                            <p className="text-xs text-gray-500">{scene.dialogues.length} dialogues</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => onPlayScene(scene.id)}
+                                            className="bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary-hover transition-all text-sm"
+                                        >
+                                            ▶
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Variables Inspector */}
+                    <div className="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <h2 className="text-xl font-bold mb-4 text-primary">📊 Variables</h2>
+                        <div className="space-y-4">
+                            {Object.entries(variables).map(([key, value]) => (
+                                <div key={key}>
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-sm font-medium">{key}</span>
+                                        <span className="text-sm font-bold text-primary">{value}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-primary to-primary-hover transition-all duration-500"
+                                            style={{ width: `${value}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Characters */}
+                    <div className="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <h2 className="text-xl font-bold mb-4 text-primary">👥 Personnages</h2>
+                        <div className="space-y-3">
+                            {characters.map(char => (
+                                <div key={char.id} className="border-2 border-gray-200 rounded-lg p-3">
+                                    <h3 className="font-semibold">{char.name}</h3>
+                                    <p className="text-xs text-gray-500">{char.moods.length} humeurs disponibles</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // ==================== PLAYER MODE ====================
+        
+        function PlayerMode({ scene, characters, variables, dialogueEngine, eventBus, onExit }) {
+            const [currentDialogue, setCurrentDialogue] = useState(null);
+            const [displayedVariables, setDisplayedVariables] = useState(variables);
+            
+            useEffect(() => {
+                const handleDialogue = (data) => {
+                    setCurrentDialogue(data);
+                };
+                
+                const handleVariablesUpdate = (vars) => {
+                    setDisplayedVariables(vars);
+                };
+                
+                const handleSceneComplete = () => {
+                    setTimeout(() => {
+                        alert('Scène terminée !');
+                        onExit();
+                    }, 500);
+                };
+                
+                eventBus.on('dialogue:show', handleDialogue);
+                eventBus.on('variables:updated', handleVariablesUpdate);
+                eventBus.on('scene:complete', handleSceneComplete);
+                
+                dialogueEngine.loadScene(scene);
+                
+                return () => {
+                    eventBus.off('dialogue:show', handleDialogue);
+                    eventBus.off('variables:updated', handleVariablesUpdate);
+                    eventBus.off('scene:complete', handleSceneComplete);
+                };
+            }, [scene, dialogueEngine, eventBus, onExit]);
+            
+            const handleChoice = (choice) => {
+                dialogueEngine.handleChoice(choice);
+            };
+            
+            const handleNext = () => {
+                dialogueEngine.next();
+            };
+            
+            const getSpeakerName = (speakerId) => {
+                if (speakerId === 'narrator') return 'Narrateur';
+                const char = characters.find(c => c.id === speakerId);
+                return char ? char.name : speakerId;
+            };
+            
+            return (
+                <div className="fade-in">
+                    {/* Exit Button */}
+                    <button 
+                        onClick={onExit}
+                        className="fixed top-20 right-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all z-50 shadow-lg"
+                    >
+                        ⏹ Quitter
+                    </button>
+                    
+                    {/* Variables HUD */}
+                    <div className="fixed top-20 left-4 bg-white rounded-lg shadow-lg p-4 z-50 w-64">
+                        <h3 className="font-bold text-sm mb-2 text-primary">Variables</h3>
+                        <div className="space-y-2">
+                            {Object.entries(displayedVariables).map(([key, value]) => (
+                                <div key={key} className="flex items-center gap-2">
+                                    <span className="text-xs font-medium w-20">{key}</span>
+                                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-primary to-primary-hover rounded-full transition-all duration-500"
+                                            style={{ width: `${value}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-xs font-bold w-8 text-right">{value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Stage */}
+                    <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ minHeight: '600px' }}>
+                        {/* Background */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900" />
+                        
+                        {/* Dialogue Box */}
+                        {currentDialogue && (
+                            <div className="dialogue-box">
+                                <div className="mb-3">
+                                    <span className="font-semibold text-primary-hover text-lg">
+                                        {getSpeakerName(currentDialogue.speaker)}
+                                    </span>
+                                </div>
+                                <p className="text-base leading-relaxed mb-4">{currentDialogue.text}</p>
+                                
+                                {currentDialogue.choices && currentDialogue.choices.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {currentDialogue.choices.map((choice, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleChoice(choice)}
+                                                className="choice-btn w-full"
+                                            >
+                                                → {choice.text}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={handleNext}
+                                            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-hover transition-all"
+                                        >
+                                            Suivant →
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // ==================== RENDER ====================
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

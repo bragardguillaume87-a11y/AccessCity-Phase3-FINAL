@@ -101,6 +101,17 @@
             border-color: #1177bb;
             transform: translateX(4px);
         }
+        /* Badges de deltas variables */
+        @keyframes riseFade {
+            0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+            15% { opacity: 1; transform: translateY(0) scale(1); }
+            85% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        }
+        .delta-badge { 
+            animation: riseFade 1.5s ease forwards; 
+            box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -213,13 +224,18 @@
             
             handleChoice(choice) {
                 if (choice.effects) {
+                    const deltas = [];
                     choice.effects.forEach(effect => {
+                        const before = this.variableManager.get(effect.variable);
                         if (effect.operation === 'set') {
                             this.variableManager.set(effect.variable, effect.value);
+                            deltas.push({ variable: effect.variable, delta: effect.value - before });
                         } else if (effect.operation === 'add') {
                             this.variableManager.modify(effect.variable, effect.value);
+                            deltas.push({ variable: effect.variable, delta: effect.value });
                         }
                     });
+                    this.eventBus.emit('variables:delta', deltas);
                     this.eventBus.emit('variables:updated', this.variableManager.getAll());
                 }
                 this.next();
@@ -312,16 +328,62 @@
             ]
         };
         
+        // ==================== UI LAYOUTS (fallback minimal si fetch indisponible) ====================
+        const FALLBACK_LAYOUTS = {
+            version: "fallback",
+            layouts: {
+                standard: {
+                    description: "Disposition editeur complete",
+                    panels: [
+                        { id: 'scene-list', visible: true, position: 'left', width: 260 },
+                        { id: 'inspector', visible: true, position: 'center', flex: 1 },
+                        { id: 'devtools', visible: true, position: 'right', width: 320 }
+                    ]
+                },
+                focus: {
+                    description: "Mode focus sur l'ecriture",
+                    panels: [
+                        { id: 'scene-list', visible: false, position: 'left', width: 0 },
+                        { id: 'inspector', visible: true, position: 'center', flex: 1 },
+                        { id: 'devtools', visible: true, position: 'right', width: 280 }
+                    ]
+                },
+                accessibility: {
+                    description: "Mode accessibilite",
+                    panels: [
+                        { id: 'scene-list', visible: true, position: 'left', width: 300 },
+                        { id: 'inspector', visible: true, position: 'center', flex: 1 },
+                        { id: 'devtools', visible: false, position: 'right', width: 0 }
+                    ]
+                },
+                devtools: {
+                    description: "Mode debug",
+                    panels: [
+                        { id: 'scene-list', visible: true, position: 'left', width: 220 },
+                        { id: 'inspector', visible: true, position: 'center', flex: 1 },
+                        { id: 'devtools', visible: true, position: 'right', width: 380 }
+                    ]
+                }
+            }
+        };
+        
         // ==================== MAIN APP ====================
         
         function App() {
             const [mode, setMode] = useState('editor'); // 'editor' or 'player'
-            const [currentLayout, setCurrentLayout] = useState('standard');
+            // Accessibilité par défaut pour une meilleure lisibilité
+            const [currentLayout, setCurrentLayout] = useState('accessibility');
             const [scenes, setScenes] = useState(SAMPLE_DATA.scenes);
             const [characters, setCharacters] = useState(SAMPLE_DATA.characters);
             const [selectedSceneId, setSelectedSceneId] = useState(null);
             const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Inclusion: 50, Stress: 50 });
             const [editingCharacter, setEditingCharacter] = useState(null);
+            // UI layouts chargés depuis data/ui_layout.json
+            const [uiLayouts, setUiLayouts] = useState(null);
+            // Onboarding + objectif courant
+            const [showOnboarding, setShowOnboarding] = useState(false);
+            const [objective, setObjective] = useState("Parler au conseiller à la mairie");
+            const [showHint, setShowHint] = useState(false);
             
             const eventBusRef = useRef(new EventBus());
             const variableManagerRef = useRef(new VariableManager());
@@ -336,6 +398,25 @@
                 eventBusRef.current.on('variables:updated', (vars) => {
                     setVariables(vars);
                 });
+                // Auto-sélectionner le premier chapitre et afficher onboarding au premier démarrage
+                if (SAMPLE_DATA.scenes && SAMPLE_DATA.scenes.length > 0) {
+                    setSelectedSceneId(SAMPLE_DATA.scenes[0].id);
+                }
+                const onboarded = window.localStorage.getItem('ac_onboarded');
+                if (!onboarded) {
+                    setShowOnboarding(true);
+                }
+                // Charger layouts JSON avec fallback
+                (async () => {
+                    try {
+                        const res = await fetch('data/ui_layout.json');
+                        if (!res.ok) throw new Error('fetch failed');
+                        const json = await res.json();
+                        setUiLayouts(json);
+                    } catch (e) {
+                        setUiLayouts(FALLBACK_LAYOUTS);
+                    }
+                })();
             }, []);
             
             const playScene = (sceneId) => {
@@ -420,6 +501,24 @@
                                     </div>
                                 )}
                             </div>
+                            {/* HUD Objectif + aide */}
+                            <div className="flex items-center justify-between py-3 text-gray-700">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base font-semibold text-primary">🎯 Objectif:</span>
+                                    <span className="text-base font-medium">{objective}</span>
+                                </div>
+                                <button
+                                    onClick={() => setShowHint(v => !v)}
+                                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm"
+                                >
+                                    Où aller ?
+                                </button>
+                            </div>
+                            {showHint && (
+                                <div className="mb-3 p-3 bg-blue-50 border-l-4 border-primary rounded text-sm text-gray-700">
+                                    Astuce: ouvre l’onglet “📋 Chapitres” et clique sur le bouton ▶ du premier chapitre pour commencer. Bonne chance !
+                                </div>
+                            )}
                         </div>
                     </div>
                     
@@ -434,6 +533,7 @@
                                     onEditCharacter={setEditingCharacter}
                                     onAddCharacter={addNewCharacter}
                                     currentLayout={currentLayout}
+                                    layout={uiLayouts ? uiLayouts.layouts[currentLayout] : null}
                                 />
                                 {editingCharacter && (
                                     <CharacterEditor 
@@ -454,6 +554,53 @@
                                 onExit={() => setMode('editor')}
                             />
                         )}
+                        {showOnboarding && (
+                            <OnboardingModal 
+                                onClose={() => { window.localStorage.setItem('ac_onboarded','true'); setShowOnboarding(false); }}
+                            />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== ONBOARDING MODAL ====================
+        function OnboardingModal({ onClose }) {
+            const [step, setStep] = useState(0);
+            const steps = [
+                {
+                    title: "Bienvenue dans AccessCity !",
+                    text: "Tu vas aider à rendre la ville plus accueillante. C’est toi le héros !"
+                },
+                {
+                    title: "Comment jouer ?",
+                    text: "Lis, choisis, avance. Un bouton = une action. Clique sur ▶ pour lancer le chapitre."
+                },
+                {
+                    title: "Ton premier objectif",
+                    text: "Parle au conseiller à la mairie. Tes choix feront évoluer l’Empathie, l’Autonomie et l’Inclusion."
+                }
+            ];
+            const isLast = step === steps.length - 1;
+            return (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+                        <h3 className="text-2xl font-bold text-primary mb-2">{steps[step].title}</h3>
+                        <p className="text-gray-700 mb-6">{steps[step].text}</p>
+                        <div className="flex justify-between items-center">
+                            <button onClick={onClose} className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-100">Passer</button>
+                            <div className="flex gap-2 items-center">
+                                {step > 0 && (
+                                    <button onClick={() => setStep(step-1)} className="px-4 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200">Précédent</button>
+                                )}
+                                <button
+                                    onClick={() => { if (isLast) onClose(); else setStep(step+1); }}
+                                    className="px-4 py-2 text-sm rounded bg-primary text-white hover:bg-primary-hover"
+                                >
+                                    {isLast ? 'Commencer' : 'Continuer'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
@@ -461,36 +608,24 @@
         
         // ==================== EDITOR MODE ====================
         
-        function EditorMode({ scenes, characters, variables, onPlayScene, onEditCharacter, onAddCharacter, currentLayout }) {
-            // Layout descriptions
-            const layoutDescriptions = {
-                standard: "Vue complete : scenes, sentiments et personnages visibles",
-                focus: "Mode concentration : focus sur l'ecriture",
-                accessibility: "Mode adapte : gros textes, contrastes eleves",
-                devtools: "Mode debug : outils developper visibles"
-            };
-            
-            // Determine columns based on layout
-            let gridClass = "grid gap-6 fade-in";
-            if (currentLayout === 'standard' || currentLayout === 'devtools') {
-                gridClass += " md:grid-cols-3";
-            } else if (currentLayout === 'focus') {
-                gridClass += " md:grid-cols-2";
-            } else if (currentLayout === 'accessibility') {
-                gridClass += " md:grid-cols-2";
-            }
-            
+        function EditorMode({ scenes, characters, variables, onPlayScene, onEditCharacter, onAddCharacter, currentLayout, layout }) {
+            // Extraire panneaux depuis la définition de layout
+            const findPanel = (id) => layout && layout.panels ? layout.panels.find(p => p.id === id) : null;
+            const left = findPanel('scene-list') || { visible: true, width: 260 };
+            const center = findPanel('inspector') || { visible: true };
+            const right = findPanel('devtools') || { visible: false, width: 0 };
+
             return (
                 <div>
                     <div className="mb-4 p-4 bg-blue-50 border-l-4 border-primary rounded">
                         <p className="text-sm text-gray-700">
-                            <span className="font-semibold">💡 {currentLayout === 'standard' ? 'Standard' : currentLayout === 'focus' ? 'Focus' : currentLayout === 'accessibility' ? 'Accessibilite' : 'Debug'}</span> : {layoutDescriptions[currentLayout]}
+                            <span className="font-semibold">💡 {currentLayout.charAt(0).toUpperCase()+currentLayout.slice(1)}</span> : {layout ? layout.description : 'Disposition editeur'}
                         </p>
                     </div>
-                    <div className={gridClass}>
+                    <div className="flex gap-6 fade-in">
                     {/* Scene List - Hidden in focus mode */}
-                    {currentLayout !== 'focus' && (
-                    <div className="bg-white rounded-xl shadow-md p-6 card-hover">
+                    {left.visible && (
+                    <div className="bg-white rounded-xl shadow-md p-6 card-hover" style={{ width: (left.width || 260) + 'px' }}>
                         <h2 className="text-xl font-bold mb-4 text-primary">📋 Chapitres</h2>
                         <div className="space-y-2">
                             {scenes.map(scene => (
@@ -514,7 +649,8 @@
                     )}
                     
                     {/* Variables Inspector */}
-                    <div className="bg-white rounded-xl shadow-md p-6 card-hover">
+                    {center.visible && (
+                    <div className="bg-white rounded-xl shadow-md p-6 card-hover flex-1">
                         <h2 className="text-xl font-bold mb-4 text-primary">📊 Sentiments du heros</h2>
                         <div className="space-y-4">
                             {Object.entries(variables).map(([key, value]) => (
@@ -533,10 +669,11 @@
                             ))}
                         </div>
                     </div>
+                    )}
                     
                     {/* Characters - Hidden in accessibility mode */}
-                    {currentLayout !== 'accessibility' && (
-                    <div className="bg-white rounded-xl shadow-md p-6 card-hover">
+                    {right.visible && (
+                    <div className="bg-white rounded-xl shadow-md p-6 card-hover" style={{ width: (right.width || 280) + 'px' }}>
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold text-primary">👥 Mes personnages</h2>
                             <button 
@@ -704,6 +841,7 @@
         function PlayerMode({ scene, characters, variables, dialogueEngine, eventBus, onExit }) {
             const [currentDialogue, setCurrentDialogue] = useState(null);
             const [displayedVariables, setDisplayedVariables] = useState(variables);
+            const [deltas, setDeltas] = useState([]);
             
             useEffect(() => {
                 const handleDialogue = (data) => {
@@ -723,6 +861,17 @@
                 
                 eventBus.on('dialogue:show', handleDialogue);
                 eventBus.on('variables:updated', handleVariablesUpdate);
+                const handleVariablesDelta = (deltaList) => {
+                    if (!Array.isArray(deltaList)) return;
+                    deltaList.forEach(({ variable, delta }) => {
+                        const id = `${Date.now()}-${Math.random()}`;
+                        setDeltas((prev) => [...prev, { id, variable, delta }]);
+                        setTimeout(() => {
+                            setDeltas((prev) => prev.filter((d) => d.id !== id));
+                        }, 1500);
+                    });
+                };
+                eventBus.on('variables:delta', handleVariablesDelta);
                 eventBus.on('scene:complete', handleSceneComplete);
                 
                 dialogueEngine.loadScene(scene);
@@ -730,6 +879,7 @@
                 return () => {
                     eventBus.off('dialogue:show', handleDialogue);
                     eventBus.off('variables:updated', handleVariablesUpdate);
+                    eventBus.off('variables:delta', handleVariablesDelta);
                     eventBus.off('scene:complete', handleSceneComplete);
                 };
             }, [scene, dialogueEngine, eventBus, onExit]);
@@ -758,7 +908,8 @@
                         ⏹ Quitter
                     </button>
                     
-                    {/* Variables HUD */}
+                    {/* Variables HUD */
+                    }
                     <div className="fixed top-20 left-4 bg-white rounded-lg shadow-lg p-4 z-50 w-64">
                         <h3 className="font-bold text-sm mb-2 text-primary">Variables</h3>
                         <div className="space-y-2">
@@ -775,6 +926,17 @@
                                 </div>
                             ))}
                         </div>
+                    </div>
+                    {/* Delta Badges */}
+                    <div className="pointer-events-none fixed z-40" style={{ top: '64px', left: '280px' }}>
+                        {deltas.map((d) => (
+                            <div
+                                key={d.id}
+                                className={`delta-badge mt-1 inline-block px-3 py-1 rounded-full text-sm font-semibold ${d.delta > 0 ? 'bg-emerald-600/90 text-white border border-emerald-400/60' : d.delta < 0 ? 'bg-rose-600/90 text-white border border-rose-400/60' : 'bg-slate-600/90 text-white border border-slate-400/60'}`}
+                            >
+                                {d.variable} {d.delta > 0 ? '+' : ''}{d.delta}
+                            </div>
+                        ))}
                     </div>
                     
                     {/* Stage */}

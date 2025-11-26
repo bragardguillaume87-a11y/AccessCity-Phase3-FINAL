@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AccessCity - Player & Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -27,7 +30,7 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        * { font-family: 'Inter', sans-serif; }
+        * { font-family: 'Poppins', 'Inter', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #0e639c 0%, #094771 100%); }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
@@ -101,6 +104,9 @@
             border-color: #1177bb;
             transform: translateX(4px);
         }
+        /* Overlay d’aide (coach marks) */
+        .overlay-dim { background: rgba(0,0,0,0.6); }
+        .coach-bubble { background: #fef08a; color: #0b1220; border: 2px solid #facc15; }
         /* Badges de deltas variables */
         @keyframes riseFade {
             0% { opacity: 0; transform: translateY(8px) scale(0.98); }
@@ -447,9 +453,9 @@
             return (
                 <div className="min-h-screen">
                     <header className="gradient-bg text-white py-6 shadow-lg">
-                        <div className="container mx-auto px-4">
-                            <h1 className="text-3xl font-bold">🎮 AccessCity - Player & Editor</h1>
-                            <p className="text-sm opacity-90 mt-1">Moteur narratif interactif avec variables</p>
+                        <div className="container mx-auto px-4 text-center">
+                            <h1 className="text-4xl font-bold tracking-tight">🎮 AccessCity</h1>
+                            <p className="text-sm opacity-90 mt-1">Générateur de scénarios — Jouer & Éditer</p>
                         </div>
                     </header>
                     
@@ -474,30 +480,17 @@
                                 {mode === 'editor' && (
                                     <div className="flex gap-2 items-center">
                                         <span className="text-sm text-gray-600 mr-2">Vue :</span>
-                                        <button
-                                            onClick={() => setCurrentLayout('standard')}
-                                            className={'px-3 py-2 text-sm rounded transition-all ' + (currentLayout === 'standard' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200')}
+                                        <select
+                                            value={currentLayout}
+                                            onChange={(e) => setCurrentLayout(e.target.value)}
+                                            className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
                                         >
-                                            Standard
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentLayout('focus')}
-                                            className={'px-3 py-2 text-sm rounded transition-all ' + (currentLayout === 'focus' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200')}
-                                        >
-                                            Focus
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentLayout('accessibility')}
-                                            className={'px-3 py-2 text-sm rounded transition-all ' + (currentLayout === 'accessibility' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200')}
-                                        >
-                                            Accessibilité
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentLayout('devtools')}
-                                            className={'px-3 py-2 text-sm rounded transition-all ' + (currentLayout === 'devtools' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200')}
-                                        >
-                                            Debug
-                                        </button>
+                                            <option value="standard">Standard</option>
+                                            <option value="focus">Focus</option>
+                                            <option value="accessibility">Accessibilité</option>
+                                            <option value="devtools">Debug</option>
+                                        </select>
+                                        <span title="Infos" className="ml-2 text-yellow-500">💡</span>
                                     </div>
                                 )}
                             </div>
@@ -842,6 +835,8 @@
             const [currentDialogue, setCurrentDialogue] = useState(null);
             const [displayedVariables, setDisplayedVariables] = useState(variables);
             const [deltas, setDeltas] = useState([]);
+            const [showHud, setShowHud] = useState(false);
+            const [showCoach, setShowCoach] = useState(true);
             
             useEffect(() => {
                 const handleDialogue = (data) => {
@@ -910,22 +905,31 @@
                     
                     {/* Variables HUD */
                     }
-                    <div className="fixed top-20 left-4 bg-white rounded-lg shadow-lg p-4 z-50 w-64">
-                        <h3 className="font-bold text-sm mb-2 text-primary">Variables</h3>
-                        <div className="space-y-2">
-                            {Object.entries(displayedVariables).map(([key, value]) => (
-                                <div key={key} className="flex items-center gap-2">
-                                    <span className="text-xs font-medium w-20">{key}</span>
-                                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                        <div 
-                                            className="h-full bg-gradient-to-r from-primary to-primary-hover rounded-full transition-all duration-500"
-                                            style={{ width: `${value}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-xs font-bold w-8 text-right">{value}</span>
-                                </div>
-                            ))}
+                    {/* HUD Variables optionnel */}
+                    <div className="fixed top-20 left-4 z-50">
+                        <div className="mb-2 bg-white rounded-lg shadow p-2 inline-flex items-center gap-2">
+                            <label className="text-xs text-gray-700">Afficher le HUD</label>
+                            <input type="checkbox" checked={showHud} onChange={(e)=>setShowHud(e.target.checked)} />
                         </div>
+                        {showHud && (
+                            <div className="bg-white rounded-lg shadow-lg p-3 w-56">
+                                <h3 className="font-bold text-xs mb-2 text-primary">Variables</h3>
+                                <div className="space-y-2">
+                                    {Object.entries(displayedVariables).map(([key, value]) => (
+                                        <div key={key} className="flex items-center gap-2">
+                                            <span className="text-[11px] font-medium w-20">{key}</span>
+                                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                                <div 
+                                                    className="h-full bg-gradient-to-r from-primary to-primary-hover rounded-full transition-all duration-500"
+                                                    style={{ width: `${value}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[11px] font-bold w-8 text-right">{value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     {/* Delta Badges */}
                     <div className="pointer-events-none fixed z-40" style={{ top: '64px', left: '280px' }}>
@@ -979,6 +983,19 @@
                             </div>
                         )}
                     </div>
+                    {/* Coach marks: bulle d’aide jaune + assombrissement */}
+                    {showCoach && (
+                        <div className="fixed inset-0 z-50">
+                            <div className="absolute inset-0 overlay-dim" onClick={()=>setShowCoach(false)}></div>
+                            <div className="absolute bottom-40 left-1/2 -translate-x-1/2 coach-bubble rounded-xl p-4 shadow-lg w-[420px]">
+                                <div className="font-bold mb-1">Conseil</div>
+                                <div className="text-sm">Lis le texte puis choisis une réponse. Clique sur « Suivant » s’il n’y a pas de choix. Tu peux masquer le HUD pour te concentrer.</div>
+                                <div className="mt-3 flex justify-end">
+                                    <button className="px-3 py-1 rounded bg-yellow-300 hover:bg-yellow-400 text-sm" onClick={()=>setShowCoach(false)}>Compris</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }

@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node test/ascii-check.js && node test/test-integration-v5.js",
     "summary": "node tools/generate_summary.js --help",
-    "dev": "python -m http.server 8000"
+    "dev": "python -m http.server 8000",
+    "lint": "echo Lint non configuré pour ce projet; ajoutez ESLint si nécessaire"
   }
 }

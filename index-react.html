@@ -130,6 +130,35 @@
     
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+        // Utilitaire: piège à focus pour modales (Tab/Shift+Tab cyclique)
+        function trapFocus(container) {
+            if (!container) return () => {};
+            const selectors = [
+                'a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])'
+            ];
+            const getFocusables = () => Array.from(container.querySelectorAll(selectors.join(',')))
+                .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+            const handler = (e) => {
+                if (e.key !== 'Tab') return;
+                const focusables = getFocusables();
+                if (focusables.length === 0) return;
+                const first = focusables[0];
+                const last = focusables[focusables.length - 1];
+                if (e.shiftKey) {
+                    if (document.activeElement === first || !container.contains(document.activeElement)) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else {
+                    if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            };
+            container.addEventListener('keydown', handler);
+            return () => container.removeEventListener('keydown', handler);
+        }
         
         // ==================== CORE MODULES (Vanilla JS intégrés) ====================
         
@@ -935,11 +964,17 @@
             useEffect(() => {
                 const prevOverflow = document.body.style.overflow;
                 document.body.style.overflow = 'hidden';
+                const prevActive = document.activeElement;
                 if (dialogRef.current) {
                     dialogRef.current.focus();
                 }
+                const cleanupTrap = trapFocus(dialogRef.current);
                 return () => {
                     document.body.style.overflow = prevOverflow;
+                    cleanupTrap && cleanupTrap();
+                    if (prevActive && typeof prevActive.focus === 'function') {
+                        try { prevActive.focus(); } catch {}
+                    }
                 };
             }, []);
             const steps = [
@@ -1096,11 +1131,17 @@
             useEffect(() => {
                 const prevOverflow = document.body.style.overflow;
                 document.body.style.overflow = 'hidden';
+                const prevActive = document.activeElement;
                 if (dialogRef.current) {
                     dialogRef.current.focus();
                 }
+                const cleanupTrap = trapFocus(dialogRef.current);
                 return () => {
                     document.body.style.overflow = prevOverflow;
+                    cleanupTrap && cleanupTrap();
+                    if (prevActive && typeof prevActive.focus === 'function') {
+                        try { prevActive.focus(); } catch {}
+                    }
                 };
             }, []);
             

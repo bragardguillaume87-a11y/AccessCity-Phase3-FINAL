@@ -1308,11 +1308,11 @@
             };
             
             return (
-                <div className="fade-in">
+                <div className="fade-in relative">
                     {/* Exit Button */}
                     <button 
                         onClick={onExit}
-                        className="fixed top-20 right-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all z-50 shadow-lg"
+                        className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all z-50 shadow-lg"
                     >
                         ⏹ Quitter
                     </button>
@@ -1320,7 +1320,7 @@
                     {/* Variables HUD */
                     }
                     {/* HUD Variables optionnel */}
-                    <div className="fixed top-20 left-4 z-50">
+                    <div className="absolute top-4 left-4 z-50">
                         <div className="mb-2 bg-white rounded-lg shadow p-2 inline-flex items-center gap-2">
                             <label className="text-xs text-gray-700">Afficher le HUD</label>
                             <input type="checkbox" checked={showHud} onChange={(e)=>setShowHud(e.target.checked)} />
@@ -1360,7 +1360,7 @@
                         )}
                     </div>
                     {/* Delta Badges */}
-                    <div className="pointer-events-none fixed z-40" style={{ top: '64px', left: '280px' }}>
+                    <div className="pointer-events-none absolute z-40" style={{ top: '64px', left: '280px' }}>
                         {deltas.map((d) => (
                             <div
                                 key={d.id}

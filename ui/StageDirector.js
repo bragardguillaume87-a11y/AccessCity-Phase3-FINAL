@@ -115,7 +115,7 @@ export class StageDirector {
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 200;
+            /* z-index normalized via class */
             background: rgba(220, 53, 69, 0.9);
             color: white;
             border: none;
@@ -128,6 +128,7 @@ export class StageDirector {
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             transition: background 0.2s;
         `;
+        this.exitButton.classList.add('layer-50');
         this.exitButton.addEventListener('mouseenter', () => {
             this.exitButton.style.background = 'rgba(200, 35, 51, 0.95)';
         });

@@ -146,3 +146,38 @@ Si migration vers React/Vue/autre framework :
 - Extraire les tokens dans un fichier `tokens.css` séparé.
 - Créer des composants réutilisables (`Button.jsx`, `Panel.jsx`, etc.) appliquant ces tokens.
 - Conserver la même palette pour cohérence visuelle.
+
+---
+
+## 🧱 Calques (z-index)
+
+Pour éviter les conflits d’empilement et garantir la lisibilité des éléments flottants, nous utilisons des classes sémantiques `.layer-*` au lieu de valeurs `z-*` éparses.
+
+### Règles
+- Ne pas assigner `position: relative` dans `.layer-*` (les composants gèrent leur positionnement).
+- Éviter de mixer `.layer-*` avec des classes Tailwind `z-*`.
+- Attention aux nouveaux stacking contexts (ex: `transform`, `filter`, `opacity < 1`) sur des conteneurs parents.
+
+### Classes utilitaires
+```css
+.layer-10 { z-index: 10; }
+.layer-20 { z-index: 20; }
+.layer-30 { z-index: 30; }
+.layer-40 { z-index: 40; }
+.layer-50 { z-index: 50; }
+```
+
+### Carte des calques (recommandation)
+- Contenu de base (décor, texte non flottant) : défaut (sans classe)
+- Personnages / portraits : `layer-10`
+- Boîte de dialogue : `layer-20`
+- HUD (état du joueur) : `layer-40`
+- Badges delta variables : `layer-50`
+- Overlays / modales / toasts : `layer-50`
+
+### Exemples d’application
+- PlayerMode: bouton Quitter (`layer-50`), HUD (`layer-40`), badges delta (`layer-50`)
+- Modales (Onboarding, CharacterEditor): conteneur fixe en `layer-50`, focus initial, `aria-modal` et verrouillage scroll
+- StageDirector: bouton quitter en `layer-50` (remplacer `z-index` inline)
+
+Ces conventions améliorent la robustesse visuelle et simplifient la maintenance.

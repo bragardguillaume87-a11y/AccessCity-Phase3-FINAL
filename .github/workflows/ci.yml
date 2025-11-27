@@ -1,0 +1,28 @@
+# CI basique — à activer quand vous êtes prêts
+name: CI
+on:
+  push:
+    branches: [ Access-City-5.5a ]
+  pull_request:
+    branches: [ Access-City-5.5a ]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        run: npm ci
+      - name: Lint (placeholder)
+        run: npm run lint
+      - name: Install Playwright (optional)
+        run: |
+          npm i -D @playwright/test || true
+          npx playwright install || true
+      - name: Run E2E tests (optional)
+        run: |
+          npx playwright test || true

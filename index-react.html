@@ -150,10 +150,8 @@
         class VariableManager {
             constructor() {
                 this.variables = {
-                    'Empathie': 50,
-                    'Autonomie': 50,
-                    'Inclusion': 50,
-                    'Stress': 50
+                    'Physique': 100,
+                    'Mentale': 100
                 };
             }
             get(name) {
@@ -296,23 +294,23 @@
                             choices: [
                                 {
                                     text: "Bonjour, je suis tres motive !",
-                                    effects: [{ variable: "Empathie", value: 60, operation: "set" }]
+                                    effects: [{ variable: "Mentale", value: 5, operation: "add" }]
                                 },
                                 {
                                     text: "Je n'ai pas beaucoup de temps.",
-                                    effects: [{ variable: "Empathie", value: 40, operation: "set" }]
+                                    effects: [{ variable: "Mentale", value: -5, operation: "add" }]
                                 }
                             ]
                         },
                         {
                             speaker: "counsellor",
                             text: "C'est formidable de sentir votre enthousiasme !",
-                            conditions: [{ variable: "Empathie", operator: ">=", value: 60 }]
+                            conditions: [{ variable: "Mentale", operator: ">=", value: 95 }]
                         },
                         {
                             speaker: "counsellor",
                             text: "Tres bien, nous allons faire vite alors.",
-                            conditions: [{ variable: "Empathie", operator: "<", value: 60 }]
+                            conditions: [{ variable: "Mentale", operator: "<", value: 95 }]
                         },
                         {
                             speaker: "narrator",
@@ -383,7 +381,7 @@
             const [characters, setCharacters] = useState(SAMPLE_DATA.characters);
             const [selectedSceneId, setSelectedSceneId] = useState(null);
             const [selectedSceneForEdit, setSelectedSceneForEdit] = useState(null);
-            const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Inclusion: 50, Stress: 50 });
+            const [variables, setVariables] = useState({ Physique: 100, Mentale: 100 });
             const [backgroundsHistory, setBackgroundsHistory] = useState([]); // derniers décors choisis
             const [editingCharacter, setEditingCharacter] = useState(null);
             // UI layouts chargés depuis data/ui_layout.json
@@ -394,6 +392,16 @@
             const [showHint, setShowHint] = useState(false);
             // Studio workflow steps (théâtre): Contexte → Personnages → Scènes → Dialogues → Prévisualisation → Export
             const studioSteps = ['Contexte', 'Personnages', 'Scènes', 'Dialogues', 'Prévisualisation', 'Export'];
+            // Contexte form state
+            const [contextTitle, setContextTitle] = useState('');
+            const [contextErrors, setContextErrors] = useState({ title: '' });
+            // Toast notifications
+            const [toast, setToast] = useState(null);
+            
+            const showToast = (message, type = 'info') => {
+                setToast({ message, type });
+                setTimeout(() => setToast(null), 2500);
+            };
             const [stepStatus, setStepStatus] = useState(() => {
                 // initial: étape 0 en cours, les autres non démarrées
                 return [1, 0, 0, 0, 0, 0];
@@ -407,7 +415,7 @@
                     return next;
                 });
             };
-            const [currentStep, setCurrentStep] = useState(1); // Démarre sur Personnages
+            const [currentStep, setCurrentStep] = useState(0); // Démarre sur Contexte
             const [showSidePreview, setShowSidePreview] = useState(() => {
                 const saved = window.localStorage.getItem('ac_showSidePreview');
                 return saved === 'true';
@@ -613,16 +621,6 @@
                                         ← Retour à l'éditeur
                                     </button>
                                     <p className="text-sm text-gray-600">Mode Joueur</p>
-                                </div>
-                            )}
-                            {/* Toasts */}
-                            {toasts.length > 0 && (
-                                <div className="fixed top-4 right-4 z-50 space-y-2" role="status" aria-live="polite">
-                                    {toasts.map(t => (
-                                        <div key={t.id} className={`px-4 py-2 rounded shadow text-white ${t.type === 'warn' ? 'bg-amber-600' : t.type === 'success' ? 'bg-emerald-600' : 'bg-slate-700'}`}>
-                                            {t.message}
-                                        </div>
-                                    ))}
                                 </div>
                             )}
                             {/* HUD Objectif + aide */}
@@ -905,6 +903,20 @@
                             <OnboardingModal 
                                 onClose={() => { window.localStorage.setItem('ac_onboarded','true'); setShowOnboarding(false); }}
                             />
+                        )}
+                        {/* Toast notifications */}
+                        {toast && (
+                            <div 
+                                role="status" 
+                                aria-live="polite" 
+                                className={`fixed bottom-6 right-6 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50 ${
+                                    toast.type === 'success' ? 'bg-green-600' : 
+                                    toast.type === 'warn' ? 'bg-yellow-600' : 
+                                    'bg-blue-600'
+                                }`}
+                            >
+                                {toast.message}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -1237,7 +1249,7 @@
             const [currentDialogue, setCurrentDialogue] = useState(null);
             const [displayedVariables, setDisplayedVariables] = useState(variables);
             const [deltas, setDeltas] = useState([]);
-            const [showHud, setShowHud] = useState(false);
+            const [showHud, setShowHud] = useState(true); // Visible par défaut
             const [showCoach, setShowCoach] = useState(true);
             
             useEffect(() => {
@@ -1314,21 +1326,35 @@
                             <input type="checkbox" checked={showHud} onChange={(e)=>setShowHud(e.target.checked)} />
                         </div>
                         {showHud && (
-                            <div className="bg-white rounded-lg shadow-lg p-3 w-56">
-                                <h3 className="font-bold text-xs mb-2 text-primary">Variables</h3>
-                                <div className="space-y-2">
-                                    {Object.entries(displayedVariables).map(([key, value]) => (
-                                        <div key={key} className="flex items-center gap-2">
-                                            <span className="text-[11px] font-medium w-20">{key}</span>
-                                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                                <div 
-                                                    className="h-full bg-gradient-to-r from-primary to-primary-hover rounded-full transition-all duration-500"
-                                                    style={{ width: `${value}%` }}
-                                                />
+                            <div className="bg-white rounded-lg shadow-lg p-3 w-64">
+                                <h3 className="font-bold text-sm mb-3 text-primary flex items-center gap-2">
+                                    <span>🎯</span>
+                                    <span>État du joueur</span>
+                                </h3>
+                                <div className="space-y-3">
+                                    {Object.entries(displayedVariables).map(([key, value]) => {
+                                        const icon = key === 'Physique' ? '💪' : key === 'Mentale' ? '🧠' : '📊';
+                                        const color = value > 66 ? 'from-green-500 to-green-600' : 
+                                                     value > 33 ? 'from-yellow-500 to-yellow-600' : 
+                                                     'from-red-500 to-red-600';
+                                        return (
+                                            <div key={key} className="flex items-center gap-2">
+                                                <span className="text-lg">{icon}</span>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between mb-1">
+                                                        <span className="text-xs font-semibold text-gray-700">{key}</span>
+                                                        <span className="text-xs font-bold text-gray-900">{value}/100</span>
+                                                    </div>
+                                                    <div className="bg-gray-200 rounded-full h-3 shadow-inner">
+                                                        <div 
+                                                            className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-500 shadow-sm`}
+                                                            style={{ width: `${value}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <span className="text-[11px] font-bold w-8 text-right">{value}</span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -1408,7 +1434,8 @@
         
         // ==================== RENDER ====================
         
-        ReactDOM.render(<App />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>

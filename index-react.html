@@ -382,7 +382,9 @@
             const [scenes, setScenes] = useState(SAMPLE_DATA.scenes);
             const [characters, setCharacters] = useState(SAMPLE_DATA.characters);
             const [selectedSceneId, setSelectedSceneId] = useState(null);
+            const [selectedSceneForEdit, setSelectedSceneForEdit] = useState(null);
             const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Inclusion: 50, Stress: 50 });
+            const [backgroundsHistory, setBackgroundsHistory] = useState([]); // derniers décors choisis
             const [editingCharacter, setEditingCharacter] = useState(null);
             // UI layouts chargés depuis data/ui_layout.json
             const [uiLayouts, setUiLayouts] = useState(null);
@@ -390,10 +392,63 @@
             const [showOnboarding, setShowOnboarding] = useState(false);
             const [objective, setObjective] = useState("Parler au conseiller à la mairie");
             const [showHint, setShowHint] = useState(false);
-            // Studio workflow steps
-            const studioSteps = ['Contexte', 'Personnages', 'Dialogues', 'Prévisualisation', 'Export'];
+            // Studio workflow steps (théâtre): Contexte → Personnages → Scènes → Dialogues → Prévisualisation → Export
+            const studioSteps = ['Contexte', 'Personnages', 'Scènes', 'Dialogues', 'Prévisualisation', 'Export'];
+            const [stepStatus, setStepStatus] = useState(() => {
+                // initial: étape 0 en cours, les autres non démarrées
+                return [1, 0, 0, 0, 0, 0];
+            });
+            const badgeFor = (status) => status === 2 ? '✓' : status === 1 ? '●' : '○';
+            const gotoStep = (idx) => {
+                setCurrentStep(idx);
+                setStepStatus(prev => {
+                    const next = [...prev];
+                    next[idx] = next[idx] === 2 ? 2 : 1;
+                    return next;
+                });
+            };
             const [currentStep, setCurrentStep] = useState(1); // Démarre sur Personnages
-            const [showSidePreview, setShowSidePreview] = useState(false);
+            const [showSidePreview, setShowSidePreview] = useState(() => {
+                const saved = window.localStorage.getItem('ac_showSidePreview');
+                return saved === 'true';
+            });
+                        // Navigation helpers
+                        const prevStep = () => {
+                            setCurrentStep((idx) => {
+                                const nextIdx = Math.max(0, idx - 1);
+                                setStepStatus((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = next[idx] === 2 ? 2 : 1; // conserve l'état de l'étape quittee
+                                    next[nextIdx] = 1; // étape cible en cours
+                                    return next;
+                                });
+                                return nextIdx;
+                            });
+                        };
+                        const nextStep = () => {
+                            setCurrentStep((idx) => {
+                                // Validation gating for Contexte (step 0)
+                                if (idx === 0) {
+                                    const errs = { title: '' };
+                                    if (!contextTitle || contextTitle.trim().length === 0) {
+                                        errs.title = 'Le titre est requis.';
+                                    }
+                                    setContextErrors(errs);
+                                    if (errs.title) {
+                                        showToast('Veuillez renseigner le titre du scénario.', 'warn');
+                                        return idx; // block advance
+                                    }
+                                }
+                                const nextIdx = Math.min(studioSteps.length - 1, idx + 1);
+                                setStepStatus((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = 2; // étape actuelle terminée
+                                    next[nextIdx] = next[nextIdx] === 2 ? 2 : 1; // prochaine en cours
+                                    return next;
+                                });
+                                return nextIdx;
+                            });
+                        };
             
             const eventBusRef = useRef(new EventBus());
             const variableManagerRef = useRef(new VariableManager());
@@ -453,6 +508,51 @@
                 setCharacters([...characters, newChar]);
                 setEditingCharacter(newChar);
             };
+
+            // Scenes CRUD helpers
+            const addScene = () => {
+                const newId = `scene_${Date.now()}`;
+                const newScene = { id: newId, title: 'Nouvelle scène', description: '', backgroundUrl: '', dialogues: [] };
+                setScenes(prev => [...prev, newScene]);
+                setSelectedSceneForEdit(newId);
+                showToast('Scène ajoutée', 'success');
+            };
+            const removeScene = (sceneId) => {
+                if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette scène ?')) return;
+                setScenes(prev => prev.filter(s => s.id !== sceneId));
+                if (selectedSceneForEdit === sceneId) setSelectedSceneForEdit(null);
+                if (selectedSceneId === sceneId) setSelectedSceneId(null);
+                showToast('Scène supprimée', 'warn');
+            };
+            const updateScene = (sceneId, patch) => {
+                setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, ...patch } : s));
+                if (patch && typeof patch.backgroundUrl === 'string') {
+                    const url = patch.backgroundUrl.trim();
+                    if (url) {
+                        setBackgroundsHistory(prev => {
+                            const next = [url, ...prev.filter(u => u !== url)];
+                            return next.slice(0, 6);
+                        });
+                    }
+                }
+            };
+
+            // Export helpers
+            const exportJson = (filename, data) => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast(`Fichier ${filename} téléchargé`, 'success');
+            };
+            const exportScenes = () => exportJson('scenes.json', scenes);
+            const exportCharacters = () => exportJson('characters.json', characters);
+            const exportCore = () => exportJson('core_system.json', { title: contextTitle || 'Sans titre' });
             
             return (
                 <div className="min-h-screen">
@@ -471,16 +571,21 @@
                                         {studioSteps.map((step, idx) => (
                                             <button
                                                 key={idx}
-                                                onClick={() => setCurrentStep(idx)}
-                                                className={'px-5 py-4 whitespace-nowrap transition-all ' + (currentStep === idx ? 'tab-active' : 'text-gray-600 hover:bg-gray-50')}
+                                                onClick={() => gotoStep(idx)}
+                                                className={'px-5 py-4 whitespace-nowrap transition-all flex items-center gap-2 ' + (currentStep === idx ? 'tab-active' : 'text-gray-600 hover:bg-gray-50')}
                                             >
-                                                {idx + 1}. {step}
+                                                <span className={stepStatus[idx] === 2 ? 'text-green-600' : stepStatus[idx] === 1 ? 'text-blue-600' : 'text-gray-500'}>{badgeFor(stepStatus[idx])}</span>
+                                                <span>{idx + 1}. {step}</span>
                                             </button>
                                         ))}
                                     </div>
                                     <div className="flex gap-2 items-center">
                                         <button
-                                            onClick={() => setShowSidePreview(v => !v)}
+                                            onClick={() => setShowSidePreview(v => {
+                                                const next = !v;
+                                                window.localStorage.setItem('ac_showSidePreview', next.toString());
+                                                return next;
+                                            })}
                                             className="px-3 py-2 text-sm rounded bg-primary text-white hover:bg-primary-hover whitespace-nowrap"
                                         >
                                             {showSidePreview ? '📐 Masquer préview' : '👁️ Afficher préview'}
@@ -508,6 +613,16 @@
                                         ← Retour à l'éditeur
                                     </button>
                                     <p className="text-sm text-gray-600">Mode Joueur</p>
+                                </div>
+                            )}
+                            {/* Toasts */}
+                            {toasts.length > 0 && (
+                                <div className="fixed top-4 right-4 z-50 space-y-2" role="status" aria-live="polite">
+                                    {toasts.map(t => (
+                                        <div key={t.id} className={`px-4 py-2 rounded shadow text-white ${t.type === 'warn' ? 'bg-amber-600' : t.type === 'success' ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                                            {t.message}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                             {/* HUD Objectif + aide */}
@@ -541,7 +656,16 @@
                                             <p className="text-gray-600 mb-6">🎬 Définis le cadre de ton scénario</p>
                                             <div className="mb-4">
                                                 <label className="block text-sm font-semibold mb-2">Titre du scénario</label>
-                                                <input type="text" placeholder="Ex: Aventure à la mairie" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none" />
+                                                <input 
+                                                    type="text" 
+                                                    value={contextTitle}
+                                                    onChange={(e)=>{ setContextTitle(e.target.value); if (contextErrors.title) setContextErrors({ ...contextErrors, title: '' }); }}
+                                                    placeholder="Ex: Aventure à la mairie" 
+                                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:border-primary focus:outline-none ${contextErrors.title ? 'border-red-400' : 'border-gray-200'}`}
+                                                />
+                                                {contextErrors.title && (
+                                                    <p className="text-red-600 text-xs mt-1">{contextErrors.title}</p>
+                                                )}
                                             </div>
                                             <div className="grid md:grid-cols-2 gap-4 mb-4">
                                                 <div>
@@ -562,7 +686,10 @@
                                                 <textarea rows="4" placeholder="Décris la situation..." className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none resize-none" />
                                             </div>
                                             <p className="text-xs text-gray-500 mb-4">Note: Ces données seront sauvegardées dans data/core_system.json lors de l'export.</p>
-                                            <button onClick={() => setCurrentStep(1)} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold">Suivant →</button>
+                                            <div className="flex justify-between mt-6">
+                                                <div />
+                                                <button onClick={nextStep} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold focus:ring-2 focus:ring-primary">Suivant →</button>
+                                            </div>
                                         </div>
                                     )}
                                     {currentStep === 1 && (
@@ -588,35 +715,137 @@
                                     )}
                                     {currentStep === 2 && (
                                         <div className="bg-white rounded-xl shadow-md p-8">
-                                            <h2 className="text-2xl font-bold mb-2">Étape 3 : Dialogues</h2>
-                                            <p className="text-gray-600 mb-6">💬 Compose tes dialogues et choix</p>
-                                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
-                                                <p className="text-blue-800">💡 Pour l'instant, utilise l'onglet <strong>Personnages</strong> pour ajouter des chapitres et dialogues via l'interface actuelle.</p>
-                                                <p className="text-sm text-blue-700 mt-2">Un éditeur de dialogues visuel sera ajouté prochainement (structure compatible data/scenes.json).</p>
+                                            <h2 className="text-2xl font-bold mb-2">Étape 3 : Scènes</h2>
+                                            <p className="text-gray-600 mb-6">🏟️ Configure les lieux et chapitres (décors), lance avec ▶</p>
+                                            <div className="grid md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold mb-3 text-primary">📋 Liste des scènes</h3>
+                                                    <div className="space-y-2">
+                                                        {scenes.map(scene => (
+                                                            <div key={scene.id} className="border-2 border-gray-200 rounded-lg p-3 hover:border-primary transition-all">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <input 
+                                                                                className="font-semibold flex-1 border-b border-gray-200 focus:border-primary outline-none bg-transparent"
+                                                                                value={scene.title}
+                                                                                onChange={(e)=>updateScene(scene.id, { title: e.target.value })}
+                                                                            />
+                                                                            <button
+                                                                                onClick={()=>setSelectedSceneForEdit(scene.id)}
+                                                                                className={`text-xs px-2 py-1 rounded ${selectedSceneForEdit===scene.id?'bg-primary text-white':'bg-gray-100 text-gray-700'}`}
+                                                                            >Configurer</button>
+                                                                            <button
+                                                                                onClick={()=>removeScene(scene.id)}
+                                                                                className="text-xs px-2 py-1 rounded bg-red-500 text-white"
+                                                                            >Supprimer</button>
+                                                                        </div>
+                                                                        <p className="text-xs text-gray-500">{scene.dialogues.length} dialogues</p>
+                                                                    </div>
+                                                                    <button 
+                                                                        onClick={() => playScene(scene.id)}
+                                                                        className="bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary-hover transition-all text-sm focus:ring-2 focus:ring-primary"
+                                                                        aria-label="Lancer la scène"
+                                                                    >▶</button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="mt-3">
+                                                        <button onClick={addScene} className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 text-sm">+ Ajouter une scène</button>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold mb-3 text-primary">🎭 Décor / Lieu</h3>
+                                                    {selectedSceneForEdit ? (
+                                                        <div className="space-y-3">
+                                                            <div className="border-2 border-gray-200 rounded-lg p-4">
+                                                                <label className="block text-sm font-semibold mb-2">URL du décor (image)</label>
+                                                                <input 
+                                                                    type="text"
+                                                                    className="w-full px-3 py-2 border-2 border-gray-200 rounded focus:border-primary outline-none"
+                                                                    placeholder="assets/backgrounds/city.jpg ou URL"
+                                                                    value={scenes.find(s=>s.id===selectedSceneForEdit)?.backgroundUrl || ''}
+                                                                    onChange={(e)=>updateScene(selectedSceneForEdit, { backgroundUrl: e.target.value })}
+                                                                />
+                                                            </div>
+                                                            {/* Galerie d'assets depuis assets/backgrounds */}
+                                                            <div className="border-2 border-gray-200 rounded-lg p-4">
+                                                                <p className="text-sm font-semibold mb-2">Galerie de décors</p>
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                                    {['assets/backgrounds/city_street.svg'].map((bg) => (
+                                                                        <button key={bg} onClick={()=>updateScene(selectedSceneForEdit, { backgroundUrl: bg })} className="rounded overflow-hidden border hover:border-primary">
+                                                                            <img src={bg} alt="bg" className="w-full h-24 object-cover" />
+                                                                            <div className="text-[11px] px-2 py-1 text-left text-gray-600">{bg.split('/').slice(-1)[0]}</div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            {backgroundsHistory.length > 0 && (
+                                                                <div className="border-2 border-gray-200 rounded-lg p-4">
+                                                                    <p className="text-sm font-semibold mb-2">Décors récents</p>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {backgroundsHistory.map((bg)=> (
+                                                                            <button key={bg} onClick={()=>updateScene(selectedSceneForEdit, { backgroundUrl: bg })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">
+                                                                                {bg}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            <div className="border-2 border-gray-200 rounded-lg p-4">
+                                                                <p className="text-sm text-gray-600 mb-2">Aperçu du décor</p>
+                                                                {scenes.find(s=>s.id===selectedSceneForEdit)?.backgroundUrl ? (
+                                                                    <img src={scenes.find(s=>s.id===selectedSceneForEdit)?.backgroundUrl} alt="Décor" className="w-full max-h-64 object-cover rounded" />
+                                                                ) : (
+                                                                    <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-sm">Aucune image</div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="border-2 border-gray-200 rounded-lg p-4 text-sm text-gray-600">
+                                                            Sélectionne une scène dans la liste pour configurer son décor.
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex gap-3">
-                                                <button onClick={() => setCurrentStep(1)} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold">← Précédent</button>
-                                                <button onClick={() => setCurrentStep(3)} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold">Suivant →</button>
+                                            <div className="flex gap-3 mt-6">
+                                                <button onClick={prevStep} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold focus:ring-2 focus:ring-gray-400">← Précédent</button>
+                                                <button onClick={nextStep} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold focus:ring-2 focus:ring-primary">Suivant →</button>
                                             </div>
                                         </div>
                                     )}
                                     {currentStep === 3 && (
                                         <div className="bg-white rounded-xl shadow-md p-8">
-                                            <h2 className="text-2xl font-bold mb-2">Étape 4 : Prévisualisation</h2>
+                                            <h2 className="text-2xl font-bold mb-2">Étape 4 : Dialogues</h2>
+                                            <p className="text-gray-600 mb-6">💬 Compose tes dialogues et choix</p>
+                                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
+                                                <p className="text-blue-800">💡 Pour l'instant, utilise l'étape <strong>Scènes</strong> ou le panneau <strong>Personnages</strong> pour ajouter des dialogues via l'interface actuelle.</p>
+                                                <p className="text-sm text-blue-700 mt-2">Un éditeur de dialogues visuel sera ajouté prochainement (structure compatible data/scenes.json).</p>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <button onClick={prevStep} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold focus:ring-2 focus:ring-gray-400">← Précédent</button>
+                                                <button onClick={nextStep} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold focus:ring-2 focus:ring-primary">Suivant →</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {currentStep === 4 && (
+                                        <div className="bg-white rounded-xl shadow-md p-8">
+                                            <h2 className="text-2xl font-bold mb-2">Étape 5 : Prévisualisation</h2>
                                             <p className="text-gray-600 mb-6">🎮 Teste ton scénario en temps réel</p>
                                             <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-4">
                                                 <p className="text-green-800">✅ Clique sur <strong>"Afficher préview"</strong> en haut à droite pour ouvrir la prévisualisation agrandie.</p>
                                                 <p className="text-sm text-green-700 mt-2">Ou utilise le bouton ▶ d'un chapitre pour passer en mode Joueur plein écran.</p>
                                             </div>
                                             <div className="flex gap-3">
-                                                <button onClick={() => setCurrentStep(2)} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold">← Précédent</button>
-                                                <button onClick={() => setCurrentStep(4)} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold">Suivant →</button>
+                                                <button onClick={prevStep} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold focus:ring-2 focus:ring-gray-400">← Précédent</button>
+                                                <button onClick={nextStep} className="btn-primary text-white px-6 py-3 rounded-lg font-semibold focus:ring-2 focus:ring-primary">Suivant →</button>
                                             </div>
                                         </div>
                                     )}
-                                    {currentStep === 4 && (
+                                    {currentStep === 5 && (
                                         <div className="bg-white rounded-xl shadow-md p-8">
-                                            <h2 className="text-2xl font-bold mb-2">Étape 5 : Export</h2>
+                                            <h2 className="text-2xl font-bold mb-2">Étape 6 : Export</h2>
                                             <p className="text-gray-600 mb-6">📥 Exporte ton scénario complet</p>
                                             <div className="space-y-3 mb-6">
                                                 <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
@@ -626,10 +855,14 @@
                                                     <p className="font-semibold">Scènes: {scenes.length}</p>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-gray-500 mb-4">L'export générera les fichiers data/characters.json, data/scenes.json, data/core_system.json compatibles avec le moteur AccessCity.</p>
-                                            <button className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 font-semibold">📥 Télécharger JSON</button>
+                                            <p className="text-xs text-gray-500 mb-4">Télécharge séparément les fichiers JSON compatibles AccessCity (import possibles dans GDevelop).</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button onClick={exportScenes} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-semibold focus:ring-2 focus:ring-green-400">📥 scenes.json</button>
+                                                <button onClick={exportCharacters} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-semibold focus:ring-2 focus:ring-green-400">📥 characters.json</button>
+                                                <button onClick={exportCore} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-semibold focus:ring-2 focus:ring-green-400">📥 core_system.json</button>
+                                            </div>
                                             <div className="mt-4">
-                                                <button onClick={() => setCurrentStep(3)} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold">← Précédent</button>
+                                                <button onClick={prevStep} className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-semibold focus:ring-2 focus:ring-gray-400">← Précédent</button>
                                             </div>
                                         </div>
                                     )}
@@ -1115,7 +1348,11 @@
                     {/* Stage */}
                     <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ minHeight: '600px' }}>
                         {/* Background */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900" />
+                        {scene?.backgroundUrl ? (
+                            <img src={scene.backgroundUrl} alt="Décor" className="stage-background" />
+                        ) : (
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900" />
+                        )}
                         
                         {/* Dialogue Box */}
                         {currentDialogue && (

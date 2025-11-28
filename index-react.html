@@ -123,7 +123,27 @@
             .layer-30 { z-index: 30; }
             .layer-40 { z-index: 40; }
             .layer-50 { z-index: 50; }
+        /* Placeholder instrumentation (non fiable, demonstration seulement) */
+        /* Active si parametre d'URL ?covPlaceholder=1 */
     </style>
+    <script>
+        (function(){
+            if (location.search.includes('covPlaceholder=1')) {
+                // Structure minimale de l'objet Istanbul pour ne pas casser les outils.
+                // Ceci n'est PAS une vraie couverture : juste un marqueur.
+                window.__coverage__ = window.__coverage__ || {
+                    placeholder: true,
+                    // Clé factice pour illustrer : index-react.html
+                    'index-react.html': {
+                        path: 'index-react.html',
+                        statementMap: {}, fnMap: {}, branchMap: {},
+                        s: {}, f: {}, b: {}
+                    }
+                };
+                console.log('[covPlaceholder] window.__coverage__ initialisé (démonstration).');
+            }
+        })();
+    </script>
 </head>
 <body class="bg-gray-50">
     <div id="root"></div>

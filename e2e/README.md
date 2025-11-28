@@ -104,9 +104,18 @@ npx playwright test --headed
 Le workflow `.github/workflows/ci.yml` exécute automatiquement les tests e2e sur push/PR.
 Les artefacts sont uploadés en cas d'échec pour diagnostic.
 
+### Couverture de code navigateur
+
+- **Hook**: `e2e/coverage-hook.ts` récupère `window.__coverage__` après chaque test
+- **Stockage**: `coverage/browser/*.json` (uniquement si code instrumenté)
+- **Fusion**: `npm run coverage:merge` combine Node + navigateur → `coverage/merged/`
+- **État actuel**: Placeholder actif (`?covPlaceholder=1`), instrumentation réelle à venir
+- **Roadmap**: Consulter `docs/COVERAGE_ROADMAP.md` pour migration Vite + vite-plugin-istanbul
+
 ---
 
 **Ressources**:
 - Template prompt: `docs/E2E_PROMPT_TEMPLATE.md`
 - Config Playwright: `playwright.config.ts`
+- Roadmap couverture: `docs/COVERAGE_ROADMAP.md`
 - Documentation officielle: https://playwright.dev

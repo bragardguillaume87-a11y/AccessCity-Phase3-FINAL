@@ -2,8 +2,10 @@
 ## [Unreleased]
 ### Added
 - Browser coverage hook (`e2e/coverage-hook.ts`) collecting `window.__coverage__` when instrumentation is present.
-- Coverage merge script (`tools/merge_coverage.js`) and npm script `coverage:merge` producing unified lcov + HTML.
+- Coverage merge script (`tools/merge_coverage.cjs`) and npm script `coverage:merge` producing unified lcov + HTML.
 - Scripts section in root `README.md` documenting coverage workflow.
+- Placeholder instrumentation in `index-react.html` via `?covPlaceholder=1` (demo only).
+- Comprehensive coverage roadmap (`docs/COVERAGE_ROADMAP.md`) explaining migration path to Vite + real instrumentation.
 ## [5.5.0] - 2025-11-23
 ### Added
 - **VariableManager**: Typed narrative variables (number, boolean, string) with min/max clamping.

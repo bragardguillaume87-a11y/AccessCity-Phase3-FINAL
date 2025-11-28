@@ -11,6 +11,7 @@ Narrative scene editor for non-coders. Data-driven architecture.
 - `docs/AccessCity_Agentic_Workflow.md` - Development workflow
 - `docs/CHANGELOG.md` - Version history
 - `docs/SUMMARY_AUTOMATION.md` - Conversation summary generator
+- `docs/COVERAGE_ROADMAP.md` - Plan couverture de code complète (Node + navigateur)
 
 ## Testing
 ```bash

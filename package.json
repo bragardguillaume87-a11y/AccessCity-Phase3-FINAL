@@ -8,11 +8,14 @@
     "dev": "python -m http.server 8000",
     "lint": "echo Lint non configuré pour ce projet; ajoutez ESLint si nécessaire",
     "e2e": "playwright test",
-    "e2e:install": "playwright install --with-deps"
+    "e2e:install": "playwright install --with-deps",
+    "coverage": "c8 --reporter=text --reporter=lcov npm test",
+    "coverage:html": "c8 --reporter=html npm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
     "@types/node": "^24.10.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "c8": "^9.1.0"
   }
 }

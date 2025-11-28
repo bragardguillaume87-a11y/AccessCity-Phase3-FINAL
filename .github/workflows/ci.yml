@@ -32,6 +32,17 @@ jobs:
       - name: Run integration/unit tests
         run: npm test
 
+      - name: Run coverage (c8)
+        run: npm run coverage
+
+      - name: Upload coverage report (lcov)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: ignore
+
       - name: Run E2E tests (Playwright)
         run: npm run e2e -- --reporter=list
 

@@ -117,12 +117,13 @@ vite.config.js       ← Configuration Vite (port 5173, React plugin)
 1. ✅ Hook `useDialogueEngine` ajouté (`src/hooks/useDialogueEngine.js`)
 2. ✅ `App.jsx` utilise maintenant une scène initiale `initialScene` passée au moteur
 3. ✅ Variables narratives gérées par `VariableManager` (Physique, Mentale, Alerte)
-4. ✅ HUD simplifié React affiche snapshot variables (mise à jour instantanée)
-5. 🔄 Pour modifier la scène: édite `initialScene` dans `App.jsx` (dialogues / choices / effets)
-6. 🧪 Tester effets: choisir "Boost Mentale" ou "Fatigue Physique" et observer HUD sans rechargement
-7. ♻️ Reset moteur rapide: bouton "Recharger (reset)" (remontée simple via reload pour démo — prochain pas: fonction de reset interne)
+4. ✅ HUD React dédié (`src/components/VariablesHUD.jsx`)
+5. ✅ Reset moteur sans reload via `reset()` (restaure variables + relance scène)
+6. 🧪 Tester effets: choisir "Boost Mentale" ou "Fatigue Physique" et observer HUD instantané
+7. 🔍 EventLog (`src/components/EventLogPanel.jsx`) pour tracer `dialogue_show`, `choices_show`, `scene_end`, `variable_changed`
+8. 🔄 Pour modifier la scène: édite `initialScene` dans `App.jsx` (dialogues / choices / effets)
 
-**Avantage** : Passage de maquette statique à logique dynamique alimentée par le vrai moteur → tests de scénarios plus réalistes avec HMR.
+**Avantage** : Environnement interactif complet: édition, exécution, observation événements et état sans cycle de rechargement.
 
 ### Phase 3 : Instrumentation couverture
 

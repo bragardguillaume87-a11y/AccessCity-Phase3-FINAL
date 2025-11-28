@@ -74,6 +74,17 @@ export function useDialogueEngine(initialScene) {
     engineRef.current?.selectChoice(choice);
   }, []);
 
+  const reset = useCallback(() => {
+    if (!engineRef.current) return;
+    setSceneEnded(false);
+    setChoices([]);
+    setDialogue({ speaker: '', text: '' });
+    // Reset variables to defaults
+    const defs = varManagerRef.current.getDefinitions?.() || {};
+    Object.keys(defs).forEach(name => varManagerRef.current.set(name, defs[name].defaultValue));
+    engineRef.current.startScene(initialScene);
+  }, [initialScene]);
+
   return {
     dialogue,
     choices,
@@ -81,5 +92,7 @@ export function useDialogueEngine(initialScene) {
     sceneEnded,
     next,
     selectChoice,
+    reset,
+    eventBus: eventBusRef.current,
   };
 }

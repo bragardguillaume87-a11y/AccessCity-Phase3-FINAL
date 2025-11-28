@@ -12,6 +12,9 @@ export class DialogueArea extends HTMLElement {
         if (!this.hasAttribute('data-variant')) {
             this.setAttribute('data-variant', 'panel');
         }
+        // Attributs accessibilité de base
+        if (!this.hasAttribute('role')) this.setAttribute('role', 'dialog');
+        if (!this.hasAttribute('aria-live')) this.setAttribute('aria-live', 'polite');
         this.render();
     }
 

@@ -231,11 +231,13 @@
                 this.conditionEvaluator = new ConditionEvaluator(variableManager);
                 this.currentScene = null;
                 this.currentDialogueIndex = 0;
+                this.isSceneEnded = false;
             }
             
             loadScene(scene) {
                 this.currentScene = scene;
                 this.currentDialogueIndex = 0;
+                this.isSceneEnded = false;
                 this.showCurrentDialogue();
             }
             
@@ -257,6 +259,7 @@
                     this.currentDialogueIndex++;
                 }
                 
+                this.isSceneEnded = true;
                 this.eventBus.emit('scene:complete', { sceneId: this.currentScene.id });
             }
             
@@ -1334,6 +1337,7 @@
             const [deltas, setDeltas] = useState([]);
             const [showHud, setShowHud] = useState(true); // Visible par défaut
             const [showCoach, setShowCoach] = useState(true);
+            const [sceneEnded, setSceneEnded] = useState(false);
             
             useEffect(() => {
                 const handleDialogue = (data) => {
@@ -1345,10 +1349,16 @@
                 };
                 
                 const handleSceneComplete = () => {
-                    setTimeout(() => {
-                        alert('Scène terminée !');
-                        onExit();
-                    }, 500);
+                    // Marquer la fin et conserver le player pour permettre une sortie contrôlée
+                    dialogueEngine.isSceneEnded = true;
+                    setSceneEnded(true);
+                    // Injecter un dialogue de fin lisible (sans choix ni bouton suivant)
+                    setCurrentDialogue({ speaker: 'narrator', text: 'Scène terminée.', choices: [] });
+                    // Focus sur le bouton quitter pour accessibilité
+                    requestAnimationFrame(() => {
+                        const exitBtn = document.getElementById('exit-player-btn');
+                        if (exitBtn) exitBtn.focus();
+                    });
                 };
                 
                 eventBus.on('dialogue:show', handleDialogue);
@@ -1366,6 +1376,9 @@
                 eventBus.on('variables:delta', handleVariablesDelta);
                 eventBus.on('scene:complete', handleSceneComplete);
                 
+                // (Re)initialiser l'état de fin de scène et charger
+                setSceneEnded(false);
+                dialogueEngine.isSceneEnded = false;
                 dialogueEngine.loadScene(scene);
                 
                 return () => {
@@ -1394,6 +1407,7 @@
                 <div className="fade-in relative">
                     {/* Exit Button */}
                     <button 
+                        id="exit-player-btn"
                         onClick={onExit}
                         className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all layer-50 shadow-lg"
                     >
@@ -1465,35 +1479,46 @@
                         
                         {/* Dialogue Box */}
                         {currentDialogue && (
-                            <div className="dialogue-box">
-                                <div className="mb-3">
-                                    <span className="font-semibold text-primary-hover text-lg">
-                                        {getSpeakerName(currentDialogue.speaker)}
-                                    </span>
-                                </div>
-                                <p className="text-base leading-relaxed mb-4">{currentDialogue.text}</p>
-                                
-                                {currentDialogue.choices && currentDialogue.choices.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {currentDialogue.choices.map((choice, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => handleChoice(choice)}
-                                                className="choice-btn w-full"
-                                            >
-                                                → {choice.text}
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={handleNext}
-                                            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-hover transition-all"
-                                        >
-                                            Suivant →
-                                        </button>
-                                    </div>
+                            <div 
+                                className="dialogue-box"
+                                data-scene-ended={sceneEnded ? 'true' : 'false'}
+                            >
+                                {!sceneEnded && (
+                                    <>
+                                        <div className="mb-3">
+                                            <span className="font-semibold text-primary-hover text-lg">
+                                                {getSpeakerName(currentDialogue.speaker)}
+                                            </span>
+                                        </div>
+                                        <p className="text-base leading-relaxed mb-4">{currentDialogue.text}</p>
+                                        {currentDialogue.choices && currentDialogue.choices.length > 0 ? (
+                                            <div className="space-y-2" role="group" aria-label="Choix disponibles">
+                                                {currentDialogue.choices.map((choice, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => handleChoice(choice)}
+                                                        className="choice-btn w-full"
+                                                        aria-label={`Choix ${idx + 1}: ${choice.text}`}
+                                                    >
+                                                        → {choice.text}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={handleNext}
+                                                    className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-hover transition-all"
+                                                    aria-label="Passer au dialogue suivant"
+                                                >
+                                                    Suivant →
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                {sceneEnded && (
+                                    <p className="text-base leading-relaxed mb-2" role="status" aria-live="polite">Scène terminée.</p>
                                 )}
                             </div>
                         )}
@@ -1519,6 +1544,73 @@
         
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+    // E2E overlay d'instructions: visible avec ?e2e=1 et contrôlable via window.__E2E_STEP__
+    (function() {
+        const params = new URLSearchParams(location.search);
+        const enabled = params.get('e2e') === '1';
+        const overlay = document.createElement('div');
+        overlay.id = 'e2e-overlay';
+        overlay.setAttribute('role', 'status');
+        overlay.setAttribute('aria-live', 'polite');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.zIndex = '9999';
+        overlay.style.background = 'rgba(14, 99, 156, 0.95)';
+        overlay.style.color = '#fff';
+        overlay.style.padding = '8px 12px';
+        overlay.style.font = '600 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+        overlay.style.boxShadow = '0 2px 6px rgba(0,0,0,.2)';
+        overlay.textContent = '🧪 Tests E2E en cours — ne pas interagir';
+        function ensure() { if (document.body && !document.body.contains(overlay)) document.body.appendChild(overlay); }
+        window.__E2E_STEP__ = function(msg) { if (!enabled) return; ensure(); overlay.textContent = '🧪 ' + String(msg || '').trim(); };
+        window.addEventListener('e2e:step', function(e){ if (!enabled) return; ensure(); overlay.textContent = '🧪 ' + String(e.detail || '').trim(); });
+        window.addEventListener('e2e:done', function(){ if (!enabled) return; if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); });
+        if (enabled) ensure();
+
+        // Surlignage visuel des clics pour mieux comprendre ce que fait le test
+        function highlightRect(rect) {
+            const ring = document.createElement('div');
+            ring.style.position = 'fixed';
+            ring.style.left = rect.left + 'px';
+            ring.style.top = rect.top + 'px';
+            ring.style.width = rect.width + 'px';
+            ring.style.height = rect.height + 'px';
+            ring.style.border = '2px solid #ffeb3b';
+            ring.style.borderRadius = '8px';
+            ring.style.boxShadow = '0 0 0 4px rgba(255,235,59,0.3)';
+            ring.style.pointerEvents = 'none';
+            ring.style.zIndex = '10000';
+            ring.style.opacity = '1';
+            ring.style.transition = 'opacity 600ms ease, transform 600ms ease';
+            document.body.appendChild(ring);
+            requestAnimationFrame(() => {
+                ring.style.opacity = '0';
+                ring.style.transform = 'scale(1.05)';
+            });
+            setTimeout(() => ring.remove(), 700);
+        }
+
+        if (enabled) {
+            document.addEventListener('click', (e) => {
+                const t = e.target;
+                if (!(t instanceof Element)) return;
+                const rect = t.getBoundingClientRect();
+                highlightRect(rect);
+            }, true);
+            // API pour forcer un surlignage depuis les tests si besoin
+            window.__E2E_HIGHLIGHT__ = function(selector) {
+                const el = document.querySelector(selector);
+                if (!el) return false;
+                const rect = el.getBoundingClientRect();
+                highlightRect(rect);
+                return true;
+            };
+        }
+    })();
     </script>
 </body>
 </html>

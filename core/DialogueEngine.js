@@ -13,6 +13,7 @@ export class DialogueEngine {
         this.currentScene = null;
         this.currentIndex = -1;
         this.isWaitingForChoice = false;
+        this.isSceneEnded = false;
     }
 
     /**
@@ -29,6 +30,7 @@ export class DialogueEngine {
         this.currentScene = scene;
         this.currentIndex = -1;
         this.isWaitingForChoice = false;
+        this.isSceneEnded = false;
 
         this.eventBus.emit('engine:scene_start', scene);
         this.next();
@@ -128,6 +130,7 @@ export class DialogueEngine {
 
     endScene() {
         console.log('[DialogueEngine] Scene ended');
+        this.isSceneEnded = true;
         this.currentScene = null;
         this.eventBus.emit('engine:scene_end');
     }

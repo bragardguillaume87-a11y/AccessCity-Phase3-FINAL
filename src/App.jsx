@@ -1,31 +1,27 @@
 import React, { useState } from 'react';
 import DialogueArea from './components/DialogueArea.jsx';
+import { useDialogueEngine } from './hooks/useDialogueEngine.js';
 
 function App() {
   const [count, setCount] = useState(0);
-  const [dialogueIndex, setDialogueIndex] = useState(0);
-  const [currentChoices, setCurrentChoices] = useState([]);
 
-  const demoScene = [
-    { speaker: 'Narrateur', text: 'Bienvenue dans la démo dialogue réactif Vite.' },
-    { speaker: 'Conseiller', text: 'Vous voyez le rendu changer sans recharger la page.' },
-    { speaker: 'Joueur', text: 'Que souhaitez-vous tester ?', choices: [
-      { text: 'Avancer', next: 3 },
-      { text: 'Revenir début', next: 0 }
-    ]},
-    { speaker: 'Narrateur', text: 'Fin de la démo. Modifie ce texte dans App.jsx pour voir HMR.' }
-  ];
+  // Définition scène initiale pour moteur réel
+  const initialScene = {
+    id: 'react_demo_scene',
+    title: 'Démo moteur DialogueEngine',
+    dialogues: [
+      { speaker: 'Narrateur', text: 'Bienvenue dans la version moteur réelle intégrée à React.' },
+      { speaker: 'Conseiller', text: 'Cette phrase est rendue par DialogueEngine via EventBus.' },
+      { speaker: 'Joueur', text: 'Choisissez une option pour modifier les variables.', choices: [
+        { text: 'Boost Mentale (+5)', effects: [{ variable: 'Mentale', operation: 'add', value: 5 }] },
+        { text: 'Fatigue Physique (-10)', effects: [{ variable: 'Physique', operation: 'add', value: -10 }] },
+        { text: 'Activer Alerte', effects: [{ variable: 'Alerte', operation: 'set', value: true }] }
+      ]},
+      { speaker: 'Narrateur', text: 'Variables modifiées. Relance ou inspecte HUD React.' },
+    ]
+  };
 
-  const current = demoScene[dialogueIndex] || {};
-  React.useEffect(() => {
-    setCurrentChoices(current.choices || []);
-  }, [dialogueIndex]);
-
-  function handleChoice(choice) {
-    if (typeof choice.next === 'number') {
-      setDialogueIndex(choice.next);
-    }
-  }
+  const { dialogue, choices, variables, sceneEnded, next, selectChoice } = useDialogueEngine(initialScene);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center p-8">
@@ -77,25 +73,39 @@ function App() {
         </div>
 
         <div className="mt-10">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">🗨️ Démo DialogueArea (HMR)</h2>
-          <p className="text-gray-600 mb-4">Modifie n'importe quel texte dans <code>demoScene</code> (fichier <code>src/App.jsx</code>) et sauvegarde : le changement apparaît instantanément sans perdre la position actuelle dans le dialogue.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">🧠 Moteur de dialogue intégré</h2>
+          <p className="text-gray-600 mb-4">Le contenu ci-dessous est alimenté par <code>DialogueEngine</code>. Modifie la scène initiale dans <code>App.jsx</code> puis sauvegarde pour feedback immédiat.</p>
           <DialogueArea
-            speaker={current.speaker}
-            text={current.text}
-            choices={currentChoices}
-            onSelect={handleChoice}
+            speaker={dialogue.speaker}
+            text={dialogue.text}
+            choices={choices}
+            onSelect={selectChoice}
           />
-          <div className="flex gap-4 mt-6">
-            <button
-              onClick={() => setDialogueIndex(i => Math.min(demoScene.length - 1, i + 1))}
-              className="px-6 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow">
-              Suivant
-            </button>
-            <button
-              onClick={() => setDialogueIndex(0)}
-              className="px-6 py-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white font-medium shadow">
-              Recommencer
-            </button>
+          <div className="flex flex-col gap-4 mt-6">
+            <div className="flex gap-4">
+              <button
+                onClick={next}
+                disabled={sceneEnded}
+                className="px-6 py-3 rounded-lg bg-indigo-600 disabled:opacity-40 hover:bg-indigo-700 text-white font-medium shadow">
+                {sceneEnded ? 'Scène terminée' : 'Suivant'}
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white font-medium shadow">
+                Recharger (reset)
+              </button>
+            </div>
+            <div className="bg-slate-800/70 border border-slate-700 rounded-lg p-4 text-sm text-slate-200">
+              <h3 className="font-semibold mb-2">HUD Variables</h3>
+              <ul className="grid grid-cols-2 gap-2">
+                {Object.entries(variables).map(([name, value]) => (
+                  <li key={name} className="flex items-center justify-between bg-slate-700/60 px-3 py-2 rounded">
+                    <span>{name}</span>
+                    <span className="font-mono">{String(value)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>

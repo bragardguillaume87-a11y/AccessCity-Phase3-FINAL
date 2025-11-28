@@ -112,16 +112,17 @@ vite.config.js       ← Configuration Vite (port 5173, React plugin)
 
 ### Phase 2 : Migration composants AccessCity
 
-1. ✅ `DialogueArea` React déjà ajouté (`src/components/DialogueArea.jsx`)
-2. **Tester HMR** :
-  - Ouvre `src/App.jsx`
-  - Cherche le tableau `demoScene`
-  - Modifie un texte (ex: "Fin de la démo...")
-  - Sauvegarde → Le changement apparaît immédiatement dans le navigateur, et la position actuelle du dialogue (index) est conservée
-3. **Tester choix** : Clique sur un choix → navigation directe à un autre index sans recharge
-4. **Étendre** : Ajoute une nouvelle entrée à `demoScene` pour voir la fluidité
+### Intégration moteur réel (DialogueEngine)
 
-**Avantage** : Itération ultra-rapide sur formulation dialogues sans cycle de rechargement.
+1. ✅ Hook `useDialogueEngine` ajouté (`src/hooks/useDialogueEngine.js`)
+2. ✅ `App.jsx` utilise maintenant une scène initiale `initialScene` passée au moteur
+3. ✅ Variables narratives gérées par `VariableManager` (Physique, Mentale, Alerte)
+4. ✅ HUD simplifié React affiche snapshot variables (mise à jour instantanée)
+5. 🔄 Pour modifier la scène: édite `initialScene` dans `App.jsx` (dialogues / choices / effets)
+6. 🧪 Tester effets: choisir "Boost Mentale" ou "Fatigue Physique" et observer HUD sans rechargement
+7. ♻️ Reset moteur rapide: bouton "Recharger (reset)" (remontée simple via reload pour démo — prochain pas: fonction de reset interne)
+
+**Avantage** : Passage de maquette statique à logique dynamique alimentée par le vrai moteur → tests de scénarios plus réalistes avec HMR.
 
 ### Phase 3 : Instrumentation couverture
 

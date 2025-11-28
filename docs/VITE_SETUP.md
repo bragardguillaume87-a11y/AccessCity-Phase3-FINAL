@@ -112,15 +112,16 @@ vite.config.js       ← Configuration Vite (port 5173, React plugin)
 
 ### Phase 2 : Migration composants AccessCity
 
-1. **Extraire** `DialogueArea` de `index-react.html`
-2. **Créer** `src/components/DialogueArea.jsx`
-3. **Importer** dans `App.jsx` :
-   ```jsx
-   import DialogueArea from './components/DialogueArea';
-   ```
-4. **Tester** HMR sur ce composant
+1. ✅ `DialogueArea` React déjà ajouté (`src/components/DialogueArea.jsx`)
+2. **Tester HMR** :
+  - Ouvre `src/App.jsx`
+  - Cherche le tableau `demoScene`
+  - Modifie un texte (ex: "Fin de la démo...")
+  - Sauvegarde → Le changement apparaît immédiatement dans le navigateur, et la position actuelle du dialogue (index) est conservée
+3. **Tester choix** : Clique sur un choix → navigation directe à un autre index sans recharge
+4. **Étendre** : Ajoute une nouvelle entrée à `demoScene` pour voir la fluidité
 
-**Avantage** : Modifier le dialogue, voir résultat instantané sans recharger scénario.
+**Avantage** : Itération ultra-rapide sur formulation dialogues sans cycle de rechargement.
 
 ### Phase 3 : Instrumentation couverture
 

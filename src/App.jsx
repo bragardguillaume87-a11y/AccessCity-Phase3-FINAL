@@ -1,7 +1,31 @@
 import React, { useState } from 'react';
+import DialogueArea from './components/DialogueArea.jsx';
 
 function App() {
   const [count, setCount] = useState(0);
+  const [dialogueIndex, setDialogueIndex] = useState(0);
+  const [currentChoices, setCurrentChoices] = useState([]);
+
+  const demoScene = [
+    { speaker: 'Narrateur', text: 'Bienvenue dans la démo dialogue réactif Vite.' },
+    { speaker: 'Conseiller', text: 'Vous voyez le rendu changer sans recharger la page.' },
+    { speaker: 'Joueur', text: 'Que souhaitez-vous tester ?', choices: [
+      { text: 'Avancer', next: 3 },
+      { text: 'Revenir début', next: 0 }
+    ]},
+    { speaker: 'Narrateur', text: 'Fin de la démo. Modifie ce texte dans App.jsx pour voir HMR.' }
+  ];
+
+  const current = demoScene[dialogueIndex] || {};
+  React.useEffect(() => {
+    setCurrentChoices(current.choices || []);
+  }, [dialogueIndex]);
+
+  function handleChoice(choice) {
+    if (typeof choice.next === 'number') {
+      setDialogueIndex(choice.next);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center p-8">
@@ -40,7 +64,7 @@ function App() {
             <li>✅ Vite configuré et fonctionnel</li>
             <li>✅ HMR actif (Hot Module Replacement)</li>
             <li>✅ Tailwind CSS opérationnel</li>
-            <li>⏳ Migration composants AccessCity (DialogueArea, etc.)</li>
+            <li>✅ Migration partielle: composant DialogueArea réactif</li>
             <li>⏳ Instrumentation couverture navigateur</li>
           </ul>
         </div>
@@ -50,6 +74,29 @@ function App() {
             <strong>Note :</strong> L'app originale (<code>index-react.html</code>) reste accessible.
             Cette version Vite est un environnement parallèle pour tester le workflow.
           </p>
+        </div>
+
+        <div className="mt-10">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">🗨️ Démo DialogueArea (HMR)</h2>
+          <p className="text-gray-600 mb-4">Modifie n'importe quel texte dans <code>demoScene</code> (fichier <code>src/App.jsx</code>) et sauvegarde : le changement apparaît instantanément sans perdre la position actuelle dans le dialogue.</p>
+          <DialogueArea
+            speaker={current.speaker}
+            text={current.text}
+            choices={currentChoices}
+            onSelect={handleChoice}
+          />
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={() => setDialogueIndex(i => Math.min(demoScene.length - 1, i + 1))}
+              className="px-6 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow">
+              Suivant
+            </button>
+            <button
+              onClick={() => setDialogueIndex(0)}
+              className="px-6 py-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white font-medium shadow">
+              Recommencer
+            </button>
+          </div>
         </div>
       </div>
     </div>

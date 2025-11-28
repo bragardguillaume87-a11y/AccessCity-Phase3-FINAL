@@ -19,6 +19,7 @@ coverage/
 # Build / cache
 .cache/
 dist/
+dist-ssr/
 tmp/
 
 # OS artifacts

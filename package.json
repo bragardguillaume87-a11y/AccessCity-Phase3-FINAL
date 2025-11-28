@@ -6,6 +6,9 @@
     "test": "node test/ascii-check.js && node test/test-integration-v5.js",
     "summary": "node tools/generate_summary.js --help",
     "dev": "python -m http.server 8000",
+    "dev:vite": "vite --config vite.config.js index-vite.html",
+    "build:vite": "vite build --config vite.config.js",
+    "preview:vite": "vite preview --config vite.config.js",
     "lint": "echo Lint non configuré pour ce projet; ajoutez ESLint si nécessaire",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps",
@@ -16,10 +19,16 @@
   "devDependencies": {
     "@playwright/test": "^1.45.0",
     "@types/node": "^24.10.1",
-    "typescript": "^5.3.3",
+    "@vitejs/plugin-react": "^5.1.1",
     "c8": "^9.1.0",
     "istanbul-lib-coverage": "^3.2.0",
     "istanbul-lib-report": "^3.0.1",
-    "istanbul-reports": "^3.1.5"
+    "istanbul-reports": "^3.1.5",
+    "typescript": "^5.3.3",
+    "vite": "^7.2.4"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   }
 }

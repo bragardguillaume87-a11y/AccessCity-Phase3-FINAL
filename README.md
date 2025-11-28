@@ -16,3 +16,13 @@ Narrative scene editor for non-coders. Data-driven architecture.
 ```bash
 npm test
 ```
+
+## Scripts
+
+- `npm run dev` : serveur statique (Python http.server) sur port 8000.
+- `npm test` : tests d'intégration Node.
+- `npm run e2e` : suite Playwright (E2E).
+- `npm run e2e:install` : installation navigateurs Playwright.
+- `npm run coverage` : couverture Node (texte + lcov).
+- `npm run coverage:html` : rapport HTML couverture Node.
+- `npm run coverage:merge` : fusion couverture Node + navigateur vers `coverage/merged`.

@@ -1,4 +1,9 @@
 # Changelog
+## [Unreleased]
+### Added
+- Browser coverage hook (`e2e/coverage-hook.ts`) collecting `window.__coverage__` when instrumentation is present.
+- Coverage merge script (`tools/merge_coverage.js`) and npm script `coverage:merge` producing unified lcov + HTML.
+- Scripts section in root `README.md` documenting coverage workflow.
 ## [5.5.0] - 2025-11-23
 ### Added
 - **VariableManager**: Typed narrative variables (number, boolean, string) with min/max clamping.

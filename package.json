@@ -10,7 +10,8 @@
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps",
     "coverage": "c8 --reporter=text --reporter=lcov npm test",
-    "coverage:html": "c8 --reporter=html npm test"
+    "coverage:html": "c8 --reporter=html npm test",
+    "coverage:merge": "node tools/merge_coverage.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",

@@ -56,3 +56,18 @@ jobs:
             playwright-report/**
             **/trace.zip
           if-no-files-found: ignore
+
+      - name: Merge coverage (Node + Browser)
+        if: always()
+        run: npm run coverage:merge
+
+      - name: Upload merged coverage (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-merged
+          path: |
+            coverage/merged/lcov.info
+            coverage/merged/index.html
+            coverage/merged/coverage-final.json
+          if-no-files-found: ignore

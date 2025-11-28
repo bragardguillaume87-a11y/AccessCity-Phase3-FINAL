@@ -11,12 +11,15 @@
     "e2e:install": "playwright install --with-deps",
     "coverage": "c8 --reporter=text --reporter=lcov npm test",
     "coverage:html": "c8 --reporter=html npm test",
-    "coverage:merge": "node tools/merge_coverage.js"
+    "coverage:merge": "node tools/merge_coverage.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
     "@types/node": "^24.10.1",
     "typescript": "^5.3.3",
-    "c8": "^9.1.0"
+    "c8": "^9.1.0",
+    "istanbul-lib-coverage": "^3.2.0",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.1.5"
   }
 }

@@ -1,6 +1,13 @@
 # Changelog
 ## [Unreleased]
 ### Added
+- **Real browser coverage instrumentation** with `vite-plugin-istanbul@7.2.1` (replaces placeholder).
+- **5 E2E tests** for Vite/React app validating engine, HUD, reset, event log, and coverage collection (`e2e/vite-app.spec.ts`).
+- **Coverage reports generation** script (`tools/generate_reports.cjs`) producing lcov.info + HTML from merged coverage.
+- **Complete coverage workflow**: Node tests → E2E tests → merge → reports (documented in COVERAGE_ROADMAP.md).
+- **npm scripts**: `coverage:reports`, `e2e:vite`, `build:vite:coverage` for instrumented builds.
+- **Playwright config for Vite** (`playwright.config.vite.ts`) with auto-start preview server.
+- **React migration**: `src/App.jsx`, `useDialogueEngine` hook, `DialogueArea`, `VariablesHUD`, `EventLogPanel` components.
 - Browser coverage hook (`e2e/coverage-hook.ts`) collecting `window.__coverage__` when instrumentation is present.
 - Coverage merge script (`tools/merge_coverage.cjs`) and npm script `coverage:merge` producing unified lcov + HTML.
 - Scripts section in root `README.md` documenting coverage workflow.

@@ -29,7 +29,12 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-900 flex items-start justify-center p-8">
       <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-3xl w-full flex flex-col gap-10">
         <header>
-          <h1 className="text-4xl font-bold text-gray-800 mb-6 text-center">
+          <h1
+            className="text-4xl font-bold text-gray-800 mb-6 text-center"
+            data-testid="app-title"
+            role="heading"
+            aria-level={1}
+          >
             AccessCity - Vite Demo
           </h1>
           <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">

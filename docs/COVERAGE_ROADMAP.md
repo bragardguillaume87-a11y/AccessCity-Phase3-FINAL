@@ -21,38 +21,65 @@
 - **Fichier** : `e2e/coverage-hook.ts`
 - **Mécanisme** : `test.afterEach` récupère `window.__coverage__` et écrit JSON dans `coverage/browser/`
 - **État** : Prêt à collecter dès que code front instrumenté
+- **État** : ✅ Fonctionnel et actif
 
-### ⚠️ Placeholder instrumentation navigateur
-- **Fichier** : `index-react.html` (paramètre `?covPlaceholder=1`)
-- **Objet** : Crée `window.__coverage__` factice pour valider chaîne collecte
-- **Limitation** : Aucune vraie couverture, structure minimale uniquement
-- **Usage** : Démonstration et tests de la mécanique fusion
-
----
-
-## Prochaines étapes : Instrumentation réelle
-
-### 1️⃣ Choix du bundler
-
-**Besoin** : Build pipeline pour instrumenter code front (actuellement React/Babel via CDN)
-
-| Bundler  | Avantages | Inconvénients | Recommandation |
-|----------|-----------|---------------|----------------|
-| **Vite** | ⚡ Démarrage ultra rapide<br>🔌 Plugins simples (vite-plugin-istanbul)<br>📦 HMR natif<br>🎯 Excellent support React + TypeScript | Jeune écosystème (mais mature) | ⭐ **Recommandé** |
-| **Webpack** | 🏆 Écosystème le plus mature<br>🔧 Contrôle total config<br>📚 Documentation extensive | 🐢 Démarrage lent<br>📝 Config verbeuse<br>🧩 Complexité élevée | Overkill pour ce projet |
-| **esbuild** | 🚀 Build ultra rapide<br>📦 Simple, léger | 🔌 Moins de plugins<br>⚠️ Instrumentation manuelle nécessaire | Non prioritaire |
-
-**Décision recommandée** : Vite
-
-**Raisons** :
-- Compatibilité native Tailwind via PostCSS
-- Plugin instrumentation clé en main : `vite-plugin-istanbul`
-- Migration progressive possible (garder `index-react.html` en parallèle)
-- Maintenance future simplifiée
+### ✅ Instrumentation navigateur réelle (vite-plugin-istanbul)
+- **Fichier** : `vite.config.js` avec plugin `vite-plugin-istanbul@7.2.1`
+- **Configuration** : 
+  - `include: 'src/{core,ui}/**'`
+  - `exclude: 'node_modules/**,test/**,e2e/**,tools/**'`
+  - `requireEnv: false`
+  - `forceBuildInstrument: true` via `VITE_COVERAGE=true`
+- **Build** : `npm run build:vite:coverage` génère bundle instrumenté (dist/)
+- **Tests E2E** : 5/5 tests passing dans `e2e/vite-app.spec.ts`
+- **Collecte** : 5 fichiers JSON dans `coverage/browser/` (1 par test)
+- **Couverture** : Données réelles de src/App.jsx, src/components/*, src/hooks/*
+- **État** : ✅ Production-ready
 
 ---
 
-### 2️⃣ Migration vers Vite
+## Phase 1 : Instrumentation réelle ✅ COMPLÉTÉE
+
+### Choix du bundler : Vite
+
+**Décision finale** : Vite ⭐
+
+**Implémentation** :
+- ✅ Installation de Vite 7.2.4 + vite-plugin-istanbul 7.2.1
+- ✅ Configuration vite.config.js avec include/exclude patterns
+- ✅ Scripts package.json (build:vite:coverage, e2e:vite, dev:vite, preview:vite)
+- ✅ Playwright config dédié (playwright.config.vite.ts)
+- ✅ Tests E2E complets (5 tests : engine, HUD, reset, event log, coverage collection)
+- ✅ Migration React App.jsx + hooks + components
+- ✅ Merge coverage Node + browser fonctionnel
+
+---
+
+## Phase 2 : Rapports de couverture unifiés ✅ COMPLÉTÉE
+
+### Scripts de génération de rapports
+- ✅ `tools/generate_reports.cjs` : génère lcov.info + HTML depuis coverage-final.json
+- ✅ `npm run coverage:reports` : commande simplifiée
+- ✅ Rapports disponibles dans `coverage/merged/`:
+  - `lcov.info` : format standard pour CI/CD
+  - `html/index.html` : rapport interactif navigable
+
+### Workflow complet
+```bash
+# 1. Tests Node → coverage/lcov.info
+npm run coverage
+
+# 2. Build instrumenté + E2E → coverage/browser/*.json
+npm run e2e:vite
+
+# 3. Merge Node + browser → coverage/merged/coverage-final.json
+npm run coverage:merge
+
+# 4. Génération rapports lcov + HTML
+npm run coverage:reports
+```
+
+**État** : Pipeline opérationnel de bout en bout
 
 #### Phase A : Installation
 ```bash

@@ -1,3 +1,4 @@
+  "coverage:reports": "node tools/generate_reports.cjs",
 {
   "name": "accesscity-phase5",
   "version": "5.0.0",
@@ -6,9 +7,11 @@
     "test": "node test/ascii-check.js && node test/test-integration-v5.js",
     "summary": "node tools/generate_summary.js --help",
     "dev": "python -m http.server 8000",
-    "dev:vite": "vite --config vite.config.js index-vite.html",
+    "dev:vite": "vite --config vite.config.js",
     "build:vite": "vite build --config vite.config.js",
+    "build:vite:coverage": "set VITE_COVERAGE=true && vite build --config vite.config.js",
     "preview:vite": "vite preview --config vite.config.js",
+    "e2e:vite": "npm run build:vite:coverage && playwright test --config=playwright.config.vite.ts",
     "lint": "echo Lint non configuré pour ce projet; ajoutez ESLint si nécessaire",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps",
@@ -25,7 +28,8 @@
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.1.5",
     "typescript": "^5.3.3",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-istanbul": "^7.2.1"
   },
   "dependencies": {
     "react": "^19.2.0",

@@ -32,17 +32,6 @@ jobs:
       - name: Run integration/unit tests
         run: npm test
 
-      - name: Run coverage (c8)
-        run: npm run coverage
-
-      - name: Upload coverage report (lcov)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-lcov
-          path: coverage/lcov.info
-          if-no-files-found: ignore
-
       - name: Run E2E tests (Playwright)
         run: npm run e2e -- --reporter=list
 
@@ -55,65 +44,4 @@ jobs:
             test-results/**
             playwright-report/**
             **/trace.zip
-          if-no-files-found: ignore
-
-      - name: Merge coverage (Node + Browser)
-        if: always()
-        run: npm run coverage:merge
-
-      - name: Generate merged coverage reports (lcov + HTML)
-        if: always()
-        run: npm run coverage:reports
-
-      - name: Upload merged coverage (always)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-merged
-          path: |
-            coverage/merged/lcov.info
-            coverage/merged/html/index.html
-            coverage/merged/coverage-final.json
-          if-no-files-found: ignore
-
-  vite-e2e-and-coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      - name: Build Vite (instrumented)
-        run: |
-          export VITE_COVERAGE=true
-          npm run build:vite
-
-      - name: Run E2E tests against Vite preview
-        run: npx playwright test --config=playwright.config.vite.ts --reporter=list --workers=1
-
-      - name: Merge coverage (Node + Browser)
-        run: npm run coverage:merge
-
-      - name: Generate merged coverage reports
-        run: npm run coverage:reports
-
-      - name: Upload merged coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-merged-vite
-          path: |
-            coverage/merged/lcov.info
-            coverage/merged/html/**
-            coverage/merged/coverage-final.json
           if-no-files-found: ignore

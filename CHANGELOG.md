@@ -1,3 +1,0 @@
-# Changelog - AccessCity Scene Editor
-
-Tous les changements importants...

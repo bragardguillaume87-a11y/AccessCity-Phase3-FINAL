@@ -1,3 +1,0 @@
-# Contribuer à AccessCity Scene Editor - Phase 3
-
-Merci de votre intérêt...

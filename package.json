@@ -1,4 +1,4 @@
-  "coverage:reports": "node tools/generate_reports.cjs",
+{
 {
   "name": "accesscity-phase5",
   "version": "5.0.0",
@@ -18,6 +18,7 @@
     "coverage": "c8 --reporter=text --reporter=lcov npm test",
     "coverage:html": "c8 --reporter=html npm test",
     "coverage:merge": "node tools/merge_coverage.cjs"
+    ,"coverage:reports": "node tools/generate_reports.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",

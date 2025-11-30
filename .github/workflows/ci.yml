@@ -11,35 +11,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  e2e-legacy:
+    name: E2E Legacy (serveur Python)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-
-      - name: Run integration/unit tests
-        run: npm test
-
-      - name: Run E2E tests (Playwright)
-        run: npm run e2e -- --reporter=list
-
+      - name: Run E2E tests (legacy)
+        run: npx playwright test --config=playwright.config.ts --reporter=list
       - name: Upload Playwright test-results (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-test-results
+          name: playwright-test-results-legacy
+          path: |
+            test-results/**
+            playwright-report/**
+            **/trace.zip
+          if-no-files-found: ignore
+
+  e2e-vite:
+    name: E2E Vite (serveur Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run E2E tests (Vite)
+        run: npx playwright test --config=playwright.config.vite.ts --reporter=list
+      - name: Upload Playwright test-results (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-vite
           path: |
             test-results/**
             playwright-report/**

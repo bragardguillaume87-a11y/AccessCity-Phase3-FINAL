@@ -1,3 +1,26 @@
+<!--
+Ce fichier suit le format [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et le versionnage sémantique ([SemVer](https://semver.org/lang/fr/)).
+Il est destiné à être lisible par tous, à jour, et à faciliter la compréhension des évolutions du projet.
+
+## Principes directeurs
+- Les changelogs sont pour les humains, pas les machines.
+- Chaque version a sa section, datée au format ISO (AAAA-MM-JJ).
+- Les changements sont regroupés par type :
+  - `Added` (Ajouté)
+  - `Changed` (Modifié)
+  - `Deprecated` (Déprécié)
+  - `Removed` (Supprimé)
+  - `Fixed` (Corrigé)
+  - `Security` (Sécurité)
+- La section `[Unreleased]` en haut liste les changements non publiés.
+- Les dépréciations et suppressions sont toujours mentionnées.
+- Les versions retirées sont marquées `[YANKED]`.
+- Les liens vers les tags ou comparaisons Git sont encouragés.
+
+## Contribution
+Pour proposer une modification du changelog, ouvrez une pull request ou une issue en suivant le format ci-dessous. Merci de regrouper les changements par type et d’être concis.
+-->
+
 # Changelog
 ## [Unreleased]
 ### Added
@@ -35,11 +58,12 @@
 - Export/Import project functionality
 - Comprehensive test suite
 
-### Enhanced
+### Changed
 - Schema validation supports arrays and nested objects
 - Improved error handling with fallback to sample data
 - ASCII-only enforcement across all modules
 
 ## [4.5.0] - 2025-11-20
+### Added
 - Added core modules
 - Implemented UI layout system

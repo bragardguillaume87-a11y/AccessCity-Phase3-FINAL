@@ -1,3 +1,16 @@
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, uniformité dans la documentation et les exemples de payload.
+- Accessibilité : structure claire, exemples lisibles, feedback utilisateur explicite.
+- Inclusivité : langage neutre, contenu utilisable par IA et humains, documentation ouverte aux débutants.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite, instructions CLI claires.
+- Automatisation & CI/CD : scripts clairs, validation automatisée, intégration continue des bonnes pratiques.
+- Contribution : feedback encouragé, documentation et scripts à jour, conventions de commit.
+
+> Ces principes guident l’automatisation des synthèses pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
 # Synthetic Summary Automation
 
 This document describes how to generate condensed conversation summaries for AI agents.

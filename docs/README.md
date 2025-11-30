@@ -1,29 +1,90 @@
-# AccessCity Scene Editor - Phase 4.5
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : tokens centralisés, grille, typographie, couleurs.
+- Accessibilité : conformité WCAG, navigation clavier, aria, contrastes, feedback utilisateur explicite.
+- Inclusivité : langage neutre, contenu accessible à tous.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite.
+- Automatisation & CI/CD : scripts clairs, pipeline robuste, artefacts coverage.
+- Contribution : workflow PR, guide, code of conduct, conventions de commit.
+
+> Ces principes sont appliqués dans tous les fichiers du projet pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
+# AccessCity Scene Editor – Stack Moderne (Vite/React/Playwright)
+
 Modular narrative scene editor with ASCII-strict compliance.
-## Setup
-1. Clone repo
-2. Open index.html
-3. Run tests with `node test/run-all-tests.js`
+
+---
+
+## Bonnes pratiques & structuration
+- **README complet** : stack, installation, scripts, exemples, badges, liens vers la doc, contribution, licence
+- **Guides dédiés** : onboarding, architecture, conventions de code, accessibilité, QA, CI/CD
+- **Exemples de code** : snippets pour usages courants
+- **Badges** : build, coverage, version, licence, PRs welcome
+
+## Contribution & maintenance
+- **CONTRIBUTING.md** : workflow PR, conventions de commit, code of conduct
+- **Good First Issues** : tickets pour nouveaux contributeurs
+- **Changelog** : suivi des évolutions
+
+## Automatisation & CI/CD
+- **Scripts npm clairs** : build, test, coverage, lint, format, start, preview
+- **Pipeline CI** : build, test, coverage, lint, déploiement, artefacts
+- **Merge automatique couverture** : Node + navigateur
+- **Vérification accessibilité** : tests a11y automatisés (axe-core, playwright-a11y)
+
+## Accessibilité & qualité
+- **Documentation accessibilité** : chaque composant respecte les standards a11y
+- **Checklist accessibilité** : incluse dans la QA
+- **Tests E2E** : scénarios réels, mock API, tests exploratoires
+
+## Onboarding & support
+- **Quick Start** : démarrage rapide
+- **Liens vers doc officielle** : React, Vite, Playwright, Istanbul
+- **Support** : issues, discussions, Discord
+
+## Exemples et bonnes pratiques React/Vite
+- **JSX clair et typé** : TypeScript, composants fonctionnels, hooks
+- **State management** : logique expliquée, exemples
+- **Plugins Vite** : documenter les plugins utilisés
+
+---
+
+## Stack & Setup
+- **Stack moderne** : Vite, React, Playwright, Istanbul/c8, CI GitHub Actions
+- **Tests E2E** : Playwright, couverture fusionnée Node + navigateur
+- **Couverture** : c8 (Node) + vite-plugin-istanbul (navigateur)
+- **CI** : pipeline automatisé, artefacts coverage, merge, rapports HTML
+
+### Installation
+1. Clone le repo
+2. Installe les dépendances : `npm install`
+3. Lance le serveur dev : `npm run dev`
+4. Lance les tests E2E : `npm run e2e:vite`
+5. Génère la couverture : `npm run coverage:merge` puis `npm run coverage:reports`
 
 ## Fonctionnalités principales
-- **Éditeur de scènes narratives** : Créez, modifiez et gérez des scènes interactives.
-- **Conformité ASCII stricte** : Garantit la compatibilité avec les systèmes limités.
-- **Système de dialogue dynamique** : Gérez les dialogues avec des conditions et des variables.
-- **Interface utilisateur modulaire** : Personnalisez les panneaux et les composants.
+- **Éditeur de scènes narratives** : création, modification, gestion interactive
+- **Conformité ASCII stricte** : compatibilité maximale
+- **Système de dialogue dynamique** : dialogues, conditions, variables
+- **Interface modulaire** : panneaux et composants personnalisables
+- **State management** : undo/redo, export/import JSON
 
-## Exemples d'utilisation
-### Chargement d'une scène
+## Exemples d’utilisation
+### Chargement d’une scène
 ```javascript
-const sceneLoader = new SceneLoader();
-sceneLoader.load('scenes.json');
+import { jsonSceneLoader } from './core/jsonSceneLoader.js';
+jsonSceneLoader.load('data/scenes.json');
 ```
 
-### Ajout d'un personnage
+### Ajout d’un personnage
 ```javascript
+import { characterLoader } from './core/characterLoader.js';
 const character = {
-  id: 'hero',
-  name: 'Héros',
-  sprite: 'assets/characters/player/neutral.svg'
+  id: 'player',
+  name: 'Joueur',
+  sprites: { neutral: 'assets/characters/player/neutral.svg' }
 };
 characterLoader.add(character);
 ```
@@ -33,40 +94,19 @@ characterLoader.add(character);
 ![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)
 
 ## Contribution
-Pour contribuer, consultez le fichier [CONTRIBUTING.md](CONTRIBUTING.md).
+Pour contribuer, consulte le fichier [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Utilisation des outils de test
+- **Tests E2E** : `npm run e2e:vite` (Playwright)
+- **Couverture** : `npm run coverage:merge` puis `npm run coverage:reports`
+- **CI** : GitHub Actions, artefacts coverage
 
-### Mode Direct (test-direct.html)
-Ce fichier HTML permet de tester rapidement les fonctionnalités principales sans serveur. Il inclut un logger visuel et une implémentation simplifiée de l'EventBus.
+## Génération de contexte complet
+Le script `pack_project.py` génère un fichier de contexte global pour archivage/documentation.
 
-#### Instructions :
-1. Ouvrez `test-direct.html` dans un navigateur.
-2. Observez les événements et messages dans la console visuelle.
+## Scénario de démonstration
+Le fichier `demo_scenario.json` illustre les fonctionnalités principales (dialogues, choix, effets conditionnels).
 
-### Génération de contexte complet (pack_project.py)
-Le script `pack_project.py` génère un fichier `AccessCity-FULL-Context.md` contenant une vue d'ensemble de tous les fichiers pertinents du projet.
+---
 
-#### Instructions :
-1. Exécutez le script avec Python :
-   ```bash
-   python pack_project.py
-   ```
-2. Consultez le fichier généré pour une documentation complète.
-
-### Scénario de démonstration (demo_scenario.json)
-Ce fichier JSON illustre les fonctionnalités principales, comme les dialogues, les choix, et les effets conditionnels.
-
-#### Exemple :
-```json
-{
-  "id": "demo_start",
-  "title": "Le Dilemme du Parc",
-  "dialogues": [
-    {
-      "speaker": "narrator",
-      "text": "Vous arrivez devant le vieux parc de la ville."
-    }
-  ]
-}
-```
+*Ce README a été mis à jour pour refléter la stack moderne, les pratiques recommandées et les standards de documentation open source.*

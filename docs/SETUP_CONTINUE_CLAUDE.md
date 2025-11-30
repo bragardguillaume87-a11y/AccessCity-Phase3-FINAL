@@ -1,3 +1,16 @@
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, uniformité dans les guides et les configurations.
+- Accessibilité : instructions claires, feedback utilisateur explicite, guide utilisable par IA et humains.
+- Inclusivité : langage neutre, contenu accessible à tous, guide ouvert aux débutants.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite, sécurité des données (clé API).
+- Automatisation & CI/CD : validation automatisée, intégration continue des bonnes pratiques dans les workflows et configurations.
+- Contribution : feedback encouragé, documentation et guides à jour, conventions de commit.
+
+> Ces principes guident l’installation et la configuration de Continue + Claude pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
 # Guide Installation Continue + Claude API pour AccessCity
 
 ## Etape 1 : Obtenir cle API Claude (5 min)
@@ -180,6 +193,10 @@ $env:ANTHROPIC_API_KEY = "sk-ant-votre-cle"
 ```
 
 ---
+
+## Annexe : Guide Installation Continue + Claude API (optionnel)
+
+Ce guide est proposé en annexe car l’intégration d’IA tierces (Claude, Codestral, etc.) dépend du contexte d’équipe et de l’évolution rapide des outils. Pour un usage solo, il est recommandé de consulter ou adapter ce guide uniquement si besoin.
 
 **Temps total setup : ~10 minutes**  
 **Cout Phase 5.5 complete : ~$3-5**  

@@ -1,4 +1,77 @@
+# Synthèse des bonnes pratiques design system (Material Design, GOV.UK, Mailchimp)
+
+## Structure recommandée pour AccessCity
+
+1. **Principes fondamentaux**
+   - Cohérence visuelle : tokens centralisés, grille, typographie, couleurs.
+   - Accessibilité : conformité WCAG, navigation clavier, aria, contrastes.
+   - Feedback utilisateur : états visuels clairs (hover, focus, disabled, error, success).
+   - Inclusivité : langage neutre, contenu accessible à tous.
+
+2. **Design Tokens**
+   - Couleurs, typographie, espacements, rayons, ombres, z-index.
+   - Exemple :
+     ```css
+     :root {
+       --color-primary: #0e639c;
+       --font-size-base: 1rem;
+       --space-xs: 4px;
+     }
+     ```
+
+3. **Composants réutilisables**
+   - Documentation pour chaque composant : usage, variantes, propriétés, états, accessibilité, snippets React.
+   - Exemple :
+     ```jsx
+     // Bouton accessible
+     <button aria-label="Valider" className="btn btn-primary">Valider</button>
+     ```
+
+4. **Patterns et cas d’usage**
+   - Patterns récurrents (navigation, modales, formulaires, listes, overlays) avec explication du "pourquoi" et scénarios réels.
+   - Exemple :
+     > Pattern formulaire : chaque champ doit avoir un label associé, gestion des erreurs accessible, navigation clavier fluide.
+
+5. **Contribution et extension**
+   - Guide pour contribuer : PR, validation, tests visuels/accessibilité.
+   - Extension facile : ajout de tokens, nouveaux composants, adaptation à React/Vite.
+
+6. **Documentation actionnable et IA-friendly**
+   - Sections bien délimitées, sémantique explicite, exemples prêts à copier.
+   - Table des matières, liens internes, recherche rapide.
+   - Encourager le feedback et la mise à jour continue.
+
+---
+
 # Design System AccessCity 5.0
+
+## Principes et bonnes pratiques (inspirés de Material Design, GOV.UK, Mailchimp)
+
+Ce design system vise à garantir la cohérence, l’accessibilité et la rapidité de développement pour AccessCity. Il s’appuie sur les standards reconnus des grands design systems open source.
+
+### Principes de conception
+- **Cohérence visuelle** : tokens centralisés (couleurs, typographie, espacements), uniformité sur tous les écrans.
+- **Accessibilité** : critères WCAG, navigation clavier, focus visible, aria, contrastes testés pour chaque composant.
+- **Feedback utilisateur** : états visuels clairs (hover, focus, disabled, error, success).
+- **Inclusivité** : langage neutre, exemples accessibles à tous.
+
+### Documentation des composants
+- Pour chaque composant : usage, variantes, propriétés, états, accessibilité, exemples de code.
+- Cas d’usage concrets et snippets prêts à copier.
+
+### Patterns et cas d’usage
+- Patterns récurrents (navigation, modales, formulaires, listes, overlays) documentés avec le “pourquoi” et des scénarios réels.
+
+### Contribution et maintenance
+- Guide pour contribuer (PR, validation, tests visuels/accessibilité).
+- Extension facile (ajout de tokens, nouveaux composants, adaptation à React/Vue).
+- Documentation vivante : mise à jour continue, feedback encouragé.
+
+### Structure et navigation
+- Documentation facile à parcourir : sommaire, liens internes, recherche rapide.
+- Mise en avant des principes, composants, patterns, cas d’usage et guide de contribution.
+
+---
 
 ## Vue d'ensemble
 

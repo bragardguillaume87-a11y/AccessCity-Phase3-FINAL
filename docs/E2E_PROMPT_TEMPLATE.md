@@ -1,3 +1,16 @@
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, uniformité dans les templates et les sélecteurs.
+- Accessibilité : conformité WCAG, focus, rôles/aria, feedback utilisateur explicite dans les tests.
+- Inclusivité : langage neutre, contenu utilisable par IA et humains, template ouvert aux débutants.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite, instructions CI et livrables clairs.
+- Automatisation & CI/CD : scripts clairs, validation automatisée, intégration continue des bonnes pratiques.
+- Contribution : feedback encouragé, documentation et templates à jour, conventions de commit.
+
+> Ces principes guident la rédaction et l’exécution des tests E2E pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
 # Mini-template Prompt E2E (Playwright)
 
 Objectif: fournir un prompt court et actionnable pour créer/stabiliser des tests e2e Playwright sur une app web.

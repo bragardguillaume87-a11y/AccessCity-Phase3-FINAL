@@ -14,7 +14,7 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   webServer: {
-    command: 'python -m http.server 8000',
+    command: 'npx vite preview --port 8000',
     port: 8000,
     reuseExistingServer: true,
     timeout: 120000

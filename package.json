@@ -3,21 +3,18 @@
   "version": "5.0.0",
   "type": "module",
   "scripts": {
-    "test": "node test/ascii-check.js && node test/test-integration-v5.js",
-    "summary": "node tools/generate_summary.js --help",
-    "dev": "python -m http.server 8000",
-    "dev:vite": "vite --config vite.config.js",
+    "test": "playwright test",
+    "dev": "vite --config vite.config.js",
     "build:vite": "vite build --config vite.config.js",
     "build:vite:coverage": "set VITE_COVERAGE=true && vite build --config vite.config.js",
     "preview:vite": "vite preview --config vite.config.js",
-    "e2e:vite": "npm run build:vite:coverage && playwright test --config=playwright.config.vite.ts",
-    "lint": "echo Lint non configuré pour ce projet; ajoutez ESLint si nécessaire",
-    "e2e": "playwright test",
+    "e2e:vite": "npm run build:vite:coverage && vite preview --port 8000 & playwright test --config=playwright.config.vite.ts",
     "e2e:install": "playwright install --with-deps",
     "coverage": "c8 --reporter=text --reporter=lcov npm test",
     "coverage:html": "c8 --reporter=html npm test",
-    "coverage:merge": "node tools/merge_coverage.cjs"
-    ,"coverage:reports": "node tools/generate_reports.cjs"
+    "coverage:merge": "node tools/merge_coverage.cjs",
+    "coverage:reports": "node tools/generate_reports.cjs",
+    "summary": "node tools/generate_summary.js --help"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",

@@ -1,43 +1,43 @@
-# PROJECT MEMORY SEED (AccessCity Phase 5.0 → 5.5)
+# PROJECT MEMORY SEED (AccessCity Phase 5.5+)
 
 ## CONTEXTE STRATEGIQUE
 
 ### Vision Projet
 - **Client** : APF France Handicap
-- **Produit** : Editeur scenes narratives interactives + moteur jeu accessible
+- **Produit** : Éditeur de scénarios interactifs + moteur de jeu accessible
 - **Public** : Personnes en situation de handicap (trackball, eViacam, navigation clavier)
-- **Finalite** : Outil storytelling accessible + export GDevelop enrichi
+- **Finalité** : Outil storytelling accessible + export enrichi
 
-### Philosophie Technique
-- **Accessibilite d'abord** : Chaque feature utilisable au clavier/trackball/lecteur ecran
-- **Modularite stricte** : Separation core/services/ui/models/tests/docs
-- **Zero dependance** : JavaScript vanilla ES6+, pas de framework
-- **ASCII-only** : Code 100% ASCII (32-126) pour diff/patch/validation facile
-- **Code complet uniquement** : Jamais fragments, toujours fichiers entiers fonctionnels
+### Philosophie Technique (2025)
+- **Accessibilité d'abord** : Chaque fonctionnalité doit être utilisable au clavier, trackball, lecteur d’écran.
+- **Modularité stricte** : Séparation claire des modules (core, services, ui, models, tests, docs).
+- **Stack moderne** : Utilisation de React, Vite, TypeScript pour la rapidité, la maintenabilité et l’accessibilité.
+- **Dépendances maîtrisées** : Utilisation de librairies modernes (React, Playwright, Istanbul, etc.) pour la qualité et la robustesse.
+- **Clarté et documentation** : Code et docs à jour, lisibles et accessibles à tous les contributeurs.
 
 ### Architecture "Data-Driven"
-- UI entierement pilotee par `ui_layout.json`
-- Scenes et dialogues dans `scenes.json`
+- UI pilotée par `ui_layout.json`
+- Scènes et dialogues dans `scenes.json`
 - Personnages dans `characters.json`
-- Schemas validation dans `schemas.json`
-- Variables narratives gerees par `VariableManager`
+- Schémas de validation dans `schemas.json`
+- Variables narratives gérées par `VariableManager`
 
 ---
 
-## REGLES ABSOLUES
+## RÈGLES ACTUELLES
 
-### 1. Encodage ASCII Strict
-**INTERDIT** : Accents, guillemets courbes, caracteres > code 127  
-**AUTORISE** : Codes ASCII 32-126 uniquement  
-**Validation** : `npm test` inclut `ascii-check.js`
+### 1. Accessibilité et modularité
+- Priorité à l’accessibilité et à la séparation des responsabilités dans le code.
 
-### 2. Structure Fichiers Obligatoire
+### 2. Structure des fichiers
 ```
 AccessCity-Phase3-FINAL/
 ├── core/          # Modules fondamentaux (eventBus, schema, variableManager)
-├── services/      # Logique metier (dialogueEngine, timelineService)
-├── ui/            # Composants interface (panels, inspectors)
-├── models/        # Classes metier (Scene, Dialogue, Character)
+├── ui/            # Composants React (panels, inspectors, éditeurs)
+├── data/          # Données JSON (scènes, personnages, layouts)
+├── docs/          # Documentation projet
+├── test/          # Tests unitaires et E2E
+├── tools/         # Scripts de build, couverture, rapports
 ├── data/          # Fichiers JSON (scenes, characters, schemas)
 ├── test/          # Tests unitaires (1 fichier/module)
 ├── docs/          # Documentation technique

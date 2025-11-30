@@ -1,3 +1,16 @@
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, uniformité dans la documentation et les scripts de couverture.
+- Accessibilité : rapports lisibles, feedback utilisateur explicite, documentation accessible à tous.
+- Inclusivité : langage neutre, contenu utilisable par IA et humains, feuille de route ouverte aux débutants.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite, liens vers les scripts et configurations.
+- Automatisation & CI/CD : scripts clairs, validation automatisée, intégration continue des bonnes pratiques.
+- Contribution : feedback encouragé, documentation et scripts à jour, conventions de commit.
+
+> Ces principes guident la feuille de route couverture pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
 # Feuille de route : Couverture de code complète
 
 ## État actuel

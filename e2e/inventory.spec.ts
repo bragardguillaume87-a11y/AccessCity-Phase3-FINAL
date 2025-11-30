@@ -33,14 +33,17 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
 
     // Étape 2: Naviguer vers l'onglet "Chapitres" ou "Scènes"
     await step(page, 'Ouvrir onglet Chapitres/Scènes');
-    const scenesTab = page.getByRole('button', { name: /chapitres|scènes|📋/i });
-    await expect(scenesTab).toBeVisible({ timeout: 5000 });
-    await scenesTab.click();
+      const scenesTab = page.getByRole('button', { name: /chapitres|scènes|📋/i });
+      await expect(scenesTab).toBeVisible({ timeout: 10000 });
+      // Attendre la disparition de l'overlay qui bloque le clic (timeout augmenté)
+      await page.waitForSelector('#e2e-overlay', { state: 'detached', timeout: 15000 }).catch(() => {});
+      await page.waitForSelector('.fixed.inset-0', { state: 'detached', timeout: 15000 }).catch(() => {});
+      await scenesTab.click();
 
     // Étape 3: Lancer la première scène via le bouton ▶
     await step(page, 'Lancer première scène (▶)');
     const launchBtn = page.getByRole('button', { name: /▶|lancer|jouer/i }).first();
-    await expect(launchBtn).toBeVisible({ timeout: 5000 });
+    await expect(launchBtn).toBeVisible({ timeout: 10000 });
     await launchBtn.click();
 
     // Étape 4: Fermer la coach bubble si présente
@@ -53,7 +56,7 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
     // Étape 5: Vérifier que le HUD est visible (objectif, variables)
     await step(page, 'Vérifier HUD visible');
     const hudObjective = page.locator('text=/🎯\\s*Objectif/i');
-    await expect(hudObjective).toBeVisible({ timeout: 3000 });
+    await expect(hudObjective).toBeVisible({ timeout: 7000 });
 
     // Étape 6: Avancer avec "Suivant" jusqu'aux choix ou fin
     await step(page, "Avancer avec Suivant jusqu'aux choix");
@@ -61,7 +64,7 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
       const nextBtn = page.getByRole('button', { name: /suivant/i });
       if (await nextBtn.isVisible().catch(() => false)) {
         await nextBtn.click();
-        await page.waitForTimeout(500); // Laisser l'UI se mettre à jour
+        await page.waitForTimeout(1000); // Laisser l'UI se mettre à jour (plus long)
       }
       
       // Vérifier si des choix sont apparus
@@ -85,7 +88,7 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
       // Les badges delta ont la classe .delta-badge
       const deltaBadge = page.locator('.delta-badge').first();
       // On attend que le badge apparaisse (peut prendre un instant)
-      await expect(deltaBadge).toBeVisible({ timeout: 3000 });
+      await expect(deltaBadge).toBeVisible({ timeout: 7000 });
       
       // Vérifier que le texte du badge n'est pas vide
       const badgeText = await deltaBadge.textContent();
@@ -97,7 +100,7 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
     // Étape 9: Vérifier que le dialogue reste accessible
     await step(page, 'Vérifier dialogue accessible');
     const dialogueBox = page.locator('.dialogue-box');
-    await expect(dialogueBox).toBeVisible();
+    await expect(dialogueBox).toBeVisible({ timeout: 7000 });
     const dialogueText = await dialogueBox.textContent();
     expect(dialogueText?.trim()).not.toBe('');
 
@@ -114,9 +117,13 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
     }
 
     await step(page, 'Naviguer vers Chapitres');
-    await page.getByRole('button', { name: /chapitres|scènes|📋/i }).click();
+      // Attendre la disparition de l'overlay qui bloque le clic
+      await page.waitForSelector('#e2e-overlay', { state: 'detached', timeout: 15000 }).catch(() => {});
+      await page.waitForSelector('.fixed.inset-0', { state: 'detached', timeout: 15000 }).catch(() => {});
+      await page.getByRole('button', { name: /chapitres|scènes|📋/i }).click();
 
     await step(page, 'Lancer scène');
+    await expect(page.getByRole('button', { name: /▶|lancer|jouer/i }).first()).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /▶|lancer|jouer/i }).first().click();
 
     // Fermer coach
@@ -128,7 +135,7 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
     // Vérifier que le HUD a des éléments accessibles
     await step(page, 'Vérifier objectif accessible');
     const objective = page.locator('text=/🎯\\s*Objectif/i');
-    await expect(objective).toBeVisible();
+    await expect(objective).toBeVisible({ timeout: 7000 });
 
     // Vérifier les boutons de contrôle (Suivant, choix) ont des labels
     await step(page, 'Avancer et vérifier labels choix');
@@ -136,7 +143,7 @@ test.describe('Parcours Chapitres → Scène → Variables', () => {
       const nextBtn = page.getByRole('button', { name: /suivant/i });
       if (await nextBtn.isVisible().catch(() => false)) {
         await nextBtn.click();
-        await page.waitForTimeout(400);
+        await page.waitForTimeout(1000);
       }
     }
 

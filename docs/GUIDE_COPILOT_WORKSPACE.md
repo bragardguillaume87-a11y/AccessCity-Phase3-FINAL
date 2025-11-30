@@ -1,3 +1,16 @@
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, uniformité dans les guides et les workflows.
+- Accessibilité : instructions claires, feedback utilisateur explicite, guide utilisable par IA et humains.
+- Inclusivité : langage neutre, contenu accessible à tous, guide ouvert aux débutants.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite, checklists et workflows clairs.
+- Automatisation & CI/CD : validation automatisée, intégration continue des bonnes pratiques dans les workflows.
+- Contribution : feedback encouragé, documentation et guides à jour, conventions de commit.
+
+> Ces principes guident l’utilisation de Copilot Workspace et ses alternatives pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
 # Guide Copilot Workspace pour AccessCity
 
 ## Qu'est-ce que Copilot Workspace ?

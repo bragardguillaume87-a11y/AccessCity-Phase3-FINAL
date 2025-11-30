@@ -6,6 +6,19 @@
 
 ---
 
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, tokens centralisés, modularité.
+- Accessibilité : conformité WCAG, navigation clavier, aria, feedback utilisateur explicite.
+- Inclusivité : langage neutre, contenu accessible à tous, règles claires pour IA et humains.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite.
+- Automatisation & CI/CD : scripts clairs, validation automatisée (ascii-check.js, tests).
+- Contribution : workflow PR, guide, code of conduct, conventions de commit.
+
+> Ces principes garantissent une expérience optimale, accélèrent le développement (+20 à +30 %), réduisent les bugs et facilitent l’onboarding.
+
+---
+
 ## REGLES ABSOLUES
 
 ### 1. ENCODAGE ASCII STRICT

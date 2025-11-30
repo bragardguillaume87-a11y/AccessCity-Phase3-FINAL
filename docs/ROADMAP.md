@@ -6,6 +6,19 @@
 
 ---
 
+# Principes fondamentaux & standards qualité
+
+- Cohérence visuelle : respect du design system, tokens centralisés, modularité sur toutes les phases.
+- Accessibilité : conformité WCAG, navigation clavier, aria, feedback utilisateur explicite, prise en compte dans chaque évolution.
+- Inclusivité : langage neutre, contenu accessible à tous, roadmap ouverte aux débutants et agents IA.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite, liens vers les guides et specs.
+- Automatisation & CI/CD : scripts clairs, validation automatisée, intégration continue des bonnes pratiques.
+- Contribution : workflow PR, guide, code of conduct, conventions de commit, feedback encouragé.
+
+> Ces principes guident chaque phase de la roadmap pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+---
+
 ## PHASES COMPLETEES
 
 ### Phase 3.0 ✅ TERMINE (Fondations Projet)
@@ -363,6 +376,25 @@ getAllCharacters()           // Liste tous personnages
 - [ ] `docs/CHARACTERS.md` - Guide gestion personnages
 - [ ] Mettre a jour `docs/CHANGELOG.md` pour v5.5
 - [ ] Mettre a jour `docs/PROJECT_MEMORY_SEED.md`
+
+---
+
+## Blueprint Phase 4 (fusionné)
+
+### Principes fondamentaux & standards qualité
+- Cohérence visuelle : respect du design system, uniformité dans la documentation et les schémas de phase.
+- Accessibilité : structure claire, respect des standards WCAG, feedback utilisateur explicite.
+- Inclusivité : langage neutre, contenu accessible à tous, documentation ouverte aux débutants et agents IA.
+- Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite.
+- Automatisation & CI/CD : validation automatisée, intégration continue des bonnes pratiques dans les scripts et schémas.
+- Contribution : feedback encouragé, documentation et schémas à jour, conventions de commit.
+
+> Ces principes guident la phase 4 pour garantir une expérience optimale, accélérer le développement (+20 à +30 %), réduire les bugs et faciliter l’onboarding.
+
+#### Blueprint technique
+- JSON Data loading
+- Schema validation
+- UI Layout system
 
 ---
 

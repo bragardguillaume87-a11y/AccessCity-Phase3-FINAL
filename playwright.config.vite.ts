@@ -15,7 +15,7 @@ export default defineConfig({
   reporter: [['list']],
   retries: 2,
   use: {
-    baseURL: 'http://localhost:4173', // Port vite preview
+    baseURL: 'http://localhost:8000', // Port vite preview
     headless: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -24,8 +24,8 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   webServer: {
-    command: 'npx vite preview --port 4173',
-    port: 4173,
+    command: 'npx vite preview --port 8000',
+    port: 8000,
     reuseExistingServer: true,
     timeout: 120000,
   },

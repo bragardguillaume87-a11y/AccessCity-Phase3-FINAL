@@ -14,9 +14,8 @@ async function step(page: Page, msg: string) {
 }
 
 test.describe('Scene End Accessibility', () => {
-  // Note: Ce test nécessite un scénario avec une fin explicite (data-scene-ended=true)
-  // Actuellement skip car le scénario demo se termine automatiquement et ferme le player
-  test.skip('Focus returns to exit button after scene ends', async ({ page }) => {
+  // Note: Test handles both explicit scene end (data-scene-ended=true) and automatic player close
+  test('Focus returns to exit button after scene ends', async ({ page }) => {
     await openApp(page);
     
     await step(page, 'Fermer onboarding si présent');
@@ -50,7 +49,7 @@ test.describe('Scene End Accessibility', () => {
     const dialogueBox = page.locator('.dialogue-box');
     await expect(dialogueBox).toBeVisible();
     
-    await step(page, 'Avancer jusqu\'à la fin de scène');
+    await step(page, 'Avancer jusqu\'\u00e0 la fin de scène');
     // Boucle interactive jusqu'à data-scene-ended = true ou page fermée
     let sceneEnded = false;
     for (let i = 0; i < 50; i++) {

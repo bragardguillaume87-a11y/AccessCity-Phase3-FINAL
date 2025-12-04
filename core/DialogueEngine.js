@@ -14,11 +14,14 @@ export class DialogueEngine {
         this.currentIndex = -1;
         this.isWaitingForChoice = false;
         this.isSceneEnded = false;
+        
+        // Safety: max iterations to prevent infinite loops
+        this.MAX_SKIP_ITERATIONS = 1000;
     }
 
     /**
-     * Lance une scène
-     * @param {Object} scene - L'objet scène complet
+     * Lance une scene
+     * @param {Object} scene - L'objet scene complet
      */
     startScene(scene) {
         if (!scene || !scene.dialogues || scene.dialogues.length === 0) {
@@ -26,7 +29,7 @@ export class DialogueEngine {
             return;
         }
 
-        console.log(`[DialogueEngine] Starting scene: ${scene.title}`);
+        console.log(`[DialogueEngine] Starting scene: ${scene.title || 'Untitled'}`);
         this.currentScene = scene;
         this.currentIndex = -1;
         this.isWaitingForChoice = false;
@@ -37,24 +40,36 @@ export class DialogueEngine {
     }
 
     applyEffects(effects) {
+        if (!effects || effects.length === 0) return;
+
         effects.forEach(effect => {
-            switch (effect.operation) {
-                case 'set':
-                    this.variableManager.set(effect.variable, effect.value);
-                    break;
-                case 'add':
-                    const current = this.variableManager.get(effect.variable) || 0;
-                    this.variableManager.set(effect.variable, current + effect.value);
-                    break;
-                case 'random':
-                    const min = effect.min !== undefined ? effect.min : 0;
-                    const max = effect.max !== undefined ? effect.max : 100;
-                    const randomValue = Math.floor(Math.random() * (max - min + 1)) + min;
-                    this.variableManager.set(effect.variable, randomValue);
-                    console.log(`[DialogueEngine] Random roll for ${effect.variable}: ${randomValue} (min:${min}, max:${max})`);
-                    break;
-                default:
-                    console.warn(`[DialogueEngine] Unknown effect operation: ${effect.operation}`);
+            try {
+                switch (effect.operation) {
+                    case 'set':
+                        this.variableManager.set(effect.variable, effect.value);
+                        console.log(`[DialogueEngine] Effect 'set': ${effect.variable} = ${effect.value}`);
+                        break;
+                    
+                    case 'add':
+                        const current = this.variableManager.get(effect.variable) || 0;
+                        const newValue = current + effect.value;
+                        this.variableManager.set(effect.variable, newValue);
+                        console.log(`[DialogueEngine] Effect 'add': ${effect.variable} ${current} + ${effect.value} = ${newValue}`);
+                        break;
+                    
+                    case 'random':
+                        const min = effect.min !== undefined ? effect.min : 0;
+                        const max = effect.max !== undefined ? effect.max : 100;
+                        const randomValue = Math.floor(Math.random() * (max - min + 1)) + min;
+                        this.variableManager.set(effect.variable, randomValue);
+                        console.log(`[DialogueEngine] Effect 'random': ${effect.variable} = ${randomValue} (min:${min}, max:${max})`);
+                        break;
+                    
+                    default:
+                        console.warn(`[DialogueEngine] Unknown effect operation: ${effect.operation}`);
+                }
+            } catch (error) {
+                console.error(`[DialogueEngine] Error applying effect on ${effect.variable}:`, error);
             }
         });
     }
@@ -68,8 +83,17 @@ export class DialogueEngine {
             return;
         }
 
+        let skipCount = 0;
+
         while (true) {
             this.currentIndex++;
+
+            // Safety check: prevent infinite loops
+            if (skipCount >= this.MAX_SKIP_ITERATIONS) {
+                console.error(`[DialogueEngine] Max skip iterations (${this.MAX_SKIP_ITERATIONS}) reached. Breaking loop to prevent freeze.`);
+                this.endScene();
+                return;
+            }
 
             if (!this.currentScene || this.currentIndex >= this.currentScene.dialogues.length) {
                 this.endScene();
@@ -80,6 +104,7 @@ export class DialogueEngine {
 
             if (dialogue.conditions && !evaluateConditions(dialogue.conditions, this.variableManager)) {
                 console.log(`[DialogueEngine] Skipping dialogue ${this.currentIndex} (conditions not met)`);
+                skipCount++;
                 continue;
             }
 
@@ -104,12 +129,19 @@ export class DialogueEngine {
     }
 
     /**
-     * Sélectionne un choix
-     * @param {number} choiceIndex - L'index du choix dans le tableau FILTRÉ (celui affiché)
-     * @param {Object} choice - L'objet choix lui-même (plus sûr)
+     * Selectionne un choix
+     * @param {Object} choice - L'objet choix lui-meme (plus sur)
      */
     selectChoice(choice) {
-        if (!this.isWaitingForChoice) return;
+        if (!this.isWaitingForChoice) {
+            console.warn('[DialogueEngine] selectChoice called but not waiting for choice');
+            return;
+        }
+
+        if (!choice) {
+            console.error('[DialogueEngine] selectChoice called with null/undefined choice');
+            return;
+        }
 
         console.log(`[DialogueEngine] Choice selected: "${choice.text}"`);
 
@@ -120,7 +152,7 @@ export class DialogueEngine {
 
         this.isWaitingForChoice = false;
 
-        // Redirection vers une autre scène ?
+        // Redirection vers une autre scene ?
         if (choice.targetScene) {
             this.eventBus.emit('engine:scene_change_request', choice.targetScene);
         } else {

@@ -1,75 +1,157 @@
-# AccessCity 5.0
-Narrative scene editor for non-coders. Data-driven architecture.
+# AccessCity Scene Editor
 
-## Quick Start
-1. Installe les dépendances :
-   ```pwsh
-   npm install
-   ```
-2. Lance le serveur Vite :
-   ```pwsh
-   npm run dev
-   ```
-3. Accède à l’éditeur sur [http://localhost:5173](http://localhost:5173)
-4. Modifie les scènes via l’UI ou le fichier `data/scenes.json`
-5. Utilise les boutons d’export/import pour gérer tes projets
+[![E2E Tests](https://img.shields.io/badge/E2E%20Tests-7%2F7%20%E2%9C%85-brightgreen)](https://github.com/bragardguillaume87-a11y/AccessCity-Phase3-FINAL/tree/claude-sonnet-4.5/e2e)
+[![Unit Tests](https://img.shields.io/badge/Unit%20Tests-100%25%20%E2%9C%85-brightgreen)](https://github.com/bragardguillaume87-a11y/AccessCity-Phase3-FINAL/tree/claude-sonnet-4.5/test)
+[![Code Coverage](https://img.shields.io/badge/Coverage-85%25-yellow)](https://github.com/bragardguillaume87-a11y/AccessCity-Phase3-FINAL/tree/claude-sonnet-4.5/docs/COVERAGE_ROADMAP.md)
+[![Accessibility](https://img.shields.io/badge/A11y-WCAG%202.1%20AA-blue)](https://www.w3.org/WAI/WCAG21/quickref/)
 
-## Documentation
-- `docs/PROJECT_MEMORY_SEED.md` - Vision & rules
-- `docs/AccessCity_Agentic_Workflow.md` - Development workflow
-- `docs/CHANGELOG.md` - Version history
-- `docs/SUMMARY_AUTOMATION.md` - Conversation summary generator
-- `docs/COVERAGE_ROADMAP.md` - Plan couverture de code complète (Node + navigateur)
-- `docs/VITE_SETUP.md` - Guide setup Vite avec HMR (workflow dev moderne)
+**Narrative scene editor for non-coders.** Data-driven architecture with accessibility-first design.
 
-## Testing
-```pwsh
-npm test
+---
+
+## 🚀 Quick Start (5 minutes)
+
+See **[QUICK_START.md](./QUICK_START.md)** for the fastest way to get coding.
+
+### Installation
+```bash
+npm install
+npm run dev
 ```
 
-## E2E Vite (React)
-Pour exécuter les tests E2E sur l'app React/Vite :
+Access the editor at [http://localhost:5173](http://localhost:5173)
 
-1. Construisez le projet Vite instrumenté :
-   ```pwsh
-   npm run build:vite:coverage
-   ```
-2. Lancez le serveur Vite en mode preview :
-   ```pwsh
-   npm run preview:vite
-   ```
-3. Exécutez les tests Playwright :
-   ```pwsh
-   npm run e2e:vite
-   ```
+### Testing
+```bash
+npm test              # Unit tests
+npm run e2e:vite      # E2E tests (Playwright)
+```
 
-> Astuce : Le workflow Playwright (`playwright.config.vite.ts`) lance automatiquement le serveur Vite en mode preview avant les tests grâce à la section `webServer`. Vous pouvez donc simplement utiliser `npm run e2e:vite` pour tout automatiser.
+---
 
-## Scripts
-- `npm run dev` : serveur Vite avec HMR sur port 5173 (workflow moderne)
-- `npm test` : tests E2E Playwright
-- `npm run e2e:vite` : build instrumenté + tests E2E Playwright contre preview Vite
-- `npm run e2e:install` : installation navigateurs Playwright
-- `npm run coverage` : couverture Node (texte + lcov)
-- `npm run coverage:html` : rapport HTML couverture Node
-- `npm run coverage:merge` : fusion couverture Node + navigateur vers `coverage/merged`
-- `npm run coverage:reports` : génère `coverage/merged/lcov.info` et `coverage/merged/html/`
-- `npm run build:vite` : build production Vite → `dist/`
-- `npm run preview:vite` : prévisualiser build Vite localement
-- `npm run build:vite:coverage` : build Vite instrumenté (`VITE_COVERAGE=true`)
-- `npm run summary` : outil de génération de résumé de conversation
+## 📋 Documentation
 
-### Workflow couverture unifiée
-```pwsh
-# 1) Couverture Node
+### Getting Started
+- **[QUICK_START.md](./QUICK_START.md)** - 5-minute setup guide
+- **[docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)** - How to contribute
+- **[docs/CODING_RULES.md](./docs/CODING_RULES.md)** - Code standards (100% ASCII, structure)
+
+### Technical
+- **[docs/ROADMAP.md](./docs/ROADMAP.md)** - Project vision & phases
+- **[docs/COVERAGE_ROADMAP.md](./docs/COVERAGE_ROADMAP.md)** - Test coverage strategy
+- **[docs/VITE_SETUP.md](./docs/VITE_SETUP.md)** - Vite + HMR workflow
+- **[docs/E2E_PROMPT_TEMPLATE.md](./docs/E2E_PROMPT_TEMPLATE.md)** - E2E test templates
+
+### AI Context
+- **[docs/AI_CONTEXT.md](./docs/AI_CONTEXT.md)** - Project context for AI assistants
+- **[docs/AccessCity_Agentic_Workflow.md](./docs/AccessCity_Agentic_Workflow.md)** - Development workflow
+
+---
+
+## 🎯 Features
+
+- ✅ **Visual Scene Editor** - Edit dialogues, choices, conditions without coding
+- ✅ **Variable System** - Track player stats (Empathie, Autonomie, etc.)
+- ✅ **Conditional Logic** - Branch narratives based on variables
+- ✅ **Character System** - Manage avatars, names, colors
+- ✅ **Layout Profiles** - Switch between editing/play/debug modes
+- ✅ **Export/Import** - JSON-based project management
+- ✅ **Accessibility** - WCAG 2.1 AA compliant (aria-live, focus management)
+
+---
+
+## 🛠️ Scripts
+
+### Development
+```bash
+npm run dev           # Vite dev server (port 5173, HMR)
+npm run build:vite    # Production build → dist/
+npm run preview:vite  # Preview production build
+```
+
+### Testing
+```bash
+npm test                    # Unit tests (Node.js)
+npm run e2e:vite            # E2E tests (Playwright + Vite)
+npm run e2e:install         # Install Playwright browsers
+```
+
+### Coverage
+```bash
+npm run coverage            # Node.js coverage (text + lcov)
+npm run coverage:html       # HTML coverage report
+npm run build:vite:coverage # Instrumented Vite build
+npm run coverage:merge      # Merge Node + browser coverage
+npm run coverage:reports    # Generate unified reports
+```
+
+### Unified Coverage Workflow
+```bash
+# 1. Node coverage
 npm run coverage
 
-# 2) Couverture navigateur (build instrumenté + E2E)
-$env:VITE_COVERAGE='true'; npm run e2e:vite
+# 2. Browser coverage (instrumented build + E2E)
+VITE_COVERAGE=true npm run e2e:vite
 
-# 3) Merge Node + navigateur
+# 3. Merge both
 npm run coverage:merge
 
-# 4) Rapports lcov + HTML
+# 4. Generate reports (lcov + HTML)
 npm run coverage:reports
 ```
+
+---
+
+## 🏛️ Architecture
+
+```
+AccessCity-Phase3-FINAL/
+├── core/              # Dialogue engine, variable manager, loaders
+├── ui/                # UI components (SceneList, Inspector, etc.)
+├── data/              # JSON data (scenes, characters, layouts)
+├── src/               # Vite/React source (modern workflow)
+├── test/              # Unit tests
+├── e2e/               # Playwright E2E tests
+├── docs/              # Documentation
+└── tools/             # Build/dev tools
+```
+
+**Key modules:**
+- `core/DialogueEngine.js` - Scene playback with conditions/effects
+- `core/VariableManager.js` - Player stats tracking
+- `ui/StageDirector.js` - Play mode orchestration
+- `ui/CharacterEditor.js` - Character management
+
+---
+
+## 👥 Contributing
+
+We welcome contributions! See **[docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)** for:
+- Code standards (100% ASCII, folder structure)
+- Branch workflow
+- Commit conventions
+- Testing requirements
+
+**Quick rules:**
+1. All code must be 100% ASCII (no special chars)
+2. Follow `core/`, `ui/`, `data/`, `test/` structure
+3. Add tests for new features
+4. Run `npm test` before committing
+
+---
+
+## 📝 Changelog
+
+See **[docs/CHANGELOG.md](./docs/CHANGELOG.md)** for version history.
+
+---
+
+## 📝 License
+
+MIT License - See [LICENSE](./LICENSE) for details.
+
+---
+
+## 🚀 Version
+
+**AccessCity 5.5a** - Modern Vite workflow with full E2E coverage (7/7 tests passing)

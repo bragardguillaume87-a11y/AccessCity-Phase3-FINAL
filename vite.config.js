@@ -14,13 +14,33 @@ export default defineConfig({
       requireEnv: false, // Active l'instrumentation même sans VITE_COVERAGE
       forceBuildInstrument: process.env.VITE_COVERAGE === 'true', // Force pour build de production
     }),
+    // ✅ Plugin pour rediriger / vers /index-react.html (l'éditeur AccessCity)
+    {
+      name: 'redirect-to-editor',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          // Rediriger la racine vers l'éditeur AccessCity
+          if (req.url === '/' || req.url === '/index.html') {
+            req.url = '/index-react.html';
+          }
+          next();
+        });
+      },
+    },
   ],
   server: {
     port: 5173,
-    open: true,
+    open: true, // Ouvre automatiquement le navigateur
   },
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // Configuration multi-pages pour le build
+    rollupOptions: {
+      input: {
+        main: './index-react.html', // Éditeur AccessCity (par défaut)
+        demo: './index.html',        // Démo Vite simple
+      },
+    },
   },
 });

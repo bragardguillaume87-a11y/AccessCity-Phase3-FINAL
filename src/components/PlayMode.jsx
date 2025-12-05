@@ -1,18 +1,10 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '../AppContext.jsx';
 import { IconByName } from './IconByName.jsx';
-import StageDirector from '../core/StageDirector.js';
-import { 
-  playDialogue, 
-  playChoice, 
-  playSceneChange, 
-  playStatIncrease, 
-  playStatDecrease, 
-  playGameOver, 
-  playVictory,
-  setGlobalMute,
-  isGlobalMuted
-} from '../utils/soundFeedback.js';
+// FIX: Utiliser StageDirector simplifie
+import StageDirector from '../core/StageDirector.simple.js';
+// FIX: Utiliser systeme son simplifie
+import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '../utils/simpleSound.js';
 import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles, Volume2, VolumeX } from 'lucide-react';
 
 
@@ -25,24 +17,25 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
   const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Confiance: 50 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMuted, setIsMuted] = useState(isGlobalMuted());
+  const [isMuted, setIsMuted] = useState(isSoundMuted());
 
 
-  // Créer le director et initialiser le jeu en UN SEUL useEffect
+  // Creer le director et initialiser le jeu en UN SEUL useEffect
   useEffect(() => {
     if (scenes.length > 0 && dialogues.length > 0) {
-      // ✅ Support de la scène sélectionnée
-      const newDirector = new StageDirector(scenes, dialogues, characters, selectedSceneIndex);
+      // FIX: Passer selectedSceneIndex au constructeur
+      const gameState = { Empathie: 50, Autonomie: 50, Confiance: 50 };
+      const newDirector = new StageDirector(scenes, dialogues, gameState, selectedSceneIndex);
       setDirector(newDirector);
       
-      // Initialiser l'état immédiatement après création
+      // Initialiser l'etat immediatement apres creation
       const scene = newDirector.getCurrentScene();
       const dialogue = newDirector.getCurrentDialogue();
       
-      // ✅ Vérifier qu'il y a des dialogues
+      // FIX: Verifier qu'il y a des dialogues
       if (!dialogue) {
-        console.warn('[PlayMode] Aucun dialogue pour cette scène');
-        alert('Cette scène n\'a pas de dialogues. Ajoutez-en dans l\'\u00e9diteur avant de jouer !');
+        console.warn('[PlayMode] Aucun dialogue pour cette scene');
+        alert('Cette scene n\'a pas de dialogues. Ajoutez-en dans l\'editeur avant de jouer !');
         setIsLoading(false);
         setTimeout(onExit, 100);
         return;
@@ -50,12 +43,12 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
       
       setCurrentScene(scene);
       setCurrentDialogue(dialogue);
-      setVariables({ ...newDirector.variables });
-      setIsEnded(newDirector.isGameEnded());
+      setVariables({ ...newDirector.gameState });
+      setIsEnded(newDirector.isGameOver());
       setIsLoading(false);
       
-      // Jouer le son de changement de scène
-      playSceneChange();
+      // Jouer le son de changement de scene
+      playSound('/sounds/scene-change.mp3', 0.3);
     }
   }, [scenes, dialogues, characters, selectedSceneIndex, onExit]);
 
@@ -68,37 +61,39 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
     
     setCurrentScene(scene);
     setCurrentDialogue(dialogue);
-    setVariables({ ...director.variables });
-    setIsEnded(director.isGameEnded());
+    setVariables({ ...director.gameState });
+    setIsEnded(director.isGameOver());
   }
 
 
   function handleChoice(choice) {
     if (!director) return;
     
-    playChoice();
-    const effects = director.makeChoice(choice);
+    // FIX: Son simplifie
+    playSound('/sounds/choice.mp3', 0.5);
+    director.makeChoice(choice);
     
-    if (effects) {
-      Object.entries(effects).forEach(([key, value]) => {
-        if (value > 0) playStatIncrease();
-        if (value < 0) playStatDecrease();
+    // Verifier effets (optionnel: jouer sons differents)
+    if (choice.effects) {
+      Object.entries(choice.effects).forEach(([key, value]) => {
+        if (value > 0) playSound('/sounds/stat-up.mp3', 0.4);
+        if (value < 0) playSound('/sounds/stat-down.mp3', 0.4);
       });
     }
 
 
-    const ended = director.isGameEnded();
+    const ended = director.isGameOver();
     if (ended) {
-      const avgScore = (director.variables.Empathie + director.variables.Autonomie + director.variables.Confiance) / 3;
+      const avgScore = (director.gameState.Empathie + director.gameState.Autonomie + director.gameState.Confiance) / 3;
       if (avgScore >= 60) {
-        playVictory();
+        playSound('/sounds/victory.mp3', 0.6);
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
       } else {
-        playGameOver();
+        playSound('/sounds/game-over.mp3', 0.5);
       }
     } else {
-      playSceneChange();
+      playSound('/sounds/scene-change.mp3', 0.3);
     }
 
 
@@ -106,16 +101,15 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
   }
 
 
-  // ✅ Bouton Mute fonctionnel
-  function toggleMute() {
-    const newMuted = !isMuted;
+  // FIX: Bouton Mute simplifie
+  function handleMuteToggle() {
+    const newMuted = toggleSoundMute();
     setIsMuted(newMuted);
-    setGlobalMute(newMuted);
-    console.log(`[PlayMode] Son ${newMuted ? 'coupé' : 'activé'}`);
+    console.log(`[PlayMode] Son ${newMuted ? 'coupe' : 'active'}`);
   }
 
 
-  // Écran de chargement amélioré
+  // Ecran de chargement ameliore
   if (isLoading) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
@@ -123,14 +117,14 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600/20 rounded-full mb-4">
             <Sparkles className="w-8 h-8 text-purple-400 animate-spin" />
           </div>
-          <p className="text-slate-400">Chargement de la scène...</p>
+          <p className="text-slate-400">Chargement de la scene...</p>
         </div>
       </div>
     );
   }
 
 
-  // Écran de fin avec confettis et animations
+  // Ecran de fin avec confettis et animations
   if (isEnded) {
     const avgScore = (variables.Empathie + variables.Autonomie + variables.Confiance) / 3;
     const isSuccess = avgScore >= 60;
@@ -138,7 +132,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
     return (
       <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden">
-        {/* Confettis animés */}
+        {/* Confettis animes */}
         {showConfetti && (
           <div className="absolute inset-0 pointer-events-none z-50">
             {[...Array(50)].map((_, i) => (
@@ -159,13 +153,13 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
         )}
 
 
-        {/* Fond animé */}
+        {/* Fond anime */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20 animate-gradient" />
 
 
         {/* Contenu principal */}
         <div className="relative z-10 max-w-2xl w-full mx-auto p-8 text-center">
-          {/* Icône principale avec animation */}
+          {/* Icone principale avec animation */}
           <div className="mb-8 animate-scale-in">
             <div className={`
               inline-flex items-center justify-center w-32 h-32 rounded-full
@@ -180,7 +174,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
           </div>
 
 
-          {/* Titre animé */}
+          {/* Titre anime */}
           <h1 className={`
             text-5xl font-bold mb-4 animate-fade-in-up
             ${isSuccess 
@@ -193,7 +187,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
 
           <p className="text-slate-400 mb-12 text-lg animate-fade-in-up animation-delay-200">
-            Merci d'avoir joué à cette aventure
+            Merci d'avoir joue a cette aventure
           </p>
 
 
@@ -267,11 +261,11 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             </div>
 
 
-            {/* Message de succès */}
+            {/* Message de succes */}
             {isSuccess && (
               <div className="mt-8 flex items-center justify-center gap-2 text-yellow-400 animate-pulse-slow">
                 <Sparkles className="w-5 h-5" />
-                <p className="font-semibold text-lg">Félicitations ! Excellent parcours !</p>
+                <p className="font-semibold text-lg">Felicitations ! Excellent parcours !</p>
                 <Sparkles className="w-5 h-5" />
               </div>
             )}
@@ -284,7 +278,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 mx-auto animate-fade-in-up animation-delay-1200"
           >
             <IconByName name="arrow-left" className="w-5 h-5" />
-            Retour à l'éditeur
+            Retour a l'editeur
           </button>
         </div>
         {/* Styles CSS pour les animations */}
@@ -418,9 +412,9 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
               Quitter
             </button>
 
-            {/* ✅ BOUTON MUTE FONCTIONNEL */}
+            {/* FIX: BOUTON MUTE SIMPLIFIE */}
             <button
-              onClick={toggleMute}
+              onClick={handleMuteToggle}
               className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
                 isMuted 
                   ? 'bg-red-600 hover:bg-red-700 text-white' 

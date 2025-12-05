@@ -9,12 +9,14 @@ import {
   playStatIncrease, 
   playStatDecrease, 
   playGameOver, 
-  playVictory 
+  playVictory,
+  setGlobalMute,
+  isGlobalMuted
 } from '../utils/soundFeedback.js';
-import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles } from 'lucide-react';
+import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles, Volume2, VolumeX } from 'lucide-react';
 
 
-export default function PlayMode({ onExit }) {
+export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
   const { scenes, dialogues, characters } = useContext(AppContext);
   const [director, setDirector] = useState(null);
   const [currentScene, setCurrentScene] = useState(null);
@@ -23,17 +25,28 @@ export default function PlayMode({ onExit }) {
   const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Confiance: 50 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMuted, setIsMuted] = useState(isGlobalMuted());
 
 
   // Créer le director et initialiser le jeu en UN SEUL useEffect
   useEffect(() => {
     if (scenes.length > 0 && dialogues.length > 0) {
-      const newDirector = new StageDirector(scenes, dialogues, characters);
+      // ✅ Support de la scène sélectionnée
+      const newDirector = new StageDirector(scenes, dialogues, characters, selectedSceneIndex);
       setDirector(newDirector);
       
       // Initialiser l'état immédiatement après création
       const scene = newDirector.getCurrentScene();
       const dialogue = newDirector.getCurrentDialogue();
+      
+      // ✅ Vérifier qu'il y a des dialogues
+      if (!dialogue) {
+        console.warn('[PlayMode] Aucun dialogue pour cette scène');
+        alert('Cette scène n\'a pas de dialogues. Ajoutez-en dans l\'\u00e9diteur avant de jouer !');
+        setIsLoading(false);
+        setTimeout(onExit, 100);
+        return;
+      }
       
       setCurrentScene(scene);
       setCurrentDialogue(dialogue);
@@ -44,7 +57,7 @@ export default function PlayMode({ onExit }) {
       // Jouer le son de changement de scène
       playSceneChange();
     }
-  }, [scenes, dialogues, characters]);
+  }, [scenes, dialogues, characters, selectedSceneIndex, onExit]);
 
 
   function updateState() {
@@ -93,8 +106,17 @@ export default function PlayMode({ onExit }) {
   }
 
 
+  // ✅ Bouton Mute fonctionnel
+  function toggleMute() {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    setGlobalMute(newMuted);
+    console.log(`[PlayMode] Son ${newMuted ? 'coupé' : 'activé'}`);
+  }
+
+
   // Écran de chargement amélioré
-  if (isLoading || !currentScene || !director) {
+  if (isLoading) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
@@ -387,28 +409,52 @@ export default function PlayMode({ onExit }) {
       {/* Header avec variables */}
       <div className="bg-slate-900/90 backdrop-blur-sm border-b border-slate-700 p-4">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <button
-            onClick={onExit}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <IconByName name="x" className="w-4 h-4" />
-            Quitter
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onExit}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <IconByName name="x" className="w-4 h-4" />
+              Quitter
+            </button>
 
+            {/* ✅ BOUTON MUTE FONCTIONNEL */}
+            <button
+              onClick={toggleMute}
+              className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
+                isMuted 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+              }`}
+              title={isMuted ? 'Activer le son' : 'Couper le son'}
+            >
+              {isMuted ? (
+                <>
+                  <VolumeX className="w-5 h-5" />
+                  <span className="text-sm font-medium">Muet</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Son</span>
+                </>
+              )}
+            </button>
+          </div>
 
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <IconByName name="heart" className="w-5 h-5 text-red-400" />
+              <Heart className="w-5 h-5 text-red-400" />
               <span className="text-slate-300 font-medium">Empathie:</span>
               <span className="text-white font-bold">{variables.Empathie}</span>
             </div>
             <div className="flex items-center gap-2">
-              <IconByName name="zap" className="w-5 h-5 text-blue-400" />
+              <Zap className="w-5 h-5 text-blue-400" />
               <span className="text-slate-300 font-medium">Autonomie:</span>
               <span className="text-white font-bold">{variables.Autonomie}</span>
             </div>
             <div className="flex items-center gap-2">
-              <IconByName name="shield" className="w-5 h-5 text-green-400" />
+              <Shield className="w-5 h-5 text-green-400" />
               <span className="text-slate-300 font-medium">Confiance:</span>
               <span className="text-white font-bold">{variables.Confiance}</span>
             </div>

@@ -3,11 +3,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine.js';
 import HUDVariables from './HUDVariables.jsx';
+import DeltaBadges from './DeltaBadges.jsx';
 
 export default function PlayerPreview({ scene, onExit }) {
   const [current, setCurrent] = useState(null);
   const [vars, setVars] = useState({ Physique: 100, Mentale: 100 });
   const [ended, setEnded] = useState(false);
+  const [deltas, setDeltas] = useState([]);
 
   const engineRef = useRef(null);
   const busRef = useRef(null);
@@ -23,10 +25,21 @@ export default function PlayerPreview({ scene, onExit }) {
       setEnded(true);
       setCurrent({ speaker: 'narrator', text: 'Scene terminee.', choices: [] });
     }
+    function onDelta(list) {
+      if (!Array.isArray(list)) return;
+      list.forEach(({ variable, delta }) => {
+        const id = `${Date.now()}-${Math.random()}`;
+        setDeltas(prev => [...prev, { id, variable, delta }]);
+        setTimeout(() => {
+          setDeltas(prev => prev.filter(x => x.id !== id));
+        }, 1500);
+      });
+    }
 
     eventBus.on('dialogue:show', onShow);
     eventBus.on('variables:updated', onVars);
     eventBus.on('scene:complete', onEnd);
+    eventBus.on('variables:delta', onDelta);
 
     dialogueEngine.loadScene(scene);
 
@@ -34,6 +47,7 @@ export default function PlayerPreview({ scene, onExit }) {
       eventBus.off('dialogue:show', onShow);
       eventBus.off('variables:updated', onVars);
       eventBus.off('scene:complete', onEnd);
+      eventBus.off('variables:delta', onDelta);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene]);
@@ -64,6 +78,7 @@ export default function PlayerPreview({ scene, onExit }) {
 
       {/* HUD variables accesible */}
       <HUDVariables variables={vars} />
+      <DeltaBadges deltas={deltas} />
 
       {/* Stage */}
       <div className="relative w-full bg-black rounded-xl overflow-hidden mt-14" style={{ minHeight: '480px' }}>

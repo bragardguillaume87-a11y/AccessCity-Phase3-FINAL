@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
 import ConfirmModal from './ConfirmModal';
+import CharacterEditor from './CharacterEditor.jsx';
 
 function CharactersPanel() {
   const { characters, addCharacter, updateCharacter, deleteCharacter } = useApp();
   const [newCharacterName, setNewCharacterName] = useState('');
   const [charToDelete, setCharToDelete] = useState(null);
+  const [editingCharacter, setEditingCharacter] = useState(null);
 
   const sortedCharacters = useMemo(() => {
     return [...characters].sort((a, b) => a.name.localeCompare(b.name));
@@ -69,6 +71,12 @@ function CharactersPanel() {
               className="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
+              onClick={() => setEditingCharacter(character)}
+              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Editer
+            </button>
+            <button
               onClick={() => handleDeleteClick(character)}
               className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
             >
@@ -85,6 +93,15 @@ function CharactersPanel() {
           message={`Êtes-vous sûr de vouloir supprimer "${charToDelete.name}" ?`}
           onConfirm={confirmDelete}
           onCancel={() => setCharToDelete(null)}
+        />
+      )}
+
+      {/* Character Editor Modal */}
+      {editingCharacter && (
+        <CharacterEditor
+          character={editingCharacter}
+          onSave={(updated) => { updateCharacter(updated.id, updated); setEditingCharacter(null); }}
+          onClose={() => setEditingCharacter(null)}
         />
       )}
     </div>

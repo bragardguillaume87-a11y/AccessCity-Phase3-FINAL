@@ -2,6 +2,7 @@
 // ASCII only
 import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine.js';
+import HUDVariables from './HUDVariables.jsx';
 
 export default function PlayerPreview({ scene, onExit }) {
   const [current, setCurrent] = useState(null);
@@ -61,50 +62,57 @@ export default function PlayerPreview({ scene, onExit }) {
         Quitter
       </button>
 
-      <div className="mb-3 text-sm text-gray-600">
-        Physique: {vars.Physique} / 100, Mentale: {vars.Mentale} / 100
-      </div>
+      {/* HUD variables accesible */}
+      <HUDVariables variables={vars} />
 
-      {scene && scene.backgroundUrl ? (
-        <img src={scene.backgroundUrl} alt="Decor" className="w-full max-h-64 object-cover rounded mb-3" />
-      ) : (
-        <div className="w-full h-32 bg-gray-100 rounded mb-3" />
-      )}
+      {/* Stage */}
+      <div className="relative w-full bg-black rounded-xl overflow-hidden mt-14" style={{ minHeight: '480px' }}>
+        {/* Background */}
+        {scene && scene.backgroundUrl ? (
+          <img src={scene.backgroundUrl} alt="Decor" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900" />
+        )}
 
-      {current && (
-        <div className="border-2 border-gray-200 rounded p-3">
-          {!ended && (
-            <>
-              <div className="font-semibold mb-2">{nameOf(current.speaker)}</div>
-              <p className="mb-3">{current.text}</p>
-              {current.choices && current.choices.length > 0 ? (
-                <div className="space-y-2">
-                  {current.choices.map((c, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleChoice(c)}
-                      className="w-full text-left px-3 py-2 rounded border hover:border-primary"
-                    >
-                      {c.text}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleNext}
-                    className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded"
-                    aria-label="Suivant"
-                  >
-                    Suivant
-                  </button>
-                </div>
+        {/* Dialogue Box */}
+        <div className="absolute inset-x-0 bottom-4 px-4">
+          {current && (
+            <div className="mx-auto max-w-2xl bg-[rgba(37,37,38,0.95)] text-gray-100 border-2 border-primary rounded-lg p-4 shadow-xl">
+              {!ended && (
+                <>
+                  <div className="mb-2 font-semibold text-primary-hover">{nameOf(current.speaker)}</div>
+                  <p className="mb-4">{current.text}</p>
+                  {current.choices && current.choices.length > 0 ? (
+                    <div className="space-y-2" role="group" aria-label="Choix disponibles">
+                      {current.choices.map((c, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleChoice(c)}
+                          className="w-full text-left px-3 py-2 rounded border border-gray-600 hover:border-primary"
+                          aria-label={`Choix ${i + 1}`}
+                        >
+                          → {c.text}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleNext}
+                        className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded"
+                        aria-label="Suivant"
+                      >
+                        Suivant →
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </>
+              {ended && <p role="status" aria-live="polite">{current.text}</p>}
+            </div>
           )}
-          {ended && <p role="status" aria-live="polite">{current.text}</p>}
         </div>
-      )}
+      </div>
     </div>
   );
 }

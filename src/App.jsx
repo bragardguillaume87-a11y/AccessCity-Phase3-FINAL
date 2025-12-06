@@ -6,12 +6,16 @@ import BackgroundPanel from './components/BackgroundPanel.jsx';
 import CharactersPanel from './components/CharactersPanel.jsx';
 import ExportPanel from './components/ExportPanel.jsx';
 import ImportPanel from './components/ImportPanel.jsx';
+import OnboardingModal from './components/OnboardingModal.jsx';
 import PlayerPreview from './components/PlayerPreview.jsx';
 
 function StudioShell() {
   const { selectedSceneId, scenes } = useApp();
   const [currentModule, setCurrentModule] = useState('scenes');
   const [showPreview, setShowPreview] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !window.localStorage.getItem('ac_onboarded');
+  });
 
   const selectedScene = scenes.find(s => s.id === selectedSceneId);
 
@@ -95,6 +99,10 @@ function StudioShell() {
           </div>
         </div>
       </div>
+
+      {showOnboarding && (
+        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+      )}
     </div>
   );
 }

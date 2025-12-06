@@ -1,3 +1,4 @@
+// src/components/ExportPanel.jsx
 import React from 'react';
 import { useApp } from '../AppContext.jsx';
 
@@ -14,7 +15,17 @@ function downloadJson(filename, data) {
 }
 
 export default function ExportPanel() {
-  const { scenes, characters } = useApp();
+  const { scenes, characters, context } = useApp();
+
+  function exportCore() {
+    const core = {
+      title: context.title || '',
+      location: context.location || '',
+      tone: context.tone || '',
+      description: context.description || ''
+    };
+    downloadJson('core_system.json', core);
+  }
 
   return (
     <div className="space-y-3">
@@ -31,6 +42,12 @@ export default function ExportPanel() {
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
         >
           characters.json
+        </button>
+        <button
+          onClick={exportCore}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+        >
+          core_system.json
         </button>
       </div>
       <p className="text-xs text-gray-500">

@@ -5,6 +5,7 @@ import DialoguesPanel from './components/DialoguesPanel.jsx';
 import BackgroundPanel from './components/BackgroundPanel.jsx';
 import CharactersPanel from './components/CharactersPanel.jsx';
 import ExportPanel from './components/ExportPanel.jsx';
+import ImportPanel from './components/ImportPanel.jsx';
 import PlayerPreview from './components/PlayerPreview.jsx';
 
 function StudioShell() {
@@ -86,7 +87,10 @@ function StudioShell() {
               <CharactersPanel />
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl shadow p-6 xl:col-span-3">
-              <ExportPanel />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ExportPanel />
+                <ImportPanel />
+              </div>
             </div>
           </div>
         </div>

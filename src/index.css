@@ -1,3 +1,4 @@
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
 * {
@@ -7,6 +8,10 @@
 body {
   margin: 0;
   padding: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15), transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12), transparent 22%),
+    #0f172a;
+  color: #e2e8f0;
 }
 
 #root {

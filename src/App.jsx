@@ -8,6 +8,7 @@ import ExportPanel from './components/ExportPanel.jsx';
 import ImportPanel from './components/ImportPanel.jsx';
 import OnboardingModal from './components/OnboardingModal.jsx';
 import PlayerPreview from './components/PlayerPreview.jsx';
+import SkipToContent from './components/SkipToContent.jsx';
 
 function StudioShell() {
   const { selectedSceneId, scenes } = useApp();
@@ -21,14 +22,22 @@ function StudioShell() {
 
   if (showPreview && selectedScene) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900 p-6">
+      <div
+        id="main-content"
+        tabIndex="-1"
+        className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900 p-6"
+      >
         <PlayerPreview scene={selectedScene} onExit={() => setShowPreview(false)} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+    <div
+      id="main-content"
+      tabIndex="-1"
+      className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900"
+    >
       <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col gap-6">
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -110,6 +119,7 @@ function StudioShell() {
 function App() {
   return (
     <AppProvider>
+      <SkipToContent />
       <StudioShell />
     </AppProvider>
   );

@@ -1,13 +1,26 @@
 import React, { useState } from 'react';
-import { AppProvider } from './AppContext.jsx';
+import { AppProvider, useApp } from './AppContext.jsx';
 import ScenesPanel from './components/ScenesPanel.jsx';
 import DialoguesPanel from './components/DialoguesPanel.jsx';
 import BackgroundPanel from './components/BackgroundPanel.jsx';
 import CharactersPanel from './components/CharactersPanel.jsx';
 import ExportPanel from './components/ExportPanel.jsx';
+import PlayerPreview from './components/PlayerPreview.jsx';
 
 function StudioShell() {
+  const { selectedSceneId, scenes } = useApp();
   const [currentModule, setCurrentModule] = useState('scenes');
+  const [showPreview, setShowPreview] = useState(false);
+
+  const selectedScene = scenes.find(s => s.id === selectedSceneId);
+
+  if (showPreview && selectedScene) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900 p-6">
+        <PlayerPreview scene={selectedScene} onExit={() => setShowPreview(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
@@ -19,6 +32,13 @@ function StudioShell() {
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 mt-1">AccessCity Studio</h1>
             <p className="text-slate-600 mt-2">Creez vos scenarios immersifs avec scenes, dialogues et personnages.</p>
           </div>
+          <button
+            onClick={() => setShowPreview(true)}
+            disabled={!selectedScene}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Previsualiser
+          </button>
         </header>
 
         {/* Tabs pour modules */}

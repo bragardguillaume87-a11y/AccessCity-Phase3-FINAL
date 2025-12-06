@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 function trapFocus(container) {
   if (!container) return () => {};
-  const selectors = ['a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])'];
+  const selectors = ['a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])', '[role="button"]'];
   const getFocusables = () => Array.from(container.querySelectorAll(selectors.join(',')))
     .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
   
@@ -34,11 +34,12 @@ export default function CharacterEditor({ character, onSave, onClose }) {
   const [selectedMood, setSelectedMood] = useState('neutral');
   const [previewUrl, setPreviewUrl] = useState('');
   const dialogRef = useRef(null);
+  const prevActiveRef = useRef(null);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const prevActive = document.activeElement;
+    prevActiveRef.current = document.activeElement;
 
     if (dialogRef.current) dialogRef.current.focus();
     const cleanup = trapFocus(dialogRef.current);
@@ -46,8 +47,8 @@ export default function CharacterEditor({ character, onSave, onClose }) {
     return () => {
       document.body.style.overflow = prevOverflow;
       cleanup();
-      if (prevActive && typeof prevActive.focus === 'function') {
-        try { prevActive.focus(); } catch {}
+      if (prevActiveRef.current && typeof prevActiveRef.current.focus === 'function') {
+        try { prevActiveRef.current.focus(); } catch {}
       }
     };
   }, []);
@@ -122,72 +123,101 @@ export default function CharacterEditor({ character, onSave, onClose }) {
       >
         <div className="bg-gradient-to-r from-primary to-primary-hover text-white p-6 rounded-t-xl flex justify-between items-center">
           <h2 id="character-editor-title" className="text-2xl font-bold">Editer {edited.name}</h2>
-          <button onClick={onClose} className="text-white text-3xl hover:opacity-75" aria-label="Fermer">&times;</button>
+          <button
+            onClick={onClose}
+            className="text-white text-3xl hover:opacity-75 transition-opacity"
+            aria-label={`Fermer l editeur de ${edited.name}`}
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
         </div>
 
         <div className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-semibold mb-2">Nom du personnage</label>
+            <label htmlFor="character-name" className="block text-sm font-semibold mb-2">Nom du personnage</label>
             <input
+              id="character-name"
               type="text"
               value={edited.name}
               onChange={(e) => setEdited({ ...edited, name: e.target.value })}
               className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-primary outline-none"
+              aria-required="true"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-2">Description</label>
+            <label htmlFor="character-description" className="block text-sm font-semibold mb-2">Description</label>
             <textarea
+              id="character-description"
               value={edited.description || ''}
               onChange={(e) => setEdited({ ...edited, description: e.target.value })}
               className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-primary outline-none h-20"
+              aria-describedby="description-hint"
             />
+            <p id="description-hint" className="text-xs text-gray-500 mt-1">Description du personnage qui apparaitra dans le jeu</p>
           </div>
 
-          <div>
+          <fieldset>
+            <legend className="block text-sm font-semibold mb-2">Humeurs disponibles</legend>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-semibold">Humeurs disponibles</label>
+              <p className="text-xs text-gray-600" id="moods-description">Selectionnez une humeur pour lui assigner une image</p>
               <button
                 onClick={handleAddMood}
                 className="bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary-hover text-sm"
+                aria-label="Ajouter une nouvelle humeur"
               >
                 + Ajouter humeur
               </button>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap" role="group" aria-labelledby="moods-description">
               {edited.moods.map(mood => (
                 <div key={mood} className="relative">
                   <button
                     onClick={() => setSelectedMood(mood)}
-                    className={`px-4 py-2 rounded-lg transition-all ${selectedMood === mood ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                    aria-pressed={selectedMood === mood}
+                    className={`px-4 py-2 rounded-lg transition-all ${
+                      selectedMood === mood
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
                   >
                     {mood}
                   </button>
                   {edited.moods.length > 1 && (
                     <button
                       onClick={() => handleRemoveMood(mood)}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs hover:bg-red-600"
-                      aria-label={`Supprimer humeur ${mood}`}
-                    >&times;</button>
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs hover:bg-red-600 transition-colors"
+                      aria-label={`Supprimer l humeur ${mood}`}
+                    >
+                      <span aria-hidden="true">&times;</span>
+                    </button>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div>
-            <label className="block text-sm font-semibold mb-2">Image pour l humeur {selectedMood}</label>
+            <label htmlFor="mood-image-upload" className="block text-sm font-semibold mb-2">
+              Image pour l humeur {selectedMood}
+            </label>
             <input
+              id="mood-image-upload"
               type="file"
               accept="image/*"
               onChange={(e) => handleFileUpload(selectedMood, e)}
               className="w-full mb-4"
+              aria-describedby="image-hint"
             />
+            <p id="image-hint" className="text-xs text-gray-500 mb-4">Formats acceptes: JPG, PNG, GIF. Taille recommandee: 512x512px</p>
             {previewUrl && (
               <div className="text-center">
                 <p className="text-xs text-gray-500 mb-2">Apercu:</p>
-                <img src={previewUrl} alt="Preview" className="max-w-full max-h-64 mx-auto rounded-lg shadow-md" />
+                <img
+                  src={previewUrl}
+                  alt={`Apercu de ${edited.name} en humeur ${selectedMood}`}
+                  className="max-w-full max-h-64 mx-auto rounded-lg shadow-md"
+                />
               </div>
             )}
             {!previewUrl && (
@@ -196,13 +226,17 @@ export default function CharacterEditor({ character, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-3">Apercu de toutes les humeurs</label>
+            <h3 className="text-sm font-semibold mb-3">Apercu de toutes les humeurs</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {edited.moods.map(mood => (
                 <div key={mood} className="text-center border-2 border-gray-200 rounded-lg p-3 hover:border-primary transition-all">
                   <p className="text-xs font-medium mb-2 capitalize">{mood}</p>
                   {edited.sprites[mood] ? (
-                    <img src={edited.sprites[mood]} alt={mood} className="w-full h-20 object-cover rounded" />
+                    <img
+                      src={edited.sprites[mood]}
+                      alt={`${edited.name} en humeur ${mood}`}
+                      className="w-full h-20 object-cover rounded"
+                    />
                   ) : (
                     <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
                       Pas d image
@@ -217,12 +251,14 @@ export default function CharacterEditor({ character, onSave, onClose }) {
             <button
               onClick={onClose}
               className="px-6 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all"
+              aria-label="Annuler les modifications"
             >
               Annuler
             </button>
             <button
               onClick={handleSave}
               className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all"
+              aria-label="Enregistrer les modifications du personnage"
             >
               Enregistrer
             </button>

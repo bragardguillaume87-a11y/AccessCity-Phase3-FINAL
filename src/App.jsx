@@ -41,7 +41,7 @@ function StudioShell() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
-      <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col gap-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
         {/* Header */}
         <header role="banner" className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -53,7 +53,7 @@ function StudioShell() {
             onClick={() => setShowPreview(true)}
             disabled={!selectedScene}
             aria-label="Previsualiser la scene selectionnee"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             Previsualiser
           </button>
@@ -71,19 +71,26 @@ function StudioShell() {
 
         {/* Main content */}
         <main id="main-content" tabIndex="-1" role="main">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Scenes sidebar */}
-            <aside aria-label="Liste des scenes" className="lg:col-span-1 bg-white border border-slate-200 rounded-2xl shadow p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Scenes sidebar - 3 columns on large screens */}
+            <aside 
+              aria-label="Liste des scenes" 
+              className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl shadow-sm p-6"
+            >
               <ScenesPanel />
             </aside>
 
-            {/* Main panels area */}
-            <div className="lg:col-span-2 grid grid-cols-1 xl:grid-cols-3 gap-6">
-              {/* Tab panels */}
-              <section className="bg-white border border-slate-200 rounded-2xl shadow p-6">
+            {/* Main panels area - 9 columns on large screens */}
+            <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* Tab panels - full width on mobile, half on tablet, 1/3 on XL */}
+              <section className="md:col-span-2 xl:col-span-1 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
                 <TabPanel id="scenes" isActive={currentModule === 'scenes'}>
-                  <div className="text-center text-slate-500 py-8">
-                    <p>Selectionnez une scene a gauche pour voir ses details.</p>
+                  <div className="text-center text-slate-500 py-12">
+                    <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                    </svg>
+                    <p className="font-medium text-slate-600">Aucune scene selectionnee</p>
+                    <p className="text-sm mt-2">Selectionnez une scene a gauche pour voir ses details</p>
                   </div>
                 </TabPanel>
                 <TabPanel id="dialogues" isActive={currentModule === 'dialogues'}>
@@ -92,17 +99,26 @@ function StudioShell() {
               </section>
 
               {/* Background panel */}
-              <section aria-label="Arriere-plan" className="bg-white border border-slate-200 rounded-2xl shadow p-6">
+              <section 
+                aria-label="Arriere-plan" 
+                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden"
+              >
                 <BackgroundPanel />
               </section>
 
               {/* Characters panel */}
-              <section aria-label="Personnages" className="bg-white border border-slate-200 rounded-2xl shadow p-6">
+              <section 
+                aria-label="Personnages" 
+                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden"
+              >
                 <CharactersPanel />
               </section>
 
-              {/* Import/Export panel */}
-              <section aria-label="Import et Export" className="bg-white border border-slate-200 rounded-2xl shadow p-6 xl:col-span-3">
+              {/* Import/Export panel - full width */}
+              <section 
+                aria-label="Import et Export" 
+                className="md:col-span-2 xl:col-span-3 bg-white border border-slate-200 rounded-2xl shadow-sm p-6"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ExportPanel />
                   <ImportPanel />

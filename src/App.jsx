@@ -4,6 +4,7 @@ import ScenesPanel from './components/ScenesPanel.jsx';
 import DialoguesPanel from './components/DialoguesPanel.jsx';
 import BackgroundPanel from './components/BackgroundPanel.jsx';
 import CharactersPanel from './components/CharactersPanel.jsx';
+import ExportPanel from './components/ExportPanel.jsx';
 
 function StudioShell() {
   const [currentModule, setCurrentModule] = useState('scenes');
@@ -63,6 +64,9 @@ function StudioShell() {
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl shadow p-6">
               <CharactersPanel />
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl shadow p-6 xl:col-span-3">
+              <ExportPanel />
             </div>
           </div>
         </div>

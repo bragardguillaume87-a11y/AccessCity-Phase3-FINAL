@@ -1,117 +1,93 @@
-import { X } from 'lucide-react';
-import { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-/**
- * Modal de confirmation reutilisable
- * @param {boolean} isOpen - Afficher ou masquer la modal
- * @param {function} onConfirm - Callback lors du clic sur Confirmer
- * @param {function} onCancel - Callback lors du clic sur Annuler
- * @param {string} title - Titre de la modal
- * @param {string} message - Message de la modal
- * @param {string} confirmText - Texte du bouton confirmer (defaut: "Confirmer")
- * @param {string} cancelText - Texte du bouton annuler (defaut: "Annuler")
- * @param {string} confirmColor - Couleur du bouton confirmer (defaut: "red")
- */
 export default function ConfirmModal({
   isOpen,
   onConfirm,
   onCancel,
-  title,
-  message,
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
+  title = 'Confirm action',
+  message = 'Are you sure?',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   confirmColor = 'red'
 }) {
-  // Bloquer scroll du body quand modal ouverte
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+  const dialogRef = useRef(null);
+  const confirmBtnRef = useRef(null);
 
-  // Fermer au clic Echap
   useEffect(() => {
-    function handleEscape(e) {
-      if (e.key === 'Escape' && isOpen) {
-        onCancel();
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const prevActive = document.activeElement;
+
+    const t = setTimeout(() => {
+      if (confirmBtnRef.current) confirmBtnRef.current.focus();
+    }, 0);
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        if (onCancel) onCancel();
       }
     }
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', onKey);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener('keydown', onKey);
+      clearTimeout(t);
+      if (prevActive && typeof prevActive.focus === 'function') {
+        try { prevActive.focus(); } catch {}
+      }
+    };
   }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
 
+  const confirmClasses =
+    'px-4 py-2 rounded text-white ' +
+    (confirmColor === 'red'
+      ? 'bg-red-600 hover:bg-red-700'
+      : confirmColor === 'green'
+      ? 'bg-green-600 hover:bg-green-700'
+      : 'bg-blue-600 hover:bg-blue-700');
+
   return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onCancel}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
+    <div className="fixed inset-0 z-[9999]" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-desc">
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
       <div
-        className="bg-slate-800 p-6 rounded-xl max-w-md w-full shadow-2xl border border-slate-700 animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        className="relative mx-auto mt-24 w-full max-w-md rounded-xl bg-white shadow-2xl p-6"
       >
-        {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <h3 id="modal-title" className="text-xl font-bold text-white">
-            {title}
-          </h3>
+          <h3 id="confirm-title" className="text-lg font-bold text-gray-900">{title}</h3>
           <button
+            type="button"
+            aria-label="Close"
             onClick={onCancel}
-            className="text-slate-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 rounded"
-            aria-label="Fermer"
+            className="text-gray-500 hover:text-gray-700 text-xl leading-none"
           >
-            <X className="w-5 h-5" />
+            &times;
           </button>
         </div>
-
-        {/* Message */}
-        <p className="text-slate-300 mb-6 leading-relaxed">{message}</p>
-
-        {/* Actions */}
-        <div className="flex gap-3 justify-end">
+        <p id="confirm-desc" className="text-sm text-gray-700 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
           <button
+            type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="px-4 py-2 rounded border-2 border-gray-300 hover:bg-gray-100"
           >
             {cancelText}
           </button>
           <button
+            type="button"
+            ref={confirmBtnRef}
             onClick={onConfirm}
-            className={`px-4 py-2 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 ${
-              confirmColor === 'red'
-                ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                : 'bg-purple-600 hover:bg-purple-700 focus:ring-purple-500'
-            }`}
+            className={confirmClasses}
           >
             {confirmText}
           </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes scale-in {
-          from {
-            transform: scale(0.9);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.2s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

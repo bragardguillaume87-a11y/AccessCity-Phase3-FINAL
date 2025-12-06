@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AppProvider } from './AppContext.jsx';
 import ScenesPanel from './components/ScenesPanel.jsx';
 import DialoguesPanel from './components/DialoguesPanel.jsx';
+import BackgroundPanel from './components/BackgroundPanel.jsx';
 
 function StudioShell() {
   const [currentModule, setCurrentModule] = useState('scenes');
@@ -47,13 +48,18 @@ function StudioShell() {
           <div className="lg:col-span-1 bg-white border border-slate-200 rounded-2xl shadow p-6">
             <ScenesPanel />
           </div>
-          <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow p-6">
-            {currentModule === 'scenes' && (
-              <div className="text-center text-slate-500 py-12">
-                <p>Selectionnez une scene a gauche pour voir ses details.</p>
-              </div>
-            )}
-            {currentModule === 'dialogues' && <DialoguesPanel />}
+          <div className="lg:col-span-2 grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow p-6">
+              {currentModule === 'scenes' && (
+                <div className="text-center text-slate-500 py-8">
+                  <p>Selectionnez une scene a gauche pour voir ses details.</p>
+                </div>
+              )}
+              {currentModule === 'dialogues' && <DialoguesPanel />}
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl shadow p-6">
+              <BackgroundPanel />
+            </div>
           </div>
         </div>
       </div>

@@ -122,6 +122,29 @@ a:visited {
   color: #7C3AED;
 }
 
+/* ========================================
+   TOAST ANIMATIONS
+   ======================================== */
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* ========================================
+   MEDIA QUERIES
+   ======================================== */
+
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   *:focus-visible {
@@ -146,5 +169,11 @@ a:visited {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  
+  .animate-slide-in-right {
+    animation: none;
+    opacity: 1;
+    transform: translateX(0);
   }
 }

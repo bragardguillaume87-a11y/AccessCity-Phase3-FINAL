@@ -56,7 +56,7 @@ function CharactersPanel() {
           onClick={handleAddCharacter}
           disabled={!newCharacterName.trim()}
           aria-label="Ajouter le personnage"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold whitespace-nowrap"
         >
           Ajouter
         </button>
@@ -69,9 +69,13 @@ function CharactersPanel() {
         )}
         {sortedCharacters.map((character) => (
           <div key={character.id} className="bg-gradient-to-r from-slate-50 to-white border-2 border-slate-200 rounded-lg p-3 hover:shadow-md transition-all">
-            {/* Character name - read only with ellipsis */}
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-semibold text-slate-900 truncate flex-1 mr-2" title={character.name}>
+            {/* Character name - with explicit ellipsis */}
+            <div className="flex items-center justify-between mb-3">
+              <p 
+                className="font-semibold text-slate-900 flex-1 mr-2 overflow-hidden whitespace-nowrap" 
+                style={{ textOverflow: 'ellipsis', maxWidth: '100%' }}
+                title={character.name}
+              >
                 {character.name}
               </p>
             </div>
@@ -81,14 +85,14 @@ function CharactersPanel() {
               <button
                 onClick={() => setEditingCharacter(character)}
                 aria-label={`Editer ${character.name}`}
-                className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
+                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
               >
                 Editer
               </button>
               <button
                 onClick={() => handleDeleteClick(character)}
                 aria-label={`Supprimer ${character.name}`}
-                className="flex-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium"
+                className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
                 Supprimer
               </button>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './AppContext.jsx';
+import { ToastProvider } from './contexts/ToastContext.jsx';
 import ScenesPanel from './components/ScenesPanel.jsx';
 import DialoguesPanel from './components/DialoguesPanel.jsx';
 import BackgroundPanel from './components/BackgroundPanel.jsx';
@@ -139,8 +140,10 @@ function StudioShell() {
 function App() {
   return (
     <AppProvider>
-      <SkipToContent />
-      <StudioShell />
+      <ToastProvider>
+        <SkipToContent />
+        <StudioShell />
+      </ToastProvider>
     </AppProvider>
   );
 }

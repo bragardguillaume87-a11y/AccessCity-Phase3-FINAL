@@ -33,5 +33,18 @@ Desktop.ini
 
 # Misc
 *.local
-*.env
-*.env.*
+
+# Environment variables (NEVER commit real keys)
+.env
+.env.*.local
+.env.local
+
+# Secrets and API keys
+.apikey
+*.secret
+.claude
+.anthropic
+
+# Temporary files with problematic names
+pace*
+resultats*

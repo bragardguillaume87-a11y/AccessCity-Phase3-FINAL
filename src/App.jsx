@@ -11,6 +11,7 @@ import OnboardingModal from './components/OnboardingModal.jsx';
 import PlayerPreview from './components/PlayerPreview.jsx';
 import SkipToContent from './components/SkipToContent.jsx';
 import AccessibleTabs, { TabPanel } from './components/AccessibleTabs.jsx';
+import ScenarioEditorShell from './components/ScenarioEditorShell.jsx';
 
 function StudioShell() {
   const { selectedSceneId, scenes } = useApp();
@@ -142,7 +143,7 @@ function App() {
     <AppProvider>
       <ToastProvider>
         <SkipToContent />
-        <StudioShell />
+        <ScenarioEditorShell />
       </ToastProvider>
     </AppProvider>
   );

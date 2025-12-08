@@ -1,5 +1,8 @@
 # Guide d accessibilite AccessCity Studio
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 ## Conformite WCAG 2.2 AA
 
 **Score actuel** : 95% (38/40 criteres valides)

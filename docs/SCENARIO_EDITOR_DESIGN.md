@@ -1,5 +1,8 @@
 # AccessCity Studio – Scenario Editor MVP (Synthese)
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 **Date** : 8 decembre 2025  
 **Branche** : `scenario-editor-MVP`  
 **Objectif** : Editeur de scenarios interactifs accessibles pour ateliers avec personnes en situation de handicap.

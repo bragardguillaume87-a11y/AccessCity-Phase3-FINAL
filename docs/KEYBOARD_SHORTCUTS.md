@@ -1,5 +1,8 @@
 # Raccourcis clavier AccessCity Studio
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 ## Navigation globale
 
 | Raccourci | Action | Contexte |

@@ -1,5 +1,8 @@
 # PROJECT MEMORY SEED (AccessCity Phase 5.5+)
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 ## CONTEXTE STRATEGIQUE
 
 ### Vision Projet

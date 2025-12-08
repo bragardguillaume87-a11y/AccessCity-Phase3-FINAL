@@ -1,6 +1,9 @@
 # Principes fondamentaux & standards qualité
 
-- Cohérence visuelle : respect du design system, tokens centralisés, modularité.
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
+- Cohérence visuelle : respect du design system, tokens centralisés, modularité.
 - Accessibilité : conformité WCAG, navigation clavier, aria, feedback utilisateur explicite.
 - Inclusivité : langage neutre, accueil des débutants, contenu accessible à tous.
 - Documentation actionnable et IA-friendly : exemples prêts à copier, sections bien délimitées, sémantique explicite.

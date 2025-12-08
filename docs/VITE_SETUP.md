@@ -1,5 +1,8 @@
 # Setup Vite — Guide de démarrage rapide
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 ## 🎯 Objectif
 
 Tester le workflow Vite avec Hot Module Replacement (HMR) en parallèle de l'app originale `index-react.html`.

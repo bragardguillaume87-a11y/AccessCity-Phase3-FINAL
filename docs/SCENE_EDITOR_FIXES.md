@@ -1,5 +1,8 @@
 # Guide de correction: Éditeur de scènes
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 ## Problèmes identifiés
 
 1. **Impossible de supprimer une scène**

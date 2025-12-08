@@ -1,5 +1,8 @@
 # AccessCity - Regles de Developpement Strictes
 
+> **Statut** : ✅ À jour pour le Scenario Editor MVP  
+> **Dernière mise à jour** : Décembre 2025
+
 **Version**: 1.0.0  
 **Date**: 23 novembre 2025  
 **Obligatoire pour**: Tous developpeurs et IA agents

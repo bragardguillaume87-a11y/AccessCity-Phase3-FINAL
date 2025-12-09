@@ -18,7 +18,7 @@ function StudioShell() {
   const [currentModule, setCurrentModule] = useState('scenes');
   const [showPreview, setShowPreview] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !window.localStorage.getItem('ac_onboarded');
+    return !window.localStorage.getItem('ac_onboarding_completed');
   });
 
   const selectedScene = scenes.find(s => s.id === selectedSceneId);

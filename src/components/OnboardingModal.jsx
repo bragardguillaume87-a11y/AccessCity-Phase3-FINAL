@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 function trapFocus(container) {
   if (!container) return () => {};
-  const selectors = ['a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])'];
+  const selectors = ['a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])']; 
   const getFocusables = () => Array.from(container.querySelectorAll(selectors.join(',')))
     .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
   
@@ -52,16 +52,19 @@ export default function OnboardingModal({ onClose }) {
 
   const steps = [
     {
-      title: 'Bienvenue dans AccessCity Studio !',
-      text: 'Cree des scenarios immersifs pour sensibiliser a l accessibilite.'
+      title: 'Bienvenue dans ton editeur d\'histoires !',
+      text: 'Ici, tu peux creer des aventures incroyables pour sensibiliser a l\'accessibilite. C\'est toi le createur !',
+      icon: '\uD83C\uDF89'
     },
     {
-      title: 'Comment utiliser l editeur ?',
-      text: 'Navigue entre les panneaux Scenes, Dialogues et Personnages. Chaque modification est instantanee.'
+      title: 'Decouvre comment creer ta premiere aventure',
+      text: 'Tu vas pouvoir ajouter des scenes, des dialogues et des personnages. C\'est super facile, suis le guide !',
+      icon: '\uD83D\uDCA1'
     },
     {
-      title: 'Previsualiser et exporter',
-      text: 'Clique sur Previsualiser pour tester ton scenario. Exporte en JSON quand tu es pret.'
+      title: 'C\'est parti ! Cree ta premiere histoire',
+      text: 'Clique sur "Scenes" pour commencer. Tu pourras previsualiser ton histoire quand tu veux. Amuse-toi bien !',
+      icon: '\uD83D\uDE80'
     }
   ];
 
@@ -85,28 +88,64 @@ export default function OnboardingModal({ onClose }) {
     onClose();
   }
 
+  function handleKeyDown(e) {
+    if (e.key === 'Escape') {
+      handleSkip();
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-fadeIn"
+      onKeyDown={handleKeyDown}
+    >
       <div
-        className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6"
+        className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 animate-scaleIn"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboard-title"
         aria-describedby="onboard-desc"
         tabIndex="-1"
         ref={dialogRef}
+        style={{
+          outline: '2px solid transparent',
+          outlineOffset: '2px'
+        }}
       >
-        <h3 id="onboard-title" className="text-2xl font-bold text-primary mb-2">
+        {/* Icon */}
+        <div className="text-6xl text-center mb-4" aria-hidden="true">
+          {steps[step].icon}
+        </div>
+
+        {/* Title */}
+        <h3 id="onboard-title" className="text-2xl font-bold text-slate-900 mb-3 text-center">
           {steps[step].title}
         </h3>
-        <p id="onboard-desc" className="text-gray-700 mb-6">
+
+        {/* Description */}
+        <p id="onboard-desc" className="text-slate-700 mb-6 text-center text-lg leading-relaxed">
           {steps[step].text}
         </p>
         
-        <div className="flex justify-between items-center">
+        {/* Progress dots */}
+        <div className="flex justify-center gap-2 mb-6" role="progressbar" aria-valuenow={step + 1} aria-valuemin="1" aria-valuemax={steps.length} aria-label={`Etape ${step + 1} sur ${steps.length}`}>
+          {steps.map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                i === step ? 'bg-purple-600' : 'bg-slate-300'
+              }`}
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-between items-center gap-3">
           <button
             onClick={handleSkip}
-            className="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-100"
+            className="px-5 py-2.5 text-sm rounded-lg border-2 border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-medium"
+            aria-label="Passer l'introduction"
           >
             Passer
           </button>
@@ -115,16 +154,18 @@ export default function OnboardingModal({ onClose }) {
             {step > 0 && (
               <button
                 onClick={handlePrev}
-                className="px-4 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200"
+                className="px-5 py-2.5 text-sm rounded-lg bg-slate-100 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-medium"
+                aria-label="Etape precedente"
               >
                 Precedent
               </button>
             )}
             <button
               onClick={handleNext}
-              className="px-4 py-2 text-sm rounded bg-primary text-white hover:bg-primary-hover"
+              className="px-6 py-2.5 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-semibold shadow-sm"
+              aria-label={isLast ? 'Commencer a creer' : 'Continuer'}
             >
-              {isLast ? 'Commencer' : 'Continuer'}
+              {isLast ? 'Commencer' : 'Suivant'}
             </button>
           </div>
         </div>

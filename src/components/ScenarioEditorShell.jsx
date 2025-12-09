@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StudioShell from './StudioShell.jsx';
+import OnboardingModal from './OnboardingModal.jsx';
 
 /**
  * ScenarioEditorShell
@@ -17,6 +18,7 @@ import StudioShell from './StudioShell.jsx';
  */
 
 const STORAGE_KEY = 'ac_scenario_stories_v1';
+const ONBOARDING_KEY = 'ac_onboarding_completed';
 
 function loadStoriesFromStorage() {
   try {
@@ -48,10 +50,28 @@ function ScenarioEditorShell() {
   const [stories, setStories] = useState(() => loadStoriesFromStorage());
   const [selectedStoryId, setSelectedStoryId] = useState(null);
   const [newStoryName, setNewStoryName] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const MAX_FREE_STORIES = 5;
 
   const selectedStory = stories.find(s => s.id === selectedStoryId) || null;
+
+  useEffect(() => {
+    const completed = window.localStorage.getItem(ONBOARDING_KEY);
+    if (!completed) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  function handleCompleteOnboarding() {
+    window.localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  }
+
+  function handleSkipOnboarding() {
+    window.localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  }
 
   function handleCreateStory(event) {
     event.preventDefault();
@@ -134,6 +154,13 @@ function ScenarioEditorShell() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={handleCompleteOnboarding}
+          onSkip={handleSkipOnboarding}
+        />
+      )}
+
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col gap-8">
         <header className="text-center">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-600">

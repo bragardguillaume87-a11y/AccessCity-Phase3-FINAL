@@ -72,7 +72,7 @@ export default function OnboardingModal({ onClose }) {
 
   function handleNext() {
     if (isLast) {
-      window.localStorage.setItem('ac_onboarded', 'true');
+      window.localStorage.setItem('ac_onboarding_completed', 'true');
       onClose();
     } else {
       setStep(step + 1);
@@ -84,7 +84,7 @@ export default function OnboardingModal({ onClose }) {
   }
 
   function handleSkip() {
-    window.localStorage.setItem('ac_onboarded', 'true');
+    window.localStorage.setItem('ac_onboarding_completed', 'true');
     onClose();
   }
 

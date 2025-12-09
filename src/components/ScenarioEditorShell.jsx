@@ -73,6 +73,11 @@ function ScenarioEditorShell() {
     setShowOnboarding(false);
   }
 
+  function handleResetOnboarding() {
+    window.localStorage.removeItem(ONBOARDING_KEY);
+    setShowOnboarding(true);
+  }
+
   function handleCreateStory(event) {
     event.preventDefault();
     const trimmed = newStoryName.trim();
@@ -318,6 +323,14 @@ function ScenarioEditorShell() {
           </button>
           <button type="button" className="underline underline-offset-2">
             A propos d AccessCity
+          </button>
+          <button 
+            type="button" 
+            onClick={handleResetOnboarding}
+            className="underline underline-offset-2 text-purple-600 hover:text-purple-700"
+            title="Revoir la visite guidee"
+          >
+            Revoir la visite guidee
           </button>
         </footer>
       </div>

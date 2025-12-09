@@ -50,18 +50,13 @@ function ScenarioEditorShell() {
   const [stories, setStories] = useState(() => loadStoriesFromStorage());
   const [selectedStoryId, setSelectedStoryId] = useState(null);
   const [newStoryName, setNewStoryName] = useState('');
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !window.localStorage.getItem(ONBOARDING_KEY);
+  });
 
   const MAX_FREE_STORIES = 5;
 
   const selectedStory = stories.find(s => s.id === selectedStoryId) || null;
-
-  useEffect(() => {
-    const completed = window.localStorage.getItem(ONBOARDING_KEY);
-    if (!completed) {
-      setShowOnboarding(true);
-    }
-  }, []);
 
   function handleCompleteOnboarding() {
     window.localStorage.setItem(ONBOARDING_KEY, 'true');

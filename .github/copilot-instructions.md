@@ -1,120 +1,186 @@
-# GitHub Copilot Instructions – AccessCity Studio
+# Copilot Instructions - AccessCity Scenario Editor MVP
 
-## Contexte du projet
+## CONTEXTE PROJET
 
-- Nom : AccessCity Scene Editor / AccessCity Studio
-- But : editeur de scenarios interactifs accessibles, destine a des ateliers avec des personnes en situation de handicap (debutants complets).
-- Stack : React + Vite + Tailwind CSS, code 100% ASCII.
-- Branche de travail actuelle : `scenario-editor-MVP`.
+**Client**: APF France Handicap  
+**Version**: 5.5+ (scenario-editor-MVP)  
+**Stack**: React + Vite + Tailwind CSS  
+**Public**: Personnes en situation de handicap (trackball, eViacam, clavier)
 
-Le projet doit rester :
-- Accessible (WCAG 2.1/2.2 AA, navigation clavier, lecteurs d ecran).
-- Simple a comprendre pour des debutants (aucun jargon technique dans l interface).
-- Facile a animer en atelier (structure claire, peu d ecrans, guidage).
+## WORKFLOW OBLIGATOIRE
 
-## Regles de code et d architecture
+### Etape 1 - Architecte
+1. Consulter `docs/PROJECT_MEMORY_SEED.md`
+2. Verifier checklist Phase 5.5
+3. Verifier coherence architecture data-driven
 
-- Toujours respecter les regles definies dans `CODING_RULES.md`.
-- Pas de refactor massif non demande.
-- Ne jamais melanger code et documentation dans un meme fichier.
-- Utiliser uniquement des guillemets simples/doubles ASCII, pas d accents dans le code.
-- Respecter la structure existante des dossiers :
-  - `src/core`, `src/components`, `src/modules`, `src/contexts`, `src/utils`, `docs`, etc.
-- Quand un fichier est modifie, renvoyer le fichier ENTIER (pas de patch partiel dans les reponses).
+### Etape 2 - Developpeur
+1. Modifier `data/schemas.json` si nouvelle structure
+2. Modifier `data/ui_layout.json` si nouveau panel
+3. Coder dans core/ ou ui/ selon besoin
+4. Creer tests unitaires dans test/
 
-## Lignes directrices UX / accessibilite
+### Etape 3 - Validation
+1. `npm test` doit passer 100%
+2. Verifier ASCII-only (automatique dans tests)
+3. Tester accessibilite clavier
 
-- Public cible : debutants complets (y compris enfants) et personnes en situation de handicap.
-- Interface type logiciel de bureau, pas de site marketing.
-- Navigation :
-  - Barre d etapes en haut (1. Contexte, 2. Personnages, 3. Lieux / Scenes, 4. Histoires / Dialogues, 5. Essayer le jeu, 6. Partager / Exporter).
-  - Layout 3 zones :
-    - Gauche : navigation (liste de scenes / lieux).
-    - Centre : zone principale (scene visuelle, dialogues).
-    - Droite : panneau d edition (texte, proprietes).
-- Texte interface :
-  - Toujours en francais simple, sans termes techniques (pas de « variable », « JSON », etc.).
-  - Expliquer les effets en langage humain : « Ce choix rassure le personnage », « Ce choix fatigue physiquement », etc.
-- Accessibilite :
-  - Focus toujours visible.
-  - Tous les boutons et liens utilisables au clavier (Tab, Entree, Echap, fleches).
-  - Roles ARIA corrects sur onglets, dialogues, modales.
-  - Eviter les animations agressives par defaut.
+## REGLES ABSOLUES
 
-## Scenario Editor MVP (branche `scenario-editor-MVP`)
+### Code
+- JAMAIS de fragments `// ... existing code ...`
+- TOUJOURS fichiers complets et fonctionnels
+- JAMAIS d'optimisations non demandees
+- Separation stricte core/ ui/ data/ test/ docs/
 
-### ScenarioEditorShell
+### Accessibilite (PRIORITE #1)
+- Navigation clavier complete (Tab, Shift+Tab, Echap)
+- Trackball/eViacam compatible
+- Lecteur ecran (ARIA labels obligatoires)
+- Contraste WCAG AA minimum
+- Focus visible (outline 2px)
 
-- Fichier : `src/components/ScenarioEditorShell.jsx`.
-- Role :
-  - Afficher un ecran d accueil :
-    - Espace local (pour l instant un seul : « Espace local »).
-    - Liste d histoires stockees dans `localStorage` (jusqu a 5 en version gratuite).
-    - Creation / selection / suppression d une histoire.
-  - Quand une histoire est selectionnee et ouverte :
-    - Afficher un bandeau indiquant l histoire ouverte.
-    - Afficher `StudioShell` (editeur scenes + dialogues existant).
+### Architecture Data-Driven
+- UI pilotee par `ui_layout.json`
+- Scenes dans `scenes.json`
+- Personnages dans `characters.json`
+- Validation via `schemas.json`
+- Variables narratives via `VariableManager`
 
-### App.jsx
+## MODULES CRITIQUES PHASE 5.5
 
-- Doit utiliser `ScenarioEditorShell` comme point d entree editeur au lieu de rendre `StudioShell` directement.
-- Garder la structure existante :
-  - `AppProvider`
-  - `ToastProvider`
-  - `SkipToContent`
+### Core
+- EventBus - Communication inter-composants
+- VariableManager - Variables narratives (Empathie, Autonomie, Confiance)
+- ConditionEvaluator - Evaluation conditions branching
+- CharacterLoader - Chargement characters.json
+- Schema - Validation JSON recursive
+- Sanitizer - ASCII strict uniquement
 
-### Modules/ecrans cibles (vision)
+### UI
+- SceneList - Liste scenes avec selection
+- InspectorPanel - Editeur CRUD scenes/dialogues
+- DevToolsPanel - Variables temps reel
+- CharacterEditor - Edition personnages + sprites
+- ScenarioEditorShell - Page d'accueil + gestion histoires
+- StudioShell - Editeur scenes/dialogues
 
-1. Accueil
-   - Choix de l espace (MVP : un seul espace local).
-   - Liste et creation d histoires (max 5 en gratuit).
+### Data Files
+- `data/scenes.json` - Scenes narratives
+- `data/characters.json` - Personnages (player, counsellor, narrator)
+- `data/schemas.json` - Schemas validation
+- `data/ui_layout.json` - 5 layouts UI
 
-2. Contexte
-   - Titre de l histoire.
-   - Description courte.
-   - Objectif pedagogique.
+## PRIORITES ACTUELLES
 
-3. Personnages
-   - Nom, role, avatar.
-   - Position par defaut (gauche / centre / droite).
+### UX Enfants 10 ans
+1. Onboarding interactif (popup bienvenue, tooltips)
+2. Langage adapte ("Editeur" → "Creer mon histoire")
+3. Feedback visuel (animations, sons encourageants)
+4. Mode Decouverte vs Creation
+5. Gamification (badges, progression visible)
 
-4. Lieux / Scenes
-   - Liste de lieux a gauche.
-   - Scene active au centre (decor + personnages).
-   - Panneau d edition a droite.
+### Tests
+- Tests unitaires dans test/ (1 fichier par module)
+- Tests E2E avec Playwright
+- Couverture code >80%
 
-5. Histoires / Dialogues
-   - Timeline symbolique des etapes dans un lieu.
-   - Pour chaque etape :
-     - Qui parle ?
-     - Texte du dialogue.
-     - Choix du joueur (facultatif).
-     - Effets eventuels sur energie physique / mentale.
+## COMMANDES
 
-6. Essayer le jeu
-   - Previsualisation en modale plein ecran.
-   - Affichage compact des jauges :
-     - Physique : `[❤] 72 / 100`
-     - Mentale : emoji qui change par paliers de 20 + score (`🙂 45 / 100`).
+npm run dev          # Serveur Vite (localhost:5173)
+npm test             # Tests unitaires + E2E
+npm run build        # Build production
 
-7. Partager / Exporter
-   - Export JSON structure claire (Histoire > Lieux > Etapes > Choix > Effets).
-   - Explications en langage simple sur l emplacement du fichier et l usage dans GDevelop.
+## DOCUMENTATION DE REFERENCE
 
-## IA et extensions
+Toujours consulter:
+- `docs/PROJECT_MEMORY_SEED.md` - Vision strategique v5.5+
+- `docs/CODING_RULES.md` - Regles strictes
+- `docs/SCENARIO_EDITOR_DESIGN.md` - Design editeur
+- `docs/ACCESSIBILITY.md` - Specs accessibilite
+- `docs/KEYBOARD_SHORTCUTS.md` - Raccourcis clavier
+- `docs/ROADMAP.md` - Phases futures
 
-- Ne PAS introduire de bibliotheque lourde (Material UI, etc.) pour le MVP.
-- Tailwind CSS reste la base pour le style.
-- Eventuels ajouts futurs :
-  - Outils d analyse accessibilite (axe-core, etc.).
-  - Petit module IA local pour corriger / reformuler des textes de dialogues (phase 2, pas dans le MVP).
+## STRUCTURE PROJET (scenario-editor-MVP)
 
-## Ce que Copilot doit privilegier
+AccessCity-Phase3-FINAL/
+├── src/
+│   ├── core/              # EventBus, schema, variableManager, sanitizer
+│   ├── components/        # Composants React (panels, inspectors, ScenarioEditorShell)
+│   ├── modules/           # Modules specifiques
+│   ├── contexts/          # Context React (AppProvider, ToastProvider)
+│   ├── utils/             # Utilitaires
+│   ├── App.jsx            # Point entree (rend ScenarioEditorShell)
+│   └── main.jsx           # Bootstrap
+├── data/
+│   ├── scenes.json        # Scenes narratives
+│   ├── characters.json    # Personnages
+│   ├── schemas.json       # Validation
+│   └── ui_layout.json     # Layout panels
+├── docs/                  # Documentation technique
+│   ├── PROJECT_MEMORY_SEED.md
+│   ├── CODING_RULES.md
+│   ├── SCENARIO_EDITOR_DESIGN.md
+│   ├── ACCESSIBILITY.md
+│   └── ...
+├── test/                  # Tests unitaires E2E
+├── tools/                 # Scripts build
+└── index.html             # Point entree Vite
 
-- Generer du code React + Tailwind **simple, lisible, explicite**.
-- Respecter les noms et patterns existants (`StudioShell`, panels, providers).
-- Ajouter des commentaires courts et utiles seulement quand necessaire.
-- Toujours penser :
-  - public debutant,
-  - accessibilite,
-  - pas de detour par des patterns complexes inutiles (hooks generiques, HOC, etc.).
+## SCENARIO EDITOR MVP
+
+### Page d'accueil (ScenarioEditorShell)
+- Affiche "Espace local" (un seul pour MVP)
+- Liste histoires stockees dans localStorage (max 5 gratuit)
+- Creation/selection/suppression histoire
+- Quand histoire ouverte → affiche StudioShell avec bandeau en haut
+
+### Editeur (StudioShell)
+- 2 onglets : Scenes | Dialogues
+- Gauche : liste scenes
+- Centre : scene active (decor + personnages)
+- Droite : panneau edition (texte, proprietes)
+- Preview mode plein ecran
+
+### Modules/ecrans cibles
+
+1. Accueil - Choix espace (MVP : un seul local), liste creation histoires (max 5)
+2. Contexte - Titre histoire, description, objectif pedagogique
+3. Personnages - Nom, role, avatar, position defaut
+4. Lieux/Scenes - Liste lieux, scene active, panneau edition
+5. Histoires/Dialogues - Timeline etapes, dialogues, choix, effets energie
+6. Essayer le jeu - Preview modale, jauges compactes
+7. Partager/Exporter - Export JSON clair, explications langage simple
+
+## ERREURS A EVITER
+
+- Documentation trop lourde → Hallucinations IA
+- Tests non executables → Tests stricts uniquement
+- Code fragments → Fichiers complets obligatoires
+- Optimisations sauvages → Implementer ce qui est demande
+- Accent dans le code → ASCII strict uniquement
+- Jargon technique interface → Langage simple enfants
+
+## PROMPTS COPILOT CHAT RECOMMANDES
+
+### Nouvelle fonctionnalite
+@workspace Je veux [fonctionnalite] pour AccessCity scenario-editor-MVP.
+Consulte PROJECT_MEMORY_SEED.md pour l'architecture data-driven.
+Verifie schemas.json et ui_layout.json.
+Code complet uniquement (pas de fragments).
+Priorite accessibilite clavier + ARIA labels.
+
+### Corriger un bug
+@workspace Bug dans [composant] branch scenario-editor-MVP.
+Analyse selon architecture v5.5 (core/ui separation).
+Solution complete avec tests unitaires.
+Respecte CODING_RULES.md.
+
+### Ameliorer accessibilite
+@workspace Ameliore accessibilite [composant] selon specs ACCESSIBILITY.md.
+Navigation clavier complete, ARIA labels, contraste WCAG AA.
+Code complet, pas de fragments.
+
+---
+
+**RAPPEL**: Accessibilite d'abord, modularite stricte, code complet uniquement.

@@ -58,13 +58,8 @@ function ScenarioEditorShell() {
 
   const selectedStory = stories.find(s => s.id === selectedStoryId) || null;
 
-  function handleCompleteOnboarding() {
-    window.localStorage.setItem(ONBOARDING_KEY, 'true');
-    setShowOnboarding(false);
-  }
-
-  function handleSkipOnboarding() {
-    window.localStorage.setItem(ONBOARDING_KEY, 'true');
+  function handleCloseOnboarding() {
+    // OnboardingModal already writes ONBOARDING_KEY before closing.
     setShowOnboarding(false);
   }
 
@@ -155,10 +150,7 @@ function ScenarioEditorShell() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
       {showOnboarding && (
-        <OnboardingModal
-          onComplete={handleCompleteOnboarding}
-          onSkip={handleSkipOnboarding}
-        />
+        <OnboardingModal onClose={handleCloseOnboarding} />
       )}
 
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col gap-8">

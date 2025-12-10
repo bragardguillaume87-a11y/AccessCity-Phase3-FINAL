@@ -13,12 +13,14 @@ import SkipToContent from './components/SkipToContent.jsx';
 import AccessibleTabs, { TabPanel } from './components/AccessibleTabs.jsx';
 import ScenarioEditorShell from './components/ScenarioEditorShell.jsx';
 
+const ONBOARDING_KEY = 'ac_onboarding_completed';
+
 function StudioShell() {
   const { selectedSceneId, scenes } = useApp();
   const [currentModule, setCurrentModule] = useState('scenes');
   const [showPreview, setShowPreview] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !window.localStorage.getItem('ac_onboarding_completed');
+    return !window.localStorage.getItem(ONBOARDING_KEY);
   });
 
   const selectedScene = scenes.find(s => s.id === selectedSceneId);
@@ -27,6 +29,16 @@ function StudioShell() {
     { id: 'scenes', label: 'Scenes' },
     { id: 'dialogues', label: 'Dialogues' }
   ];
+
+  function handleCompleteOnboarding() {
+    window.localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  }
+
+  function handleSkipOnboarding() {
+    window.localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  }
 
   if (showPreview && selectedScene) {
     return (
@@ -132,7 +144,10 @@ function StudioShell() {
       </div>
 
       {showOnboarding && (
-        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+        <OnboardingModal 
+          onComplete={handleCompleteOnboarding}
+          onSkip={handleSkipOnboarding}
+        />
       )}
     </div>
   );

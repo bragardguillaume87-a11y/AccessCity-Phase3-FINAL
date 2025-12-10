@@ -73,6 +73,10 @@ export function AppProvider({ children }) {
     setSelectedSceneForEdit(prev => (prev === sceneId ? null : prev));
   }, []);
 
+  const reorderScenes = useCallback((newScenesOrder) => {
+    setScenes(newScenesOrder);
+  }, []);
+
   // Dialogues
   const addDialogue = useCallback((sceneId, dialogue) => {
     setScenes(prev => prev.map(s => (s.id !== sceneId ? s : { ...s, dialogues: [...(s.dialogues || []), dialogue] })));
@@ -148,6 +152,7 @@ export function AppProvider({ children }) {
       addScene,
       updateScene,
       deleteScene,
+      reorderScenes,
       // dialogues api
       addDialogue,
       updateDialogue,
@@ -172,6 +177,7 @@ export function AppProvider({ children }) {
       addScene,
       updateScene,
       deleteScene,
+      reorderScenes,
       addDialogue,
       updateDialogue,
       deleteDialogue,

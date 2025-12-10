@@ -20,6 +20,27 @@ import OnboardingModal from './OnboardingModal.jsx';
 const STORAGE_KEY = 'ac_scenario_stories_v1';
 const ONBOARDING_KEY = 'ac_onboarding_completed';
 
+const DEMO_STORIES = [
+  {
+    id: 'demo-1',
+    name: 'La visite a la mairie',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'demo-2',
+    name: 'Le trajet en bus accessible',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'demo-3',
+    name: 'Au restaurant avec des amis',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
 function loadStoriesFromStorage() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -53,10 +74,24 @@ function ScenarioEditorShell() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !window.localStorage.getItem(ONBOARDING_KEY);
   });
+  const [demoMode, setDemoMode] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
+  const [realStories, setRealStories] = useState([]);
 
   const MAX_FREE_STORIES = 5;
 
   const selectedStory = stories.find(s => s.id === selectedStoryId) || null;
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowDevTools(prev => !prev);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   function handleCompleteOnboarding() {
     window.localStorage.setItem(ONBOARDING_KEY, 'true');
@@ -73,10 +108,28 @@ function ScenarioEditorShell() {
     setShowOnboarding(true);
   }
 
+  function handleActivateDemoMode() {
+    setRealStories(stories);
+    setStories(DEMO_STORIES);
+    setDemoMode(true);
+    setSelectedStoryId(null);
+    setShowOnboarding(true);
+  }
+
+  function handleExitDemoMode() {
+    setStories(realStories);
+    setDemoMode(false);
+    setSelectedStoryId(null);
+  }
+
   function handleCreateStory(event) {
     event.preventDefault();
     const trimmed = newStoryName.trim();
     if (!trimmed) {
+      return;
+    }
+    if (demoMode) {
+      window.alert('Tu es en mode demo. Les modifications ne seront pas sauvegardees.');
       return;
     }
     if (stories.length >= MAX_FREE_STORIES) {
@@ -108,6 +161,10 @@ function ScenarioEditorShell() {
   }
 
   function handleDeleteStory(storyId) {
+    if (demoMode) {
+      window.alert('Tu es en mode demo. Les modifications ne seront pas sauvegardees.');
+      return;
+    }
     const story = stories.find(s => s.id === storyId);
     if (!story) {
       return;
@@ -125,14 +182,57 @@ function ScenarioEditorShell() {
     }
   }
 
+  function handleDevResetAll() {
+    const confirmMessage = 'ATTENTION DEV : Cela va supprimer TOUTES les histoires et reinitialiser l\'onboarding. Confirmer ?';
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) return;
+    
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(ONBOARDING_KEY);
+    window.location.reload();
+  }
+
+  function handleDevResetOnboarding() {
+    localStorage.removeItem(ONBOARDING_KEY);
+    setShowOnboarding(true);
+    setShowDevTools(false);
+  }
+
+  function handleDevLoadDemo() {
+    setStories(DEMO_STORIES);
+    saveStoriesToStorage(DEMO_STORIES);
+    setShowDevTools(false);
+  }
+
+  function handleDevClearStories() {
+    const confirmed = window.confirm('Supprimer toutes les histoires (onboarding preserve) ?');
+    if (!confirmed) return;
+    
+    localStorage.removeItem(STORAGE_KEY);
+    setStories([]);
+    setSelectedStoryId(null);
+    setShowDevTools(false);
+  }
+
   if (currentView === 'editor' && selectedStory) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+        {demoMode && (
+          <div className="bg-amber-500 text-white text-center py-2 px-4 font-semibold text-sm">
+            MODE DEMO - Les modifications ne seront pas sauvegardees
+            <button
+              onClick={handleExitDemoMode}
+              className="ml-4 underline hover:text-amber-100"
+            >
+              Quitter le mode demo
+            </button>
+          </div>
+        )}
         <header className="w-full border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-20">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
             <div className="flex flex-col">
               <span className="text-xs uppercase tracking-[0.2em] text-slate-600">
-                Espace local
+                Espace local {demoMode && '(DEMO)'}
               </span>
               <span className="text-sm font-semibold text-slate-900">
                 Histoire : {selectedStory.name}
@@ -154,6 +254,18 @@ function ScenarioEditorShell() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+      {demoMode && (
+        <div className="bg-amber-500 text-white text-center py-2 px-4 font-semibold text-sm">
+          🎭 MODE DEMO - Les modifications ne seront pas sauvegardees
+          <button
+            onClick={handleExitDemoMode}
+            className="ml-4 underline hover:text-amber-100"
+          >
+            Quitter le mode demo
+          </button>
+        </div>
+      )}
+
       {showOnboarding && (
         <OnboardingModal
           onComplete={handleCompleteOnboarding}
@@ -161,10 +273,56 @@ function ScenarioEditorShell() {
         />
       )}
 
+      {showDevTools && (
+        <div className="fixed bottom-4 right-4 bg-slate-900 text-white rounded-lg shadow-2xl p-4 w-80 z-50">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              🛠️ Outils Developpeur
+            </h3>
+            <button
+              onClick={() => setShowDevTools(false)}
+              className="text-slate-400 hover:text-white"
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-2">
+            <button
+              onClick={handleDevResetOnboarding}
+              className="w-full text-left text-xs bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded transition-colors"
+            >
+              Reset Onboarding
+            </button>
+            <button
+              onClick={handleDevLoadDemo}
+              className="w-full text-left text-xs bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded transition-colors"
+            >
+              Charger histoires demo
+            </button>
+            <button
+              onClick={handleDevClearStories}
+              className="w-full text-left text-xs bg-orange-600 hover:bg-orange-700 px-3 py-2 rounded transition-colors"
+            >
+              Supprimer histoires
+            </button>
+            <button
+              onClick={handleDevResetAll}
+              className="w-full text-left text-xs bg-red-600 hover:bg-red-700 px-3 py-2 rounded transition-colors"
+            >
+              RESET COMPLET
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-3">
+            Raccourci : Ctrl+Shift+D
+          </p>
+        </div>
+      )}
+
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col gap-8">
         <header className="text-center">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-600">
-            AccessCity Studio
+            AccessCity Studio {demoMode && '(MODE DEMO)'}
           </p>
           <h1 className="mt-2 text-3xl md:text-4xl font-black text-slate-900">
             Choisis ton espace et ton histoire
@@ -199,10 +357,10 @@ function ScenarioEditorShell() {
                 Espace actif
               </div>
               <div className="mt-1 text-base font-semibold text-slate-900">
-                Espace local
+                Espace local {demoMode && '(DEMO)'}
               </div>
               <div className="mt-1 text-xs text-slate-600">
-                Histoires creees sur cet ordinateur
+                {demoMode ? 'Histoires de demonstration' : 'Histoires creees sur cet ordinateur'}
               </div>
             </button>
           </div>
@@ -247,7 +405,7 @@ function ScenarioEditorShell() {
                     {story.name}
                   </div>
                   <div className="text-xs text-slate-600">
-                    Histoire locale
+                    {demoMode ? 'Histoire demo' : 'Histoire locale'}
                   </div>
                 </div>
                 {selectedStoryId === story.id && (
@@ -275,12 +433,14 @@ function ScenarioEditorShell() {
                 onChange={event => setNewStoryName(event.target.value)}
                 className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-600"
                 placeholder="Exemple : La visite a la mairie"
+                disabled={demoMode}
               />
             </label>
             <button
               type="submit"
               className="md:self-end bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:bg-slate-300 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-600"
               disabled={
+                demoMode ||
                 !newStoryName.trim() ||
                 stories.length >= MAX_FREE_STORIES
               }
@@ -301,7 +461,7 @@ function ScenarioEditorShell() {
             <button
               type="button"
               onClick={() => selectedStory && handleDeleteStory(selectedStory.id)}
-              disabled={!selectedStory}
+              disabled={!selectedStory || demoMode}
               className="text-sm font-semibold text-red-700 border border-red-200 bg-red-50 px-4 py-2 rounded-lg disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-600"
             >
               Supprimer cette histoire
@@ -327,6 +487,16 @@ function ScenarioEditorShell() {
           >
             Revoir la visite guidee
           </button>
+          {!demoMode && (
+            <button 
+              type="button" 
+              onClick={handleActivateDemoMode}
+              className="underline underline-offset-2 text-amber-600 hover:text-amber-700"
+              title="Activer le mode demonstration"
+            >
+              Mode Demo
+            </button>
+          )}
         </footer>
       </div>
     </div>

@@ -86,7 +86,24 @@ export default function DialoguesPanel() {
 
   function addChoice(dialogueIdx) {
     const dialogue = scene.dialogues[dialogueIdx];
-    const newChoices = [...(dialogue.choices || []), { text: 'Nouveau choix', nextScene: '' }];
+    const newChoices = [...(dialogue.choices || []), {
+      text: 'Nouveau choix',
+      nextScene: '',
+      diceRoll: {
+        enabled: false,
+        difficulty: 12,
+        successOutcome: {
+          message: 'Reussite !',
+          moral: 5,
+          illustration: ''
+        },
+        failureOutcome: {
+          message: 'Echec...',
+          moral: -3,
+          illustration: ''
+        }
+      }
+    }];
     updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
   }
 
@@ -95,6 +112,48 @@ export default function DialoguesPanel() {
     const dialogue = scene.dialogues[dialogueIdx];
     const newChoices = [...dialogue.choices];
     newChoices[choiceIdx] = { ...newChoices[choiceIdx], [field]: value };
+    updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
+  }
+
+
+  function updateDiceRoll(dialogueIdx, choiceIdx, field, value) {
+    const dialogue = scene.dialogues[dialogueIdx];
+    const newChoices = [...dialogue.choices];
+    const choice = newChoices[choiceIdx];
+    
+    if (!choice.diceRoll) {
+      choice.diceRoll = {
+        enabled: false,
+        difficulty: 12,
+        successOutcome: { message: '', moral: 0, illustration: '' },
+        failureOutcome: { message: '', moral: 0, illustration: '' }
+      };
+    }
+    
+    choice.diceRoll = { ...choice.diceRoll, [field]: value };
+    updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
+  }
+
+
+  function updateOutcome(dialogueIdx, choiceIdx, outcomeType, field, value) {
+    const dialogue = scene.dialogues[dialogueIdx];
+    const newChoices = [...dialogue.choices];
+    const choice = newChoices[choiceIdx];
+    
+    if (!choice.diceRoll) {
+      choice.diceRoll = {
+        enabled: false,
+        difficulty: 12,
+        successOutcome: { message: '', moral: 0, illustration: '' },
+        failureOutcome: { message: '', moral: 0, illustration: '' }
+      };
+    }
+    
+    choice.diceRoll[outcomeType] = {
+      ...choice.diceRoll[outcomeType],
+      [field]: value
+    };
+    
     updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
   }
 
@@ -171,12 +230,13 @@ export default function DialoguesPanel() {
                     Aucun choix. Cliquez "+ Choix" pour ajouter une branche.
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {d.choices.map((choice, choiceIdx) => (
-                      <div key={choiceIdx} className="border border-slate-300 rounded-lg p-3 bg-slate-50">
-                        <div className="space-y-2">
+                      <div key={choiceIdx} className="border-2 border-slate-300 rounded-lg p-3 bg-slate-50">
+                        <div className="space-y-3">
+                          {/* Texte du choix */}
                           <div>
-                            <label htmlFor={`choice-text-${idx}-${choiceIdx}`} className="block text-xs font-medium text-slate-600 mb-1">
+                            <label htmlFor={`choice-text-${idx}-${choiceIdx}`} className="block text-xs font-semibold text-slate-600 mb-1">
                               Texte du choix
                             </label>
                             <input
@@ -187,8 +247,11 @@ export default function DialoguesPanel() {
                               placeholder="Ex: Accepter la mission"
                             />
                           </div>
+
+
+                          {/* Scene suivante */}
                           <div>
-                            <label htmlFor={`choice-next-${idx}-${choiceIdx}`} className="block text-xs font-medium text-slate-600 mb-1">
+                            <label htmlFor={`choice-next-${idx}-${choiceIdx}`} className="block text-xs font-semibold text-slate-600 mb-1">
                               Scene suivante (ID)
                             </label>
                             <input
@@ -196,16 +259,131 @@ export default function DialoguesPanel() {
                               className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
                               value={choice.nextScene || ''}
                               onChange={(e) => updateChoice(idx, choiceIdx, 'nextScene', e.target.value)}
-                              placeholder="Ex: scene-2"
+                              placeholder="Ex: scene-2 (optionnel si lancer de de actif)"
                             />
                           </div>
-                          <div className="flex justify-end pt-1">
+
+
+                          {/* Toggle Lancer de dé */}
+                          <div className="border-t border-slate-300 pt-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={choice.diceRoll?.enabled || false}
+                                onChange={(e) => updateDiceRoll(idx, choiceIdx, 'enabled', e.target.checked)}
+                                className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-2 focus:ring-purple-500"
+                              />
+                              <span className="text-xs font-semibold text-purple-700">
+                                🎲 Activer le lancer de de
+                              </span>
+                            </label>
+                          </div>
+
+
+                          {/* Configuration du dé */}
+                          {choice.diceRoll?.enabled && (
+                            <div className="border border-purple-300 rounded-lg p-3 bg-purple-50 space-y-3">
+                              {/* Difficulté */}
+                              <div>
+                                <label htmlFor={`dice-difficulty-${idx}-${choiceIdx}`} className="block text-xs font-semibold text-purple-700 mb-1">
+                                  Difficulte (seuil de reussite)
+                                </label>
+                                <input
+                                  id={`dice-difficulty-${idx}-${choiceIdx}`}
+                                  type="number"
+                                  min="1"
+                                  max="20"
+                                  className="w-full px-2 py-1.5 border border-purple-300 rounded text-xs focus:border-purple-500 focus:ring-1 focus:ring-purple-200 outline-none"
+                                  value={choice.diceRoll?.difficulty || 12}
+                                  onChange={(e) => updateDiceRoll(idx, choiceIdx, 'difficulty', parseInt(e.target.value) || 12)}
+                                  placeholder="12"
+                                />
+                                <p className="text-xs text-purple-600 mt-1">Le joueur doit obtenir ce score ou plus au de (1-20)</p>
+                              </div>
+
+
+                              {/* Success Outcome */}
+                              <div className="border border-green-300 rounded-lg p-2 bg-green-50">
+                                <h4 className="text-xs font-bold text-green-700 mb-2">✅ En cas de reussite</h4>
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="block text-xs font-medium text-green-600 mb-1">Message</label>
+                                    <input
+                                      className="w-full px-2 py-1 border border-green-300 rounded text-xs focus:border-green-500 outline-none"
+                                      value={choice.diceRoll?.successOutcome?.message || ''}
+                                      onChange={(e) => updateOutcome(idx, choiceIdx, 'successOutcome', 'message', e.target.value)}
+                                      placeholder="Ex: Place trouvee !"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-green-600 mb-1">Impact moral</label>
+                                    <input
+                                      type="number"
+                                      className="w-full px-2 py-1 border border-green-300 rounded text-xs focus:border-green-500 outline-none"
+                                      value={choice.diceRoll?.successOutcome?.moral || 0}
+                                      onChange={(e) => updateOutcome(idx, choiceIdx, 'successOutcome', 'moral', parseInt(e.target.value) || 0)}
+                                      placeholder="5"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-green-600 mb-1">Illustration (nom fichier)</label>
+                                    <input
+                                      className="w-full px-2 py-1 border border-green-300 rounded text-xs focus:border-green-500 outline-none"
+                                      value={choice.diceRoll?.successOutcome?.illustration || ''}
+                                      onChange={(e) => updateOutcome(idx, choiceIdx, 'successOutcome', 'illustration', e.target.value)}
+                                      placeholder="parking-success.png"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+
+                              {/* Failure Outcome */}
+                              <div className="border border-red-300 rounded-lg p-2 bg-red-50">
+                                <h4 className="text-xs font-bold text-red-700 mb-2">❌ En cas d'echec</h4>
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="block text-xs font-medium text-red-600 mb-1">Message</label>
+                                    <input
+                                      className="w-full px-2 py-1 border border-red-300 rounded text-xs focus:border-red-500 outline-none"
+                                      value={choice.diceRoll?.failureOutcome?.message || ''}
+                                      onChange={(e) => updateOutcome(idx, choiceIdx, 'failureOutcome', 'message', e.target.value)}
+                                      placeholder="Ex: Aucune place..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-red-600 mb-1">Impact moral</label>
+                                    <input
+                                      type="number"
+                                      className="w-full px-2 py-1 border border-red-300 rounded text-xs focus:border-red-500 outline-none"
+                                      value={choice.diceRoll?.failureOutcome?.moral || 0}
+                                      onChange={(e) => updateOutcome(idx, choiceIdx, 'failureOutcome', 'moral', parseInt(e.target.value) || 0)}
+                                      placeholder="-3"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-red-600 mb-1">Illustration (nom fichier)</label>
+                                    <input
+                                      className="w-full px-2 py-1 border border-red-300 rounded text-xs focus:border-red-500 outline-none"
+                                      value={choice.diceRoll?.failureOutcome?.illustration || ''}
+                                      onChange={(e) => updateOutcome(idx, choiceIdx, 'failureOutcome', 'illustration', e.target.value)}
+                                      placeholder="parking-fail.png"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+
+                          {/* Bouton Supprimer */}
+                          <div className="flex justify-end pt-2 border-t border-slate-300">
                             <button
                               onClick={() => askDeleteChoice(idx, choiceIdx)}
-                              className="px-2 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-white transition-colors"
+                              className="px-3 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-white transition-colors font-medium"
                               aria-label={`Supprimer le choix ${choiceIdx + 1}`}
                             >
-                              Supprimer
+                              Supprimer ce choix
                             </button>
                           </div>
                         </div>

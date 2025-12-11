@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../AppContext.jsx';
 import ConfirmModal from './ConfirmModal.jsx';
 
+
 export default function DialoguesPanel() {
   const {
     scenes,
@@ -11,13 +12,18 @@ export default function DialoguesPanel() {
     deleteDialogue
   } = useApp();
 
+
   const scene = useMemo(
     () => scenes.find(s => s.id === selectedSceneForEdit) || null,
     [scenes, selectedSceneForEdit]
   );
 
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingIndex, setPendingIndex] = useState(null);
+  const [confirmType, setConfirmType] = useState('dialogue');
+  const [pendingChoiceIndex, setPendingChoiceIndex] = useState(null);
+
 
   if (!scene) {
     return (
@@ -31,6 +37,7 @@ export default function DialoguesPanel() {
     );
   }
 
+
   function onAdd() {
     addDialogue(scene.id, {
       speaker: 'narrator',
@@ -39,21 +46,58 @@ export default function DialoguesPanel() {
     });
   }
 
+
   function askDelete(idx) {
     setPendingIndex(idx);
+    setPendingChoiceIndex(null);
+    setConfirmType('dialogue');
     setConfirmOpen(true);
   }
 
+
+  function askDeleteChoice(dialogueIdx, choiceIdx) {
+    setPendingIndex(dialogueIdx);
+    setPendingChoiceIndex(choiceIdx);
+    setConfirmType('choice');
+    setConfirmOpen(true);
+  }
+
+
   function handleConfirmDelete() {
-    if (pendingIndex != null) deleteDialogue(scene.id, pendingIndex);
+    if (confirmType === 'dialogue' && pendingIndex != null) {
+      deleteDialogue(scene.id, pendingIndex);
+    } else if (confirmType === 'choice' && pendingIndex != null && pendingChoiceIndex != null) {
+      const dialogue = scene.dialogues[pendingIndex];
+      const newChoices = dialogue.choices.filter((_, i) => i !== pendingChoiceIndex);
+      updateDialogue(scene.id, pendingIndex, { choices: newChoices });
+    }
     setPendingIndex(null);
+    setPendingChoiceIndex(null);
     setConfirmOpen(false);
   }
 
+
   function handleCancelDelete() {
     setPendingIndex(null);
+    setPendingChoiceIndex(null);
     setConfirmOpen(false);
   }
+
+
+  function addChoice(dialogueIdx) {
+    const dialogue = scene.dialogues[dialogueIdx];
+    const newChoices = [...(dialogue.choices || []), { text: 'Nouveau choix', nextScene: '' }];
+    updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
+  }
+
+
+  function updateChoice(dialogueIdx, choiceIdx, field, value) {
+    const dialogue = scene.dialogues[dialogueIdx];
+    const newChoices = [...dialogue.choices];
+    newChoices[choiceIdx] = { ...newChoices[choiceIdx], [field]: value };
+    updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
+  }
+
 
   return (
     <div className="space-y-4">
@@ -67,6 +111,7 @@ export default function DialoguesPanel() {
           + Ajouter
         </button>
       </div>
+
 
       <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
         {(scene.dialogues || []).map((d, idx) => (
@@ -87,6 +132,7 @@ export default function DialoguesPanel() {
                 />
               </div>
 
+
               {/* Text */}
               <div>
                 <label htmlFor={`text-${idx}`} className="block text-xs font-semibold text-slate-700 mb-1">
@@ -103,6 +149,73 @@ export default function DialoguesPanel() {
                 />
               </div>
 
+
+              {/* Choices */}
+              <div className="border-t border-slate-200 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Choix (branches)
+                  </label>
+                  <button
+                    onClick={() => addChoice(idx)}
+                    className="px-3 py-1 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors"
+                    aria-label={`Ajouter un choix au dialogue ${idx + 1}`}
+                  >
+                    + Choix
+                  </button>
+                </div>
+
+
+                {(d.choices || []).length === 0 ? (
+                  <div className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded">
+                    Aucun choix. Cliquez "+ Choix" pour ajouter une branche.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {d.choices.map((choice, choiceIdx) => (
+                      <div key={choiceIdx} className="border border-slate-300 rounded-lg p-3 bg-slate-50">
+                        <div className="space-y-2">
+                          <div>
+                            <label htmlFor={`choice-text-${idx}-${choiceIdx}`} className="block text-xs font-medium text-slate-600 mb-1">
+                              Texte du choix
+                            </label>
+                            <input
+                              id={`choice-text-${idx}-${choiceIdx}`}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
+                              value={choice.text || ''}
+                              onChange={(e) => updateChoice(idx, choiceIdx, 'text', e.target.value)}
+                              placeholder="Ex: Accepter la mission"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`choice-next-${idx}-${choiceIdx}`} className="block text-xs font-medium text-slate-600 mb-1">
+                              Scene suivante (ID)
+                            </label>
+                            <input
+                              id={`choice-next-${idx}-${choiceIdx}`}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
+                              value={choice.nextScene || ''}
+                              onChange={(e) => updateChoice(idx, choiceIdx, 'nextScene', e.target.value)}
+                              placeholder="Ex: scene-2"
+                            />
+                          </div>
+                          <div className="flex justify-end pt-1">
+                            <button
+                              onClick={() => askDeleteChoice(idx, choiceIdx)}
+                              className="px-2 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-white transition-colors"
+                              aria-label={`Supprimer le choix ${choiceIdx + 1}`}
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+
               {/* Actions */}
               <div className="flex justify-end pt-2 border-t border-slate-200">
                 <button
@@ -117,6 +230,7 @@ export default function DialoguesPanel() {
           </div>
         ))}
 
+
         {(scene.dialogues || []).length === 0 && (
           <div className="text-center p-8 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50">
             <svg className="w-12 h-12 mx-auto mb-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,12 +242,13 @@ export default function DialoguesPanel() {
         )}
       </div>
 
+
       <ConfirmModal
         isOpen={confirmOpen}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
-        title="Supprimer le dialogue"
-        message="Etes-vous sur de vouloir supprimer ce dialogue ?"
+        title={confirmType === 'dialogue' ? 'Supprimer le dialogue' : 'Supprimer le choix'}
+        message={confirmType === 'dialogue' ? 'Etes-vous sur de vouloir supprimer ce dialogue ?' : 'Etes-vous sur de vouloir supprimer ce choix ?'}
         confirmText="Supprimer"
         cancelText="Annuler"
         confirmColor="red"

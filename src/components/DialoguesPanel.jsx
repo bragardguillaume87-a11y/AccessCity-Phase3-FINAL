@@ -23,16 +23,18 @@ export default function DialoguesPanel() {
   const [pendingIndex, setPendingIndex] = useState(null);
   const [confirmType, setConfirmType] = useState('dialogue');
   const [pendingChoiceIndex, setPendingChoiceIndex] = useState(null);
+  const [notification, setNotification] = useState(null);
+
+  function showNotification(message, type = 'success') {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  }
 
 
   if (!scene) {
     return (
-      <div className="space-y-3">
-        <h3 className="text-lg font-bold text-slate-900">Dialogues</h3>
-        <div className="border-2 border-slate-200 rounded-lg p-6 text-center text-slate-500">
-          <p className="mb-2">Aucune scene selectionnee</p>
-          <p className="text-sm">Selectionnez une scene a gauche pour gerer ses dialogues.</p>
-        </div>
+      <div className="flex items-center justify-center h-96 text-slate-400">
+        <p className="text-sm">← Selectionnez une scene</p>
       </div>
     );
   }
@@ -44,6 +46,7 @@ export default function DialoguesPanel() {
       text: 'Nouveau dialogue',
       choices: []
     });
+    showNotification('Dialogue ajoute avec succes', 'success');
   }
 
 
@@ -66,10 +69,12 @@ export default function DialoguesPanel() {
   function handleConfirmDelete() {
     if (confirmType === 'dialogue' && pendingIndex != null) {
       deleteDialogue(scene.id, pendingIndex);
+      showNotification('Dialogue supprime', 'success');
     } else if (confirmType === 'choice' && pendingIndex != null && pendingChoiceIndex != null) {
       const dialogue = scene.dialogues[pendingIndex];
       const newChoices = dialogue.choices.filter((_, i) => i !== pendingChoiceIndex);
       updateDialogue(scene.id, pendingIndex, { choices: newChoices });
+      showNotification('Choix supprime', 'success');
     }
     setPendingIndex(null);
     setPendingChoiceIndex(null);
@@ -105,6 +110,7 @@ export default function DialoguesPanel() {
       }
     }];
     updateDialogue(scene.id, dialogueIdx, { choices: newChoices });
+    showNotification('Choix ajoute avec succes', 'success');
   }
 
 
@@ -431,6 +437,15 @@ export default function DialoguesPanel() {
         cancelText="Annuler"
         confirmColor="red"
       />
+
+      {/* Toast Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg animate-fadeIn z-50 ${
+          notification.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          <p className="font-semibold">{notification.message}</p>
+        </div>
+      )}
     </div>
   );
 }

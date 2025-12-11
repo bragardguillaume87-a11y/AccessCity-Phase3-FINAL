@@ -31,7 +31,7 @@ export default function HUDVariables({ variables }) {
   const entries = useMemo(() => Object.entries(variables || {}), [variables]);
 
   return (
-    <div className="absolute top-4 left-4 z-40">
+    <div>
       {/* Region live pour annonces non critiques */}
       <div
         ref={liveRef}

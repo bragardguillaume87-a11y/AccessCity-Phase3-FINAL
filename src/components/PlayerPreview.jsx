@@ -4,12 +4,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine.js';
 import HUDVariables from './HUDVariables.jsx';
 import DeltaBadges from './DeltaBadges.jsx';
+import DiceResultModal from './DiceResultModal.jsx';
+import OutcomeModal from './OutcomeModal.jsx';
 
 export default function PlayerPreview({ scene, onExit }) {
   const [current, setCurrent] = useState(null);
   const [vars, setVars] = useState({ Physique: 100, Mentale: 100 });
   const [ended, setEnded] = useState(false);
   const [deltas, setDeltas] = useState([]);
+
+  // Etats pour les modales de des
+  const [diceModalOpen, setDiceModalOpen] = useState(false);
+  const [diceResult, setDiceResult] = useState({ roll: 0, difficulty: 0, success: false });
+  const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
+  const [currentOutcome, setCurrentOutcome] = useState({ message: '', illustration: '', moral: null });
 
   const engineRef = useRef(null);
   const busRef = useRef(null);
@@ -54,8 +62,61 @@ export default function PlayerPreview({ scene, onExit }) {
 
   function handleChoice(choice) {
     if (!engineRef.current) return;
-    engineRef.current.de.handleChoice(choice);
+
+    // Si le choix a un lancer de de active
+    if (choice.diceRoll && choice.diceRoll.enabled) {
+      const roll = rollDice();
+      const difficulty = choice.diceRoll.difficulty || 12;
+      const success = roll >= difficulty;
+
+      // Afficher le resultat du de
+      setDiceResult({ roll, difficulty, success });
+      setDiceModalOpen(true);
+
+      // Preparer l'issue correspondante
+      const outcome = success ? choice.diceRoll.successOutcome : choice.diceRoll.failureOutcome;
+      
+      // Attendre 1.5s puis afficher l'issue
+      setTimeout(() => {
+        setDiceModalOpen(false);
+        showOutcomeMessage(outcome, choice.nextScene);
+      }, 1500);
+    } else {
+      // Choix classique sans de
+      engineRef.current.de.handleChoice(choice);
+    }
   }
+
+  function rollDice() {
+    return Math.floor(Math.random() * 20) + 1;
+  }
+
+  function showOutcomeMessage(outcome, nextScene) {
+    if (!outcome) return;
+
+    setCurrentOutcome({
+      message: outcome.message || '',
+      illustration: outcome.illustration || '',
+      moral: outcome.moral || null
+    });
+    setOutcomeModalOpen(true);
+
+    // Appliquer l'effet moral si present
+    if (outcome.moral && outcome.moral.variable && outcome.moral.delta) {
+      engineRef.current.vm.update(outcome.moral.variable, outcome.moral.delta);
+    }
+
+    // Attendre 2s puis naviguer vers la scene suivante
+    setTimeout(() => {
+      setOutcomeModalOpen(false);
+      if (nextScene) {
+        // Charger la scene suivante
+        const sceneData = { id: nextScene, backgroundUrl: '', dialogues: [] };
+        engineRef.current.de.loadScene(sceneData);
+      }
+    }, 2000);
+  }
+
   function handleNext() {
     if (!engineRef.current) return;
     engineRef.current.de.next();
@@ -67,21 +128,40 @@ export default function PlayerPreview({ scene, onExit }) {
   }
 
   return (
-    <div className="relative bg-white rounded-xl shadow-md p-4">
+    <div className="fixed inset-0 bg-black flex flex-col">
+      {/* Modales de des */}
+      <DiceResultModal
+        isOpen={diceModalOpen}
+        roll={diceResult.roll}
+        difficulty={diceResult.difficulty}
+        success={diceResult.success}
+        onClose={() => setDiceModalOpen(false)}
+      />
+      <OutcomeModal
+        isOpen={outcomeModalOpen}
+        message={currentOutcome.message}
+        illustration={currentOutcome.illustration}
+        moral={currentOutcome.moral}
+        onClose={() => setOutcomeModalOpen(false)}
+      />
+
+      {/* Bouton Quitter */}
       <button
         onClick={onExit}
-        className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-        aria-label="Quitter"
+        className="absolute top-4 right-4 z-50 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold"
+        aria-label="Quitter la preview et retourner a l editeur"
       >
         Quitter
       </button>
 
-      {/* HUD variables accesible */}
-      <HUDVariables variables={vars} />
+      {/* HUD variables positionne en absolu */}
+      <div className="absolute top-4 left-4 z-40">
+        <HUDVariables variables={vars} />
+      </div>
       <DeltaBadges deltas={deltas} />
 
-      {/* Stage */}
-      <div className="relative w-full bg-black rounded-xl overflow-hidden mt-14" style={{ minHeight: '480px' }}>
+      {/* Stage - plein ecran */}
+      <div className="relative flex-1 bg-black overflow-hidden w-full">
         {/* Background */}
         {scene && scene.backgroundUrl ? (
           <img src={scene.backgroundUrl} alt="Decor" className="absolute inset-0 w-full h-full object-cover" />

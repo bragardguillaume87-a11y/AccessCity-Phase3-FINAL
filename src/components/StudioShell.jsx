@@ -91,7 +91,6 @@ export default function StudioShell() {
         onOpenCommandPalette={(mode) => setCommandPaletteOpen(mode || true)}
       />
 
-<<<<<<< HEAD
         <nav role="navigation" aria-label="Modules de l editeur">
           <AccessibleTabs
             tabs={tabs}
@@ -99,7 +98,6 @@ export default function StudioShell() {
             ariaLabel="Modules de l editeur"
           />
         </nav>
-=======
       {/* Command Palette */}
       <CommandPalette
         isOpen={!!commandPaletteOpen}
@@ -107,7 +105,6 @@ export default function StudioShell() {
         mode={typeof commandPaletteOpen === 'string' ? commandPaletteOpen : 'commands'}
         setActiveTab={setActiveTab}
       />
->>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
 
       <header className="bg-white border-b-2 border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -152,7 +149,6 @@ export default function StudioShell() {
                 </button>
               </div>
 
-<<<<<<< HEAD
             <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
                             {activeTab === 'editor' && (
@@ -170,7 +166,6 @@ export default function StudioShell() {
                     </svg>
                     <p className="font-medium text-slate-600">Aucune scene selectionnee</p>
                     <p className="text-sm mt-2">Selectionnez une scene a gauche pour voir ses details</p>
-=======
               {/* Badge de validation globale (cliquable) */}
               {validation.hasIssues && (
                 <button
@@ -188,7 +183,6 @@ export default function StudioShell() {
                   <div className="text-xs font-semibold">
                     {validation.totalErrors > 0 && <div>{validation.totalErrors} erreur{validation.totalErrors > 1 ? 's' : ''}</div>}
                     {validation.totalWarnings > 0 && <div>{validation.totalWarnings} avertissement{validation.totalWarnings > 1 ? 's' : ''}</div>}
->>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
                   </div>
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

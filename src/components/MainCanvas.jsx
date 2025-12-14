@@ -1,8 +1,10 @@
+import React from 'react';
+import { useApp } from '../AppContext';
+import ScenesList from './ScenesList';
+import VisualSceneEditor from './VisualSceneEditor';
+import UtilitiesPanel from './UtilitiesPanel';
+
 export default function MainCanvas() {
-  import { useApp } from '../AppContext';
-  import ScenesList from './ScenesList';
-  import VisualSceneEditor from './VisualSceneEditor';
-  import UtilitiesPanel from './UtilitiesPanel';
   const { scenes } = useApp();
   const [selectedSceneId, setSelectedSceneId] = React.useState(null);
 
@@ -25,7 +27,7 @@ export default function MainCanvas() {
 
       {/* Colonne Centrale - Éditeur Visuel */}
       <VisualSceneEditor
-        currentScene={selectedScene}   // 👈 prop correcte
+        currentScene={selectedScene}
       />
 
       {/* Colonne Droite - Utilitaires */}

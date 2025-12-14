@@ -35,6 +35,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
   const [previewUrl, setPreviewUrl] = useState('');
   const dialogRef = useRef(null);
   const prevActiveRef = useRef(null);
+    const ariaLiveRef = useRef(null);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -60,6 +61,17 @@ export default function CharacterEditor({ character, onSave, onClose }) {
       setPreviewUrl('');
     }
   }, [selectedMood, edited.sprites]);
+
+    // Fonction helper pour annoncer les messages via ARIA live
+      const announceMessage = (message) => {
+            if (ariaLiveRef.current) {
+                    ariaLiveRef.current.textContent = message;
+                          // Réinitialiser après un court délai pour permettre les annonces répétées
+                                setTimeout(() => {
+                                          if (ariaLiveRef.current) ariaLiveRef.current.textContent = '';
+                                                }, 1000);
+                                                    }
+                                                      };
 
   function handleFileUpload(mood, event) {
     const file = event.target.files[0];
@@ -109,6 +121,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
 
   function handleSave() {
     onSave(edited);
+        announceMessage(`Personnage ${edited.name} enregistré avec succès`);
   }
 
   return (
@@ -247,9 +260,18 @@ export default function CharacterEditor({ character, onSave, onClose }) {
             </div>
           </div>
 
+      {/* Région ARIA live pour les annonces */}
+            <div
+                    ref={ariaLiveRef}
+                            role="status"
+                                    aria-live="polite"
+                                            aria-atomic="true"
+                                                    className="sr-only"
+                                                          />
+
           <div className="flex gap-4 justify-end pt-4 border-t-2">
             <button
-              onClick={onClose}
+              onClick={() => { announceMessage('Modifications annulées'); onClose(); }}
               className="px-6 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all"
               aria-label="Annuler les modifications"
             >

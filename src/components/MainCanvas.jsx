@@ -1,4 +1,8 @@
 export default function MainCanvas() {
+  import { useApp } from '../AppContext';
+  import ScenesList from './ScenesList';
+  import VisualSceneEditor from './VisualSceneEditor';
+  import UtilitiesPanel from './UtilitiesPanel';
   const { scenes } = useApp();
   const [selectedSceneId, setSelectedSceneId] = React.useState(null);
 

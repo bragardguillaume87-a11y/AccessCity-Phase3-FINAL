@@ -1,10 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
+<<<<<<< HEAD
+import ScenesPanel from './ScenesPanel.jsx';
+import DialoguesPanel from './DialoguesPanel.jsx';
+import BackgroundPanel from './BackgroundPanel.jsx';
+import CharactersPanel from './CharactersPanel.jsx';
+import ExportPanel from './ExportPanel.jsx';
+import ImportPanel from './ImportPanel.jsx';
+import OnboardingModal from './OnboardingModal.jsx';
+import PlayerPreview from './PlayerPreview.jsx';
+import AccessibleTabs, { TabPanel } from './AccessibleTabs.jsx';
+import MainCanvas from './MainCanvas.jsx';
+=======
 import { useValidation } from '../hooks/useValidation.js';
 import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
 import CommandPalette from './CommandPalette.jsx';
+>>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
 
+<<<<<<< HEAD
+function StudioShell() {
+  const { selectedSceneId, scenes } = useApp();
+  const [currentModule, setCurrentModule] = useState('scenes');
+  const [showPreview, setShowPreview] = useState(false);
+    const [activeTab, setActiveTab] = useState('editor');
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !window.localStorage.getItem('ac_onboarding_completed');
+  });
+=======
 // Lazy import des panels
 const ContextPanel = React.lazy(() => import('./ContextPanel.jsx'));
 const CharactersPanel = React.lazy(() => import('./CharactersPanel.jsx'));
@@ -13,6 +36,7 @@ const ScenesPanel = React.lazy(() => import('./ScenesPanel.jsx'));
 const DialoguesPanel = React.lazy(() => import('./DialoguesPanel.jsx'));
 const PreviewPanel = React.lazy(() => import('./PreviewPanel.jsx'));
 const ExportPanel = React.lazy(() => import('./ExportPanel.jsx'));
+>>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
 
 export default function StudioShell() {
   const [activeTab, setActiveTab] = useState('context');
@@ -40,6 +64,10 @@ export default function StudioShell() {
   };
 
   const tabs = [
+    { id: 'scenes', label: 'Scenes' },
+    { id: 'dialogues', label: 'Dialogues' }
+  
+        { id: 'editor', label: 'Éditeur' },
     { id: 'context', label: '1. Contexte', icon: '📝', description: 'Definir le cadre du scenario' },
     { id: 'characters', label: '2. Personnages', icon: '👥', description: 'Creer les personnages' },
     { id: 'scenes', label: '3. Scenes', icon: '🎬', description: 'Construire l\'histoire scene par scene' },
@@ -87,6 +115,15 @@ export default function StudioShell() {
         onOpenCommandPalette={(mode) => setCommandPaletteOpen(mode || true)}
       />
 
+<<<<<<< HEAD
+        <nav role="navigation" aria-label="Modules de l editeur">
+          <AccessibleTabs
+            tabs={tabs}
+                activeTab={activeTab}            onChange={setActiveTab}
+            ariaLabel="Modules de l editeur"
+          />
+        </nav>
+=======
       {/* Command Palette */}
       <CommandPalette
         isOpen={!!commandPaletteOpen}
@@ -94,6 +131,7 @@ export default function StudioShell() {
         mode={typeof commandPaletteOpen === 'string' ? commandPaletteOpen : 'commands'}
         setActiveTab={setActiveTab}
       />
+>>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
 
       <header className="bg-white border-b-2 border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -138,6 +176,25 @@ export default function StudioShell() {
                 </button>
               </div>
 
+<<<<<<< HEAD
+            <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+                            {activeTab === 'editor' && (
+                                              <MainCanvas
+                                                                selectedScene={selectedScene}
+                                                                                  scenes={scenes}
+                                                                                                    onSceneSelect={(id) => {}}
+                                                                                                                    />
+                                                                                                                                  )}
+              <section className="md:col-span-2 xl:col-span-1 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+                <TabPanel id="scenes" isActive={currentModule === 'scenes'}>
+                  <div className="text-center text-slate-500 py-12">
+                    <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                    </svg>
+                    <p className="font-medium text-slate-600">Aucune scene selectionnee</p>
+                    <p className="text-sm mt-2">Selectionnez une scene a gauche pour voir ses details</p>
+=======
               {/* Badge de validation globale (cliquable) */}
               {validation.hasIssues && (
                 <button
@@ -155,6 +212,7 @@ export default function StudioShell() {
                   <div className="text-xs font-semibold">
                     {validation.totalErrors > 0 && <div>{validation.totalErrors} erreur{validation.totalErrors > 1 ? 's' : ''}</div>}
                     {validation.totalWarnings > 0 && <div>{validation.totalWarnings} avertissement{validation.totalWarnings > 1 ? 's' : ''}</div>}
+>>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
                   </div>
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

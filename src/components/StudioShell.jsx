@@ -1,33 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
-<<<<<<< HEAD
-import ScenesPanel from './ScenesPanel.jsx';
-import DialoguesPanel from './DialoguesPanel.jsx';
-import BackgroundPanel from './BackgroundPanel.jsx';
-import CharactersPanel from './CharactersPanel.jsx';
-import ExportPanel from './ExportPanel.jsx';
-import ImportPanel from './ImportPanel.jsx';
-import OnboardingModal from './OnboardingModal.jsx';
-import PlayerPreview from './PlayerPreview.jsx';
-import AccessibleTabs, { TabPanel } from './AccessibleTabs.jsx';
-import MainCanvas from './MainCanvas.jsx';
-=======
 import { useValidation } from '../hooks/useValidation.js';
 import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
 import CommandPalette from './CommandPalette.jsx';
->>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
 
-<<<<<<< HEAD
-function StudioShell() {
-  const { selectedSceneId, scenes } = useApp();
-  const [currentModule, setCurrentModule] = useState('scenes');
-  const [showPreview, setShowPreview] = useState(false);
-    const [activeTab, setActiveTab] = useState('editor');
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !window.localStorage.getItem('ac_onboarding_completed');
-  });
-=======
 // Lazy import des panels
 const ContextPanel = React.lazy(() => import('./ContextPanel.jsx'));
 const CharactersPanel = React.lazy(() => import('./CharactersPanel.jsx'));
@@ -36,7 +13,6 @@ const ScenesPanel = React.lazy(() => import('./ScenesPanel.jsx'));
 const DialoguesPanel = React.lazy(() => import('./DialoguesPanel.jsx'));
 const PreviewPanel = React.lazy(() => import('./PreviewPanel.jsx'));
 const ExportPanel = React.lazy(() => import('./ExportPanel.jsx'));
->>>>>>> 47b5c6801cbcf41ba9012343a0aa6c2cdd3f48bd
 
 export default function StudioShell() {
   const [activeTab, setActiveTab] = useState('context');

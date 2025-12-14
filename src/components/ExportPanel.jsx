@@ -15,7 +15,7 @@ function downloadJson(filename, data) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportPanel() {
+export default function ExportPanel({ onPrev }) {
   const { scenes, characters, context } = useApp();
   const { showToast } = useToast();
 
@@ -40,9 +40,19 @@ export default function ExportPanel() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-slate-900">Export</h2>
-      <p className="text-sm text-slate-600">Exportez vos donnees en fichiers JSON.</p>
+    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">
+          📦 Etape 7 : Export
+        </h2>
+        <p className="text-slate-600">
+          Exportez votre projet au format JSON
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+        <h3 className="text-xl font-bold text-slate-900">Fichiers disponibles</h3>
+        <p className="text-sm text-slate-600">Exportez vos donnees en fichiers JSON.</p>
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => handleExport('scenes', scenes, 'scenes.json')}
@@ -69,6 +79,19 @@ export default function ExportPanel() {
       <p className="text-xs text-slate-500">
         Les fichiers sont generes a partir de l etat courant du contexte.
       </p>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between pt-6">
+        {onPrev && (
+          <button
+            onClick={onPrev}
+            className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg transition-all"
+          >
+            ← Precedent
+          </button>
+        )}
+      </div>
     </div>
   );
 }

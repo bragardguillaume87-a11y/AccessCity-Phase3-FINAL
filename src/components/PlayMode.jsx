@@ -1,5 +1,5 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { AppContext } from '../AppContext.jsx';
+import { useState, useEffect } from 'react';
+import { useApp } from '../AppContext.jsx';
 import { IconByName } from './IconByName.jsx';
 // FIX: Utiliser StageDirector simplifie
 import StageDirector from '../core/StageDirector.simple.js';
@@ -9,7 +9,7 @@ import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles, Volume2, VolumeX 
 
 
 export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
-  const { scenes, dialogues, characters } = useContext(AppContext);
+  const { scenes, characters } = useApp();
   const [director, setDirector] = useState(null);
   const [currentScene, setCurrentScene] = useState(null);
   const [currentDialogue, setCurrentDialogue] = useState(null);
@@ -22,16 +22,28 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
   // Creer le director et initialiser le jeu en UN SEUL useEffect
   useEffect(() => {
-    if (scenes.length > 0 && dialogues.length > 0) {
+    if (scenes.length > 0) {
+      // Extraire tous les dialogues de toutes les scènes
+      const allDialogues = scenes.flatMap(scene => scene.dialogues || []);
+
+      // Vérifier qu'il y a au moins un dialogue
+      if (allDialogues.length === 0) {
+        console.warn('[PlayMode] Aucun dialogue dans le scenario');
+        alert('Ce scenario n\'a pas de dialogues. Ajoutez-en dans l\'editeur avant de jouer !');
+        setIsLoading(false);
+        setTimeout(onExit, 100);
+        return;
+      }
+
       // FIX: Passer selectedSceneIndex au constructeur
       const gameState = { Empathie: 50, Autonomie: 50, Confiance: 50 };
-      const newDirector = new StageDirector(scenes, dialogues, gameState, selectedSceneIndex);
+      const newDirector = new StageDirector(scenes, allDialogues, gameState, selectedSceneIndex);
       setDirector(newDirector);
-      
+
       // Initialiser l'etat immediatement apres creation
       const scene = newDirector.getCurrentScene();
       const dialogue = newDirector.getCurrentDialogue();
-      
+
       // FIX: Verifier qu'il y a des dialogues
       if (!dialogue) {
         console.warn('[PlayMode] Aucun dialogue pour cette scene');
@@ -40,17 +52,17 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
         setTimeout(onExit, 100);
         return;
       }
-      
+
       setCurrentScene(scene);
       setCurrentDialogue(dialogue);
       setVariables({ ...newDirector.gameState });
       setIsEnded(newDirector.isGameOver());
       setIsLoading(false);
-      
+
       // Jouer le son de changement de scene
       playSound('/sounds/scene-change.mp3', 0.3);
     }
-  }, [scenes, dialogues, characters, selectedSceneIndex, onExit]);
+  }, [scenes, characters, selectedSceneIndex, onExit]);
 
 
   function updateState() {
@@ -75,7 +87,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
     
     // Verifier effets (optionnel: jouer sons differents)
     if (choice.effects) {
-      Object.entries(choice.effects).forEach(([key, value]) => {
+      Object.entries(choice.effects).forEach(([, value]) => {
         if (value > 0) playSound('/sounds/stat-up.mp3', 0.4);
         if (value < 0) playSound('/sounds/stat-down.mp3', 0.4);
       });
@@ -399,9 +411,9 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col">
-      {/* Header avec variables */}
-      <div className="bg-slate-900/90 backdrop-blur-sm border-b border-slate-700 p-4">
+    <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col overflow-auto pt-20">
+      {/* Header avec variables - FIXED */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700 p-4">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
             <button
@@ -458,7 +470,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
 
       {/* Zone de jeu */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 pt-24">
         <div className="max-w-4xl w-full">
           {/* Carte de dialogue */}
           <div className="bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 border border-slate-700 shadow-2xl">

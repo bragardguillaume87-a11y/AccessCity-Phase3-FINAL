@@ -48,3 +48,6 @@ Desktop.ini
 # Temporary files with problematic names
 pace*
 resultats*
+
+# Perplexity context files (compilation documents for external AI)
+.perplexity-context/

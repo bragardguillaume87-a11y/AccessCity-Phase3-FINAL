@@ -1,33 +1,6 @@
 // src/components/OnboardingModal.jsx
 import React, { useEffect, useRef, useState } from 'react';
-
-function trapFocus(container) {
-  if (!container) return () => {};
-  const selectors = ['a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])']; 
-  const getFocusables = () => Array.from(container.querySelectorAll(selectors.join(',')))
-    .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
-  
-  const handler = (e) => {
-    if (e.key !== 'Tab') return;
-    const focusables = getFocusables();
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey) {
-      if (document.activeElement === first || !container.contains(document.activeElement)) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  };
-  container.addEventListener('keydown', handler);
-  return () => container.removeEventListener('keydown', handler);
-}
+import trapFocus from '../utils/trapFocus.js';
 
 export default function OnboardingModal({ onClose }) {
   const [step, setStep] = useState(0);
@@ -96,24 +69,20 @@ export default function OnboardingModal({ onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-fadeIn"
+      className="fixed inset-0 bg-gradient-to-br from-black/70 via-game-purple/25 to-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn"
       onKeyDown={handleKeyDown}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 animate-scaleIn"
+        className="bg-gradient-to-br from-white via-game-purple/5 to-white rounded-2xl shadow-game-card-hover border-2 border-game-purple/20 max-w-lg w-full p-8 animate-scale-in focus-visible:outline-2 focus-visible:outline-game-purple focus-visible:outline-offset-2"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboard-title"
         aria-describedby="onboard-desc"
         tabIndex="-1"
         ref={dialogRef}
-        style={{
-          outline: '2px solid transparent',
-          outlineOffset: '2px'
-        }}
       >
         {/* Icon */}
-        <div className="text-6xl text-center mb-4" aria-hidden="true">
+        <div className="text-6xl text-center mb-4 drop-shadow-lg animate-bounce-subtle" aria-hidden="true">
           {steps[step].icon}
         </div>
 
@@ -133,7 +102,7 @@ export default function OnboardingModal({ onClose }) {
             <div
               key={i}
               className={`w-2 h-2 rounded-full transition-colors ${
-                i === step ? 'bg-purple-600' : 'bg-slate-300'
+                i === step ? 'bg-game-purple' : 'bg-slate-300'
               }`}
               aria-hidden="true"
             />
@@ -144,7 +113,7 @@ export default function OnboardingModal({ onClose }) {
         <div className="flex justify-between items-center gap-3">
           <button
             onClick={handleSkip}
-            className="px-5 py-2.5 text-sm rounded-lg border-2 border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-medium"
+            className="px-5 py-2.5 text-sm rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-game-purple focus-visible:outline-offset-2"
             aria-label="Passer l'introduction"
           >
             Passer
@@ -154,7 +123,7 @@ export default function OnboardingModal({ onClose }) {
             {step > 0 && (
               <button
                 onClick={handlePrev}
-                className="px-5 py-2.5 text-sm rounded-lg bg-slate-100 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-medium"
+                className="px-5 py-2.5 text-sm rounded-lg bg-slate-100 hover:bg-slate-200 transition-all font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-game-purple focus-visible:outline-offset-2"
                 aria-label="Etape precedente"
               >
                 Precedent
@@ -162,7 +131,7 @@ export default function OnboardingModal({ onClose }) {
             )}
             <button
               onClick={handleNext}
-              className="px-6 py-2.5 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-semibold shadow-sm"
+              className="px-6 py-2.5 text-sm rounded-lg bg-gradient-to-r from-game-purple to-game-pink text-white hover:from-game-purple-hover hover:to-game-pink-hover transition-all font-bold shadow-game-card hover:shadow-game-card-hover focus-visible:outline-2 focus-visible:outline-game-purple focus-visible:outline-offset-2"
               aria-label={isLast ? 'Commencer a creer' : 'Continuer'}
             >
               {isLast ? 'Commencer' : 'Suivant'}

@@ -2,12 +2,14 @@
 // ASCII only
 import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine.js';
+import { useApp } from '../AppContext.jsx';
 import HUDVariables from './HUDVariables.jsx';
 import DeltaBadges from './DeltaBadges.jsx';
 import DiceResultModal from './DiceResultModal.jsx';
 import OutcomeModal from './OutcomeModal.jsx';
 
 export default function PlayerPreview({ scene, onExit }) {
+  const { characters } = useApp();
   const [current, setCurrent] = useState(null);
   const [vars, setVars] = useState({ Physique: 100, Mentale: 100 });
   const [ended, setEnded] = useState(false);
@@ -168,6 +170,31 @@ export default function PlayerPreview({ scene, onExit }) {
         ) : (
           <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900" />
         )}
+
+        {/* Character Sprite */}
+        {current && current.speaker && current.speaker !== 'narrator' && (() => {
+          const character = characters.find(c => c.id === current.speaker);
+          if (!character || !character.sprites) return null;
+
+          const speakerMood = current.speakerMood || character.defaultMood || 'neutral';
+          const spriteUrl = character.sprites[speakerMood] || character.sprites['neutral'] || character.sprites[Object.keys(character.sprites)[0]];
+
+          if (!spriteUrl) return null;
+
+          return (
+            <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10 animate-previewSwap">
+              <img
+                key={speakerMood}
+                src={spriteUrl}
+                alt={`${character.name} - ${speakerMood}`}
+                className="max-w-sm max-h-96 object-contain drop-shadow-2xl"
+                style={{
+                  filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.8))'
+                }}
+              />
+            </div>
+          );
+        })()}
 
         {/* Dialogue Box */}
         <div className="absolute inset-x-0 bottom-4 px-4">

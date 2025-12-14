@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
+import { useUndoRedo } from './hooks/useUndoRedo.js';
 
 /**
  * AppContext centralizes editor state:
@@ -41,144 +42,223 @@ const DEFAULT_CONTEXT_META = {
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  // Core editor state
-  const [scenes, setScenes] = useState(SAMPLE_DATA.scenes);
-  const [characters, setCharacters] = useState(SAMPLE_DATA.characters);
-  const [variables, setVariables] = useState({ Physique: 100, Mentale: 100 });
+  const initialEditorState = {
+    scenes: SAMPLE_DATA.scenes,
+    characters: SAMPLE_DATA.characters,
+    variables: { Physique: 100, Mentale: 100 },
+    projectData: DEFAULT_CONTEXT_META
+  };
 
-  // Scenario metadata
-  const [contextMeta, setContextMeta] = useState(DEFAULT_CONTEXT_META);
+  const {
+    state: editorState,
+    pushState,
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useUndoRedo(initialEditorState, 50);
 
-  // Selection state
+  const scenes = editorState.scenes;
+  const characters = editorState.characters;
+  const variables = editorState.variables;
+  const projectData = editorState.projectData;
+
+  const updateEditorState = useCallback((updater) => {
+    pushState(typeof updater === 'function' ? updater(editorState) : updater);
+  }, [editorState, pushState]);
+
   const [selectedSceneId, setSelectedSceneId] = useState(scenes.length ? scenes[0].id : null);
   const [selectedSceneForEdit, setSelectedSceneForEdit] = useState(scenes.length ? scenes[0].id : null);
 
-  // Scenes
-  const addScene = useCallback(() => {
-    const newId = 'scene-' + Date.now();
-    const newScene = { id: newId, title: 'New scene', description: '', backgroundUrl: '', dialogues: [] };
-    setScenes(prev => [...prev, newScene]);
-    setSelectedSceneId(newId);
-    setSelectedSceneForEdit(newId);
-    return newId;
-  }, []);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const updateScene = useCallback((sceneId, patch) => {
-    setScenes(prev => prev.map(s => (s.id === sceneId ? { ...s, ...(typeof patch === 'function' ? patch(s) : patch) } : s)));
-  }, []);
-
-  const deleteScene = useCallback((sceneId) => {
-    setScenes(prev => prev.filter(s => s.id !== sceneId));
-    setSelectedSceneId(prev => (prev === sceneId ? null : prev));
-    setSelectedSceneForEdit(prev => (prev === sceneId ? null : prev));
-  }, []);
-
-  const reorderScenes = useCallback((newScenesOrder) => {
-    setScenes(newScenesOrder);
-  }, []);
-
-  // Dialogues
-  const addDialogue = useCallback((sceneId, dialogue) => {
-    setScenes(prev => prev.map(s => (s.id !== sceneId ? s : { ...s, dialogues: [...(s.dialogues || []), dialogue] })));
-  }, []);
-
-  const updateDialogue = useCallback((sceneId, index, patch) => {
-    setScenes(prev => prev.map(s => {
-      if (s.id !== sceneId) return s;
-      const list = [...(s.dialogues || [])];
-      if (index < 0 || index >= list.length) return s;
-      list[index] = { ...list[index], ...(typeof patch === 'function' ? patch(list[index]) : patch) };
-      return { ...s, dialogues: list };
-    }));
-  }, []);
-
-  const deleteDialogue = useCallback((sceneId, index) => {
-    setScenes(prev => prev.map(s => {
-      if (s.id !== sceneId) return s;
-      const list = [...(s.dialogues || [])];
-      if (index < 0 || index >= list.length) return s;
-      list.splice(index, 1);
-      return { ...s, dialogues: list };
-    }));
-  }, []);
-
-  // Characters
-  const addCharacter = useCallback(() => {
-    const id = 'char-' + Date.now();
-    const c = { id, name: 'New character', description: '', sprites: { neutral: '' }, moods: ['neutral'] };
-    setCharacters(prev => [...prev, c]);
-    return id;
-  }, []);
-
-  const updateCharacter = useCallback((updated) => {
-    setCharacters(prev => prev.map(c => (c.id === updated.id ? { ...c, ...updated } : c)));
-  }, []);
-
-  const deleteCharacter = useCallback((charId) => {
-    setCharacters(prev => prev.filter(c => c.id !== charId));
-  }, []);
-
-  // Variables
-  const setVariable = useCallback((name, value) => {
-    setVariables(prev => ({ ...prev, [name]: value }));
-  }, []);
-
-  const modifyVariable = useCallback((name, delta) => {
-    setVariables(prev => {
-      const current = typeof prev[name] === 'number' ? prev[name] : 0;
-      const clamped = Math.max(0, Math.min(100, current + delta));
-      return { ...prev, [name]: clamped };
-    });
-  }, []);
-
-  // Context metadata helpers
-  const setContextField = useCallback((key, value) => {
-    setContextMeta(prev => ({ ...prev, [key]: value }));
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      // state
+  useEffect(() => {
+    const autoSaveData = {
       scenes,
       characters,
       variables,
-      context: contextMeta,
+      projectData,
+      timestamp: new Date().toISOString()
+    };
+
+    setIsSaving(true);
+    const saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem('accesscity-autosave', JSON.stringify(autoSaveData));
+        setLastSaved(new Date());
+        setIsSaving(false);
+      } catch (error) {
+        console.error('[AutoSave] Failed to save:', error);
+        setIsSaving(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(saveTimeout);
+  }, [scenes, characters, variables, projectData]);
+
+  const addScene = useCallback(() => {
+    const newId = 'scene-' + Date.now();
+    const newScene = { id: newId, title: 'New scene', description: '', backgroundUrl: '', dialogues: [] };
+    updateEditorState(state => ({ ...state, scenes: [...state.scenes, newScene] }));
+    setSelectedSceneId(newId);
+    setSelectedSceneForEdit(newId);
+    return newId;
+  }, [updateEditorState]);
+
+  const updateScene = useCallback((sceneId, patch) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => (s.id === sceneId ? { ...s, ...(typeof patch === 'function' ? patch(s) : patch) } : s))
+    }));
+  }, [updateEditorState]);
+
+  const deleteScene = useCallback((sceneId) => {
+    updateEditorState(state => ({ ...state, scenes: state.scenes.filter(s => s.id !== sceneId) }));
+    setSelectedSceneId(prev => (prev === sceneId ? null : prev));
+    setSelectedSceneForEdit(prev => (prev === sceneId ? null : prev));
+  }, [updateEditorState]);
+
+  const reorderScenes = useCallback((newScenesOrder) => {
+    updateEditorState(state => ({ ...state, scenes: newScenesOrder }));
+  }, [updateEditorState]);
+
+  const addDialogue = useCallback((sceneId, dialogue) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => (s.id !== sceneId ? s : { ...s, dialogues: [...(s.dialogues || []), dialogue] }))
+    }));
+  }, [updateEditorState]);
+
+  const addDialogues = useCallback((sceneId, dialogues) => {
+    if (!dialogues || dialogues.length === 0) return;
+    
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => 
+        s.id !== sceneId 
+          ? s 
+          : { ...s, dialogues: [...(s.dialogues || []), ...dialogues] }
+      )
+    }));
+  }, [updateEditorState]);
+
+  const updateDialogue = useCallback((sceneId, index, patch) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => {
+        if (s.id !== sceneId) return s;
+        const list = [...(s.dialogues || [])];
+        if (index < 0 || index >= list.length) return s;
+        list[index] = { ...list[index], ...(typeof patch === 'function' ? patch(list[index]) : patch) };
+        return { ...s, dialogues: list };
+      })
+    }));
+  }, [updateEditorState]);
+
+  const deleteDialogue = useCallback((sceneId, index) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => {
+        if (s.id !== sceneId) return s;
+        const list = [...(s.dialogues || [])];
+        if (index < 0 || index >= list.length) return s;
+        list.splice(index, 1);
+        return { ...s, dialogues: list };
+      })
+    }));
+  }, [updateEditorState]);
+
+  const addCharacter = useCallback(() => {
+    const id = 'char-' + Date.now();
+    const c = { id, name: 'New character', description: '', sprites: { neutral: '' }, moods: ['neutral'] };
+    updateEditorState(state => ({ ...state, characters: [...state.characters, c] }));
+    return id;
+  }, [updateEditorState]);
+
+  const updateCharacter = useCallback((updated) => {
+    updateEditorState(state => ({
+      ...state,
+      characters: state.characters.map(c => (c.id === updated.id ? { ...c, ...updated } : c))
+    }));
+  }, [updateEditorState]);
+
+  const deleteCharacter = useCallback((charId) => {
+    updateEditorState(state => ({ ...state, characters: state.characters.filter(c => c.id !== charId) }));
+  }, [updateEditorState]);
+
+  const setVariable = useCallback((name, value) => {
+    updateEditorState(state => ({ ...state, variables: { ...state.variables, [name]: value } }));
+  }, [updateEditorState]);
+
+  const modifyVariable = useCallback((name, delta) => {
+    updateEditorState(state => {
+      const current = typeof state.variables[name] === 'number' ? state.variables[name] : 0;
+      const clamped = Math.max(0, Math.min(100, current + delta));
+      return { ...state, variables: { ...state.variables, [name]: clamped } };
+    });
+  }, [updateEditorState]);
+
+  const setContextField = useCallback((key, value) => {
+    updateEditorState(state => ({ ...state, projectData: { ...state.projectData, [key]: value } }));
+  }, [updateEditorState]);
+
+  const updateProjectData = useCallback((updates) => {
+    updateEditorState(state => ({ ...state, projectData: { ...state.projectData, ...updates } }));
+  }, [updateEditorState]);
+
+  const value = useMemo(
+    () => ({
+      scenes,
+      characters,
+      variables,
+      context: projectData,
+      projectData,
       selectedSceneId,
       selectedSceneForEdit,
-      // selection setters
+      lastSaved,
+      isSaving,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       setSelectedSceneId,
       setSelectedSceneForEdit,
-      // scenes api
       addScene,
       updateScene,
       deleteScene,
       reorderScenes,
-      // dialogues api
       addDialogue,
+      addDialogues,
       updateDialogue,
       deleteDialogue,
-      // characters api
       addCharacter,
       updateCharacter,
       deleteCharacter,
-      // variables api
       setVariable,
       modifyVariable,
-      // context meta api
-      setContextField
+      setContextField,
+      updateProjectData
     }),
     [
       scenes,
       characters,
       variables,
-      contextMeta,
+      projectData,
       selectedSceneId,
       selectedSceneForEdit,
+      lastSaved,
+      isSaving,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       addScene,
       updateScene,
       deleteScene,
       reorderScenes,
       addDialogue,
+      addDialogues,
       updateDialogue,
       deleteDialogue,
       addCharacter,
@@ -186,7 +266,8 @@ export function AppProvider({ children }) {
       deleteCharacter,
       setVariable,
       modifyVariable,
-      setContextField
+      setContextField,
+      updateProjectData
     ]
   );
 

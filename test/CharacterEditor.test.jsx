@@ -2,7 +2,6 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import trapFocus from '../utils/trapFocus.js';
 import useUndoRedo from '../core/useUndoRedo.js';
 import { MOODS_PRESET } from '../data/moodsPreset.js';
-import AssetPicker from './AssetPicker.jsx';
 
 function clampNumber(value, min, max) {
   const n = Number(value);
@@ -15,6 +14,7 @@ function buildDefaultCharacter(character) {
   const moods = Array.isArray(base.moods) && base.moods.length ? base.moods : ['neutral'];
   const sprites = typeof base.sprites === 'object' && base.sprites ? base.sprites : {};
   const defaultMood = base.defaultMood && moods.includes(base.defaultMood) ? base.defaultMood : moods[0];
+
   const moodLabels = typeof base.moodLabels === 'object' && base.moodLabels ? base.moodLabels : {};
   const moodIcons = typeof base.moodIcons === 'object' && base.moodIcons ? base.moodIcons : {};
 
@@ -75,7 +75,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
 
   function iconForMood(mood) {
     const preset = getPresetByKey(mood);
-    return edited.moodIcons?.[mood] || preset?.icon || '✨';
+    return edited.moodIcons?.[mood] || preset?.icon || '*';
   }
 
   const selectedSpriteUrl = edited?.sprites?.[selectedMood] || '';
@@ -105,7 +105,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
 
   function validate(next) {
     const e = {};
-    if (!String(next.name || '').trim()) e.name = 'Le nom est requis.';
+    if (!String(next.name || '').trim()) e.name = 'Name is required.';
     return e;
   }
 
@@ -138,14 +138,14 @@ export default function CharacterEditor({ character, onSave, onClose }) {
     if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
       e.preventDefault();
       undo();
-      announce('Annulé.');
+      announce('Undo.');
       return;
     }
 
     if ((mod && e.key.toLowerCase() === 'y') || (mod && e.shiftKey && e.key.toLowerCase() === 'z')) {
       e.preventDefault();
       redo();
-      announce('Refait.');
+      announce('Redo.');
       return;
     }
   }
@@ -154,10 +154,27 @@ export default function CharacterEditor({ character, onSave, onClose }) {
     const nextErrors = validate(edited);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
-      announce('Corrigez les erreurs avant de sauvegarder.');
+      announce('Fix errors before saving.');
       return;
     }
     onSave(edited);
+  }
+
+  function handleFileUpload(mood, event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev?.target?.result || '';
+      applyChange((prev) => {
+        const nextSprites = { ...(prev.sprites || {}) };
+        nextSprites[mood] = result;
+        return { ...prev, sprites: nextSprites };
+      }, 'Image loaded.');
+      setSelectedMood(mood);
+    };
+    reader.readAsDataURL(file);
   }
 
   function handleRemoveSprite(mood) {
@@ -165,12 +182,12 @@ export default function CharacterEditor({ character, onSave, onClose }) {
       const nextSprites = { ...(prev.sprites || {}) };
       nextSprites[mood] = '';
       return { ...prev, sprites: nextSprites };
-    }, 'Image supprimée.');
+    }, 'Image removed.');
   }
 
   function addMoodFromPreset(moodKey) {
     if (edited.moods.includes(moodKey)) {
-      announce('Humeur déjà ajoutée.');
+      announce('Mood already added.');
       return;
     }
 
@@ -197,14 +214,14 @@ export default function CharacterEditor({ character, onSave, onClose }) {
         moodIcons: nextIcons,
         defaultMood: nextDefaultMood
       };
-    }, 'Humeur ajoutée.');
+    }, 'Mood added.');
 
     setSelectedMood(moodKey);
   }
 
   function handleRemoveMood(moodKey) {
     if (edited.moods.length <= 1) {
-      announce('Au moins une humeur est requise.');
+      announce('At least one mood is required.');
       return;
     }
 
@@ -230,7 +247,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
         moodIcons: nextIcons,
         defaultMood: nextDefault
       };
-    }, 'Humeur supprimée.');
+    }, 'Mood removed.');
   }
 
   function handleMoodRovingKeyDown(e, index) {
@@ -268,7 +285,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
 
       <div
         ref={dialogRef}
-        className="relative w-full max-w-6xl max-h-[90vh] outline-none flex flex-col"
+        className="relative w-full max-w-5xl outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -276,16 +293,16 @@ export default function CharacterEditor({ character, onSave, onClose }) {
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
-        <div className="rounded-2xl shadow-soft-lg border border-white/30 overflow-hidden bg-white animate-modalPop flex flex-col max-h-full">
+        <div className="rounded-2xl shadow-soft-lg border border-white/30 overflow-hidden bg-white animate-modalPop">
           <div className="relative px-5 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-game-purple via-game-pink to-game-teal">
             <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_0%,white,transparent_55%)]" />
             <div className="relative flex items-start justify-between gap-3">
               <div>
                 <h2 id={titleId} className="text-white text-xl sm:text-2xl font-extrabold tracking-tight">
-                  Éditeur de personnage
+                  Character editor
                 </h2>
                 <p id={descId} className="text-white/90 text-sm sm:text-base">
-                  Tab pour naviguer. Échap pour fermer. Ctrl+Z annuler. Ctrl+Y refaire.
+                  Tab moves. Esc closes. Ctrl+Z undo. Ctrl+Y redo.
                 </p>
               </div>
 
@@ -293,33 +310,32 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                 type="button"
                 className="magnetic-lift inline-flex items-center justify-center h-11 w-11 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25"
                 onClick={onClose}
-                aria-label={`Fermer l editeur de ${edited?.name || 'ce personnage'}`}
+                aria-label="Close dialog"
               >
                 <span aria-hidden="true" className="text-2xl leading-none">x</span>
               </button>
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-              <section className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white via-game-purple/5 to-white p-6 shadow-soft">
-                <h3 className="font-bold text-slate-900 text-xl mb-4">1) Identité</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-6">
+            <section className="space-y-5">
+              <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white via-game-purple/5 to-white p-4 sm:p-5 shadow-soft">
+                <h3 className="font-bold text-slate-900 text-lg">1) Identity</h3>
 
-                <div className="space-y-4">
+                <div className="mt-3 space-y-3">
                   <div>
-                    <label htmlFor="char-name" className="block text-base font-semibold text-slate-800 mb-2">
-                      Nom (requis)
+                    <label htmlFor="char-name" className="block text-sm font-semibold text-slate-800">
+                      Name (required)
                     </label>
                     <input
                       id="char-name"
                       type="text"
                       value={edited.name}
                       onChange={(e) => applyChange((prev) => ({ ...prev, name: e.target.value }))}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
+                      className="mt-1 w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
                       aria-invalid={errors.name ? 'true' : 'false'}
                       aria-describedby={errors.name ? 'char-name-error' : undefined}
-                      placeholder="Exemple : Conseiller municipal"
+                      placeholder="Example: Town councillor"
                       autoComplete="off"
                     />
                     {errors.name ? (
@@ -328,39 +344,39 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       </p>
                     ) : (
                       <p className="mt-2 text-xs text-slate-600">
-                        Gardez-le court et facile à lire.
+                        Keep it short and easy to read.
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="char-desc" className="block text-base font-semibold text-slate-800 mb-2">
+                    <label htmlFor="char-desc" className="block text-sm font-semibold text-slate-800">
                       Description
                     </label>
                     <textarea
                       id="char-desc"
                       value={edited.description}
                       onChange={(e) => applyChange((prev) => ({ ...prev, description: e.target.value }))}
-                      className="w-full min-h-[96px] rounded-xl border border-slate-300 px-4 py-3 text-base focus:border-game-blue"
-                      placeholder="Décrivez ce personnage..."
+                      className="mt-1 w-full min-h-[96px] rounded-xl border border-slate-300 px-4 py-3 text-base focus:border-game-blue"
+                      placeholder="Describe this character..."
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-                <h3 className="font-bold text-slate-900 text-xl mb-4">2) Humeurs</h3>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-soft">
+                <h3 className="font-bold text-slate-900 text-lg">2) Moods</h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div className="sm:col-span-2">
-                    <label htmlFor="add-mood" className="block text-base font-semibold text-slate-800 mb-2">
-                      Ajouter une humeur
+                    <label htmlFor="add-mood" className="block text-sm font-semibold text-slate-800">
+                      Add a mood
                     </label>
                     <select
                       id="add-mood"
                       value={addMoodSelect}
                       onChange={(e) => setAddMoodSelect(e.target.value)}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
+                      className="mt-1 w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
                     >
                       {MOODS_PRESET.map((m) => (
                         <option key={m.key} value={m.key}>
@@ -369,7 +385,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       ))}
                     </select>
                     <p className="mt-2 text-xs text-slate-600">
-                      Liste adaptée aux enfants (recommandé).
+                      Child friendly list (recommended).
                     </p>
                   </div>
 
@@ -378,16 +394,16 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                     className="magnetic-lift h-12 px-4 rounded-xl bg-game-purple text-white font-semibold shadow-soft hover:shadow-soft-lg"
                     onClick={() => addMoodFromPreset(addMoodSelect)}
                   >
-                    Ajouter
+                    Add
                   </button>
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-base font-semibold text-slate-800 mb-2">
-                    Choisir une humeur à éditer
+                  <label className="block text-sm font-semibold text-slate-800">
+                    Choose a mood to edit
                   </label>
 
-                  <div role="radiogroup" aria-label="Sélection d'humeur" className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div role="radiogroup" aria-label="Mood selection" className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {edited.moods.map((mood, idx) => {
                       const selected = mood === selectedMood;
                       const hasSprite = Boolean(edited.sprites && edited.sprites[mood]);
@@ -405,7 +421,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                           className={[
                             'mood-card',
                             'magnetic-lift',
-                            'rounded-2xl border px-4 py-4 text-left min-h-[72px]',
+                            'rounded-2xl border px-3 py-3 text-left min-h-[64px]',
                             getMoodColor(mood),
                             selected ? 'ring-2 ring-game-blue ring-offset-2' : ''
                           ].join(' ')}
@@ -416,7 +432,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                               <span className="font-semibold">{labelForMood(mood)}</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-700">
-                              {hasSprite ? 'IMG' : 'Aucune'}
+                              {hasSprite ? 'IMG' : 'No'}
                             </span>
                           </div>
                         </button>
@@ -426,14 +442,14 @@ export default function CharacterEditor({ character, onSave, onClose }) {
 
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="default-mood" className="block text-base font-semibold text-slate-800 mb-2">
-                        Humeur par défaut
+                      <label htmlFor="default-mood" className="block text-sm font-semibold text-slate-800">
+                        Default mood
                       </label>
                       <select
                         id="default-mood"
                         value={edited.defaultMood}
-                        onChange={(e) => applyChange((prev) => ({ ...prev, defaultMood: e.target.value }), 'Humeur par défaut mise à jour.')}
-                        className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
+                        onChange={(e) => applyChange((prev) => ({ ...prev, defaultMood: e.target.value }), 'Default mood updated.')}
+                        className="mt-1 w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
                       >
                         {edited.moods.map((m) => (
                           <option key={m} value={m}>
@@ -448,18 +464,18 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       className="magnetic-lift h-12 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold self-end"
                       onClick={() => handleRemoveMood(selectedMood)}
                     >
-                      Retirer l'humeur sélectionnée
+                      Remove selected mood
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-                <h3 className="font-bold text-slate-900 text-xl mb-4">3) Position</h3>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-soft">
+                <h3 className="font-bold text-slate-900 text-lg">3) Position</h3>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="pos-x" className="block text-base font-semibold text-slate-800 mb-2">X</label>
+                    <label htmlFor="pos-x" className="block text-sm font-semibold text-slate-800">X</label>
                     <input
                       id="pos-x"
                       type="number"
@@ -467,14 +483,14 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       value={edited.position?.x ?? 0}
                       onChange={(e) => {
                         const x = clampNumber(e.target.value, -9999, 9999);
-                        applyChange((prev) => ({ ...prev, position: { ...(prev.position || {}), x } }), 'Position mise à jour.');
+                        applyChange((prev) => ({ ...prev, position: { ...(prev.position || {}), x } }), 'Position updated.');
                       }}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
+                      className="mt-1 w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="pos-y" className="block text-base font-semibold text-slate-800 mb-2">Y</label>
+                    <label htmlFor="pos-y" className="block text-sm font-semibold text-slate-800">Y</label>
                     <input
                       id="pos-y"
                       type="number"
@@ -482,22 +498,22 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       value={edited.position?.y ?? 0}
                       onChange={(e) => {
                         const y = clampNumber(e.target.value, -9999, 9999);
-                        applyChange((prev) => ({ ...prev, position: { ...(prev.position || {}), y } }), 'Position mise à jour.');
+                        applyChange((prev) => ({ ...prev, position: { ...(prev.position || {}), y } }), 'Position updated.');
                       }}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
+                      className="mt-1 w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
                     />
                   </div>
                 </div>
               </div>
             </section>
 
-            <aside className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white via-game-purple/5 to-white p-6 shadow-soft">
-                <div className="flex items-start justify-between gap-4 mb-4">
+            <aside className="space-y-5">
+              <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white via-game-purple/5 to-white p-4 sm:p-5 shadow-soft">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-xl">Prévisualisation en direct</h3>
-                    <p className="mt-2 text-sm text-slate-700">
-                      Humeur : <span className="font-semibold">{labelForMood(selectedMood)}</span>
+                    <h3 className="font-bold text-slate-900 text-lg">Live preview</h3>
+                    <p className="mt-1 text-sm text-slate-700">
+                      Mood: <span className="font-semibold">{labelForMood(selectedMood)}</span>
                     </p>
                   </div>
 
@@ -509,7 +525,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       disabled={!canUndo}
                       aria-disabled={!canUndo ? 'true' : 'false'}
                     >
-                      Annuler
+                      Undo
                     </button>
                     <button
                       type="button"
@@ -518,7 +534,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       disabled={!canRedo}
                       aria-disabled={!canRedo ? 'true' : 'false'}
                     >
-                      Refaire
+                      Redo
                     </button>
                   </div>
                 </div>
@@ -528,57 +544,49 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                     {selectedSpriteUrl ? (
                       <img
                         src={selectedSpriteUrl}
-                        alt={(edited.name || 'Personnage') + ' sprite'}
+                        alt={(edited.name || 'Character') + ' sprite'}
                         className="max-h-full max-w-full object-contain animate-previewSwap"
                       />
                     ) : (
                       <div className="text-center p-6">
                         <div className="text-4xl" aria-hidden="true">{iconForMood(selectedMood)}</div>
                         <p className="mt-2 text-sm text-slate-700">
-                          Aucune image pour cette humeur.
+                          No image for this mood yet.
                         </p>
                       </div>
                     )}
 
                     <div className="absolute left-3 top-3 px-3 py-1 rounded-full text-xs font-bold bg-white/80 border border-white shadow-soft">
-                      {edited.name || 'Sans nom'}
+                      {edited.name || 'Unnamed'}
                     </div>
                   </div>
 
                   <div className="p-4 border-t border-slate-200">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-semibold text-slate-700">
-                          Sprite pour "{labelForMood(selectedMood)}"
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <label className="magnetic-lift inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-game-teal text-white font-semibold shadow-soft cursor-pointer">
+                          <span aria-hidden="true">Up</span>
+                          <span>Upload image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={(e) => handleFileUpload(selectedMood, e)}
+                          />
                         </label>
-                        <div className="text-sm text-slate-600">
-                          Défaut: <span className="font-semibold">{labelForMood(edited.defaultMood)}</span>
-                        </div>
-                      </div>
 
-                      <AssetPicker
-                        type="character"
-                        value={edited.sprites?.[selectedMood] || ''}
-                        onChange={(url) => {
-                          applyChange((prev) => {
-                            const nextSprites = { ...(prev.sprites || {}) };
-                            nextSprites[selectedMood] = url;
-                            return { ...prev, sprites: nextSprites };
-                          }, `Sprite "${labelForMood(selectedMood)}" mis à jour`);
-                        }}
-                        allowUpload={true}
-                        allowUrl={true}
-                      />
-
-                      {edited.sprites?.[selectedMood] && (
                         <button
                           type="button"
-                          className="w-full px-4 py-2 rounded-lg border border-red-300 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors"
+                          className="magnetic-lift h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold"
                           onClick={() => handleRemoveSprite(selectedMood)}
                         >
-                          🗑️ Supprimer ce sprite
+                          Remove image
                         </button>
-                      )}
+                      </div>
+
+                      <div className="text-sm text-slate-700">
+                        Default: <span className="font-semibold">{labelForMood(edited.defaultMood)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -591,14 +599,14 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                 ) : null}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-                <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-end">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-soft">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
                   <button
                     type="button"
                     className="magnetic-lift h-12 px-5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold"
                     onClick={onClose}
                   >
-                    Annuler
+                    Cancel
                   </button>
 
                   <button
@@ -608,12 +616,11 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                     disabled={!canSave}
                     aria-disabled={!canSave ? 'true' : 'false'}
                   >
-                    Sauvegarder
+                    Save
                   </button>
                 </div>
               </div>
             </aside>
-            </div>
           </div>
         </div>
       </div>

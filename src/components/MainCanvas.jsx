@@ -2,12 +2,37 @@ import React from 'react';
 import { useApp } from '../AppContext';
 import ScenesList from './ScenesList';
 import VisualSceneEditor from './VisualSceneEditor';
-import UtilitiesPanel from './UtilitiesPanel';
+import PropertiesPanel from './PropertiesPanel';
+import SkipToContent from './SkipToContent';
 
+/**
+ * MainCanvas - Conteneur principal 3 colonnes pour l'éditeur de scénarios
+ * 
+ * Architecture:
+ * ┌────────────────────┬──────────────────────┬──────────────────────┐
+ * │                    │                      │                      │
+ * │  ScenesList        │ VisualSceneEditor    │ PropertiesPanel      │
+ * │  (Gauche)          │ (Centre)             │ (Droite)             │
+ * │  - CRUD scènes     │ - Aperçu visuel      │ - Propriétés          │
+ * │  - Navigation      │ - Canvas D&D         │ - Bibliothèque        │
+ * │                    │                      │ - Styles              │
+ * └────────────────────┴──────────────────────┴──────────────────────┘
+ * 
+ * Phase 1: Structure stable, accessibilité, navigation clavier
+ * Phase 2: Édition complète (CRUD scènes, renommage, etc.)
+ * Phase 3: Drag & drop, zoom, amélioration UX
+ * 
+ * Composants enfants attendus:
+ * - ScenesList: Colonne gauche (déjà implémentée)
+ * - VisualSceneEditor: Colonne centrale (déjà implémentée)
+ * - PropertiesPanel: Colonne droite (NEW - à créer)
+ */
 export default function MainCanvas() {
   const { scenes } = useApp();
   const [selectedSceneId, setSelectedSceneId] = React.useState(null);
+  const [selectedElement, setSelectedElement] = React.useState(null); // TODO: tracking d'objet sélectionné dans le canvas
 
+  // Auto-sélection première scène disponible
   React.useEffect(() => {
     if (scenes.length > 0 && !selectedSceneId) {
       setSelectedSceneId(scenes[0].id);
@@ -16,27 +41,81 @@ export default function MainCanvas() {
 
   const selectedScene = scenes.find(s => s.id === selectedSceneId);
 
+  const handleSceneSelect = (sceneId) => {
+    setSelectedSceneId(sceneId);
+    setSelectedElement(null); // Réinitialiser la sélection d'objet
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Colonne Gauche - Liste des Scènes */}
-      <ScenesList
-        scenes={scenes}
-        selectedSceneId={selectedSceneId}
-        onSelectScene={setSelectedSceneId}
-      />
+    <>
+      {/* Skip to Content link (a11y) */}
+      <SkipToContent target="mainCanvasContent" />
 
-      {/* Colonne Centrale - Éditeur Visuel */}
-      <VisualSceneEditor
-        currentScene={selectedScene}
-      />
+      {/* Conteneur principal 3 colonnes */}
+      <div 
+        className="flex h-screen w-screen bg-slate-900 overflow-hidden"
+        role="main"
+        aria-label="Éditeur de scénarios AccessCity - 3 colonnes"
+      >
+        {/* COLONNE GAUCHE - Liste des scènes */}
+        <aside 
+          className="flex-shrink-0 w-64 bg-slate-800 border-r border-slate-700 flex flex-col overflow-hidden"
+          role="region"
+          aria-label="Colonne gauche - Liste des scènes"
+          aria-describedby="scenesListHelp"
+        >
+          <ScenesList
+            scenes={scenes}
+            selectedSceneId={selectedSceneId}
+            onSelectScene={handleSceneSelect}
+          />
+          <div id="scenesListHelp" className="sr-only">
+            Liste des scènes avec support de sélection clavier.
+          </div>
+        </aside>
 
-      {/* Colonne Droite - Utilitaires */}
-      <UtilitiesPanel
-        onSave={() => {
-          // TODO: brancher ici ta vraie fonction de sauvegarde (ex: saveProject())
-          console.log('Save from UtilitiesPanel');
-        }}
-      />
-    </div>
+        {/* COLONNE CENTRALE - Canvas d'édition visuelle */}
+        <main 
+          id="mainCanvasContent"
+          className="flex-1 flex flex-col bg-slate-900 overflow-hidden"
+          role="region"
+          aria-label="Colonne centrale - Éditeur visuel de scène"
+          aria-describedby="canvasHelp"
+        >
+          {/* TODO: Header avec titre de la scène et contrôles de zoom/vue */}
+          <div className="flex-1 overflow-hidden">
+            <VisualSceneEditor
+              currentScene={selectedScene}
+              selectedElement={selectedElement}
+              onSelectElement={setSelectedElement}
+            />
+          </div>
+          <div id="canvasHelp" className="sr-only">
+            Zone d'édition visuelle de la scène sélectionnée. Utilisez Tab pour naviguer.
+          </div>
+        </main>
+
+        {/* COLONNE DROITE - Panneau de propriétés et utilitaires */}
+        <aside 
+          className="flex-shrink-0 w-80 bg-slate-800 border-l border-slate-700 flex flex-col overflow-hidden"
+          role="region"
+          aria-label="Colonne droite - Propriétés et utilitaires"
+          aria-describedby="propertiesPanelHelp"
+        >
+          {/* TODO: Créer PropertiesPanel avec onglets (Bibliothèque, Propriétés, Styles) */}
+          <PropertiesPanel
+            scene={selectedScene}
+            selectedElement={selectedElement}
+            onUpdateScene={() => {
+              // TODO: brancher ici la vraie fonction de mise à jour de scène
+              console.log('Update scene properties');
+            }}
+          />
+          <div id="propertiesPanelHelp" className="sr-only">
+            Panneau de propriétés pour la scène ou l'objet sélectionné.
+          </div>
+        </aside>
+      </div>
+    </>
   );
 }

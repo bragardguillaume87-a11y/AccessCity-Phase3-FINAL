@@ -1,5 +1,4 @@
 import React from 'react';
-import AccessibleTabs from './AccessibleTabs';
 
 /**
  * PropertiesPanel - Panneau latéral droit avec onglets
@@ -31,7 +30,7 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
       {/* Onglets */}
       <div className="flex-shrink-0 border-b border-slate-700 bg-slate-750">
         <div className="flex gap-0 px-2">
-          {/* TODO: Remplacer par AccessibleTabs quand dispon. */}
+          {/* Onglet Propriétés */}
           <button
             onClick={() => setActiveTab('properties')}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
@@ -44,6 +43,8 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
           >
             📄 Propriétés
           </button>
+          
+          {/* Onglet Bibliothèque */}
           <button
             onClick={() => setActiveTab('library')}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
@@ -56,6 +57,8 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
           >
             📚 Bibliothèque
           </button>
+          
+          {/* Onglet Styles */}
           <button
             onClick={() => setActiveTab('styles')}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
@@ -66,7 +69,7 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
             aria-selected={activeTab === 'styles'}
             role="tab"
           >
-            🎫 Styles
+            🎨 Styles
           </button>
         </div>
       </div>
@@ -131,33 +134,33 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
         {activeTab === 'library' && (
           <div className="p-4" role="tabpanel" aria-labelledby="tab-library">
             <div className="space-y-4">
-              {/* TODO: Section Personnages */}
+              {/* Section Personnages */}
               <div>
                 <h4 className="text-xs font-semibold text-slate-300 mb-2">
                   👾 Personnages
                 </h4>
                 <div className="bg-slate-700 rounded p-2 text-xs text-slate-400 text-center">
-                  Aucun personnage dispon.
+                  Aucun personnage disponible
                 </div>
               </div>
 
-              {/* TODO: Section Décors */}
+              {/* Section Décors */}
               <div>
                 <h4 className="text-xs font-semibold text-slate-300 mb-2">
-                  🎫 Décors
+                  🎭 Décors
                 </h4>
                 <div className="bg-slate-700 rounded p-2 text-xs text-slate-400 text-center">
-                  Aucun décor dispon.
+                  Aucun décor disponible
                 </div>
               </div>
 
-              {/* TODO: Section Sons */}
+              {/* Section Sons */}
               <div>
                 <h4 className="text-xs font-semibold text-slate-300 mb-2">
                   🔊 Sons
                 </h4>
                 <div className="bg-slate-700 rounded p-2 text-xs text-slate-400 text-center">
-                  Aucun son dispon.
+                  Aucun son disponible
                 </div>
               </div>
             </div>
@@ -168,7 +171,7 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
         {activeTab === 'styles' && (
           <div className="p-4" role="tabpanel" aria-labelledby="tab-styles">
             <div className="space-y-4">
-              {/* TODO: Couleur de fond */}
+              {/* Couleur de fond */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">
                   Couleur de fond
@@ -176,7 +179,7 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
                 <div className="flex gap-2">
                   <input
                     type="color"
-                    value={scene?.backgroundColor || '#000000'}
+                    value={scene?.backgroundColor || '#1e293b'}
                     onChange={(e) => {
                       // TODO: Implémenter le changement de couleur
                       console.log('Update bg color:', e.target.value);
@@ -185,19 +188,23 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
                   />
                   <input
                     type="text"
-                    value={scene?.backgroundColor || '#000000'}
+                    value={scene?.backgroundColor || '#1e293b'}
                     onChange={(e) => {
                       // TODO: Implémenter la saisie de couleur
                       console.log('Update bg color text:', e.target.value);
                     }}
                     className="flex-1 px-2 py-1 bg-slate-700 text-slate-100 text-xs rounded border border-slate-600 focus:border-purple-500 focus:outline-none"
-                    placeholder="#000000"
+                    placeholder="#1e293b"
                   />
                 </div>
               </div>
 
-              {/* TODO: Police/Thématique */}
-              {/* TODO: Effets visuels */}
+              {/* Section Police/Thématique */}
+              <div>
+                <p className="text-xs text-slate-400">
+                  Plus d'options à venir (police, thématique, effets)
+                </p>
+              </div>
             </div>
           </div>
         )}

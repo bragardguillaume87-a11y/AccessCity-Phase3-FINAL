@@ -18,32 +18,35 @@ import SkipToContent from './SkipToContent';
  * │                    │                      │ - Styles              │
  * └────────────────────┴──────────────────────┴──────────────────────┘
  * 
- * Phase 1: Structure stable, accessibilité, navigation clavier
- * Phase 2: Édition complète (CRUD scènes, renommage, etc.)
+ * Phase 1: Structure stable, accessibilité, navigation clavier ✓
+ * Phase 2: Édition complète - EN COURS
  * Phase 3: Drag & drop, zoom, amélioration UX
- * 
- * Composants enfants attendus:
- * - ScenesList: Colonne gauche (déjà implémentée)
- * - VisualSceneEditor: Colonne centrale (déjà implémentée)
- * - PropertiesPanel: Colonne droite (NEW - à créer)
  */
 export default function MainCanvas() {
-  const { scenes } = useApp();
-  const [selectedSceneId, setSelectedSceneId] = React.useState(null);
-  const [selectedElement, setSelectedElement] = React.useState(null); // TODO: tracking d'objet sélectionné dans le canvas
+  // Utilisation du context global (single source of truth)
+  const { 
+    scenes, 
+    selectedSceneId, 
+    setSelectedSceneId,
+    updateScene 
+  } = useApp();
+  
+  // Gestion de la sélection d'élément dans le canvas (personnage, décor, etc.)
+  const [selectedElement, setSelectedElement] = React.useState(null);
 
-  // Auto-sélection première scène disponible
-  React.useEffect(() => {
-    if (scenes.length > 0 && !selectedSceneId) {
-      setSelectedSceneId(scenes[0].id);
-    }
-  }, [scenes, selectedSceneId]);
-
+  // Trouver la scène actuellement sélectionnée
   const selectedScene = scenes.find(s => s.id === selectedSceneId);
 
+  // Handler pour la sélection de scène
   const handleSceneSelect = (sceneId) => {
     setSelectedSceneId(sceneId);
-    setSelectedElement(null); // Réinitialiser la sélection d'objet
+    setSelectedElement(null); // Réinitialiser la sélection d'élément
+  };
+
+  // Handler pour la mise à jour de scène (utilisé par PropertiesPanel)
+  const handleUpdateScene = (patch) => {
+    if (!selectedSceneId) return;
+    updateScene(selectedSceneId, patch);
   };
 
   return (
@@ -82,7 +85,7 @@ export default function MainCanvas() {
           aria-label="Colonne centrale - Éditeur visuel de scène"
           aria-describedby="canvasHelp"
         >
-          {/* TODO: Header avec titre de la scène et contrôles de zoom/vue */}
+          {/* TODO Phase 3: Header avec titre de la scène et contrôles de zoom/vue */}
           <div className="flex-1 overflow-hidden">
             <VisualSceneEditor
               currentScene={selectedScene}
@@ -102,14 +105,10 @@ export default function MainCanvas() {
           aria-label="Colonne droite - Propriétés et utilitaires"
           aria-describedby="propertiesPanelHelp"
         >
-          {/* TODO: Créer PropertiesPanel avec onglets (Bibliothèque, Propriétés, Styles) */}
           <PropertiesPanel
             scene={selectedScene}
             selectedElement={selectedElement}
-            onUpdateScene={() => {
-              // TODO: brancher ici la vraie fonction de mise à jour de scène
-              console.log('Update scene properties');
-            }}
+            onUpdateScene={handleUpdateScene}
           />
           <div id="propertiesPanelHelp" className="sr-only">
             Panneau de propriétés pour la scène ou l'objet sélectionné.

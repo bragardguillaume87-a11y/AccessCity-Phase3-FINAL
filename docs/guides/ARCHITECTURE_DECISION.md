@@ -9,15 +9,16 @@
 AccessCity Studio utilise actuellement un composant principal `StudioShell.jsx` qui gère une interface à onglets pour piloter l’éditeur de scénarios [web:1].  
 Ce composant concentre la navigation (Context, Characters, Scenes, Dialogues, Preview, Export) et plusieurs outils (ProblemsPanel, CommandPalette, KeyboardShortcuts), avec des optimisations comme le lazy loading des panels [web:1].  
 
-L’analyse qualité a mis en évidence :
-- des violations majeures des standards (ASCII only, i18n manquant, imports désordonnés) [web:1]  
-- une gestion d’état peu optimale (re-render global chaque seconde pour le timer) [web:1]  
-- un besoin de refactor lourd pour aligner le code sur les nouvelles règles de `CONTRIBUTING.md`.  
+L'analyse qualité a mis en évidence :
 
-Dans ce contexte, deux options sont envisagées pour l’interface principale :
+- des violations majeures des standards (ASCII only, i18n manquant, imports désordonnés) [web:1]
+- une gestion d'état peu optimale (re-render global chaque seconde pour le timer) [web:1]
+- un besoin de refactor lourd pour aligner le code sur les nouvelles règles de `CONTRIBUTING.md`.
 
-- **Option A** : Migration vers une interface 3 volets type GDevelop  
-- **Option B** : Finalisation et durcissement de l’interface à onglets existante  
+Dans ce contexte, deux options sont envisagées pour l'interface principale :
+
+- **Option A** : Migration vers une interface 3 volets type GDevelop
+- **Option B** : Finalisation et durcissement de l'interface à onglets existante  
 
 ---
 
@@ -41,13 +42,15 @@ Schéma cible inspiré des éditeurs comme GDevelop, Unity ou Figma [web:32][web
 text
 
 **Avantages :**
-- Vision simultanée de la structure (gauche), du contenu (centre) et des propriétés (droite), comme dans les éditeurs de scènes GDevelop [web:26][web:23].  
-- Meilleure séparation des responsabilités : chaque panneau peut devenir un composant indépendant, limitant les re-renders et simplifiant le state management [web:28].  
-- Expérience cohérente avec les outils de création modernes (moins d’aller-retours entre onglets).  
+
+- Vision simultanée de la structure (gauche), du contenu (centre) et des propriétés (droite), comme dans les éditeurs de scènes GDevelop [web:26][web:23].
+- Meilleure séparation des responsabilités : chaque panneau peut devenir un composant indépendant, limitant les re-renders et simplifiant le state management [web:28].
+- Expérience cohérente avec les outils de création modernes (moins d'aller-retours entre onglets).
 
 **Inconvénients :**
-- Refactoring structurel important de `StudioShell.jsx` (découpage en plusieurs composants + nouveau layout global) [web:1].  
-- Gestion de l’accessibilité plus complexe (landmarks ARIA multiples, focus management entre panneaux).  
+
+- Refactoring structurel important de `StudioShell.jsx` (découpage en plusieurs composants + nouveau layout global) [web:1].
+- Gestion de l'accessibilité plus complexe (landmarks ARIA multiples, focus management entre panneaux).  
 
 ---
 
@@ -56,14 +59,16 @@ text
 L’interface actuelle repose sur un `tablist` avec des panneaux affichés/masqués, un pattern classique mais qui nécessite une implémentation a11y rigoureuse [web:27][web:33].  
 
 **Avantages :**
-- Refactor limité : nettoyage du code existant, correction des violations (ASCII, i18n, imports) [web:1].  
-- Navigation séquentielle simple, adaptée à des workflows linéaires (Context → Characters → Scenes → Dialogues → Preview → Export) [web:1].  
-- Meilleure adaptation aux petits écrans (les tabbed interfaces gèrent bien les layouts compacts) [web:30].  
+
+- Refactor limité : nettoyage du code existant, correction des violations (ASCII, i18n, imports) [web:1].
+- Navigation séquentielle simple, adaptée à des workflows linéaires (Context → Characters → Scenes → Dialogues → Preview → Export) [web:1].
+- Meilleure adaptation aux petits écrans (les tabbed interfaces gèrent bien les layouts compacts) [web:30].
 
 **Inconvénients :**
-- Perte de contexte : impossible de voir en même temps la structure complète et les propriétés détaillées (contrairement aux interfaces multi-panneaux) [web:32].  
-- Risque de complexité croissante si on commence à empiler des sous-onglets et des overlays (tabs dans tabs) [web:36].  
-- Ne résout pas, à lui seul, les problèmes actuels de taille du composant et de fragmentation de l’état.  
+
+- Perte de contexte : impossible de voir en même temps la structure complète et les propriétés détaillées (contrairement aux interfaces multi-panneaux) [web:32].
+- Risque de complexité croissante si on commence à empiler des sous-onglets et des overlays (tabs dans tabs) [web:36].
+- Ne résout pas, à lui seul, les problèmes actuels de taille du composant et de fragmentation de l'état.  
 
 ---
 
@@ -72,9 +77,10 @@ L’interface actuelle repose sur un `tablist` avec des panneaux affichés/masqu
 L’analyse combinée du code actuel de `StudioShell.jsx` et des besoins UX d’un éditeur de scénarios visuels penche clairement en faveur de **l’Option A : interface 3 volets** [web:1][web:26].  
 
 Motifs principaux :
-- Alignement avec les pratiques des éditeurs de scènes (GDevelop, moteurs de jeu, éditeurs de niveau) [web:26][web:32].  
-- Meilleure scalabilité pour de futures fonctionnalités (timeline, variables globales, journal d’accessibilité, etc.).  
-- Opportunité de repartir sur une base saine côté architecture (découpage des composants, state management, i18n) plutôt que d’empiler des correctifs sur un composant déjà surchargé [web:28][web:40].  
+
+- Alignement avec les pratiques des éditeurs de scènes (GDevelop, moteurs de jeu, éditeurs de niveau) [web:26][web:32].
+- Meilleure scalabilité pour de futures fonctionnalités (timeline, variables globales, journal d'accessibilité, etc.).
+- Opportunité de repartir sur une base saine côté architecture (découpage des composants, state management, i18n) plutôt que d'empiler des correctifs sur un composant déjà surchargé [web:28][web:40].  
 
 ---
 
@@ -121,9 +127,9 @@ Total estimé : **3,5 à 6 jours** selon le niveau de couverture de tests et le 
 
 Avant de lancer le refactoring majeur :
 
-- [ ] Valider officiellement l’option **A (interface 3 volets)** comme cible principale.  
-- [ ] Geler les évolutions fonctionnelles majeures sur `StudioShell.jsx` le temps du refactor.  
-- [ ] Valider le **plan de refactoring détaillé** décrit dans `REFACTORING_PLAN.md`.  
-- [ ] S’assurer que les exigences d’accessibilité (WCAG 2.1 AA) restent prioritaires pendant la migration.  
+- [ ] Valider officiellement l'option **A (interface 3 volets)** comme cible principale.
+- [ ] Geler les évolutions fonctionnelles majeures sur `StudioShell.jsx` le temps du refactor.
+- [ ] Valider le **plan de refactoring détaillé** décrit dans `REFACTORING_PLAN.md`.
+- [ ] S'assurer que les exigences d'accessibilité (WCAG 2.1 AA) restent prioritaires pendant la migration.
 
 Une fois ces points validés, le travail peut démarrer en suivant le plan de refactor dédié.

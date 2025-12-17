@@ -1,3 +1,21 @@
+/**
+ * MIGRATION NOTICE
+ * ================
+ * This component is being progressively migrated to EditorShell.jsx
+ * as part of the 3-pane editor architecture refactoring.
+ *
+ * New architecture (EditorShell):
+ * - Left panel: ExplorerPanel (scenes/dialogues/characters tree)
+ * - Center panel: MainCanvas (visual editing, scene preview)
+ * - Right panel: PropertiesPanel (properties of selected element)
+ *
+ * See docs/guides/ARCHITECTURE_DECISION.md and REFACTORING_PLAN.md
+ * for migration details.
+ *
+ * TODO: Once EditorShell is fully operational and tested, this component
+ * will be deprecated and routing will switch to EditorShell.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { useValidation } from '../hooks/useValidation.js';
@@ -18,19 +36,19 @@ export default function StudioShell() {
   const [activeTab, setActiveTab] = useState('context');
   const { lastSaved, isSaving, undo, redo, canUndo, canRedo, setSelectedSceneForEdit } = useApp();
   const validation = useValidation();
-  const [, forceUpdate] = useState(0);
+  const [, _forceUpdate] = useState(0);
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  // Force re-render toutes les secondes pour mettre a jour le temps ecoule
+  // Force re-render every second to update elapsed time display
   useEffect(() => {
     const interval = setInterval(() => {
-      forceUpdate(n => n + 1);
+      _forceUpdate(n => n + 1);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Helper pour calculer le temps ecoulé depuis la dernière sauvegarde
+  // Helper to calculate time since last save
   const getTimeSinceLastSave = () => {
     if (!lastSaved) return null;
     const seconds = Math.floor((Date.now() - new Date(lastSaved).getTime()) / 1000);
@@ -40,10 +58,6 @@ export default function StudioShell() {
   };
 
   const tabs = [
-    { id: 'scenes', label: 'Scenes' },
-    { id: 'dialogues', label: 'Dialogues' }
-  
-        { id: 'editor', label: 'Éditeur' },
     { id: 'context', label: '1. Contexte', icon: '📝', description: 'Definir le cadre du scenario' },
     { id: 'characters', label: '2. Personnages', icon: '👥', description: 'Creer les personnages' },
     { id: 'scenes', label: '3. Scenes', icon: '🎬', description: 'Construire l\'histoire scene par scene' },
@@ -91,13 +105,6 @@ export default function StudioShell() {
         onOpenCommandPalette={(mode) => setCommandPaletteOpen(mode || true)}
       />
 
-        <nav role="navigation" aria-label="Modules de l editeur">
-          <AccessibleTabs
-            tabs={tabs}
-                activeTab={activeTab}            onChange={setActiveTab}
-            ariaLabel="Modules de l editeur"
-          />
-        </nav>
       {/* Command Palette */}
       <CommandPalette
         isOpen={!!commandPaletteOpen}
@@ -149,23 +156,7 @@ export default function StudioShell() {
                 </button>
               </div>
 
-            <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
-                            {activeTab === 'editor' && (
-                                              <MainCanvas
-                                                                selectedScene={selectedScene}
-                                                                                  scenes={scenes}
-                                                                                                    onSceneSelect={(id) => {}}
-                                                                                                                    />
-                                                                                                                                  )}
-              <section className="md:col-span-2 xl:col-span-1 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-                <TabPanel id="scenes" isActive={currentModule === 'scenes'}>
-                  <div className="text-center text-slate-500 py-12">
-                    <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                    </svg>
-                    <p className="font-medium text-slate-600">Aucune scene selectionnee</p>
-                    <p className="text-sm mt-2">Selectionnez une scene a gauche pour voir ses details</p>
+              {/* Validation badge (clickable) */}
               {/* Badge de validation globale (cliquable) */}
               {validation.hasIssues && (
                 <button
@@ -198,21 +189,21 @@ export default function StudioShell() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Sauvegarde...</span>
+                    <span>Saving...</span>
                   </div>
                 ) : lastSaved ? (
                   <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span>Sauvegarde il y a {getTimeSinceLastSave()}</span>
+                    <span>Saved {getTimeSinceLastSave()} ago</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
                     </svg>
-                    <span>Pas encore sauvegarde</span>
+                    <span>Not saved yet</span>
                   </div>
                 )}
               </div>

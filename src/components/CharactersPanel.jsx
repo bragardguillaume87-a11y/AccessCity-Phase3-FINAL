@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { useValidation } from '../hooks/useValidation.js';
-import ConfirmModal from './ConfirmModal';
+import ConfirmModal from './ConfirmModal.jsx';
 import CharacterEditor from './CharacterEditor.jsx';
 import { duplicateCharacter } from '../utils/duplication.js';
 

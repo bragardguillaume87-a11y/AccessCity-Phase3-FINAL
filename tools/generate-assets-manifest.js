@@ -69,9 +69,17 @@ try {
   };
 
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(manifest, null, 2));
 
-  console.log(`✅ Assets manifest generated successfully`);
+  try {
+    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(manifest, null, 2));
+    console.log(`✅ Assets manifest generated successfully`);
+  } catch (writeError) {
+    if (writeError.code === 'EBADF' && fs.existsSync(OUTPUT_FILE)) {
+      console.warn(`⚠️  Manifest file locked, using existing version`);
+    } else {
+      throw writeError;
+    }
+  }
   console.log(`📊 Total: ${manifest.totalAssets} files`);
   console.log(`📂 Categories: ${manifest.categories.join(', ') || 'none'}`);
   console.log(`💾 Output: ${OUTPUT_FILE}`);

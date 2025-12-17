@@ -30,7 +30,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     });
   });
 
-  // Erreurs de dialogues
+  // Dialogue errors
   Object.entries(validation.errors.dialogues).forEach(([key, errors]) => {
     const [sceneId, dialogueIdx] = key.split('-');
     const scene = scenes.find(s => s.id === sceneId);
@@ -48,7 +48,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     });
   });
 
-  // Erreurs de choix
+  // Choice errors
   Object.entries(validation.errors.choices).forEach(([key, errors]) => {
     const [sceneId, dialogueIdx, choiceIdx] = key.split('-');
     const scene = scenes.find(s => s.id === sceneId);
@@ -67,7 +67,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     });
   });
 
-  // Erreurs de personnages
+  // Character errors
   Object.entries(validation.errors.characters).forEach(([charId, errors]) => {
     const character = characters.find(c => c.id === charId);
     errors.forEach(error => {
@@ -83,7 +83,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     });
   });
 
-  // Erreurs de variables
+  // Variable errors
   Object.entries(validation.errors.variables).forEach(([varName, errors]) => {
     errors.forEach(error => {
       allProblems.push({
@@ -133,14 +133,14 @@ export default function ProblemsPanel({ onNavigateTo }) {
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            Problèmes
+            Problems
           </h2>
           <div className="flex items-center gap-2 text-sm">
             <span className="px-2 py-1 bg-red-100 text-red-700 rounded font-semibold">
-              {validation.totalErrors} erreur{validation.totalErrors > 1 ? 's' : ''}
+              {validation.totalErrors} error{validation.totalErrors > 1 ? 's' : ''}
             </span>
             <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded font-semibold">
-              {validation.totalWarnings} avertissement{validation.totalWarnings > 1 ? 's' : ''}
+              {validation.totalWarnings} warning{validation.totalWarnings > 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Tout ({allProblems.length})
+            All ({allProblems.length})
           </button>
           <button
             onClick={() => setFilter('errors')}
@@ -165,7 +165,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            🔴 Erreurs ({validation.totalErrors})
+            Errors ({validation.totalErrors})
           </button>
           <button
             onClick={() => setFilter('warnings')}
@@ -175,7 +175,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            ⚠️ Avertissements ({validation.totalWarnings})
+            Warnings ({validation.totalWarnings})
           </button>
         </div>
       </div>

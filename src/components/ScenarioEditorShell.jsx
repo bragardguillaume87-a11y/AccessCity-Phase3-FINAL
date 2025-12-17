@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import StudioShell from './StudioShell.jsx';
+import EditorShell from './EditorShell.jsx';
 import OnboardingModal from './OnboardingModal.jsx';
 import { useValidation } from '../hooks/useValidation.js';
 
@@ -247,7 +247,7 @@ function ScenarioEditorShell() {
             </button>
           </div>
         </header>
-        <StudioShell />
+        <EditorShell />
       </div>
     );
   }

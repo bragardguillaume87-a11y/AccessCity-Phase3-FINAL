@@ -4,6 +4,7 @@ import { AppContext } from '../../AppContext';
 export const useCharacters = () => {
   const { characters, addCharacter, updateCharacter, deleteCharacter } = useContext(AppContext);
 
+  // Création d'un personnage par défaut
   const createCharacter = useCallback(() => {
     const newChar = {
       name: "Nouveau Personnage",
@@ -14,6 +15,7 @@ export const useCharacters = () => {
     return addCharacter(newChar);
   }, [addCharacter]);
 
+  // Suppression sécurisée
   const removeCharacter = useCallback((charId) => {
     if (charId === 'player' || charId === 'counsellor') {
       return { success: false, error: "Impossible de supprimer les personnages système." };
@@ -22,6 +24,7 @@ export const useCharacters = () => {
     return { success: true };
   }, [deleteCharacter]);
 
+  // Duplication
   const duplicateCharacter = useCallback((charId) => {
     const original = characters.find(c => c.id === charId);
     if (!original) return null;

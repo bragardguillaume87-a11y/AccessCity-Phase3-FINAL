@@ -1,0 +1,1 @@
+.card { padding: 10px; border: 1px solid #ccc; margin-bottom: 5px; cursor: pointer; } .selected { background: #e0f7fa; } .actions { display: flex; gap: 5px; margin-top: 5px; }

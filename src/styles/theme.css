@@ -1,0 +1,176 @@
+/* ============================================================================
+   FICHIER : src/styles/theme.css
+   
+   INSTRUCTIONS POUR COPILOT :
+   1. Crée ce fichier dans src/styles/theme.css
+   2. Importe-le AVANT tous les autres styles dans src/main.jsx :
+      import './styles/theme.css';
+   3. Ces variables seront utilisables partout dans l'app via var(--nom-variable)
+   
+   EXEMPLE D'UTILISATION :
+   .mon-element {
+     background: var(--bg-primary);
+     color: var(--text-primary);
+     border: 1px solid var(--border-subtle);
+   }
+   ============================================================================ */
+
+:root {
+  /* ==========================================================================
+     BACKGROUNDS - Fonds de l'application
+     ========================================================================== */
+  --bg-primary: #1a1d29; /* Fond principal (comme l'éditeur) */
+  --bg-secondary: #13151f; /* Cartes, sidebar (plus sombre) */
+  --bg-tertiary: #0d0f16; /* Zones très sombres */
+  --bg-hover: #2a2d3a; /* État hover des éléments */
+  --bg-elevated: #252837; /* Modals, dropdowns surélevés */
+
+  /* ==========================================================================
+     BORDERS - Bordures
+     ========================================================================== */
+  --border-subtle: #2a2d3a; /* Bordures discrètes (par défaut) */
+  --border-medium: #3a3d4a; /* Bordures visibles */
+  --border-focus: #8b5cf6; /* Bordure lors du focus (violet) */
+
+  /* ==========================================================================
+     TEXT - Couleurs de texte
+     ========================================================================== */
+  --text-primary: #e8eaed; /* Texte principal (blanc cassé) */
+  --text-secondary: #9ca3af; /* Texte secondaire (gris moyen) */
+  --text-tertiary: #6b7280; /* Texte tertiaire (gris foncé) */
+  --text-disabled: #4b5563; /* Texte désactivé */
+
+  /* ==========================================================================
+     ACCENT COLORS - Couleurs des boutons de l'éditeur
+     Utilise ces couleurs pour matcher le style de l'éditeur
+     ========================================================================== */
+
+  /* Violet (Settings) */
+  --accent-purple: #8b5cf6; /* Normal */
+  --accent-purple-hover: #a78bfa; /* Hover */
+  --accent-purple-dark: #7c3aed; /* Active/Pressed */
+
+  /* Bleu (Personnages) */
+  --accent-blue: #3b82f6; /* Normal */
+  --accent-blue-hover: #60a5fa; /* Hover */
+  --accent-blue-dark: #2563eb; /* Active */
+
+  /* Rose (Assets) */
+  --accent-pink: #ec4899; /* Normal */
+  --accent-pink-hover: #f472b6; /* Hover */
+  --accent-pink-dark: #db2777; /* Active */
+
+  /* Vert (Export) */
+  --accent-green: #10b981; /* Normal */
+  --accent-green-hover: #34d399; /* Hover */
+  --accent-green-dark: #059669; /* Active */
+
+  /* Orange (Preview) */
+  --accent-orange: #f97316; /* Normal */
+  --accent-orange-hover: #fb923c; /* Hover */
+  --accent-orange-dark: #ea580c; /* Active */
+
+  /* Autres couleurs utiles */
+  --accent-cyan: #06b6d4; /* Cyan (complémentaire) */
+  --accent-yellow: #eab308; /* Jaune (warnings) */
+
+  /* ==========================================================================
+     SEMANTIC COLORS - Couleurs sémantiques (succès, erreur, etc.)
+     ========================================================================== */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --error: #ef4444;
+  --error-light: #fee2e2;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+
+  /* ==========================================================================
+     SHADOWS - Ombres
+     ========================================================================== */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+  /* ==========================================================================
+     SPACING - Espacements standardisés
+     ========================================================================== */
+  --spacing-xs: 0.25rem; /* 4px - très petit */
+  --spacing-sm: 0.5rem; /* 8px - petit */
+  --spacing-md: 1rem; /* 16px - moyen (par défaut) */
+  --spacing-lg: 1.5rem; /* 24px - grand */
+  --spacing-xl: 2rem; /* 32px - très grand */
+  --spacing-2xl: 3rem; /* 48px - extra grand */
+
+  /* ==========================================================================
+     RADIUS - Arrondis des coins
+     ========================================================================== */
+  --radius-sm: 4px; /* Petit arrondi */
+  --radius-md: 8px; /* Arrondi moyen */
+  --radius-lg: 12px; /* Grand arrondi (cartes) */
+  --radius-xl: 16px; /* Très grand arrondi */
+  --radius-full: 9999px; /* Complètement arrondi (badges, boutons ronds) */
+
+  /* ==========================================================================
+     TYPOGRAPHY - Polices et tailles de texte
+     ========================================================================== */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+    "Courier New", monospace;
+
+  --font-size-xs: 0.75rem; /* 12px - très petit */
+  --font-size-sm: 0.875rem; /* 14px - petit */
+  --font-size-base: 1rem; /* 16px - normal */
+  --font-size-lg: 1.125rem; /* 18px - grand */
+  --font-size-xl: 1.25rem; /* 20px - très grand */
+  --font-size-2xl: 1.5rem; /* 24px - titre moyen */
+  --font-size-3xl: 1.875rem; /* 30px - grand titre */
+  --font-size-4xl: 2.25rem; /* 36px - énorme titre */
+
+  /* ==========================================================================
+     TRANSITIONS - Vitesses d'animation
+     ========================================================================== */
+  --transition-fast: 150ms ease; /* Rapide */
+  --transition-base: 200ms ease; /* Normal (par défaut) */
+  --transition-slow: 300ms ease; /* Lent */
+}
+
+/* ===============================================================================
+   UTILITY CLASSES - Classes utilitaires prêtes à l'emploi
+   
+   TODO COPILOT : Ces classes sont optionnelles mais pratiques.
+   Tu peux les utiliser directement dans le JSX :
+   <div className="gradient-primary"> ou <button className="gradient-purple">
+   =============================================================================== */
+
+.gradient-primary {
+  background: linear-gradient(
+    135deg,
+    var(--bg-primary) 0%,
+    var(--bg-hover) 100%
+  );
+}
+
+.gradient-purple {
+  background: linear-gradient(
+    135deg,
+    var(--accent-purple) 0%,
+    var(--accent-pink) 100%
+  );
+}
+
+.gradient-blue {
+  background: linear-gradient(
+    135deg,
+    var(--accent-blue) 0%,
+    var(--accent-cyan) 100%
+  );
+}
+
+/* ===============================================================================
+   FIN DU FICHIER theme.css
+   =============================================================================== */

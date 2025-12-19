@@ -5,7 +5,7 @@ import { useApp } from '../AppContext.jsx';
  * Composant pour gérer les raccourcis clavier globaux
  * Inspiré de VS Code, Inky, et autres éditeurs modernes
  */
-export default function KeyboardShortcuts({ onOpenCommandPalette, activeTab, setActiveTab }) {
+export default function KeyboardShortcuts({ onOpenCommandPalette, onOpenModal, activeTab, setActiveTab }) {
   const { addScene, addCharacter, undo, redo } = useApp();
 
   useEffect(() => {
@@ -90,11 +90,36 @@ export default function KeyboardShortcuts({ onOpenCommandPalette, activeTab, set
         if (onOpenCommandPalette) onOpenCommandPalette('help');
         return;
       }
+
+      // EditorShell modals (only if onOpenModal is provided)
+      if (onOpenModal) {
+        // Characters Modal : Ctrl+Shift+C
+        if (modifier && e.shiftKey && e.key === 'C') {
+          e.preventDefault();
+          onOpenModal('characters');
+          return;
+        }
+
+        // Assets Modal : Ctrl+Shift+A
+        if (modifier && e.shiftKey && e.key === 'A') {
+          e.preventDefault();
+          onOpenModal('assets');
+          return;
+        }
+
+        // Preview Modal : Ctrl+Shift+P (different from Command Palette Ctrl+Shift+P)
+        // Using Ctrl+R for Preview (R for Run/Review)
+        if (modifier && !e.shiftKey && e.key === 'r') {
+          e.preventDefault();
+          onOpenModal('preview');
+          return;
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [addScene, addCharacter, undo, redo, onOpenCommandPalette, activeTab, setActiveTab]);
+  }, [addScene, addCharacter, undo, redo, onOpenCommandPalette, onOpenModal, activeTab, setActiveTab]);
 
   return null; // Composant invisible
 }

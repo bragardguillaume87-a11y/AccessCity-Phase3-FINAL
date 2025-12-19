@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useApp } from '../../AppContext.jsx';
+import { AvatarPicker } from '../tabs/characters/components/AvatarPicker.jsx';
+import { duplicateDialogue } from '../../utils/duplication.js';
 
 /**
  * PropertiesPanel - Right sidebar for editing selected element properties
@@ -11,8 +13,22 @@ import { useApp } from '../../AppContext.jsx';
  * ASCII only, form-based editing.
  */
 function PropertiesPanel({ selectedElement, selectedScene, characters }) {
-  const { updateScene, updateCharacter, updateDialogue } = useApp();
+  const { updateScene, updateCharacter, updateDialogue, addCharacter, addDialogue, scenes } = useApp();
   const [activeTab, setActiveTab] = useState('properties');
+  const [newMood, setNewMood] = useState('');
+  const [activeMood, setActiveMood] = useState('neutral');
+
+  // Sync activeMood when character changes
+  useEffect(() => {
+    if (selectedElement?.type === 'character') {
+      const char = characters.find(c => c.id === selectedElement.id);
+      if (char && char.moods && char.moods.length > 0) {
+        setActiveMood(char.moods[0]);
+      } else {
+        setActiveMood('neutral');
+      }
+    }
+  }, [selectedElement, characters]);
 
   if (!selectedElement) {
     return (
@@ -126,13 +142,85 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
       );
     }
 
+    const isSystemCharacter = character.id === 'player' || character.id === 'narrator';
+
+    // Calculate usage statistics
+    const appearancesCount = scenes.filter(scene =>
+      scene.dialogues?.some(d => d.speaker === character.id)
+    ).length;
+    const linesCount = scenes.reduce((total, scene) => {
+      const sceneLines = scene.dialogues?.filter(d => d.speaker === character.id).length || 0;
+      return total + sceneLines;
+    }, 0);
+
+    const handleAddMood = () => {
+      if (!newMood.trim()) return;
+      const moods = character.moods || [];
+      if (moods.includes(newMood.trim())) {
+        alert('This mood already exists');
+        return;
+      }
+      updateCharacter({
+        ...character,
+        moods: [...moods, newMood.trim()],
+        sprites: { ...character.sprites, [newMood.trim()]: '' }
+      });
+      setNewMood('');
+      setActiveMood(newMood.trim());
+    };
+
+    const handleRemoveMood = (moodToRemove) => {
+      if (moodToRemove === 'neutral') {
+        alert('Cannot remove the "neutral" mood');
+        return;
+      }
+      const moods = (character.moods || []).filter(m => m !== moodToRemove);
+      const sprites = { ...character.sprites };
+      delete sprites[moodToRemove];
+      updateCharacter({ ...character, moods, sprites });
+      if (activeMood === moodToRemove) {
+        setActiveMood(moods[0] || 'neutral');
+      }
+    };
+
+    const handleDuplicate = () => {
+      const duplicate = {
+        ...character,
+        name: `${character.name} (copy)`,
+        sprites: { ...character.sprites },
+        moods: [...(character.moods || [])]
+      };
+      delete duplicate.id;
+      addCharacter(duplicate);
+    };
+
     return (
       <div className="h-full flex flex-col bg-slate-800">
-        <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3">
+        {/* Header with duplicate button */}
+        <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white uppercase tracking-wide">Character Properties</h3>
+          <button
+            onClick={handleDuplicate}
+            className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded transition-colors"
+            title="Duplicate this character"
+          >
+            📋 Duplicate
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* System character badge */}
+          {isSystemCharacter && (
+            <div className="px-3 py-2 bg-amber-900/30 border border-amber-600 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-amber-300">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="font-semibold">System Character (Protected)</span>
+              </div>
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label htmlFor="char-name" className="block text-xs font-semibold text-slate-400 mb-1.5">
@@ -163,46 +251,104 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
             />
           </div>
 
-          {/* Moods */}
+          {/* Moods (editable) */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">
               Moods
             </label>
-            <div className="text-xs text-slate-500">
-              {character.moods && character.moods.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {character.moods.map((mood, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-slate-700 rounded text-slate-300">
-                      {mood}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-600 italic">No moods defined</p>
-              )}
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1 mb-2">
+                {(character.moods || ['neutral']).map((mood) => (
+                  <div
+                    key={mood}
+                    className={`group flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-all ${
+                      activeMood === mood
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                    onClick={() => setActiveMood(mood)}
+                  >
+                    <span className="text-xs font-medium">{mood}</span>
+                    {mood !== 'neutral' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveMood(mood);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+                        title="Remove mood"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add mood */}
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={newMood}
+                  onChange={(e) => setNewMood(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddMood()}
+                  placeholder="Add mood (e.g., happy, angry)"
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleAddMood}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded transition-colors"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Sprites */}
+          {/* Sprites (with AvatarPicker) */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-              Sprites
+              Avatar for "{activeMood}"
             </label>
+            <AvatarPicker
+              currentSprites={character.sprites || {}}
+              onSelect={(mood, url) => {
+                updateCharacter({
+                  ...character,
+                  sprites: { ...(character.sprites || {}), [mood]: url }
+                });
+              }}
+              mood={activeMood}
+              labels={{}}
+            />
+          </div>
+
+          {/* Usage Statistics */}
+          <div className="pt-4 border-t border-slate-700">
+            <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase">Usage Statistics</h4>
             <div className="space-y-2 text-xs">
-              {character.sprites && Object.keys(character.sprites).length > 0 ? (
-                Object.entries(character.sprites).map(([mood, url]) => (
-                  <div key={mood} className="p-2 bg-slate-900 border border-slate-700 rounded-lg">
-                    <div className="font-semibold text-slate-400 mb-1">{mood}</div>
-                    <div className="text-slate-600 font-mono text-[10px] break-all">{url || '(empty)'}</div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-slate-600 italic">No sprites defined</p>
-              )}
+              <div className="flex justify-between text-slate-500">
+                <span>Appears in scenes:</span>
+                <span className="text-slate-300 font-semibold">{appearancesCount}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Total lines:</span>
+                <span className="text-slate-300 font-semibold">{linesCount}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Moods defined:</span>
+                <span className="text-slate-300 font-semibold">{(character.moods || []).length}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Sprites assigned:</span>
+                <span className="text-slate-300 font-semibold">
+                  {Object.values(character.sprites || {}).filter(Boolean).length} / {(character.moods || []).length}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Info */}
           <div className="pt-4 border-t border-slate-700">
             <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase">Info</h4>
             <div className="space-y-2 text-xs text-slate-500">
@@ -228,8 +374,25 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
       );
     }
 
+    const handleDuplicateDialogue = () => {
+      const duplicated = duplicateDialogue(dialogue);
+      addDialogue(selectedScene.id, duplicated);
+    };
+
     return (
       <div className="h-full flex flex-col bg-slate-800">
+        {/* Header with duplicate button */}
+        <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wide">Dialogue Properties</h3>
+          <button
+            onClick={handleDuplicateDialogue}
+            className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded transition-colors"
+            title="Duplicate this dialogue"
+          >
+            📋 Duplicate
+          </button>
+        </div>
+
         {/* Tabs */}
         <div className="flex-shrink-0 border-b border-slate-700">
           <div className="flex px-4" role="tablist">
@@ -318,16 +481,308 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
         {/* Choices tab */}
         {activeTab === 'choices' && (
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* Add Choice button */}
+            <button
+              onClick={() => {
+                const newChoice = {
+                  id: `choice-${Date.now()}`,
+                  text: 'New choice',
+                  nextScene: '',
+                  effects: []
+                };
+                const updatedChoices = [...(dialogue.choices || []), newChoice];
+                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+              }}
+              className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              + Add Choice
+            </button>
+
             {dialogue.choices && dialogue.choices.length > 0 ? (
-              dialogue.choices.map((choice, idx) => (
-                <div key={idx} className="p-3 bg-slate-900 border border-slate-700 rounded-lg">
-                  <div className="text-xs font-semibold text-blue-400 mb-1">Choice {idx + 1}</div>
-                  <div className="text-sm text-slate-300 mb-2">{choice.text}</div>
+              dialogue.choices.map((choice, choiceIdx) => (
+                <div key={choiceIdx} className="p-4 bg-slate-900 border-2 border-slate-700 rounded-lg space-y-3">
+                  {/* Choice header */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-blue-400">Choice {choiceIdx + 1}</div>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete choice ${choiceIdx + 1}?`)) {
+                          const updatedChoices = dialogue.choices.filter((_, i) => i !== choiceIdx);
+                          updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                        }
+                      }}
+                      className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Choice text */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Choice Text
+                    </label>
+                    <input
+                      type="text"
+                      value={choice.text || ''}
+                      onChange={(e) => {
+                        const updatedChoices = [...dialogue.choices];
+                        updatedChoices[choiceIdx] = { ...updatedChoices[choiceIdx], text: e.target.value };
+                        updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                      }}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., Accept the mission"
+                    />
+                  </div>
+
+                  {/* Next scene */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Next Scene ID
+                    </label>
+                    <input
+                      type="text"
+                      value={choice.nextScene || ''}
+                      onChange={(e) => {
+                        const updatedChoices = [...dialogue.choices];
+                        updatedChoices[choiceIdx] = { ...updatedChoices[choiceIdx], nextScene: e.target.value };
+                        updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                      }}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., scene-2 (optional)"
+                    />
+                  </div>
+
+                  {/* Dice roll toggle */}
+                  <div className="pt-3 border-t border-slate-700">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={choice.diceRoll?.enabled || false}
+                        onChange={(e) => {
+                          const updatedChoices = [...dialogue.choices];
+                          if (!updatedChoices[choiceIdx].diceRoll) {
+                            updatedChoices[choiceIdx].diceRoll = {
+                              enabled: false,
+                              difficulty: 12,
+                              successOutcome: { message: '', moral: 0, illustration: '' },
+                              failureOutcome: { message: '', moral: 0, illustration: '' }
+                            };
+                          }
+                          updatedChoices[choiceIdx].diceRoll.enabled = e.target.checked;
+                          updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                        }}
+                        className="w-4 h-4 text-purple-600 border-slate-600 rounded focus:ring-2 focus:ring-purple-500 bg-slate-800"
+                      />
+                      <span className="text-xs font-semibold text-purple-400">
+                        🎲 Enable dice roll
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Dice configuration */}
+                  {choice.diceRoll?.enabled && (
+                    <div className="p-3 border border-purple-500/30 rounded-lg bg-purple-900/20 space-y-3">
+                      {/* Difficulty */}
+                      <div>
+                        <label className="block text-xs font-semibold text-purple-300 mb-1.5">
+                          Difficulty (1-20)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={choice.diceRoll?.difficulty || 12}
+                          onChange={(e) => {
+                            const updatedChoices = [...dialogue.choices];
+                            if (!updatedChoices[choiceIdx].diceRoll) {
+                              updatedChoices[choiceIdx].diceRoll = {
+                                enabled: true,
+                                difficulty: 12,
+                                successOutcome: { message: '', moral: 0, illustration: '' },
+                                failureOutcome: { message: '', moral: 0, illustration: '' }
+                              };
+                            }
+                            updatedChoices[choiceIdx].diceRoll.difficulty = parseInt(e.target.value) || 12;
+                            updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-800 border border-purple-500/50 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                        <p className="text-xs text-purple-400 mt-1">Player must roll this score or higher (d20)</p>
+                      </div>
+
+                      {/* Success outcome */}
+                      <div className="p-3 border border-green-500/30 rounded-lg bg-green-900/20">
+                        <h4 className="text-xs font-bold text-green-300 mb-2">✅ On Success</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-xs font-medium text-green-400 mb-1">Message</label>
+                            <input
+                              type="text"
+                              value={choice.diceRoll?.successOutcome?.message || ''}
+                              onChange={(e) => {
+                                const updatedChoices = [...dialogue.choices];
+                                if (!updatedChoices[choiceIdx].diceRoll) {
+                                  updatedChoices[choiceIdx].diceRoll = {
+                                    enabled: true,
+                                    difficulty: 12,
+                                    successOutcome: { message: '', moral: 0, illustration: '' },
+                                    failureOutcome: { message: '', moral: 0, illustration: '' }
+                                  };
+                                }
+                                updatedChoices[choiceIdx].diceRoll.successOutcome = {
+                                  ...updatedChoices[choiceIdx].diceRoll.successOutcome,
+                                  message: e.target.value
+                                };
+                                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                              }}
+                              className="w-full px-2 py-1.5 bg-slate-800 border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                              placeholder="e.g., Found a spot!"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-green-400 mb-1">Moral Impact</label>
+                            <input
+                              type="number"
+                              value={choice.diceRoll?.successOutcome?.moral || 0}
+                              onChange={(e) => {
+                                const updatedChoices = [...dialogue.choices];
+                                if (!updatedChoices[choiceIdx].diceRoll) {
+                                  updatedChoices[choiceIdx].diceRoll = {
+                                    enabled: true,
+                                    difficulty: 12,
+                                    successOutcome: { message: '', moral: 0, illustration: '' },
+                                    failureOutcome: { message: '', moral: 0, illustration: '' }
+                                  };
+                                }
+                                updatedChoices[choiceIdx].diceRoll.successOutcome = {
+                                  ...updatedChoices[choiceIdx].diceRoll.successOutcome,
+                                  moral: parseInt(e.target.value) || 0
+                                };
+                                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                              }}
+                              className="w-full px-2 py-1.5 bg-slate-800 border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                              placeholder="5"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-green-400 mb-1">Illustration</label>
+                            <input
+                              type="text"
+                              value={choice.diceRoll?.successOutcome?.illustration || ''}
+                              onChange={(e) => {
+                                const updatedChoices = [...dialogue.choices];
+                                if (!updatedChoices[choiceIdx].diceRoll) {
+                                  updatedChoices[choiceIdx].diceRoll = {
+                                    enabled: true,
+                                    difficulty: 12,
+                                    successOutcome: { message: '', moral: 0, illustration: '' },
+                                    failureOutcome: { message: '', moral: 0, illustration: '' }
+                                  };
+                                }
+                                updatedChoices[choiceIdx].diceRoll.successOutcome = {
+                                  ...updatedChoices[choiceIdx].diceRoll.successOutcome,
+                                  illustration: e.target.value
+                                };
+                                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                              }}
+                              className="w-full px-2 py-1.5 bg-slate-800 border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                              placeholder="parking-success.png"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Failure outcome */}
+                      <div className="p-3 border border-red-500/30 rounded-lg bg-red-900/20">
+                        <h4 className="text-xs font-bold text-red-300 mb-2">❌ On Failure</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-xs font-medium text-red-400 mb-1">Message</label>
+                            <input
+                              type="text"
+                              value={choice.diceRoll?.failureOutcome?.message || ''}
+                              onChange={(e) => {
+                                const updatedChoices = [...dialogue.choices];
+                                if (!updatedChoices[choiceIdx].diceRoll) {
+                                  updatedChoices[choiceIdx].diceRoll = {
+                                    enabled: true,
+                                    difficulty: 12,
+                                    successOutcome: { message: '', moral: 0, illustration: '' },
+                                    failureOutcome: { message: '', moral: 0, illustration: '' }
+                                  };
+                                }
+                                updatedChoices[choiceIdx].diceRoll.failureOutcome = {
+                                  ...updatedChoices[choiceIdx].diceRoll.failureOutcome,
+                                  message: e.target.value
+                                };
+                                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                              }}
+                              className="w-full px-2 py-1.5 bg-slate-800 border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                              placeholder="e.g., No spots..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-red-400 mb-1">Moral Impact</label>
+                            <input
+                              type="number"
+                              value={choice.diceRoll?.failureOutcome?.moral || 0}
+                              onChange={(e) => {
+                                const updatedChoices = [...dialogue.choices];
+                                if (!updatedChoices[choiceIdx].diceRoll) {
+                                  updatedChoices[choiceIdx].diceRoll = {
+                                    enabled: true,
+                                    difficulty: 12,
+                                    successOutcome: { message: '', moral: 0, illustration: '' },
+                                    failureOutcome: { message: '', moral: 0, illustration: '' }
+                                  };
+                                }
+                                updatedChoices[choiceIdx].diceRoll.failureOutcome = {
+                                  ...updatedChoices[choiceIdx].diceRoll.failureOutcome,
+                                  moral: parseInt(e.target.value) || 0
+                                };
+                                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                              }}
+                              className="w-full px-2 py-1.5 bg-slate-800 border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                              placeholder="-3"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-red-400 mb-1">Illustration</label>
+                            <input
+                              type="text"
+                              value={choice.diceRoll?.failureOutcome?.illustration || ''}
+                              onChange={(e) => {
+                                const updatedChoices = [...dialogue.choices];
+                                if (!updatedChoices[choiceIdx].diceRoll) {
+                                  updatedChoices[choiceIdx].diceRoll = {
+                                    enabled: true,
+                                    difficulty: 12,
+                                    successOutcome: { message: '', moral: 0, illustration: '' },
+                                    failureOutcome: { message: '', moral: 0, illustration: '' }
+                                  };
+                                }
+                                updatedChoices[choiceIdx].diceRoll.failureOutcome = {
+                                  ...updatedChoices[choiceIdx].diceRoll.failureOutcome,
+                                  illustration: e.target.value
+                                };
+                                updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
+                              }}
+                              className="w-full px-2 py-1.5 bg-slate-800 border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                              placeholder="parking-fail.png"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Effects (legacy support - read-only for now) */}
                   {choice.effects && choice.effects.length > 0 && (
-                    <div className="text-xs text-slate-500">
-                      <div className="font-semibold mb-1">Effects:</div>
+                    <div className="pt-3 border-t border-slate-700">
+                      <div className="text-xs font-semibold text-amber-400 mb-2">Effects (legacy):</div>
                       {choice.effects.map((effect, eIdx) => (
-                        <div key={eIdx} className="ml-2 text-amber-500">
+                        <div key={eIdx} className="text-xs text-amber-500 ml-2">
                           {effect.variable}: {effect.operation} {effect.value}
                         </div>
                       ))}
@@ -338,7 +793,7 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
             ) : (
               <div className="text-center py-8 text-slate-600">
                 <p className="text-sm">No choices for this dialogue</p>
-                <p className="text-xs mt-1">Linear dialogue with no branching</p>
+                <p className="text-xs mt-1">Click "+ Add Choice" to create branching</p>
               </div>
             )}
           </div>

@@ -207,6 +207,45 @@ export function AppProvider({ children }) {
     updateEditorState(state => ({ ...state, projectData: { ...state.projectData, ...updates } }));
   }, [updateEditorState]);
 
+  // Scene character management
+  const addCharacterToScene = useCallback((sceneId, characterId, mood = 'neutral', position = { x: 50, y: 50 }) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => s.id !== sceneId ? s : {
+        ...s,
+        characters: [
+          ...(s.characters || []),
+          {
+            id: `scene-char-${Date.now()}`,
+            characterId,
+            mood,
+            position
+          }
+        ]
+      })
+    }));
+  }, [updateEditorState]);
+
+  const removeCharacterFromScene = useCallback((sceneId, sceneCharId) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => s.id !== sceneId ? s : {
+        ...s,
+        characters: (s.characters || []).filter(sc => sc.id !== sceneCharId)
+      })
+    }));
+  }, [updateEditorState]);
+
+  const updateSceneCharacter = useCallback((sceneId, sceneCharId, updates) => {
+    updateEditorState(state => ({
+      ...state,
+      scenes: state.scenes.map(s => s.id !== sceneId ? s : {
+        ...s,
+        characters: (s.characters || []).map(sc => sc.id !== sceneCharId ? sc : { ...sc, ...updates })
+      })
+    }));
+  }, [updateEditorState]);
+
   const value = useMemo(
     () => ({
       scenes,
@@ -238,7 +277,10 @@ export function AppProvider({ children }) {
       setVariable,
       modifyVariable,
       setContextField,
-      updateProjectData
+      updateProjectData,
+      addCharacterToScene,
+      removeCharacterFromScene,
+      updateSceneCharacter
     }),
     [
       scenes,
@@ -267,7 +309,10 @@ export function AppProvider({ children }) {
       setVariable,
       modifyVariable,
       setContextField,
-      updateProjectData
+      updateProjectData,
+      addCharacterToScene,
+      removeCharacterFromScene,
+      updateSceneCharacter
     ]
   );
 

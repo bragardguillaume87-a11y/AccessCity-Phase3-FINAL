@@ -8,6 +8,8 @@ import { useValidation } from '../hooks/useValidation.js';
 const ExplorerPanel = React.lazy(() => import('./panels/ExplorerPanel.jsx'));
 const MainCanvas = React.lazy(() => import('./panels/MainCanvas.jsx'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel.jsx'));
+const CharactersModal = React.lazy(() => import('./modals/CharactersModal.jsx'));
+const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal.jsx'));
 
 /**
  * EditorShell - New 3-pane editor layout (GDevelop-like)
@@ -36,6 +38,10 @@ export default function EditorShell() {
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
+
+  // Modal state management
+  const [activeModal, setActiveModal] = useState(null); // 'characters' | 'assets' | 'export' | 'preview' | null
+  const [modalContext, setModalContext] = useState({}); // { characterId, category, sceneId, ... }
 
   // Force re-render every second for elapsed time display
   useEffect(() => {
@@ -88,6 +94,10 @@ export default function EditorShell() {
         activeTab="editor"
         setActiveTab={() => {}}
         onOpenCommandPalette={(mode) => setCommandPaletteOpen(mode || true)}
+        onOpenModal={(modal, context) => {
+          setActiveModal(modal);
+          if (context) setModalContext(context);
+        }}
       />
 
       {/* Command Palette */}
@@ -102,6 +112,7 @@ export default function EditorShell() {
       <header className="bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
+            {/* Left: Title */}
             <div className="flex items-center gap-4">
               <div>
                 <div className="text-xs font-semibold text-slate-400 tracking-wide uppercase">
@@ -113,6 +124,63 @@ export default function EditorShell() {
               </div>
             </div>
 
+            {/* Center: Toolbar */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveModal('project')}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                title="Project Settings"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Settings
+              </button>
+              <button
+                onClick={() => setActiveModal('characters')}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                title="Manage Characters | Shortcut: Ctrl+Shift+C"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Personnages
+              </button>
+              <button
+                onClick={() => setActiveModal('assets')}
+                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                title="Asset Library | Shortcut: Ctrl+Shift+A"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Assets
+              </button>
+              <button
+                onClick={() => setActiveModal('export')}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                title="Export Project"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export
+              </button>
+              <button
+                onClick={() => setActiveModal('preview')}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                title="Preview Game | Shortcut: Ctrl+R"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Preview
+              </button>
+            </div>
+
+            {/* Right: Undo/Redo + Save indicator */}
             <div className="flex items-center gap-3">
               {/* Undo/Redo buttons */}
               <div className="flex items-center gap-1 border-r border-slate-600 pr-3">
@@ -237,6 +305,10 @@ export default function EditorShell() {
               selectedScene={selectedScene}
               scenes={scenes}
               selectedElement={selectedElement}
+              onOpenModal={(modal, context = {}) => {
+                setActiveModal(modal);
+                setModalContext(context);
+              }}
             />
           </div>
 
@@ -261,6 +333,24 @@ export default function EditorShell() {
           AccessCity Studio - Accessible scenario editor
         </div>
       </footer>
+
+      {/* Modals */}
+      <React.Suspense fallback={null}>
+        {activeModal === 'characters' && (
+          <CharactersModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            initialCharacterId={modalContext.characterId}
+          />
+        )}
+        {activeModal === 'assets' && (
+          <AssetsLibraryModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            initialCategory={modalContext.category}
+          />
+        )}
+      </React.Suspense>
     </div>
   );
 }

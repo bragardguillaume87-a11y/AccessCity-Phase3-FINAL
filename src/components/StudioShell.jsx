@@ -30,7 +30,7 @@ const AssetsLibraryPanel = React.lazy(() => import('./AssetsLibraryPanel.jsx'));
 const ScenesPanel = React.lazy(() => import('./ScenesPanel.jsx'));
 const DialoguesPanel = React.lazy(() => import('./DialoguesPanel.jsx'));
 const PreviewPanel = React.lazy(() => import('./PreviewPanel.jsx'));
-const ExportPanel = React.lazy(() => import('./ExportPanel.jsx'));
+const ExportPanel = React.lazy(() => import('./panels/ExportPanel.jsx'));
 
 export default function StudioShell() {
   const [activeTab, setActiveTab] = useState('context');

@@ -1,20 +1,30 @@
 import { useState } from 'react';
 import { useApp } from '../AppContext.jsx';
 import PlayerPreview from './PlayerPreview.jsx';
+import PreviewPlayer from './panels/PreviewPlayer.jsx';
 
 export default function PreviewPanel({ onPrev, onNext }) {
   const { scenes, selectedSceneForEdit } = useApp();
   const [showPreview, setShowPreview] = useState(false);
   const [previewSceneId, setPreviewSceneId] = useState(null);
+  const [useNewPlayer, setUseNewPlayer] = useState(false);
 
   const previewScene = scenes.find(s => s.id === previewSceneId);
 
-  function handlePreviewScene(sceneId) {
+  function handlePreviewScene(sceneId, newPlayer = false) {
     setPreviewSceneId(sceneId);
+    setUseNewPlayer(newPlayer);
     setShowPreview(true);
   }
 
   if (showPreview && previewScene) {
+    if (useNewPlayer) {
+      return (
+        <div className="animate-fadeIn h-screen">
+          <PreviewPlayer initialSceneId={previewSceneId} onClose={() => setShowPreview(false)} />
+        </div>
+      );
+    }
     return (
       <div className="animate-fadeIn">
         <PlayerPreview scene={previewScene} onExit={() => setShowPreview(false)} />
@@ -50,8 +60,12 @@ export default function PreviewPanel({ onPrev, onNext }) {
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
               <div className="text-sm text-blue-800">
-                <p className="font-semibold mb-1">Mode Preview</p>
-                <p>Cliquez sur une scene pour la tester en mode joueur interactif</p>
+                <p className="font-semibold mb-1">Deux modes de preview disponibles</p>
+                <p className="mb-2">Testez vos scenes avec le lecteur de votre choix :</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><strong>Mode Avance</strong> : Lecteur complet avec sprites animes, des, effets visuels</li>
+                  <li><strong>Mode Simple</strong> : Lecteur leger avec navigation rapide et statistiques</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -124,14 +138,23 @@ export default function PreviewPanel({ onPrev, onNext }) {
                       )}
                     </div>
 
-                    {/* Bouton */}
-                    <button
-                      onClick={() => handlePreviewScene(scene.id)}
-                      disabled={!hasDialogues}
-                      className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
-                    >
-                      {hasDialogues ? '▶️ Jouer cette scene' : 'Aucun dialogue'}
-                    </button>
+                    {/* Boutons */}
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handlePreviewScene(scene.id, false)}
+                        disabled={!hasDialogues}
+                        className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+                      >
+                        {hasDialogues ? '▶️ Mode Avance' : 'Aucun dialogue'}
+                      </button>
+                      <button
+                        onClick={() => handlePreviewScene(scene.id, true)}
+                        disabled={!hasDialogues}
+                        className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed text-sm"
+                      >
+                        {hasDialogues ? '🎮 Mode Simple' : 'Aucun dialogue'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

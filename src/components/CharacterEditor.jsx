@@ -1,622 +1,113 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import trapFocus from '../utils/trapFocus.js';
-import useUndoRedo from '../core/useUndoRedo.js';
-import { MOODS_PRESET } from '../data/moodsPreset.js';
-import AssetPicker from './AssetPicker.jsx';
+import React, { useState, useEffect, useRef } from 'react';
+import { AvatarPicker } from './tabs/characters/components/AvatarPicker.jsx';
+import { useCharacterValidation } from '../hooks/useCharacterValidation.js';
 
-function clampNumber(value, min, max) {
-  const n = Number(value);
-  if (Number.isNaN(n)) return min;
-  return Math.min(max, Math.max(min, n));
-}
+// Styles inline temporaires pour la modale pour garantir l'affichage
+const modalStyles = {
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  dialog: { background: 'white', padding: '20px', borderRadius: '8px', minWidth: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' },
+  header: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
+  formGroup: { marginBottom: '15px' },
+  label: { display: 'block', marginBottom: '5px', fontWeight: 'bold' },
+  input: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' },
+  error: { color: 'red', fontSize: '0.875rem' },
+  footer: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }
+};
 
-function buildDefaultCharacter(character) {
-  const base = character || {};
-  const moods = Array.isArray(base.moods) && base.moods.length ? base.moods : ['neutral'];
-  const sprites = typeof base.sprites === 'object' && base.sprites ? base.sprites : {};
-  const defaultMood = base.defaultMood && moods.includes(base.defaultMood) ? base.defaultMood : moods[0];
-  const moodLabels = typeof base.moodLabels === 'object' && base.moodLabels ? base.moodLabels : {};
-  const moodIcons = typeof base.moodIcons === 'object' && base.moodIcons ? base.moodIcons : {};
+export const CharacterEditor = ({ character, characters, onSave, onClose, labels }) => {
+  const [formData, setFormData] = useState(character);
+  const [errors, setErrors] = useState({});
+  const [activeMood, setActiveMood] = useState('neutral');
+  const { validateAll } = useCharacterValidation(characters, character);
 
-  return {
-    id: base.id || 'character',
-    name: base.name || '',
-    role: base.role || 'npc',
-    description: base.description || '',
-    moods,
-    sprites,
-    defaultMood,
-    moodLabels,
-    moodIcons,
-    position: {
-      x: typeof base.position?.x === 'number' ? base.position.x : 0,
-      y: typeof base.position?.y === 'number' ? base.position.y : 0
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrs = {...prev};
+        delete newErrs[field];
+        return newErrs;
+      });
     }
   };
-}
 
-function getPresetByKey(key) {
-  return MOODS_PRESET.find((m) => m.key === key) || null;
-}
-
-export default function CharacterEditor({ character, onSave, onClose }) {
-  const titleId = useId();
-  const descId = useId();
-
-  const initial = useMemo(() => buildDefaultCharacter(character), [character]);
-  const { state: edited, setState: setEdited, undo, redo, canUndo, canRedo } = useUndoRedo(initial);
-
-  const [selectedMood, setSelectedMood] = useState(initial.defaultMood || 'neutral');
-  const [errors, setErrors] = useState({});
-  const [liveMessage, setLiveMessage] = useState('');
-  const [addMoodSelect, setAddMoodSelect] = useState('happy');
-
-  const dialogRef = useRef(null);
-  const prevActiveRef = useRef(null);
-  const moodButtonsRef = useRef([]);
-
-  const moodColors = useMemo(() => ({
-    neutral: 'bg-gray-50 border-gray-200 text-gray-900',
-    happy: 'bg-yellow-50 border-yellow-200 text-yellow-950',
-    sad: 'bg-blue-50 border-blue-200 text-blue-950',
-    angry: 'bg-red-50 border-red-200 text-red-950',
-    surprised: 'bg-purple-50 border-purple-200 text-purple-950',
-    scared: 'bg-orange-50 border-orange-200 text-orange-950',
-    confused: 'bg-slate-50 border-slate-200 text-slate-950',
-    serious: 'bg-indigo-50 border-indigo-200 text-indigo-950'
-  }), []);
-
-  const getMoodColor = (mood) => moodColors[mood] || 'bg-game-purple/10 border-game-purple text-game-purple';
-
-  function labelForMood(mood) {
-    const preset = getPresetByKey(mood);
-    return edited.moodLabels?.[mood] || preset?.label || mood;
-  }
-
-  function iconForMood(mood) {
-    const preset = getPresetByKey(mood);
-    return edited.moodIcons?.[mood] || preset?.icon || '✨';
-  }
-
-  const selectedSpriteUrl = edited?.sprites?.[selectedMood] || '';
-
-  useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    prevActiveRef.current = document.activeElement;
-
-    if (dialogRef.current) dialogRef.current.focus();
-    const cleanup = trapFocus(dialogRef.current);
-
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      cleanup();
-      if (prevActiveRef.current && typeof prevActiveRef.current.focus === 'function') {
-        try { prevActiveRef.current.focus(); } catch {}
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!edited.moods.includes(selectedMood)) {
-      setSelectedMood(edited.moods[0] || 'neutral');
-    }
-  }, [edited.moods, selectedMood]);
-
-  function validate(next) {
-    const e = {};
-    if (!String(next.name || '').trim()) e.name = 'Le nom est requis.';
-    return e;
-  }
-
-  function announce(msg) {
-    setLiveMessage(msg);
-    window.clearTimeout(announce._t);
-    announce._t = window.setTimeout(() => setLiveMessage(''), 1200);
-  }
-
-  function applyChange(patchFn, msg) {
-    setEdited((prev) => {
-      const next = patchFn(prev);
-      const nextErrors = validate(next);
-      setErrors(nextErrors);
-      return next;
-    });
-    if (msg) announce(msg);
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const validation = validateAll(formData);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
-
-    const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-
-    if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-      e.preventDefault();
-      undo();
-      announce('Annulé.');
-      return;
-    }
-
-    if ((mod && e.key.toLowerCase() === 'y') || (mod && e.shiftKey && e.key.toLowerCase() === 'z')) {
-      e.preventDefault();
-      redo();
-      announce('Refait.');
-      return;
-    }
-  }
-
-  function handleSave() {
-    const nextErrors = validate(edited);
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) {
-      announce('Corrigez les erreurs avant de sauvegarder.');
-      return;
-    }
-    onSave(edited);
-  }
-
-  function handleRemoveSprite(mood) {
-    applyChange((prev) => {
-      const nextSprites = { ...(prev.sprites || {}) };
-      nextSprites[mood] = '';
-      return { ...prev, sprites: nextSprites };
-    }, 'Image supprimée.');
-  }
-
-  function addMoodFromPreset(moodKey) {
-    if (edited.moods.includes(moodKey)) {
-      announce('Humeur déjà ajoutée.');
-      return;
-    }
-
-    const preset = getPresetByKey(moodKey);
-
-    applyChange((prev) => {
-      const nextMoods = [...prev.moods, moodKey];
-      const nextSprites = { ...(prev.sprites || {}), [moodKey]: '' };
-      const nextLabels = { ...(prev.moodLabels || {}) };
-      const nextIcons = { ...(prev.moodIcons || {}) };
-
-      if (preset) {
-        nextLabels[moodKey] = preset.label;
-        nextIcons[moodKey] = preset.icon;
-      }
-
-      const nextDefaultMood = prev.defaultMood && nextMoods.includes(prev.defaultMood) ? prev.defaultMood : nextMoods[0];
-
-      return {
-        ...prev,
-        moods: nextMoods,
-        sprites: nextSprites,
-        moodLabels: nextLabels,
-        moodIcons: nextIcons,
-        defaultMood: nextDefaultMood
-      };
-    }, 'Humeur ajoutée.');
-
-    setSelectedMood(moodKey);
-  }
-
-  function handleRemoveMood(moodKey) {
-    if (edited.moods.length <= 1) {
-      announce('Au moins une humeur est requise.');
-      return;
-    }
-
-    applyChange((prev) => {
-      const nextMoods = prev.moods.filter((m) => m !== moodKey);
-      const nextSprites = { ...(prev.sprites || {}) };
-      delete nextSprites[moodKey];
-
-      const nextLabels = { ...(prev.moodLabels || {}) };
-      const nextIcons = { ...(prev.moodIcons || {}) };
-      delete nextLabels[moodKey];
-      delete nextIcons[moodKey];
-
-      const nextDefault = nextMoods.includes(prev.defaultMood) ? prev.defaultMood : nextMoods[0];
-      const nextSelected = nextMoods.includes(selectedMood) ? selectedMood : nextMoods[0];
-      window.setTimeout(() => setSelectedMood(nextSelected), 0);
-
-      return {
-        ...prev,
-        moods: nextMoods,
-        sprites: nextSprites,
-        moodLabels: nextLabels,
-        moodIcons: nextIcons,
-        defaultMood: nextDefault
-      };
-    }, 'Humeur supprimée.');
-  }
-
-  function handleMoodRovingKeyDown(e, index) {
-    const total = edited.moods.length;
-    if (total <= 1) return;
-
-    const move = (nextIndex) => {
-      const safe = (nextIndex + total) % total;
-      const mood = edited.moods[safe];
-      setSelectedMood(mood);
-      const btn = moodButtonsRef.current[safe];
-      if (btn && typeof btn.focus === 'function') btn.focus();
-    };
-
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      move(index + 1);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      move(index - 1);
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      move(0);
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      move(total - 1);
-    }
-  }
-
-  const canSave = Object.keys(errors).length === 0 && String(edited.name || '').trim().length > 0;
+    onSave(formData);
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
-      <div className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm animate-modalBackdrop" onMouseDown={onClose} />
+    <div style={modalStyles.overlay}>
+      <div style={modalStyles.dialog} role="dialog" aria-modal="true">
+        <header style={modalStyles.header}>
+          <h2>{labels?.editCharacter || 'Éditer'}</h2>
+          <button onClick={onClose} style={{border: 'none', background: 'transparent', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
+        </header>
 
-      <div
-        ref={dialogRef}
-        className="relative w-full max-w-6xl max-h-[90vh] outline-none flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descId}
-        tabIndex={-1}
-        onKeyDown={handleKeyDown}
-      >
-        <div className="rounded-2xl shadow-soft-lg border border-white/30 overflow-hidden bg-white animate-modalPop flex flex-col max-h-full">
-          <div className="relative px-5 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-game-purple via-game-pink to-game-teal">
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_0%,white,transparent_55%)]" />
-            <div className="relative flex items-start justify-between gap-3">
-              <div>
-                <h2 id={titleId} className="text-white text-xl sm:text-2xl font-extrabold tracking-tight">
-                  Éditeur de personnage
-                </h2>
-                <p id={descId} className="text-white/90 text-sm sm:text-base">
-                  Tab pour naviguer. Échap pour fermer. Ctrl+Z annuler. Ctrl+Y refaire.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="magnetic-lift inline-flex items-center justify-center h-11 w-11 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25"
-                onClick={onClose}
-                aria-label={`Fermer l editeur de ${edited?.name || 'ce personnage'}`}
-              >
-                <span aria-hidden="true" className="text-2xl leading-none">x</span>
-              </button>
-            </div>
+        <form onSubmit={handleSubmit}>
+          <div style={modalStyles.formGroup}>
+            <label style={modalStyles.label}>{labels?.name || 'Nom'}</label>
+            <input 
+              type="text" 
+              value={formData.name} 
+              onChange={e => handleChange('name', e.target.value)}
+              style={modalStyles.input}
+            />
+            {errors.name && <span style={modalStyles.error}>{errors.name[0]}</span>}
           </div>
 
-          <div className="overflow-y-auto flex-1 min-h-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-              <section className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white via-game-purple/5 to-white p-6 shadow-soft">
-                <h3 className="font-bold text-slate-900 text-xl mb-4">1) Identité</h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="char-name" className="block text-base font-semibold text-slate-800 mb-2">
-                      Nom (requis)
-                    </label>
-                    <input
-                      id="char-name"
-                      type="text"
-                      value={edited.name}
-                      onChange={(e) => applyChange((prev) => ({ ...prev, name: e.target.value }))}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
-                      aria-invalid={errors.name ? 'true' : 'false'}
-                      aria-describedby={errors.name ? 'char-name-error' : undefined}
-                      placeholder="Exemple : Conseiller municipal"
-                      autoComplete="off"
-                    />
-                    {errors.name ? (
-                      <p id="char-name-error" className="mt-2 text-sm text-red-700" role="alert">
-                        {errors.name}
-                      </p>
-                    ) : (
-                      <p className="mt-2 text-xs text-slate-600">
-                        Gardez-le court et facile à lire.
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="char-desc" className="block text-base font-semibold text-slate-800 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      id="char-desc"
-                      value={edited.description}
-                      onChange={(e) => applyChange((prev) => ({ ...prev, description: e.target.value }))}
-                      className="w-full min-h-[96px] rounded-xl border border-slate-300 px-4 py-3 text-base focus:border-game-blue"
-                      placeholder="Décrivez ce personnage..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-                <h3 className="font-bold text-slate-900 text-xl mb-4">2) Humeurs</h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label htmlFor="add-mood" className="block text-base font-semibold text-slate-800 mb-2">
-                      Ajouter une humeur
-                    </label>
-                    <select
-                      id="add-mood"
-                      value={addMoodSelect}
-                      onChange={(e) => setAddMoodSelect(e.target.value)}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
-                    >
-                      {MOODS_PRESET.map((m) => (
-                        <option key={m.key} value={m.key}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-2 text-xs text-slate-600">
-                      Liste adaptée aux enfants (recommandé).
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="magnetic-lift h-12 px-4 rounded-xl bg-game-purple text-white font-semibold shadow-soft hover:shadow-soft-lg"
-                    onClick={() => addMoodFromPreset(addMoodSelect)}
-                  >
-                    Ajouter
-                  </button>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-base font-semibold text-slate-800 mb-2">
-                    Choisir une humeur à éditer
-                  </label>
-
-                  <div role="radiogroup" aria-label="Sélection d'humeur" className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {edited.moods.map((mood, idx) => {
-                      const selected = mood === selectedMood;
-                      const hasSprite = Boolean(edited.sprites && edited.sprites[mood]);
-
-                      return (
-                        <button
-                          key={mood}
-                          type="button"
-                          ref={(el) => { moodButtonsRef.current[idx] = el; }}
-                          role="radio"
-                          aria-checked={selected ? 'true' : 'false'}
-                          tabIndex={selected ? 0 : -1}
-                          onClick={() => setSelectedMood(mood)}
-                          onKeyDown={(e) => handleMoodRovingKeyDown(e, idx)}
-                          className={[
-                            'mood-card',
-                            'magnetic-lift',
-                            'rounded-2xl border px-4 py-4 text-left min-h-[72px]',
-                            getMoodColor(mood),
-                            selected ? 'ring-2 ring-game-blue ring-offset-2' : ''
-                          ].join(' ')}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span aria-hidden="true" className="text-xl">{iconForMood(mood)}</span>
-                              <span className="font-semibold">{labelForMood(mood)}</span>
-                            </div>
-                            <span className="text-xs font-semibold text-slate-700">
-                              {hasSprite ? 'IMG' : 'Aucune'}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="default-mood" className="block text-base font-semibold text-slate-800 mb-2">
-                        Humeur par défaut
-                      </label>
-                      <select
-                        id="default-mood"
-                        value={edited.defaultMood}
-                        onChange={(e) => applyChange((prev) => ({ ...prev, defaultMood: e.target.value }), 'Humeur par défaut mise à jour.')}
-                        className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
-                      >
-                        {edited.moods.map((m) => (
-                          <option key={m} value={m}>
-                            {labelForMood(m)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="magnetic-lift h-12 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold self-end"
-                      onClick={() => handleRemoveMood(selectedMood)}
-                    >
-                      Retirer l'humeur sélectionnée
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-                <h3 className="font-bold text-slate-900 text-xl mb-4">3) Position</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="pos-x" className="block text-base font-semibold text-slate-800 mb-2">X</label>
-                    <input
-                      id="pos-x"
-                      type="number"
-                      inputMode="numeric"
-                      value={edited.position?.x ?? 0}
-                      onChange={(e) => {
-                        const x = clampNumber(e.target.value, -9999, 9999);
-                        applyChange((prev) => ({ ...prev, position: { ...(prev.position || {}), x } }), 'Position mise à jour.');
-                      }}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="pos-y" className="block text-base font-semibold text-slate-800 mb-2">Y</label>
-                    <input
-                      id="pos-y"
-                      type="number"
-                      inputMode="numeric"
-                      value={edited.position?.y ?? 0}
-                      onChange={(e) => {
-                        const y = clampNumber(e.target.value, -9999, 9999);
-                        applyChange((prev) => ({ ...prev, position: { ...(prev.position || {}), y } }), 'Position mise à jour.');
-                      }}
-                      className="w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue"
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <aside className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white via-game-purple/5 to-white p-6 shadow-soft">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-xl">Prévisualisation en direct</h3>
-                    <p className="mt-2 text-sm text-slate-700">
-                      Humeur : <span className="font-semibold">{labelForMood(selectedMood)}</span>
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="magnetic-lift h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold disabled:opacity-50"
-                      onClick={undo}
-                      disabled={!canUndo}
-                      aria-disabled={!canUndo ? 'true' : 'false'}
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="button"
-                      className="magnetic-lift h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold disabled:opacity-50"
-                      onClick={redo}
-                      disabled={!canRedo}
-                      aria-disabled={!canRedo ? 'true' : 'false'}
-                    >
-                      Refaire
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                  <div className="relative aspect-[4/3] bg-slate-50 grid place-items-center">
-                    {selectedSpriteUrl ? (
-                      <img
-                        src={selectedSpriteUrl}
-                        alt={(edited.name || 'Personnage') + ' sprite'}
-                        className="max-h-full max-w-full object-contain animate-previewSwap"
-                      />
-                    ) : (
-                      <div className="text-center p-6">
-                        <div className="text-4xl" aria-hidden="true">{iconForMood(selectedMood)}</div>
-                        <p className="mt-2 text-sm text-slate-700">
-                          Aucune image pour cette humeur.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="absolute left-3 top-3 px-3 py-1 rounded-full text-xs font-bold bg-white/80 border border-white shadow-soft">
-                      {edited.name || 'Sans nom'}
-                    </div>
-                  </div>
-
-                  <div className="p-4 border-t border-slate-200">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-semibold text-slate-700">
-                          Sprite pour "{labelForMood(selectedMood)}"
-                        </label>
-                        <div className="text-sm text-slate-600">
-                          Défaut: <span className="font-semibold">{labelForMood(edited.defaultMood)}</span>
-                        </div>
-                      </div>
-
-                      <AssetPicker
-                        type="character"
-                        value={edited.sprites?.[selectedMood] || ''}
-                        onChange={(url) => {
-                          applyChange((prev) => {
-                            const nextSprites = { ...(prev.sprites || {}) };
-                            nextSprites[selectedMood] = url;
-                            return { ...prev, sprites: nextSprites };
-                          }, `Sprite "${labelForMood(selectedMood)}" mis à jour`);
-                        }}
-                        allowUpload={true}
-                        allowUrl={true}
-                      />
-
-                      {edited.sprites?.[selectedMood] && (
-                        <button
-                          type="button"
-                          className="w-full px-4 py-2 rounded-lg border border-red-300 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors"
-                          onClick={() => handleRemoveSprite(selectedMood)}
-                        >
-                          🗑️ Supprimer ce sprite
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sr-only" aria-live="polite">{liveMessage}</div>
-                {liveMessage ? (
-                  <div className="mt-3 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3 py-2 animate-toastIn">
-                    {liveMessage}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-                <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-end">
-                  <button
-                    type="button"
-                    className="magnetic-lift h-12 px-5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold"
-                    onClick={onClose}
-                  >
-                    Annuler
-                  </button>
-
-                  <button
-                    type="button"
-                    className="magnetic-lift h-12 px-5 rounded-xl bg-game-purple text-white font-extrabold shadow-soft hover:shadow-soft-lg disabled:opacity-50"
-                    onClick={handleSave}
-                    disabled={!canSave}
-                    aria-disabled={!canSave ? 'true' : 'false'}
-                  >
-                    Sauvegarder
-                  </button>
-                </div>
-              </div>
-            </aside>
-            </div>
+          <div style={modalStyles.formGroup}>
+            <label style={modalStyles.label}>{labels?.description || 'Description'}</label>
+            <textarea 
+              value={formData.description || ''}
+              onChange={e => handleChange('description', e.target.value)}
+              style={{...modalStyles.input, minHeight: '100px'}}
+            />
           </div>
-        </div>
+
+          <div style={modalStyles.formGroup}>
+            <h3>Avatars</h3>
+            <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
+              {formData.moods && formData.moods.map(mood => (
+                <button 
+                  key={mood}
+                  type="button"
+                  onClick={() => setActiveMood(mood)}
+                  style={{
+                    padding: '5px 10px',
+                    background: activeMood === mood ? '#2563eb' : '#eee',
+                    color: activeMood === mood ? 'white' : 'black',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {mood}
+                </button>
+              ))}
+            </div>
+            
+            <AvatarPicker 
+              currentSprites={formData.sprites}
+              onSelect={(mood, url) => setFormData(prev => ({
+                ...prev, sprites: {...prev.sprites, [mood]: url}
+              }))}
+              mood={activeMood}
+              labels={labels}
+            />
+          </div>
+
+          <footer style={modalStyles.footer}>
+            <button type="button" onClick={onClose} style={{padding: '8px 16px', cursor: 'pointer'}}>{labels?.cancel || 'Annuler'}</button>
+            <button type="submit" style={{padding: '8px 16px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>{labels?.save || 'Sauvegarder'}</button>
+          </footer>
+        </form>
       </div>
     </div>
   );
-}
+};

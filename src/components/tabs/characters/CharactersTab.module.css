@@ -1,0 +1,211 @@
+/* ==========================================
+   CharactersTab - Layout principal
+   ========================================== */
+
+.container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+/* ==========================================
+   Panneau central (Main)
+   ========================================== */
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+/* ==========================================
+   Vue détails du personnage sélectionné
+   ========================================== */
+
+.details {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.detailsHeader h2 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1e293b;
+  margin: 0;
+}
+
+.editBtn {
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.editBtn:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.editBtn:active {
+  transform: translateY(0);
+}
+
+/* ==========================================
+   Aperçu des avatars
+   ========================================== */
+
+.avatarPreview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.avatarItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.avatarItem:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.avatarItem img {
+  width: 100px;
+  height: 120px;
+  object-fit: contain;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.avatarItem span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: capitalize;
+}
+
+/* ==========================================
+   Description
+   ========================================== */
+
+.description {
+  padding: 16px;
+  background-color: #f8fafc;
+  border-left: 4px solid #3b82f6;
+  border-radius: 6px;
+  color: #475569;
+  line-height: 1.6;
+  font-size: 0.875rem;
+  margin-bottom: 24px;
+}
+
+.description em {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ==========================================
+   Placeholder (aucun personnage sélectionné)
+   ========================================== */
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #94a3b8;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.placeholder p {
+  margin: 0;
+}
+
+/* ==========================================
+   Responsive
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .main {
+    padding: 16px;
+  }
+
+  .detailsHeader h2 {
+    font-size: 1.5rem;
+  }
+
+  .avatarPreview {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    overflow-y: auto;
+  }
+
+  .main {
+    padding: 12px;
+  }
+
+  .detailsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .detailsHeader h2 {
+    font-size: 1.25rem;
+  }
+
+  .editBtn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .avatarPreview {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
+  .avatarItem img {
+    width: 80px;
+    height: 96px;
+  }
+}

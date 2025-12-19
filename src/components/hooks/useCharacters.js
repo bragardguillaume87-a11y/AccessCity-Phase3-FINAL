@@ -1,36 +1,55 @@
 import { useContext, useCallback } from 'react';
-import { AppContext } from '../../AppContext';
+// Ajustement du chemin pour remonter à la racine src/
+import { AppContext } from '../../../../AppContext';
 
 export const useCharacters = () => {
   const { characters, addCharacter, updateCharacter, deleteCharacter } = useContext(AppContext);
 
-  // Création d'un personnage par défaut
   const createCharacter = useCallback(() => {
     const newChar = {
-      name: "Nouveau Personnage",
-      description: "",
-      sprites: { neutral: "", professional: "", helpful: "" },
-      moods: ["neutral", "professional", "helpful"]
+      name: 'New Character',
+      description: '',
+      sprites: {
+        neutral: 'assets/characters/default/neutral.svg',
+        professional: 'assets/characters/default/professional.svg',
+        helpful: 'assets/characters/default/helpful.svg'
+      },
+      moods: ['neutral', 'professional', 'helpful']
     };
+    
     return addCharacter(newChar);
   }, [addCharacter]);
 
-  // Suppression sécurisée
+  const duplicateCharacter = useCallback((charId) => {
+    const original = characters.find(c => c.id === charId);
+    if (!original) return null;
+
+    // On retire l'ID pour que addCharacter en génère un nouveau
+    const { id, ...rest } = original;
+    
+    const duplicate = {
+      ...rest,
+      name: `${original.name} (Copy)`
+    };
+
+    return addCharacter(duplicate);
+  }, [characters, addCharacter]);
+
   const removeCharacter = useCallback((charId) => {
+    // Protection contre la suppression des personnages système
     if (charId === 'player' || charId === 'counsellor') {
-      return { success: false, error: "Impossible de supprimer les personnages système." };
+      return { success: false, error: 'Cannot delete core characters' };
     }
+
     deleteCharacter(charId);
     return { success: true };
   }, [deleteCharacter]);
 
-  // Duplication
-  const duplicateCharacter = useCallback((charId) => {
-    const original = characters.find(c => c.id === charId);
-    if (!original) return null;
-    const { id, ...rest } = original;
-    return addCharacter({ ...rest, name: `${original.name} (Copie)` });
-  }, [characters, addCharacter]);
-
-  return { characters, createCharacter, duplicateCharacter, removeCharacter, updateCharacter };
+  return {
+    characters,
+    createCharacter,
+    duplicateCharacter,
+    removeCharacter,
+    updateCharacter
+  };
 };

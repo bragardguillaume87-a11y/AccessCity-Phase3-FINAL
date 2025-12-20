@@ -20,15 +20,24 @@ AccessCity est un editeur visuel pour creer des scenarios pedagogiques interacti
 
 ```bash
 npm install
+npm run install:server  # Install backend dependencies
 ```
 
 ### 2. Lancer l'editeur
 
+**IMPORTANT** : Toujours utiliser `npm run dev` (pas `npm run dev:vite`)
+
 ```bash
-npm run dev
+npm run dev  # Lance Vite (port 5173) + Serveur upload (port 3001)
 ```
 
 Ouvrir [http://localhost:5173](http://localhost:5173)
+
+**Commandes disponibles** :
+
+- `npm run dev` - **Recommandé** : Lance Vite + serveur backend (upload)
+- `npm run dev:vite` - Lance SEULEMENT Vite (upload ne fonctionnera pas)
+- `npm run dev:server` - Lance SEULEMENT serveur backend (port 3001)
 
 ### 3. Premier scenario
 
@@ -81,6 +90,33 @@ AccessCity-Phase3-FINAL/
 - **Playwright** 1.45.0 (tests E2E)
 - **Tailwind CSS** (styling)
 - **Lucide React** (icones)
+
+### Systeme de Gestion des Assets
+
+L'application utilise un systeme en 3 composants pour gerer les images (backgrounds, personnages, illustrations) :
+
+1. **Serveur Backend** (Express, port 3001)
+   - API `/api/assets/upload` - Upload d'images
+   - API `/api/health` - Health check du serveur
+   - Stockage dans `/public/assets/[category]/`
+
+2. **Manifeste JSON** (`/public/assets-manifest.json`)
+   - Index genere automatiquement de tous les assets disponibles
+   - Genere par `node tools/generate-assets-manifest.js`
+   - Mis a jour automatiquement apres chaque upload
+
+3. **AssetPicker** (Composant React)
+   - Interface utilisateur avec 3 onglets : Bibliotheque, Upload, URL
+   - Health check automatique du serveur backend
+   - Gestion gracieuse des erreurs (manifeste manquant, serveur offline)
+
+**Workflow normal** :
+
+1. Utilisateur lance `npm run dev` (Vite + Serveur)
+2. AssetPicker verifie que le serveur est en ligne
+3. Utilisateur peut uploader des images via drag & drop
+4. Serveur sauvegarde l'image et regenere le manifeste
+5. Bibliotheque se met a jour automatiquement
 
 ---
 
@@ -198,7 +234,92 @@ npm run coverage:reports
 
 ## 🔧 Troubleshooting
 
-### Probleme : Erreur `playClose is not defined`
+### ❌ Upload d'images ne fonctionne pas
+
+**Symptomes** :
+
+- Banner orange "Upload server not available" dans l'onglet Upload
+- Message "ERR_CONNECTION_REFUSED" dans la console
+- Bouton "Choisir un fichier" desactive
+
+**Causes** :
+
+- Vous avez lance `npm run dev:vite` au lieu de `npm run dev`
+- Le serveur backend n'est pas demarre
+
+**Solution** :
+
+1. Arreter le processus actuel (`Ctrl + C`)
+2. Lancer la commande correcte :
+
+```bash
+npm run dev  # Lance Vite (5173) + Serveur upload (3001)
+```
+
+3. Verifier que le banner devient vert "Upload server is online"
+4. Si le probleme persiste, cliquer sur "Retry connection"
+
+### 📚 Bibliotheque d'assets vide
+
+**Symptomes** :
+
+- L'onglet Bibliotheque affiche "Aucun asset disponible"
+- Message d'erreur dans la console `[useAssets] Manifest not found`
+
+**Causes** :
+
+- Manifeste JSON manquant ou vide
+- Aucune image dans `/public/assets/`
+
+**Solution** :
+
+1. Ajouter des images dans les dossiers appropries :
+
+```text
+/public/assets/
+├── backgrounds/     # Images de fond
+├── characters/      # Avatars personnages
+└── illustrations/   # Images decoratives
+```
+
+2. Regenerer le manifeste :
+
+```bash
+node tools/generate-assets-manifest.js
+```
+
+3. Recharger l'application (`F5`)
+
+**Note** : Si le manifeste est manquant, l'application utilise automatiquement un manifeste vide pour eviter les crashs. La bibliotheque sera simplement vide jusqu'a ce que vous ajoutiez des assets.
+
+### 🔐 Modales ne se ferment pas correctement
+
+**Symptomes** :
+
+- Appuyer sur `Escape` ferme toutes les modales simultanement
+- Modales imbriquees (ex: CharactersModal → CharacterEditorModal) se comportent mal
+
+**Causes** :
+
+- Ancien bug resolu dans la version actuelle
+
+**Solution** :
+
+1. Verifier que vous etes sur la derniere version :
+
+```bash
+git pull origin v6.0-restore-full-project
+npm install
+```
+
+2. Comportement attendu :
+   - `Escape` ferme SEULEMENT la modale la plus recente (en haut de la pile)
+   - Les modales en arriere-plan restent ouvertes
+   - Vous devez appuyer sur `Escape` plusieurs fois pour fermer toutes les modales
+
+3. Verifier dans la console les logs `[ModalStack] Pushed/Popped` pour debugger
+
+### ⚠️ Erreur `playClose is not defined`
 
 **Solution** : Tu es sur une ancienne version. Passe sur `Access-City-CLEAN` :
 
@@ -209,19 +330,21 @@ npm install
 npm run dev
 ```
 
-### Probleme : Interface ne se met pas a jour
+### 🔄 Interface ne se met pas a jour
 
 **Solution** : Vider le cache navigateur :
+
 - **Windows/Linux** : `Ctrl + Shift + R`
 - **Mac** : `Cmd + Shift + R`
 
-### Probleme : Mode joueur affiche "Fin du jeu" immediatement
+### 🎮 Mode joueur affiche "Fin du jeu" immediatement
 
 **Solution** : Verifier que tes dialogues ont bien un `sceneId` correspondant a une scene existante.
 
-### Probleme : Sons ne marchent pas
+### 🔊 Sons ne marchent pas
 
-**Solution** : 
+**Solution** :
+
 1. Verifier que les fichiers MP3 existent dans `public/sounds/`
 2. Cliquer sur le bouton Mute (peut etre active par defaut)
 3. Verifier console navigateur (F12) pour erreurs

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { trapFocus } from '../../utils/trapFocus.js';
+import modalStack from '../../utils/modalStack.js';
 
 /**
  * BaseModal - Reusable modal component with dark theme
@@ -23,10 +24,16 @@ export default function BaseModal({
 }) {
   const dialogRef = useRef(null);
   const previousActiveElement = useRef(null);
+  const modalIdRef = useRef(`modal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
   // Handle focus trap and body scroll lock
   useEffect(() => {
     if (!isOpen) return;
+
+    const modalId = modalIdRef.current;
+
+    // Register modal in stack
+    modalStack.push(modalId);
 
     // Store currently focused element
     previousActiveElement.current = document.activeElement;
@@ -43,16 +50,23 @@ export default function BaseModal({
       }
     }, 100);
 
-    // Escape key handler
+    // Escape key handler - ONLY close if this modal is at the top of the stack
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
+        // ONLY close if this modal is at the top
+        if (modalStack.isTop(modalId)) {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }
       }
     }
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      // Unregister modal from stack
+      modalStack.pop(modalId);
+
       document.body.style.overflow = prevOverflow;
       document.removeEventListener('keydown', handleKeyDown);
       clearTimeout(timer);

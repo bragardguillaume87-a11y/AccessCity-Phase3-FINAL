@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import modalStack from '../utils/modalStack.js';
 
 export default function ConfirmModal({
   isOpen,
@@ -12,9 +13,16 @@ export default function ConfirmModal({
 }) {
   const dialogRef = useRef(null);
   const confirmBtnRef = useRef(null);
+  const modalIdRef = useRef(`confirm-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const modalId = modalIdRef.current;
+
+    // Register modal in stack
+    modalStack.push(modalId);
+
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const prevActive = document.activeElement;
@@ -25,13 +33,20 @@ export default function ConfirmModal({
 
     function onKey(e) {
       if (e.key === 'Escape') {
-        e.stopPropagation();
-        if (onCancel) onCancel();
+        // ONLY close if this modal is at the top of the stack
+        if (modalStack.isTop(modalId)) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onCancel) onCancel();
+        }
       }
     }
     document.addEventListener('keydown', onKey);
 
     return () => {
+      // Unregister modal from stack
+      modalStack.pop(modalId);
+
       document.body.style.overflow = prevOverflow;
       document.removeEventListener('keydown', onKey);
       clearTimeout(t);

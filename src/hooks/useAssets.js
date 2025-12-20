@@ -1,46 +1,72 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 
 /**
  * Hook pour charger et filtrer les assets depuis le manifeste JSON
  * @param {Object} options - Options de configuration
  * @param {string} options.category - Categorie a filtrer (backgrounds, characters, etc.)
  * @param {boolean} options.autoLoad - Charger automatiquement (defaut: true)
- * @returns {Object} { assets, loading, error, categories }
+ * @returns {Object} { assets, loading, error, categories, reloadManifest }
  */
 export function useAssets(options = {}) {
   const { category = null, autoLoad = true } = options;
   const [manifest, setManifest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
 
-  useEffect(() => {
-    if (!autoLoad) return;
-
-    const controller = new AbortController();
+  const loadManifest = useCallback(() => {
     setLoading(true);
     setError(null);
 
-    fetch('/assets-manifest.json', { signal: controller.signal })
+    fetch('/assets-manifest.json?t=' + Date.now()) // Cache bust
       .then(res => {
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: Unable to load assets manifest`);
+          // Fallback: manifeste vide si 404 ou autre erreur HTTP
+          console.warn('[useAssets] Manifest not found (HTTP ' + res.status + '), using empty fallback');
+          return {
+            generated: new Date().toISOString(),
+            version: '1.0.0',
+            totalAssets: 0,
+            categories: [],
+            assets: {}
+          };
         }
         return res.json();
       })
       .then(data => {
         setManifest(data);
         setLoading(false);
+
+        // Warning si manifeste vide
+        if (data.totalAssets === 0) {
+          console.warn('[useAssets] Assets manifest is empty. Add files to /public/assets/ and regenerate manifest.');
+        }
       })
       .catch(err => {
-        if (err.name !== 'AbortError') {
-          console.error('[useAssets] Error loading manifest:', err);
-          setError(err.message);
-          setLoading(false);
-        }
-      });
+        console.error('[useAssets] Error loading manifest:', err);
 
-    return () => controller.abort();
-  }, [autoLoad]);
+        // Fallback: manifeste vide si erreur réseau
+        setManifest({
+          generated: new Date().toISOString(),
+          version: '1.0.0',
+          totalAssets: 0,
+          categories: [],
+          assets: {}
+        });
+
+        setError('Unable to load assets manifest. Using empty library.');
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!autoLoad) return;
+    loadManifest();
+  }, [autoLoad, reloadTrigger, loadManifest]);
+
+  const reloadManifest = useCallback(() => {
+    setReloadTrigger(prev => prev + 1);
+  }, []);
 
   const assets = useMemo(() => {
     if (!manifest || !manifest.assets) return [];
@@ -68,7 +94,8 @@ export function useAssets(options = {}) {
     loading,
     error,
     categories,
-    manifest
+    manifest,
+    reloadManifest
   };
 }
 

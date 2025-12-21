@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from '../AppContext';
+import { useScenesStore, useUIStore } from '../stores/index.js';
 import ScenesList from './ScenesList';
 import VisualSceneEditor from './VisualSceneEditor';
 import PropertiesPanel from './PropertiesPanel';
@@ -23,13 +23,11 @@ import SkipToContent from './SkipToContent';
  * Phase 3: Drag & drop, zoom, amélioration UX
  */
 export default function MainCanvas() {
-  // Utilisation du context global (single source of truth)
-  const { 
-    scenes, 
-    selectedSceneId, 
-    setSelectedSceneId,
-    updateScene 
-  } = useApp();
+  // Zustand stores (granular selectors)
+  const scenes = useScenesStore(state => state.scenes);
+  const updateScene = useScenesStore(state => state.updateScene);
+  const selectedSceneId = useUIStore(state => state.selectedSceneId);
+  const setSelectedSceneId = useUIStore(state => state.setSelectedSceneId);
   
   // Gestion de la sélection d'élément dans le canvas (personnage, décor, etc.)
   const [selectedElement, setSelectedElement] = React.useState(null);

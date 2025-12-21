@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import istanbul from 'vite-plugin-istanbul';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,6 +16,14 @@ export default defineConfig({
       forceBuildInstrument: process.env.VITE_COVERAGE === 'true', // Force pour build de production
     }),
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  optimizeDeps: {
+    include: ['react-resizable-panels'],
+  },
   server: {
     port: 5173,
     open: true, // Ouvre automatiquement le navigateur

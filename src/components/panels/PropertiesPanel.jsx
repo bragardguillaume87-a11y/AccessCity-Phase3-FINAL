@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useApp } from '../../AppContext.jsx';
+import { useScenesStore, useCharactersStore, useUIStore } from '../../stores/index.js';
 import { AvatarPicker } from '../tabs/characters/components/AvatarPicker.jsx';
 import { duplicateDialogue } from '../../utils/duplication.js';
+import { CollapsibleSection, FormField } from '../ui/CollapsibleSection.jsx';
+import { AutoSaveIndicator } from '../ui/AutoSaveIndicator.jsx';
 
 /**
  * PropertiesPanel - Right sidebar for editing selected element properties
@@ -13,10 +15,20 @@ import { duplicateDialogue } from '../../utils/duplication.js';
  * ASCII only, form-based editing.
  */
 function PropertiesPanel({ selectedElement, selectedScene, characters }) {
-  const { updateScene, updateCharacter, updateDialogue, addCharacter, addDialogue, scenes } = useApp();
+  // Zustand stores (granular selectors)
+  const updateScene = useScenesStore(state => state.updateScene);
+  const updateDialogue = useScenesStore(state => state.updateDialogue);
+  const addDialogue = useScenesStore(state => state.addDialogue);
+  const scenes = useScenesStore(state => state.scenes);
+  const updateCharacter = useCharactersStore(state => state.updateCharacter);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
+  const lastSaved = useUIStore(state => state.lastSaved);
+  const isSaving = useUIStore(state => state.isSaving);
+
   const [activeTab, setActiveTab] = useState('properties');
   const [newMood, setNewMood] = useState('');
   const [activeMood, setActiveMood] = useState('neutral');
+  const [moodError, setMoodError] = useState('');
 
   // Sync activeMood when character changes
   useEffect(() => {
@@ -127,6 +139,11 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
             </div>
           </div>
         </div>
+
+        {/* Auto-save indicator */}
+        <div className="flex-shrink-0 border-t border-slate-700 p-3">
+          <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} />
+        </div>
       </div>
     );
   }
@@ -154,19 +171,34 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
     }, 0);
 
     const handleAddMood = () => {
-      if (!newMood.trim()) return;
-      const moods = character.moods || [];
-      if (moods.includes(newMood.trim())) {
-        alert('This mood already exists');
+      const trimmed = newMood.trim();
+
+      // Validation
+      if (!trimmed) {
+        setMoodError('Mood name cannot be empty');
         return;
       }
+
+      if (trimmed.length > 20) {
+        setMoodError('Mood name too long (20 chars max)');
+        return;
+      }
+
+      const moods = character.moods || [];
+      if (moods.includes(trimmed)) {
+        setMoodError('This mood already exists');
+        return;
+      }
+
+      // Success
       updateCharacter({
         ...character,
-        moods: [...moods, newMood.trim()],
-        sprites: { ...character.sprites, [newMood.trim()]: '' }
+        moods: [...moods, trimmed],
+        sprites: { ...character.sprites, [trimmed]: '' }
       });
       setNewMood('');
-      setActiveMood(newMood.trim());
+      setMoodError('');
+      setActiveMood(trimmed);
     };
 
     const handleRemoveMood = (moodToRemove) => {
@@ -208,7 +240,7 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {/* System character badge */}
           {isSystemCharacter && (
             <div className="px-3 py-2 bg-amber-900/30 border border-amber-600 rounded-lg">
@@ -286,21 +318,41 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
               </div>
 
               {/* Add mood */}
-              <div className="flex gap-1">
-                <input
-                  type="text"
-                  value={newMood}
-                  onChange={(e) => setNewMood(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddMood()}
-                  placeholder="Add mood (e.g., happy, angry)"
-                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  onClick={handleAddMood}
-                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded transition-colors"
-                >
-                  +
-                </button>
+              <div className="space-y-1">
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    value={newMood}
+                    onChange={(e) => {
+                      setNewMood(e.target.value);
+                      setMoodError(''); // Clear error on type
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddMood()}
+                    placeholder="Add mood (e.g., happy, angry)"
+                    className={`flex-1 px-2 py-1 bg-slate-900 border rounded text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 transition-colors ${
+                      moodError
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-slate-700 focus:ring-blue-500'
+                    }`}
+                    aria-invalid={!!moodError}
+                    aria-describedby={moodError ? "mood-error" : undefined}
+                  />
+                  <button
+                    onClick={handleAddMood}
+                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded transition-colors disabled:opacity-50"
+                    disabled={!newMood.trim()}
+                  >
+                    +
+                  </button>
+                </div>
+                {moodError && (
+                  <p id="mood-error" className="text-xs text-red-400 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {moodError}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -358,6 +410,11 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Auto-save indicator */}
+        <div className="flex-shrink-0 border-t border-slate-700 p-3">
+          <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} />
         </div>
       </div>
     );
@@ -798,6 +855,11 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
             )}
           </div>
         )}
+
+        {/* Auto-save indicator */}
+        <div className="flex-shrink-0 border-t border-slate-700 p-3">
+          <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} />
+        </div>
       </div>
     );
   }

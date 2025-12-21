@@ -1,21 +1,27 @@
 // src/components/BackgroundPanel.jsx
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../AppContext.jsx';
-
-// Utilise des chemins absolus depuis /public ou des placeholders SVG
-const GALLERY_ASSETS = [
-  { url: '/assets/backgrounds/city_street.svg', name: 'Rue de la ville', fallback: 'city_street.svg' },
-  { url: '/assets/backgrounds/city_hall.svg', name: 'Hotel de ville', fallback: 'city_hall.svg' },
-  { url: '/assets/backgrounds/park.svg', name: 'Parc', fallback: 'park.svg' },
-  { url: '/assets/backgrounds/office.svg', name: 'Bureau', fallback: 'office.svg' }
-];
+import { useScenesStore, useUIStore } from '../stores/index.js';
+import { GALLERY_ASSETS } from '../constants/assets.js';
 
 export default function BackgroundPanel() {
-  const { scenes, selectedSceneId, updateScene } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const selectedSceneId = useUIStore(state => state.selectedSceneId);
+  const updateScene = useScenesStore(state => state.updateScene);
   const [history, setHistory] = useState([]);
   const [imageErrors, setImageErrors] = useState({});
+  const [pendingUrl, setPendingUrl] = useState('');
+  const [isSaved, setIsSaved] = useState(true);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const scene = scenes.find(s => s.id === selectedSceneId);
+
+  // Initialize pendingUrl when scene changes
+  useEffect(() => {
+    if (scene) {
+      setPendingUrl(scene.backgroundUrl || '');
+      setIsSaved(true);
+    }
+  }, [scene?.id]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem('ac_backgrounds_history');
@@ -39,15 +45,30 @@ export default function BackgroundPanel() {
     );
   }
 
-  function setBackground(url) {
-    const trimmed = url.trim();
+  function handleUrlChange(url) {
+    setPendingUrl(url);
+    setIsSaved(false);
+  }
+
+  function saveBackground() {
+    const trimmed = pendingUrl.trim();
     updateScene(scene.id, { backgroundUrl: trimmed });
-    
+    setIsSaved(true);
+
+    // Show success message
+    setShowSaveSuccess(true);
+    setTimeout(() => setShowSaveSuccess(false), 2000);
+
     if (trimmed && !history.includes(trimmed)) {
       const newHistory = [trimmed, ...history.filter(u => u !== trimmed)].slice(0, 6);
       setHistory(newHistory);
       window.localStorage.setItem('ac_backgrounds_history', JSON.stringify(newHistory));
     }
+  }
+
+  function selectFromGallery(url) {
+    setPendingUrl(url);
+    setIsSaved(false);
   }
 
   function handleImageError(key) {
@@ -63,16 +84,33 @@ export default function BackgroundPanel() {
         <label htmlFor="background-url" className="block text-sm font-semibold mb-2 text-slate-700">
           URL du decor (image)
         </label>
-        <input
-          id="background-url"
-          type="text"
-          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-          placeholder="/assets/backgrounds/city.jpg ou URL complete"
-          value={scene.backgroundUrl || ''}
-          onChange={(e) => setBackground(e.target.value)}
-          aria-label="URL du decor de la scene"
-        />
-        <p className="text-xs text-slate-500 mt-1">Entrez un chemin local ou une URL complete (https://...)</p>
+        <div className="flex gap-2">
+          <input
+            id="background-url"
+            type="text"
+            className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+            placeholder="/assets/backgrounds/city.jpg ou URL complete"
+            value={pendingUrl}
+            onChange={(e) => handleUrlChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !isSaved && saveBackground()}
+            aria-label="URL du decor de la scene"
+          />
+          <button
+            onClick={saveBackground}
+            disabled={isSaved}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all whitespace-nowrap ${
+              isSaved
+                ? 'bg-green-100 text-green-700 border-2 border-green-300 cursor-default'
+                : 'bg-blue-600 text-white hover:bg-blue-700 border-2 border-blue-600'
+            }`}
+            aria-label={isSaved ? 'Decor sauvegarde' : 'Sauvegarder le decor'}
+          >
+            {showSaveSuccess ? '✓ Sauvegardé' : (isSaved ? '✓ Sauvegardé' : 'Sauvegarder')}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 mt-1">
+          Entrez un chemin local ou une URL complete (https://...) puis cliquez sur Sauvegarder
+        </p>
       </div>
 
       {/* Galerie d'assets */}
@@ -82,8 +120,10 @@ export default function BackgroundPanel() {
           {GALLERY_ASSETS.map((asset) => (
             <button
               key={asset.url}
-              onClick={() => setBackground(asset.url)}
-              className="rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-500 hover:shadow-md transition-all group"
+              onClick={() => selectFromGallery(asset.url)}
+              className={`rounded-lg overflow-hidden border-2 transition-all group ${
+                pendingUrl === asset.url ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-500 hover:shadow-md'
+              }`}
               aria-label={`Utiliser le decor ${asset.name}`}
             >
               {imageErrors[asset.url] ? (
@@ -117,8 +157,12 @@ export default function BackgroundPanel() {
             {history.map((bg, index) => (
               <button
                 key={`${bg}-${index}`}
-                onClick={() => setBackground(bg)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 border border-slate-300 hover:border-blue-500 transition-all font-medium text-slate-700"
+                onClick={() => selectFromGallery(bg)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
+                  pendingUrl === bg
+                    ? 'bg-blue-100 border-blue-500 text-blue-700'
+                    : 'bg-slate-100 hover:bg-blue-100 border-slate-300 hover:border-blue-500 text-slate-700'
+                }`}
                 title={bg}
                 aria-label={`Utiliser le decor recent ${bg}`}
               >
@@ -131,11 +175,18 @@ export default function BackgroundPanel() {
 
       {/* Aperçu */}
       <div className="border-2 border-slate-200 rounded-lg p-4 bg-slate-50">
-        <p className="text-sm font-semibold mb-3 text-slate-900">Apercu du decor</p>
-        {scene.backgroundUrl ? (
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-slate-900">Apercu du decor</p>
+          {!isSaved && (
+            <span className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">
+              Non sauvegardé
+            </span>
+          )}
+        </div>
+        {pendingUrl ? (
           <div className="relative">
             <img
-              src={scene.backgroundUrl}
+              src={pendingUrl}
               alt={`Decor de la scene ${scene.name}`}
               className="w-full max-h-64 object-contain rounded-lg shadow-md"
               onError={(e) => {
@@ -148,7 +199,7 @@ export default function BackgroundPanel() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <p className="text-sm font-semibold">Impossible de charger l image</p>
-              <p className="text-xs mt-1">{scene.backgroundUrl}</p>
+              <p className="text-xs mt-1">{pendingUrl}</p>
             </div>
           </div>
         ) : (

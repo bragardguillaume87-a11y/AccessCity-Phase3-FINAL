@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useCharactersStore } from '../stores/index.js';
 import { useValidation } from '../hooks/useValidation.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import CharacterEditor from './CharacterEditor.jsx';
 import { duplicateCharacter } from '../utils/duplication.js';
 
 function CharactersPanel({ onPrev, onNext }) {
-  const { characters, addCharacter, updateCharacter, deleteCharacter } = useApp();
+  const characters = useCharactersStore(state => state.characters);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
+  const updateCharacter = useCharactersStore(state => state.updateCharacter);
+  const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
   const validation = useValidation();
   const [newCharacterName, setNewCharacterName] = useState('');
   const [charToDelete, setCharToDelete] = useState(null);

@@ -1,11 +1,14 @@
-import { useApp } from '../../../../AppContext.jsx';
+import { useCharactersStore } from '../../../../stores/index.js';
 
 /**
  * Hook personnalisé pour gérer les personnages
  * Encapsule toute la logique CRUD des personnages
  */
 export const useCharacters = () => {
-  const { characters, addCharacter, updateCharacter, deleteCharacter } = useApp();
+  const characters = useCharactersStore(state => state.characters);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
+  const updateCharacter = useCharactersStore(state => state.updateCharacter);
+  const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
 
   /**
    * Crée un nouveau personnage avec des valeurs par défaut

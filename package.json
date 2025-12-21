@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "predev": "node tools/generate-assets-manifest.js",
-    "dev": "vite --config vite.config.js",
+    "predev:vite": "node tools/generate-assets-manifest.js",
+    "dev:vite": "vite --config vite.config.js",
+    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:server\" --names \"VITE,SERVER\" --prefix-colors \"cyan,magenta\"",
     "prebuild:vite": "node tools/generate-assets-manifest.js",
     "build:vite": "vite build --config vite.config.js",
     "build:vite:coverage": "set VITE_COVERAGE=true && vite build --config vite.config.js",
@@ -16,7 +18,8 @@
     "coverage:html": "c8 --reporter=html npm test",
     "coverage:merge": "node tools/merge_coverage.cjs",
     "coverage:reports": "node tools/generate_reports.cjs",
-    "summary": "node tools/generate_summary.js --help"
+    "summary": "node tools/generate_summary.js --help",
+    "install:server": "cd server && npm install"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
@@ -24,6 +27,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",
     "c8": "^9.1.0",
+    "concurrently": "^9.2.1",
     "istanbul-lib-coverage": "^3.2.0",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.1.5",
@@ -34,9 +38,27 @@
     "vite-plugin-istanbul": "^7.2.1"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "lucide-react": "^0.561.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-resizable-panels": "^4.0.13",
+    "react-rnd": "^10.5.2",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.9"
   }
 }

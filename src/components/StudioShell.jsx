@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useUIStore, useUndoRedoStore } from '../stores/index.js';
 import { useValidation } from '../hooks/useValidation.js';
 import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
@@ -34,7 +34,13 @@ const ExportPanel = React.lazy(() => import('./panels/ExportPanel.jsx'));
 
 export default function StudioShell() {
   const [activeTab, setActiveTab] = useState('context');
-  const { lastSaved, isSaving, undo, redo, canUndo, canRedo, setSelectedSceneForEdit } = useApp();
+  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
+  const lastSaved = useUndoRedoStore(state => state.lastSaved);
+  const isSaving = useUndoRedoStore(state => state.isSaving);
+  const undo = useUndoRedoStore(state => state.undo);
+  const redo = useUndoRedoStore(state => state.redo);
+  const canUndo = useUndoRedoStore(state => state.canUndo);
+  const canRedo = useUndoRedoStore(state => state.canRedo);
   const validation = useValidation();
   const [, _forceUpdate] = useState(0);
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);

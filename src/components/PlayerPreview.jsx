@@ -2,14 +2,14 @@
 // ASCII only
 import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine.js';
-import { useApp } from '../AppContext.jsx';
+import { useCharactersStore } from '../stores/index.js';
 import HUDVariables from './HUDVariables.jsx';
 import DeltaBadges from './DeltaBadges.jsx';
 import DiceResultModal from './DiceResultModal.jsx';
 import OutcomeModal from './OutcomeModal.jsx';
 
 export default function PlayerPreview({ scene, onExit }) {
-  const { characters } = useApp();
+  const characters = useCharactersStore(state => state.characters);
   const [current, setCurrent] = useState(null);
   const [vars, setVars] = useState({ Physique: 100, Mentale: 100 });
   const [ended, setEnded] = useState(false);

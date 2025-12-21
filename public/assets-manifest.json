@@ -1,7 +1,39 @@
 {
-  "generated": "2025-12-19T00:44:11.330Z",
+  "generated": "2025-12-21T10:29:55.519Z",
   "version": "1.0.0",
-  "totalAssets": 0,
-  "categories": [],
-  "assets": {}
+  "totalAssets": 3,
+  "categories": [
+    "illustrations"
+  ],
+  "assets": {
+    "illustrations": [
+      {
+        "id": "illustrations/1152407-1766108312655",
+        "name": "1152407-1766108312655",
+        "path": "/assets/illustrations/1152407-1766108312655.jpg",
+        "type": "jpg",
+        "category": "illustrations",
+        "size": 257048,
+        "modified": "2025-12-19T01:38:32.660Z"
+      },
+      {
+        "id": "illustrations/46d516554e2684a85857ef4b1c44eb3b-1766219966013",
+        "name": "46d516554e2684a85857ef4b1c44eb3b-1766219966013",
+        "path": "/assets/illustrations/46d516554e2684a85857ef4b1c44eb3b-1766219966013.jpg",
+        "type": "jpg",
+        "category": "illustrations",
+        "size": 190628,
+        "modified": "2025-12-20T08:39:26.020Z"
+      },
+      {
+        "id": "illustrations/4809677696321801264396237113013811855004898n-1766108299595",
+        "name": "4809677696321801264396237113013811855004898n-1766108299595",
+        "path": "/assets/illustrations/4809677696321801264396237113013811855004898n-1766108299595.jpg",
+        "type": "jpg",
+        "category": "illustrations",
+        "size": 744683,
+        "modified": "2025-12-19T01:38:19.620Z"
+      }
+    ]
+  }
 }

@@ -1,0 +1,19 @@
+{
+  "name": "accesscity-asset-server",
+  "version": "1.0.0",
+  "description": "Backend server for AccessCity asset upload and management",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": ["accesscity", "assets", "upload"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5"
+  }
+}

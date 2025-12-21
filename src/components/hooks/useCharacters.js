@@ -1,9 +1,11 @@
-import { useContext, useCallback } from 'react';
-// Ajustement du chemin pour remonter à la racine src/
-import { AppContext } from '../../../../AppContext';
+import { useCallback } from 'react';
+import { useCharactersStore } from '../../stores/index.js';
 
 export const useCharacters = () => {
-  const { characters, addCharacter, updateCharacter, deleteCharacter } = useContext(AppContext);
+  const characters = useCharactersStore(state => state.characters);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
+  const updateCharacter = useCharactersStore(state => state.updateCharacter);
+  const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
 
   const createCharacter = useCallback(() => {
     const newChar = {

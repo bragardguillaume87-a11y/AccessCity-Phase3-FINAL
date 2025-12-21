@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-const DEFAULT_STATS = { physique: 0, mentale: 0, sociale: 0 };
+const DEFAULT_STATS = {};
 
 export function useGameState({ scenes, initialSceneId, initialStats = DEFAULT_STATS }) {
   const [currentSceneId, setCurrentSceneId] = useState(initialSceneId);
@@ -25,11 +25,13 @@ export function useGameState({ scenes, initialSceneId, initialStats = DEFAULT_ST
   }, []);
 
   const applyStatsDelta = useCallback((delta = {}) => {
-    setStats((prev) => ({
-      physique: (prev.physique ?? 0) + (delta.physique ?? 0),
-      mentale: (prev.mentale ?? 0) + (delta.mentale ?? 0),
-      sociale: (prev.sociale ?? 0) + (delta.sociale ?? 0),
-    }));
+    setStats((prev) => {
+      const updated = { ...prev };
+      Object.keys(delta).forEach((key) => {
+        updated[key] = (prev[key] ?? 0) + (delta[key] ?? 0);
+      });
+      return updated;
+    });
   }, []);
 
   const addToHistory = useCallback(({ sceneId, dialogueId, choiceId }) => {
@@ -67,6 +69,21 @@ export function useGameState({ scenes, initialSceneId, initialStats = DEFAULT_ST
   const chooseOption = useCallback(async (choice) => {
     if (!currentScene || !currentDialogue || !choice) return;
     addToHistory({ sceneId: currentScene.id, dialogueId: currentDialogue.id, choiceId: choice.id });
+
+    // Apply effects from choice (new format: effects array)
+    if (choice.effects && Array.isArray(choice.effects)) {
+      const delta = {};
+      choice.effects.forEach(effect => {
+        if (effect.operation === 'set') {
+          delta[effect.variable] = effect.value - (stats[effect.variable] ?? 0);
+        } else if (effect.operation === 'add') {
+          delta[effect.variable] = effect.value;
+        }
+      });
+      applyStatsDelta(delta);
+    }
+
+    // Legacy support: statsDelta object
     if (choice.statsDelta) applyStatsDelta(choice.statsDelta);
 
     let branch = null;
@@ -79,7 +96,7 @@ export function useGameState({ scenes, initialSceneId, initialStats = DEFAULT_ST
     if (target.nextSceneId) goToScene(target.nextSceneId, target.nextDialogueId);
     else if (target.nextDialogueId) setCurrentDialogueId(target.nextDialogueId);
     else goToNextDialogue();
-  }, [currentScene, currentDialogue, addToHistory, applyStatsDelta, resolveDiceCheck, goToNextDialogue, goToScene]);
+  }, [currentScene, currentDialogue, stats, addToHistory, applyStatsDelta, resolveDiceCheck, goToNextDialogue, goToScene]);
 
   return {
     currentScene,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.js';
 
 /**
  * Command Palette - Inspiré de VS Code
@@ -7,7 +7,11 @@ import { useApp } from '../AppContext.jsx';
  * Ctrl+Shift+P : Toutes les commandes
  */
 export default function CommandPalette({ isOpen, onClose, mode = 'commands', setActiveTab }) {
-  const { scenes, characters, addScene, addCharacter, setSelectedSceneForEdit } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const addScene = useScenesStore(state => state.addScene);
+  const characters = useCharactersStore(state => state.characters);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
+  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);

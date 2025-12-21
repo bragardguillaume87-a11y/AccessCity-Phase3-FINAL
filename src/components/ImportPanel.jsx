@@ -1,10 +1,10 @@
 // src/components/ImportPanel.jsx
 import React from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useSettingsStore } from '../stores/index.js';
 import { useToast } from '../contexts/ToastContext.jsx';
 
 export default function ImportPanel() {
-  const { setContextField } = useApp();
+  const setContextField = useSettingsStore(state => state.setContextField);
   const { showToast } = useToast();
 
   function onFileChange(e) {

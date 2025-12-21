@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../AppContext.jsx';
-
-// Galerie d'arrière-plans prédéfinis
-const GALLERY_ASSETS = [
-  { url: '/assets/backgrounds/city_street.svg', name: 'Rue de la ville', fallback: 'city_street.svg' },
-  { url: '/assets/backgrounds/city_hall.svg', name: 'Hotel de ville', fallback: 'city_hall.svg' },
-  { url: '/assets/backgrounds/park.svg', name: 'Parc', fallback: 'park.svg' },
-  { url: '/assets/backgrounds/office.svg', name: 'Bureau', fallback: 'office.svg' }
-];
+import { useScenesStore, useUIStore } from '../stores/index.js';
+import { GALLERY_ASSETS } from '../constants/assets.js';
 
 export default function AssetsPanel({ onPrev, onNext }) {
-  const { scenes, selectedSceneForEdit, updateScene } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
+  const updateScene = useScenesStore(state => state.updateScene);
   const [history, setHistory] = useState([]);
   const [imageErrors, setImageErrors] = useState({});
 

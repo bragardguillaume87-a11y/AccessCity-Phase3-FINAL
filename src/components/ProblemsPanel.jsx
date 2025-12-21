@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useValidation } from '../hooks/useValidation.js';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore } from '../stores/index.js';
 
 /**
  * Problems Panel - Inspiré de VS Code Issue Browser
@@ -8,7 +8,8 @@ import { useApp } from '../AppContext.jsx';
  */
 export default function ProblemsPanel({ onNavigateTo }) {
   const validation = useValidation();
-  const { scenes, characters } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
   const [filter, setFilter] = useState('all'); // all | errors | warnings
 
   // Agréger tous les problèmes avec leur localisation

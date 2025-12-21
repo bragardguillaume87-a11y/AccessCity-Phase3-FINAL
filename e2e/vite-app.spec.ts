@@ -11,7 +11,7 @@ import type { Page } from '@playwright/test';
  * - Focus: validation moteur DialogueEngine + couverture
  */
 
-const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173';
+const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:8000';
 
 async function openApp(page: Page) {
   await page.goto(BASE_URL + '/');

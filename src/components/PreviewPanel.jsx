@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useUIStore } from '../stores/index.js';
 import PlayerPreview from './PlayerPreview.jsx';
 import PreviewPlayer from './panels/PreviewPlayer.jsx';
 
 export default function PreviewPanel({ onPrev, onNext }) {
-  const { scenes, selectedSceneForEdit } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
   const [showPreview, setShowPreview] = useState(false);
   const [previewSceneId, setPreviewSceneId] = useState(null);
   const [useNewPlayer, setUseNewPlayer] = useState(false);

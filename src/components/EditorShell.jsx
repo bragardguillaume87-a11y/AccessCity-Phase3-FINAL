@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore, useUIStore, useUndoRedoStore } from '../stores/index.js';
+import { Panel, Group, Separator } from 'react-resizable-panels';
 import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
 import CommandPalette from './CommandPalette.jsx';
@@ -10,6 +11,8 @@ const MainCanvas = React.lazy(() => import('./panels/MainCanvas.jsx'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel.jsx'));
 const CharactersModal = React.lazy(() => import('./modals/CharactersModal.jsx'));
 const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal.jsx'));
+const SettingsModal = React.lazy(() => import('./modals/SettingsModal.jsx'));
+const PreviewModal = React.lazy(() => import('./modals/PreviewModal.jsx'));
 
 /**
  * EditorShell - New 3-pane editor layout (GDevelop-like)
@@ -19,19 +22,18 @@ const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal.
  * - Right: PropertiesPanel (properties of selected element)
  * ASCII only, no hardcoded French strings.
  */
-export default function EditorShell() {
-  const {
-    scenes,
-    characters,
-    selectedSceneForEdit,
-    setSelectedSceneForEdit,
-    lastSaved,
-    isSaving,
-    undo,
-    redo,
-    canUndo,
-    canRedo
-  } = useApp();
+export default function EditorShell({ onBack = null }) {
+  // Zustand stores (granular selectors for better performance)
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
+  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
+  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
+  const lastSaved = useUndoRedoStore(state => state.lastSaved);
+  const isSaving = useUndoRedoStore(state => state.isSaving);
+  const undo = useUndoRedoStore(state => state.undo);
+  const redo = useUndoRedoStore(state => state.redo);
+  const canUndo = useUndoRedoStore(state => state.canUndo);
+  const canRedo = useUndoRedoStore(state => state.canRedo);
 
   const validation = useValidation();
   const [, _forceUpdate] = useState(0);
@@ -112,8 +114,20 @@ export default function EditorShell() {
       <header className="bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
-            {/* Left: Title */}
+            {/* Left: Back Button + Title */}
             <div className="flex items-center gap-4">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                  title="Retour à l'accueil"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Retour
+                </button>
+              )}
               <div>
                 <div className="text-xs font-semibold text-slate-400 tracking-wide uppercase">
                   AccessCity Studio
@@ -272,8 +286,8 @@ export default function EditorShell() {
         </div>
       )}
 
-      {/* Main 3-pane layout */}
-      <main className="flex-1 flex overflow-hidden" id="main-content" tabIndex="-1">
+      {/* Main 3-pane layout - Resizable with react-resizable-panels */}
+      <main className="flex-1 overflow-hidden" id="main-content" tabIndex="-1">
         <React.Suspense fallback={
           <div className="flex-1 flex items-center justify-center bg-slate-900">
             <div className="text-center">
@@ -282,48 +296,74 @@ export default function EditorShell() {
             </div>
           </div>
         }>
-          {/* Left panel: Explorer */}
-          <aside
-            className="w-64 bg-slate-800 border-r border-slate-700 flex-shrink-0 overflow-y-auto"
-            role="complementary"
-            aria-label="Project explorer"
-          >
-            <ExplorerPanel
-              scenes={scenes}
-              characters={characters}
-              selectedSceneId={selectedSceneForEdit}
-              selectedElement={selectedElement}
-              onSceneSelect={handleSceneSelect}
-              onCharacterSelect={handleCharacterSelect}
-              onDialogueSelect={handleDialogueSelect}
-            />
-          </aside>
+          <Group direction="horizontal" className="h-full">
+            {/* Left panel: Explorer - Resizable 15-40% */}
+            <Panel
+              defaultSize="20%"
+              minSize="15%"
+              maxSize="40%"
+              collapsible={true}
+              className="bg-slate-800 border-r border-slate-700 overflow-y-auto"
+              id="explorer-panel"
+            >
+              <div role="complementary" aria-label="Project explorer">
+                <ExplorerPanel
+                  scenes={scenes}
+                  characters={characters}
+                  selectedSceneId={selectedSceneForEdit}
+                  selectedElement={selectedElement}
+                  onSceneSelect={handleSceneSelect}
+                  onCharacterSelect={handleCharacterSelect}
+                  onDialogueSelect={handleDialogueSelect}
+                />
+              </div>
+            </Panel>
 
-          {/* Center panel: Main Canvas */}
-          <div className="flex-1 bg-slate-900 overflow-auto" role="main">
-            <MainCanvas
-              selectedScene={selectedScene}
-              scenes={scenes}
-              selectedElement={selectedElement}
-              onOpenModal={(modal, context = {}) => {
-                setActiveModal(modal);
-                setModalContext(context);
-              }}
-            />
-          </div>
+            {/* Resize handle (drag border) */}
+            <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
 
-          {/* Right panel: Properties */}
-          <aside
-            className="w-80 bg-slate-800 border-l border-slate-700 flex-shrink-0 overflow-y-auto"
-            role="complementary"
-            aria-label="Properties panel"
-          >
-            <PropertiesPanel
-              selectedElement={selectedElement}
-              selectedScene={selectedScene}
-              characters={characters}
-            />
-          </aside>
+            {/* Center panel: Main Canvas - Flexible */}
+            <Panel
+              defaultSize="50%"
+              minSize="30%"
+              className="bg-slate-900 overflow-auto"
+              id="canvas-panel"
+            >
+              <div role="main">
+                <MainCanvas
+                  selectedScene={selectedScene}
+                  scenes={scenes}
+                  selectedElement={selectedElement}
+                  onSelectDialogue={handleDialogueSelect}
+                  onOpenModal={(modal, context = {}) => {
+                    setActiveModal(modal);
+                    setModalContext(context);
+                  }}
+                />
+              </div>
+            </Panel>
+
+            {/* Resize handle */}
+            <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+
+            {/* Right panel: Properties - Resizable 20-40% */}
+            <Panel
+              defaultSize="30%"
+              minSize="20%"
+              maxSize="40%"
+              collapsible={true}
+              className="bg-slate-800 border-l border-slate-700 overflow-y-auto"
+              id="properties-panel"
+            >
+              <div role="complementary" aria-label="Properties panel">
+                <PropertiesPanel
+                  selectedElement={selectedElement}
+                  selectedScene={selectedScene}
+                  characters={characters}
+                />
+              </div>
+            </Panel>
+          </Group>
         </React.Suspense>
       </main>
 
@@ -336,6 +376,12 @@ export default function EditorShell() {
 
       {/* Modals */}
       <React.Suspense fallback={null}>
+        {activeModal === 'project' && (
+          <SettingsModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
         {activeModal === 'characters' && (
           <CharactersModal
             isOpen={true}
@@ -348,6 +394,13 @@ export default function EditorShell() {
             isOpen={true}
             onClose={() => setActiveModal(null)}
             initialCategory={modalContext.category}
+          />
+        )}
+        {activeModal === 'preview' && (
+          <PreviewModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            initialSceneId={modalContext.sceneId || selectedScene?.id}
           />
         )}
       </React.Suspense>

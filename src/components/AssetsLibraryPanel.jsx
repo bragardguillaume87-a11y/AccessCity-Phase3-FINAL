@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAssets } from '../hooks/useAssets.js';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore } from '../stores/index.js';
 import AssetPicker from './AssetPicker.jsx';
 
 /**
@@ -11,7 +11,8 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [viewMode, setViewMode] = useState('grid'); // grid | list
   const { assets, loading, error } = useAssets();
-  const { scenes, characters } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
 
   // Catégories disponibles
   const assetCategories = [

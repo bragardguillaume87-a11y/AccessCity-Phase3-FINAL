@@ -1,9 +1,11 @@
-import React, { useContext, useState } from 'react';
-import { AppContext } from '../../AppContext';
+import React, { useState } from 'react';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../../stores/index.js';
 import { validateScenario, downloadExport } from '../../utils/exporters';
 
 export default function ExportPanel({ onPrev, onNext }) {
-  const { scenes, characters, context } = useContext(AppContext);
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
+  const context = useSettingsStore(state => state.projectData);
   const [validationResult, setValidationResult] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
 

@@ -1,6 +1,6 @@
 // src/components/ExportPanel.jsx
 import React from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.js';
 import { useToast } from '../contexts/ToastContext.jsx';
 
 function downloadJson(filename, data) {
@@ -16,7 +16,9 @@ function downloadJson(filename, data) {
 }
 
 export default function ExportPanel({ onPrev }) {
-  const { scenes, characters, context } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
+  const context = useSettingsStore(state => state.projectData);
   const { showToast } = useToast();
 
   function handleExport(type, data, filename) {

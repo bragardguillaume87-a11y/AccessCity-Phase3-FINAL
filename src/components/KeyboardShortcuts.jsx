@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore } from '../stores/index.js';
 
 /**
  * Composant pour gérer les raccourcis clavier globaux
  * Inspiré de VS Code, Inky, et autres éditeurs modernes
  */
 export default function KeyboardShortcuts({ onOpenCommandPalette, onOpenModal, activeTab, setActiveTab }) {
-  const { addScene, addCharacter, undo, redo } = useApp();
+  const addScene = useScenesStore(state => state.addScene);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -93,6 +94,13 @@ export default function KeyboardShortcuts({ onOpenCommandPalette, onOpenModal, a
 
       // EditorShell modals (only if onOpenModal is provided)
       if (onOpenModal) {
+        // Settings Modal : Ctrl+,
+        if (modifier && !e.shiftKey && e.key === ',') {
+          e.preventDefault();
+          onOpenModal('project');
+          return;
+        }
+
         // Characters Modal : Ctrl+Shift+C
         if (modifier && e.shiftKey && e.key === 'C') {
           e.preventDefault();
@@ -119,7 +127,7 @@ export default function KeyboardShortcuts({ onOpenCommandPalette, onOpenModal, a
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [addScene, addCharacter, undo, redo, onOpenCommandPalette, onOpenModal, activeTab, setActiveTab]);
+  }, [addScene, addCharacter, onOpenCommandPalette, onOpenModal, activeTab, setActiveTab]);
 
   return null; // Composant invisible
 }
@@ -149,8 +157,17 @@ export const KEYBOARD_SHORTCUTS = [
   {
     category: 'Vue',
     shortcuts: [
+      { keys: ['Ctrl', ','], description: 'Ouvrir Settings', mac: ['⌘', ','] },
       { keys: ['Ctrl', 'Shift', 'V'], description: 'Ouvrir Preview', mac: ['⌘', '⇧', 'V'] },
       { keys: ['Ctrl', 'E'], description: 'Ouvrir Export', mac: ['⌘', 'E'] },
+    ]
+  },
+  {
+    category: 'Manipulation de personnages',
+    shortcuts: [
+      { keys: ['Delete'], description: 'Supprimer personnage sélectionné', mac: ['Delete'] },
+      { keys: ['↑', '↓', '←', '→'], description: 'Déplacer personnage (0.5%)', mac: ['↑', '↓', '←', '→'] },
+      { keys: ['Shift', '+', '↑', '↓', '←', '→'], description: 'Déplacer personnage (1%)', mac: ['⇧', '+', '↑', '↓', '←', '→'] },
     ]
   },
   {

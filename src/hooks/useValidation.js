@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.js';
 
 /**
  * Hook de validation en temps reel pour l'editeur
  * Retourne des erreurs organisees par type et par ID
  */
 export function useValidation() {
-  const { scenes, characters, variables } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
+  const variables = useSettingsStore(state => state.variables);
 
   const validation = useMemo(() => {
     const errors = {

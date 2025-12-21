@@ -1,7 +1,20 @@
-import React from "react";
 import "../styles/home.css";
 
-function HomePage() {
+function HomePage({
+  quests = [],
+  selectedQuestId = null,
+  newQuestName = "",
+  onNewQuestNameChange = () => {},
+  onCreateQuest = () => {},
+  onSelectQuest = () => {},
+  onLaunchEditor = () => {},
+  onDeleteQuest = () => {},
+}) {
+  const quotaMax = 5;
+  const quotaUsed = quests.length;
+  const quotaPercent = Math.min(100, (quotaUsed / quotaMax) * 100);
+  const selectedQuest = quests.find((q) => q.id === selectedQuestId);
+
   return (
     <div className="home-container">
       {/* HEADER */}
@@ -39,7 +52,9 @@ function HomePage() {
             <p className="card-description">
               📚 Histoires créées sur cet ordinateur
             </p>
-            <div className="card-stats">📖 1/5 histoires</div>
+            <div className="card-stats">
+              📖 {quotaUsed}/{quotaMax} histoires
+            </div>
             <div className="card-note">
               💡 Un espace regroupe plusieurs histoires. Version gratuite : 5
               max.
@@ -58,32 +73,64 @@ function HomePage() {
               </p>
             </div>
           </div>
-          {/* Liste des quêtes */}
-          <div className="quest-card">
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-            >
-              <span>📖</span>
-              <h3 className="card-title" style={{ marginBottom: 0 }}>
-                La visite à la mairie
-              </h3>
-              <span className="card-badge card-badge--local">📍 Local</span>
-              <span className="card-badge card-badge--date">19/12/2025</span>
+          {/* Liste des quêtes dynamiques */}
+          {quests.length === 0 && (
+            <div className="quest-card" style={{ opacity: 0.7 }}>
+              <span>Aucune quête pour l'instant.</span>
             </div>
-          </div>
+          )}
+          {quests.map((quest) => (
+            <div
+              key={quest.id}
+              className={`quest-card${
+                selectedQuestId === quest.id ? " quest-card--selected" : ""
+              }`}
+              style={{
+                cursor: "pointer",
+                marginBottom: 12,
+                border:
+                  selectedQuestId === quest.id
+                    ? "2px solid var(--accent-purple)"
+                    : undefined,
+              }}
+              onClick={() => onSelectQuest(quest.id)}
+              tabIndex={0}
+              aria-label={`Sélectionner la quête ${quest.name}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onSelectQuest(quest.id);
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <span>📖</span>
+                <h3 className="card-title" style={{ marginBottom: 0 }}>
+                  {quest.name}
+                </h3>
+                <span className="card-badge card-badge--local">📍 Local</span>
+                <span className="card-badge card-badge--date">
+                  {new Date(quest.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          ))}
           {/* Quota */}
           <div className="quest-quota">
             <div className="quest-quota__header">
               <span className="quest-quota__title">📊 Quota</span>
-              <span className="quest-quota__count">1/5</span>
+              <span className="quest-quota__count">
+                {quotaUsed}/{quotaMax}
+              </span>
             </div>
             <div className="quest-quota__progress">
               <div
                 className="quest-quota__progress-bar"
-                style={{ width: "20%" }}
+                style={{ width: `${quotaPercent}%` }}
               ></div>
             </div>
-            <div className="quest-quota__remaining">✨ 4 quêtes restantes</div>
+            <div className="quest-quota__remaining">
+              ✨ {quotaMax - quotaUsed} quêtes restantes
+            </div>
           </div>
           {/* Nouvelle quête */}
           <div className="new-quest">
@@ -91,12 +138,40 @@ function HomePage() {
             <input
               className="new-quest__input"
               placeholder="Ex: La visite à la mairie"
+              value={newQuestName}
+              onChange={(e) => onNewQuestNameChange(e.target.value)}
+              maxLength={60}
+              aria-label="Nom de la nouvelle quête"
             />
-            <button className="btn btn-primary">+ Créer cette quête</button>
-            <button className="btn btn-secondary">
-              ⚠️ Sélectionne une quête
+            <button
+              className="btn btn-primary"
+              onClick={onCreateQuest}
+              disabled={!newQuestName.trim() || quotaUsed >= quotaMax}
+              aria-disabled={!newQuestName.trim() || quotaUsed >= quotaMax}
+            >
+              + Créer cette quête
             </button>
-            <button className="btn btn-danger">🗑️ Supprimer</button>
+            <button
+              className="btn btn-secondary"
+              onClick={onLaunchEditor}
+              disabled={!selectedQuestId}
+              aria-disabled={!selectedQuestId}
+              style={{
+                backgroundColor: selectedQuestId ? 'var(--accent-purple)' : undefined,
+                borderColor: selectedQuestId ? 'var(--accent-purple)' : undefined,
+                color: selectedQuestId ? 'white' : undefined,
+              }}
+            >
+              🚀 Lancer l'éditeur
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={onDeleteQuest}
+              disabled={!selectedQuestId}
+              aria-disabled={!selectedQuestId}
+            >
+              🗑️ Supprimer
+            </button>
           </div>
         </section>
       </main>

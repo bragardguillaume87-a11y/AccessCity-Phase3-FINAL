@@ -1,15 +1,18 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
-import { AppContext } from '../../AppContext';
+import React, { useEffect, useRef, useState } from 'react';
+import { useScenesStore, useSettingsStore } from '../../stores/index.js';
 import { useGameState } from '../../hooks/useGameState';
 
 export default function PreviewPlayer({ initialSceneId, onClose }) {
-  const { scenes } = useContext(AppContext);
+  // Zustand stores (granular selectors)
+  const scenes = useScenesStore(state => state.scenes);
+  const variables = useSettingsStore(state => state.variables);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const liveRegionRef = useRef(null);
 
   const { currentScene, currentDialogue, stats, history, isPaused, chooseOption, goToScene, setIsPaused } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
+    initialStats: variables || {}
   });
 
   // Annonce accessibilité
@@ -59,13 +62,13 @@ export default function PreviewPlayer({ initialSceneId, onClose }) {
           </div>
 
           <div className="space-y-2">
-            {currentDialogue?.choices?.map((choice) => (
+            {currentDialogue?.choices?.map((choice, idx) => (
               <button
-                key={choice.id}
+                key={choice.id || idx}
                 onClick={() => chooseOption(choice)}
                 className="w-full text-left p-3 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors"
               >
-                {choice.label}
+                {choice.text || choice.label || 'Continue'}
               </button>
             ))}
             {(!currentDialogue?.choices || currentDialogue.choices.length === 0) && (
@@ -78,16 +81,16 @@ export default function PreviewPlayer({ initialSceneId, onClose }) {
         <aside className="col-span-4 space-y-4">
           <div className="bg-slate-800 p-4 rounded-lg">
             <h3 className="font-bold text-slate-400 mb-2 uppercase text-xs">Statistiques</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                Physique: <span className="font-mono text-cyan-300">{stats.physique}</span>
-              </div>
-              <div>
-                Mentale: <span className="font-mono text-purple-300">{stats.mentale}</span>
-              </div>
-              <div>
-                Sociale: <span className="font-mono text-yellow-300">{stats.sociale}</span>
-              </div>
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              {Object.entries(stats).map(([key, value], idx) => {
+                const colors = ['text-cyan-300', 'text-purple-300', 'text-yellow-300', 'text-green-300', 'text-pink-300'];
+                const color = colors[idx % colors.length];
+                return (
+                  <div key={key}>
+                    {key}: <span className={`font-mono ${color}`}>{value}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

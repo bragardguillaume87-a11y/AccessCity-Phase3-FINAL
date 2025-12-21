@@ -1,12 +1,12 @@
 import React from 'react';
-import { useApp } from '../AppContext';
+import { useScenesStore } from '../stores/index.js';
 
 /**
  * ScenesList - Colonne gauche avec liste chronologique des scènes
  * Pattern: GDevelop Project Manager
  */
 export default function ScenesList({ scenes, selectedSceneId, onSelectScene }) {
-  const { addScene } = useApp();
+  const addScene = useScenesStore(state => state.addScene);
 
   const handleKeyDown = (e, sceneId) => {
     if (e.key === 'Enter' || e.key === ' ') {

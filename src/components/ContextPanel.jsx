@@ -1,8 +1,10 @@
 import React from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useSettingsStore } from '../stores/index.js';
 
 export default function ContextPanel({ onNext }) {
-  const { context, setContextField } = useApp();
+  const projectData = useSettingsStore(state => state.projectData);
+  const setContextField = useSettingsStore(state => state.setContextField);
+  const context = projectData; // Alias for compatibility
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">

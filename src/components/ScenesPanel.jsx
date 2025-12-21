@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useUIStore } from '../stores/index.js';
 import { useValidation } from '../hooks/useValidation.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import { duplicateScene } from '../utils/duplication.js';
 import AssetPicker from './AssetPicker.jsx';
 
 export default function ScenesPanel({ onPrev, onNext }) {
-  const {
-    scenes,
-    selectedSceneForEdit,
-    setSelectedSceneForEdit,
-    addScene,
-    updateScene,
-    deleteScene,
-    reorderScenes
-  } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
+  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
+  const addScene = useScenesStore(state => state.addScene);
+  const updateScene = useScenesStore(state => state.updateScene);
+  const deleteScene = useScenesStore(state => state.deleteScene);
+  const reorderScenes = useScenesStore(state => state.reorderScenes);
 
   const validation = useValidation();
 

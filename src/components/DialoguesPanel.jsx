@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.js';
 import { useValidation } from '../hooks/useValidation.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import TemplateSelector from './TemplateSelector.jsx';
@@ -7,16 +7,14 @@ import { duplicateDialogue } from '../utils/duplication.js';
 import { normalizeTemplate } from '../utils/templateNormalizer.js';
 
 export default function DialoguesPanel() {
-  const {
-    scenes,
-    characters,
-    selectedSceneForEdit,
-    setSelectedSceneForEdit,
-    addDialogue,
-    addDialogues,
-    updateDialogue,
-    deleteDialogue
-  } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
+  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
+  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
+  const addDialogue = useScenesStore(state => state.addDialogue);
+  const addDialogues = useScenesStore(state => state.addDialogues);
+  const updateDialogue = useScenesStore(state => state.updateDialogue);
+  const deleteDialogue = useScenesStore(state => state.deleteDialogue);
 
   const validation = useValidation();
 

@@ -33,11 +33,7 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
 
   if (loading) {
     return (
-      <div style={{
-        padding: '20px',
-        textAlign: 'center',
-        color: '#64748b'
-      }}>
+      <div className="p-5 text-center text-slate-500">
         Chargement des avatars...
       </div>
     );
@@ -45,80 +41,35 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
 
   if (error) {
     return (
-      <div style={{
-        padding: '20px',
-        textAlign: 'center',
-        color: '#dc2626',
-        backgroundColor: '#fee2e2',
-        borderRadius: '6px'
-      }}>
+      <div className="p-5 text-center text-red-600 bg-red-100 rounded-lg">
         Erreur: {error}
       </div>
     );
   }
 
   return (
-    <div style={{
-      border: '1px solid #e2e8f0',
-      borderRadius: '8px',
-      padding: '16px',
-      backgroundColor: '#f8fafc'
-    }}>
+    <div className="border border-slate-700 rounded-lg p-4 bg-slate-800">
       {/* Avatar actuel */}
       {currentSprite && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            color: '#64748b',
-            marginBottom: '8px',
-            textTransform: 'uppercase'
-          }}>
+        <div className="mb-4">
+          <div className="text-xs font-semibold text-slate-400 mb-2 uppercase">
             Avatar actuel ({mood})
           </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px',
-            backgroundColor: 'white',
-            borderRadius: '6px',
-            border: '2px solid #3b82f6'
-          }}>
+          <div className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg border-2 border-blue-500">
             <img
               src={currentSprite}
               alt={mood}
-              style={{
-                width: '64px',
-                height: '64px',
-                objectFit: 'contain',
-                backgroundColor: '#f1f5f9',
-                borderRadius: '4px'
-              }}
+              className="w-16 h-16 object-contain bg-slate-800 rounded"
             />
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{
-                fontSize: '0.75rem',
-                color: '#64748b',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
+            <div className="flex-1 overflow-hidden">
+              <div className="text-xs text-slate-400 truncate">
                 {currentSprite}
               </div>
             </div>
             <button
               type="button"
               onClick={() => onSelect(mood, '')}
-              style={{
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
             >
               Retirer
             </button>
@@ -127,40 +78,23 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
       )}
 
       {/* Barre de recherche */}
-      <div style={{ marginBottom: '12px' }}>
+      <div className="mb-3">
         <input
           type="text"
           placeholder="Rechercher un avatar..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px',
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            fontSize: '0.875rem',
-            boxSizing: 'border-box'
-          }}
+          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
         />
       </div>
 
       {/* Assets récents */}
       {!searchTerm && recentAssets.length > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            color: '#64748b',
-            marginBottom: '8px',
-            textTransform: 'uppercase'
-          }}>
+        <div className="mb-4">
+          <div className="text-xs font-semibold text-slate-400 mb-2 uppercase">
             Récents
           </div>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-            gap: '8px'
-          }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
             {recentAssets.map((assetPath, idx) => (
               <AssetThumbnail
                 key={idx}
@@ -174,32 +108,13 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
       )}
 
       {/* Grille d'avatars disponibles */}
-      <div style={{
-        fontSize: '0.75rem',
-        fontWeight: '600',
-        color: '#64748b',
-        marginBottom: '8px',
-        textTransform: 'uppercase'
-      }}>
+      <div className="text-xs font-semibold text-slate-400 mb-2 uppercase">
         {searchTerm ? `Résultats (${filteredAssets.length})` : 'Tous les avatars'}
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-        gap: '8px',
-        maxHeight: '300px',
-        overflowY: 'auto',
-        padding: '4px'
-      }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2 max-h-80 overflow-y-auto p-1">
         {filteredAssets.length === 0 && (
-          <div style={{
-            gridColumn: '1 / -1',
-            padding: '20px',
-            textAlign: 'center',
-            color: '#94a3b8',
-            fontSize: '0.875rem'
-          }}>
+          <div className="col-span-full p-5 text-center text-slate-500 text-sm">
             Aucun avatar disponible
           </div>
         )}
@@ -224,59 +139,23 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
 const AssetThumbnail = ({ path, name, isSelected, onClick }) => (
   <div
     onClick={onClick}
-    style={{
-      position: 'relative',
-      aspectRatio: '1',
-      border: `2px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}`,
-      borderRadius: '6px',
-      overflow: 'hidden',
-      cursor: 'pointer',
-      backgroundColor: 'white',
-      transition: 'all 0.2s',
-      boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none'
-    }}
-    onMouseEnter={(e) => {
-      if (!isSelected) {
-        e.currentTarget.style.borderColor = '#cbd5e1';
-        e.currentTarget.style.transform = 'scale(1.05)';
-      }
-    }}
-    onMouseLeave={(e) => {
-      if (!isSelected) {
-        e.currentTarget.style.borderColor = '#e2e8f0';
-        e.currentTarget.style.transform = 'scale(1)';
-      }
-    }}
+    className={`relative aspect-square border-2 rounded-lg overflow-hidden cursor-pointer bg-slate-900 transition-all ${
+      isSelected
+        ? 'border-blue-500 ring-2 ring-blue-500/30'
+        : 'border-slate-700 hover:border-slate-500 hover:scale-105'
+    }`}
     title={name || path}
   >
     <img
       src={path}
       alt={name || path}
-      style={{
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain',
-        padding: '4px'
-      }}
+      className="w-full h-full object-contain p-1"
       onError={(e) => {
-        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f1f5f9" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2394a3b8">?</text></svg>';
+        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2394a3b8">?</text></svg>';
       }}
     />
     {isSelected && (
-      <div style={{
-        position: 'absolute',
-        top: '4px',
-        right: '4px',
-        width: '16px',
-        height: '16px',
-        backgroundColor: '#3b82f6',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '10px',
-        color: 'white'
-      }}>
+      <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white">
         ✓
       </div>
     )}

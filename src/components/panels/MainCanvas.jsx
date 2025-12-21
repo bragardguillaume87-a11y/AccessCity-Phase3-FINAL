@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useApp } from '../../AppContext.jsx';
+import { Rnd } from 'react-rnd';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../../stores/index.js';
 import ContextMenu from '../ui/ContextMenu.jsx';
+import AddCharacterToSceneModal from '../modals/AddCharacterToSceneModal.jsx';
 
 /**
  * MainCanvas - Center panel for visual scene editing
@@ -11,10 +13,101 @@ import ContextMenu from '../ui/ContextMenu.jsx';
  * - Dialogue flow visualization
  * - Quick actions
  */
-function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
-  const { addDialogue, characters, addCharacterToScene, removeCharacterFromScene, updateSceneCharacter } = useApp();
+function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, onOpenModal }) {
+  // Zustand stores (granular selectors)
+  const addDialogue = useScenesStore(state => state.addDialogue);
+  const addCharacterToScene = useScenesStore(state => state.addCharacterToScene);
+  const removeCharacterFromScene = useScenesStore(state => state.removeCharacterFromScene);
+  const updateSceneCharacter = useScenesStore(state => state.updateSceneCharacter);
+  const characters = useCharactersStore(state => state.characters);
+  const projectSettings = useSettingsStore(state => state.projectSettings);
+
   const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const [contextMenuData, setContextMenuData] = useState(null);
+  const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
+  const canvasRef = useRef(null);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+
+  // Define sceneCharacters early to avoid reference errors in useEffect
+  const sceneCharacters = selectedScene?.characters || [];
+  const dialoguesCount = selectedScene?.dialogues?.length || 0;
+
+  // Update canvas dimensions on mount and resize
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (canvasRef.current) {
+        const { width, height } = canvasRef.current.getBoundingClientRect();
+        setCanvasDimensions({ width, height });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  // Keyboard shortcuts for character manipulation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!selectedCharacterId || !selectedScene) return;
+
+      const selectedChar = sceneCharacters.find(sc => sc.id === selectedCharacterId);
+      if (!selectedChar) return;
+
+      // Delete key - remove character
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        const character = characters.find(c => c.id === selectedChar.characterId);
+        const confirmed = window.confirm(`Remove ${character?.name || 'character'} from this scene?`);
+        if (confirmed) {
+          removeCharacterFromScene(selectedScene.id, selectedChar.id);
+          setSelectedCharacterId(null);
+        }
+        return;
+      }
+
+      // Arrow keys - nudge character position
+      const nudgeAmount = e.shiftKey ? 1 : 0.5; // 1% with Shift, 0.5% without
+      const currentPosition = selectedChar.position || { x: 50, y: 50 };
+      let newPosition = { ...currentPosition };
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          newPosition.x = Math.max(0, currentPosition.x - nudgeAmount);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          newPosition.x = Math.min(100, currentPosition.x + nudgeAmount);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          newPosition.y = Math.max(0, currentPosition.y - nudgeAmount);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          newPosition.y = Math.min(100, currentPosition.y + nudgeAmount);
+          break;
+        default:
+          return;
+      }
+
+      updateSceneCharacter(selectedScene.id, selectedChar.id, { position: newPosition });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCharacterId, selectedScene, sceneCharacters, characters, removeCharacterFromScene, updateSceneCharacter]);
+
+  // Convert percentage to pixels
+  const percentToPixels = (percent, dimension) => {
+    return (percent / 100) * dimension;
+  };
+
+  // Convert pixels to percentage
+  const pixelsToPercent = (pixels, dimension) => {
+    return (pixels / dimension) * 100;
+  };
 
   const handleAddDialogue = () => {
     if (!selectedScene) return;
@@ -70,12 +163,18 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
           }
         },
         {
-          label: 'Position Character',
+          label: 'Change Z-Index',
           icon: '🎯',
           onClick: () => {
-            alert('Drag character sprites to reposition (coming soon)');
-          },
-          disabled: true
+            const currentZIndex = sceneChar.zIndex || 1;
+            const newZIndex = prompt(`Enter Z-Index (layer order) for ${characterName}:`, currentZIndex);
+            if (newZIndex !== null) {
+              const parsedZIndex = parseInt(newZIndex);
+              if (!isNaN(parsedZIndex)) {
+                updateSceneCharacter(selectedScene.id, sceneChar.id, { zIndex: parsedZIndex });
+              }
+            }
+          }
         },
         {
           label: 'Remove from Scene',
@@ -94,25 +193,12 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
 
   const handleAddCharacterToScene = () => {
     if (!selectedScene) return;
+    setShowAddCharacterModal(true);
+  };
 
-    // Simple MVP: prompt for character selection
-    if (characters.length === 0) {
-      alert('No characters available. Create characters first using the Characters modal.');
-      return;
-    }
-
-    const characterList = characters.map((c, idx) => `${idx + 1}. ${c.name} (${c.id})`).join('\n');
-    const choice = prompt(`Select character to add:\n\n${characterList}\n\nEnter character number (1-${characters.length}):`);
-
-    if (!choice) return;
-
-    const index = parseInt(choice) - 1;
-    if (index >= 0 && index < characters.length) {
-      const character = characters[index];
-      addCharacterToScene(selectedScene.id, character.id, 'neutral', { x: 50, y: 50 });
-    } else {
-      alert('Invalid character number');
-    }
+  const handleAddCharacterConfirm = (characterId, mood) => {
+    if (!selectedScene) return;
+    addCharacterToScene(selectedScene.id, characterId, mood, { x: 50, y: 50 });
   };
 
   if (!selectedScene) {
@@ -130,9 +216,6 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
       </div>
     );
   }
-
-  const dialoguesCount = selectedScene.dialogues?.length || 0;
-  const sceneCharacters = selectedScene.characters || [];
 
   return (
     <div className="h-full flex flex-col">
@@ -171,6 +254,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
         <div className="rounded-xl overflow-hidden border-2 border-slate-700 shadow-xl bg-slate-900 mb-6">
           {/* Scene Canvas Container */}
           <div
+            ref={canvasRef}
             className="relative aspect-video bg-slate-950 flex items-center justify-center"
             style={{
               backgroundImage: selectedScene.backgroundUrl ? `url(${selectedScene.backgroundUrl})` : 'none',
@@ -178,9 +262,34 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
               backgroundPosition: 'center'
             }}
           >
+            {/* Grid Overlay */}
+            {projectSettings?.editor?.showGrid && canvasDimensions.width > 0 && (
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ zIndex: 0 }}
+              >
+                <defs>
+                  <pattern
+                    id="grid"
+                    width={projectSettings.editor.gridSize}
+                    height={projectSettings.editor.gridSize}
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d={`M ${projectSettings.editor.gridSize} 0 L 0 0 0 ${projectSettings.editor.gridSize}`}
+                      fill="none"
+                      stroke="rgba(148, 163, 184, 0.2)"
+                      strokeWidth="0.5"
+                    />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+              </svg>
+            )}
+
             {/* No background placeholder */}
             {!selectedScene.backgroundUrl && (
-              <div className="text-center text-slate-700">
+              <div className="text-center text-slate-700" style={{ zIndex: 0 }}>
                 <svg className="w-20 h-20 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -195,58 +304,117 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
             )}
 
             {/* Character Sprites Layer */}
-            {sceneCharacters.map((sceneChar) => {
+            {canvasDimensions.width > 0 && sceneCharacters.map((sceneChar) => {
               const character = characters.find(c => c.id === sceneChar.characterId);
               if (!character) return null;
 
               const sprite = character.sprites?.[sceneChar.mood || 'neutral'];
               const position = sceneChar.position || { x: 50, y: 50 };
+              const scale = sceneChar.scale || 1.0;
+              const zIndex = sceneChar.zIndex || 1;
+
+              // Default character size
+              const baseWidth = 128;
+              const baseHeight = 128;
+              const scaledWidth = baseWidth * scale;
+              const scaledHeight = baseHeight * scale;
+
+              // Convert percentage position to pixels (accounting for center transform)
+              const pixelX = percentToPixels(position.x, canvasDimensions.width) - (scaledWidth / 2);
+              const pixelY = percentToPixels(position.y, canvasDimensions.height) - (scaledHeight / 2);
+
+              // Grid settings
+              const gridSize = projectSettings?.editor?.gridSize || 20;
+              const snapToGrid = projectSettings?.editor?.snapToGrid || false;
+              const dragGrid = snapToGrid ? [gridSize, gridSize] : [1, 1];
 
               return (
-                <div
+                <Rnd
                   key={sceneChar.id}
-                  className="absolute cursor-pointer group"
-                  style={{
-                    left: `${position.x}%`,
-                    top: `${position.y}%`,
-                    transform: 'translate(-50%, -50%)'
+                  size={{ width: scaledWidth, height: scaledHeight }}
+                  position={{ x: pixelX, y: pixelY }}
+                  onDragStop={(e, d) => {
+                    // Convert pixel position back to percentage (accounting for center transform)
+                    const centerX = d.x + (scaledWidth / 2);
+                    const centerY = d.y + (scaledHeight / 2);
+                    const newPercentX = pixelsToPercent(centerX, canvasDimensions.width);
+                    const newPercentY = pixelsToPercent(centerY, canvasDimensions.height);
+
+                    updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                      position: { x: newPercentX, y: newPercentY }
+                    });
                   }}
-                  onClick={() => handleCharacterClick(sceneChar)}
-                  onContextMenu={(e) => handleCharacterRightClick(e, sceneChar)}
+                  onResizeStop={(e, direction, ref, delta, position) => {
+                    // Calculate new scale based on new width
+                    const newWidth = parseInt(ref.style.width);
+                    const newScale = newWidth / baseWidth;
+
+                    // Convert pixel position back to percentage
+                    const centerX = position.x + (newWidth / 2);
+                    const centerY = position.y + (parseInt(ref.style.height) / 2);
+                    const newPercentX = pixelsToPercent(centerX, canvasDimensions.width);
+                    const newPercentY = pixelsToPercent(centerY, canvasDimensions.height);
+
+                    updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                      position: { x: newPercentX, y: newPercentY },
+                      scale: newScale
+                    });
+                  }}
+                  dragGrid={dragGrid}
+                  resizeGrid={dragGrid}
+                  lockAspectRatio={true}
+                  style={{ zIndex }}
+                  className="group"
+                  enableResizing={{
+                    top: false,
+                    right: true,
+                    bottom: true,
+                    left: false,
+                    topRight: false,
+                    bottomRight: true,
+                    bottomLeft: false,
+                    topLeft: false
+                  }}
                 >
-                  {/* Character Sprite */}
-                  {sprite ? (
-                    <img
-                      src={sprite}
-                      alt={character.name}
-                      className="h-32 w-auto drop-shadow-lg group-hover:scale-110 transition-transform"
-                      draggable="false"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center border-2 border-slate-600">
+                  <div
+                    className="w-full h-full cursor-move"
+                    onClick={() => handleCharacterClick(sceneChar)}
+                    onContextMenu={(e) => handleCharacterRightClick(e, sceneChar)}
+                  >
+                    {/* Character Sprite */}
+                    {sprite ? (
+                      <img
+                        src={sprite}
+                        alt={character.name}
+                        className="w-full h-full object-contain drop-shadow-lg group-hover:scale-105 transition-transform pointer-events-none"
+                        draggable="false"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-700 rounded-full flex items-center justify-center border-2 border-slate-600">
+                        <span className="text-2xl">👤</span>
+                      </div>
+                    )}
+
+                    {/* Fallback for broken images */}
+                    <div className="hidden w-full h-full bg-slate-700 rounded-full items-center justify-center border-2 border-slate-600">
                       <span className="text-2xl">👤</span>
                     </div>
-                  )}
 
-                  {/* Fallback for broken images */}
-                  <div className="hidden w-16 h-16 bg-slate-700 rounded-full items-center justify-center border-2 border-slate-600">
-                    <span className="text-2xl">👤</span>
+                    {/* Character Label (on hover) */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                      {character.name}
+                    </div>
+
+                    {/* Selection indicator */}
+                    {selectedCharacterId === sceneChar.id && (
+                      <div className="absolute inset-0 -m-2 border-4 border-blue-500 rounded-lg animate-pulse pointer-events-none" />
+                    )}
                   </div>
-
-                  {/* Character Label (on hover) */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    {character.name}
-                  </div>
-
-                  {/* Selection indicator */}
-                  {selectedCharacterId === sceneChar.id && (
-                    <div className="absolute inset-0 -m-2 border-4 border-blue-500 rounded-lg animate-pulse pointer-events-none" />
-                  )}
-                </div>
+                </Rnd>
               );
             })}
 
@@ -260,6 +428,65 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
               </svg>
               Add Character to Scene
             </button>
+
+            {/* Dialogue Preview Overlay */}
+            {selectedElement?.type === 'dialogue' && selectedElement?.sceneId === selectedScene.id && (() => {
+              const dialogue = selectedScene.dialogues[selectedElement.index];
+              if (!dialogue) return null;
+
+              const speaker = characters.find(c => c.id === dialogue.speaker);
+              const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
+
+              return (
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent px-8 py-6 pointer-events-none">
+                  {/* Dialogue Box */}
+                  <div className="bg-slate-900/90 backdrop-blur-sm border-2 border-slate-700 rounded-xl p-5 shadow-2xl max-w-4xl mx-auto pointer-events-auto">
+                    {/* Speaker Name */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="px-3 py-1 bg-blue-600 rounded-lg">
+                        <span className="text-white font-bold text-sm">{speakerName}</span>
+                      </div>
+                      <div className="flex-1 h-px bg-slate-700" />
+                      <span className="text-xs text-slate-500 font-medium">PREVIEW</span>
+                    </div>
+
+                    {/* Dialogue Text */}
+                    <p className="text-white text-base leading-relaxed mb-4">
+                      {dialogue.text || '(empty dialogue)'}
+                    </p>
+
+                    {/* Choices */}
+                    {dialogue.choices && dialogue.choices.length > 0 && (
+                      <div className="space-y-2">
+                        {dialogue.choices.map((choice, cIdx) => (
+                          <div
+                            key={cIdx}
+                            className="bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-blue-500 rounded-lg px-4 py-2.5 transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-200 text-sm group-hover:text-white transition-colors">
+                                {choice.text}
+                              </span>
+                              {choice.effects && choice.effects.length > 0 && (
+                                <span className="text-xs px-2 py-0.5 bg-amber-900/30 border border-amber-700 text-amber-300 rounded">
+                                  {choice.effects.length} effect{choice.effects.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Navigation Hint */}
+                    <div className="mt-4 pt-3 border-t border-slate-700 flex items-center justify-between text-xs text-slate-500">
+                      <span>Dialogue {selectedElement.index + 1} of {selectedScene.dialogues.length}</span>
+                      <span>Click dialogue in list below to preview</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Scene Info Bar */}
@@ -291,7 +518,8 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
               return (
                 <div
                   key={idx}
-                  className={`rounded-lg border-2 p-4 transition-all ${
+                  onClick={() => onSelectDialogue?.(selectedScene.id, idx)}
+                  className={`rounded-lg border-2 p-4 transition-all cursor-pointer ${
                     isSelected
                       ? 'border-blue-500 bg-blue-900/20 shadow-lg shadow-blue-500/20'
                       : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
@@ -371,6 +599,14 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onOpenModal }) {
           onClose={() => setContextMenuData(null)}
         />
       )}
+
+      {/* Add Character Modal */}
+      <AddCharacterToSceneModal
+        isOpen={showAddCharacterModal}
+        onClose={() => setShowAddCharacterModal(false)}
+        characters={characters}
+        onAddCharacter={handleAddCharacterConfirm}
+      />
     </div>
   );
 }
@@ -379,6 +615,7 @@ MainCanvas.propTypes = {
   selectedScene: PropTypes.object,
   scenes: PropTypes.array.isRequired,
   selectedElement: PropTypes.object,
+  onSelectDialogue: PropTypes.func,
   onOpenModal: PropTypes.func
 };
 

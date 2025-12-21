@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { useApp } from '../../AppContext.jsx';
+import { useScenesStore, useCharactersStore } from '../../stores/index.js';
 
 /**
  * ExplorerPanel - Left sidebar for project navigation
@@ -18,7 +18,12 @@ function ExplorerPanel({
   onCharacterSelect,
   onDialogueSelect
 }) {
-  const { addScene, addCharacter, deleteScene, deleteCharacter } = useApp();
+  // Zustand actions (granular selectors)
+  const addScene = useScenesStore(state => state.addScene);
+  const deleteScene = useScenesStore(state => state.deleteScene);
+  const addCharacter = useCharactersStore(state => state.addCharacter);
+  const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
+
   const [expandedScenes, setExpandedScenes] = useState(new Set([selectedSceneId]));
   const [activeSection, setActiveSection] = useState('scenes');
 

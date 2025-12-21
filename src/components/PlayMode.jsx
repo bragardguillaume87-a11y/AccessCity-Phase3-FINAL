@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApp } from '../AppContext.jsx';
+import { useScenesStore, useCharactersStore } from '../stores/index.js';
 import { IconByName } from './IconByName.jsx';
 // FIX: Utiliser StageDirector simplifie
 import StageDirector from '../core/StageDirector.simple.js';
@@ -9,7 +9,8 @@ import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles, Volume2, VolumeX 
 
 
 export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
-  const { scenes, characters } = useApp();
+  const scenes = useScenesStore(state => state.scenes);
+  const characters = useCharactersStore(state => state.characters);
   const [director, setDirector] = useState(null);
   const [currentScene, setCurrentScene] = useState(null);
   const [currentDialogue, setCurrentDialogue] = useState(null);

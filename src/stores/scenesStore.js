@@ -29,6 +29,7 @@ const SAMPLE_SCENES = [
     title: "Rencontre Mairie",
     description: "Premiere scene de test.",
     backgroundUrl: "",
+    characters: [],
     dialogues: [
       {
         id: "dialogue-01-01",
@@ -66,6 +67,7 @@ const SAMPLE_SCENES = [
     title: "Suite de laventure",
     description: "Deuxieme scene.",
     backgroundUrl: "",
+    characters: [],
     dialogues: [
       {
         id: "dialogue-02-01",

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { trapFocus } from '../../utils/trapFocus.js';
 import modalStack from '../../utils/modalStack.js';
+import { getZIndexClass } from '../../utils/zIndexLayers.js';
 
 /**
  * BaseModal - Reusable modal component with dark theme
@@ -25,6 +26,11 @@ export default function BaseModal({
   const dialogRef = useRef(null);
   const previousActiveElement = useRef(null);
   const modalIdRef = useRef(`modal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+
+  // Deprecation warning
+  useEffect(() => {
+    console.warn('⚠️ BaseModal is deprecated. Please use shadcn/ui Dialog instead.');
+  }, []);
 
   // Handle focus trap and body scroll lock
   useEffect(() => {
@@ -94,7 +100,7 @@ export default function BaseModal({
     full: 'max-w-[95vw]'
   };
 
-  const zIndex = nested ? 'z-[10000]' : 'z-[9999]';
+  const zIndex = nested ? getZIndexClass('DIALOG_NESTED') : getZIndexClass('DIALOG_BASE');
 
   return (
     <div

@@ -19,6 +19,13 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Users,
   Plus,
   Edit,
@@ -28,7 +35,10 @@ import {
   AlertCircle,
   Sparkles,
   Eye,
-  Film
+  Film,
+  Grid3x3,
+  List,
+  Star
 } from 'lucide-react';
 
 /**
@@ -55,6 +65,12 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
   const [charToDelete, setCharToDelete] = useState(null);
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [showCreateAnimation, setShowCreateAnimation] = useState(false);
+
+  // AAA View options
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [sortBy, setSortBy] = useState('name'); // 'name' | 'name-desc' | 'completeness'
+  const [filterMood, setFilterMood] = useState('all');
+  const [favorites, setFavorites] = useState(new Set()); // Set of character IDs
 
   // Auto-open character editor if initialCharacterId provided
   useEffect(() => {
@@ -86,11 +102,30 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
       );
     }
 
-    // Sort alphabetically
-    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    // Mood filter
+    if (filterMood !== 'all') {
+      filtered = filtered.filter(c => c.moods?.includes(filterMood));
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'completeness': {
+          const aStats = getCharacterStats(a);
+          const bStats = getCharacterStats(b);
+          return bStats.completeness - aStats.completeness;
+        }
+        default:
+          return 0;
+      }
+    });
 
     return filtered;
-  }, [characters, searchQuery]);
+  }, [characters, searchQuery, filterMood, sortBy]);
 
   // Calculate character stats
   const getCharacterStats = (character) => {
@@ -220,8 +255,9 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
           </div>
         </DialogHeader>
 
-        {/* Search Section */}
-        <div className="px-8 py-4 border-b bg-muted/30">
+        {/* Search & Toolbar Section */}
+        <div className="px-8 py-4 border-b bg-muted/30 space-y-4">
+          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -232,8 +268,61 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
             />
           </div>
 
+          {/* Toolbar: View Mode + Sort + Filter */}
+          <div className="flex items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 border rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="gap-2"
+              >
+                <Grid3x3 className="h-4 w-4" />
+                Grille
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="gap-2"
+              >
+                <List className="h-4 w-4" />
+                Liste
+              </Button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Trier par" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">A → Z</SelectItem>
+                <SelectItem value="name-desc">Z → A</SelectItem>
+                <SelectItem value="completeness">Complétude</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Mood Filter */}
+            <Select value={filterMood} onValueChange={setFilterMood}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filtrer par humeur" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les humeurs</SelectItem>
+                <SelectItem value="neutral">Neutral</SelectItem>
+                <SelectItem value="happy">Happy</SelectItem>
+                <SelectItem value="sad">Sad</SelectItem>
+                <SelectItem value="angry">Angry</SelectItem>
+                <SelectItem value="surprised">Surprised</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Results Count */}
           {searchQuery && (
-            <div className="mt-2 text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {filteredCharacters.length} résultat{filteredCharacters.length !== 1 ? 's' : ''} trouvé{filteredCharacters.length !== 1 ? 's' : ''}
             </div>
           )}
@@ -271,16 +360,30 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
           )}
 
           {filteredCharacters.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-3'}>
               {filteredCharacters.map((character) => {
                 const stats = getCharacterStats(character);
                 const charErrors = validation.errors.characters[character.id];
                 const hasErrors = charErrors && charErrors.some(e => e.severity === 'error');
+                const isFavorite = favorites.has(character.id);
+
+                const toggleFavorite = (e) => {
+                  e.stopPropagation();
+                  setFavorites(prev => {
+                    const newFavorites = new Set(prev);
+                    if (newFavorites.has(character.id)) {
+                      newFavorites.delete(character.id);
+                    } else {
+                      newFavorites.add(character.id);
+                    }
+                    return newFavorites;
+                  });
+                };
 
                 return (
                   <Card
                     key={character.id}
-                    className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden"
+                    className={`group hover:shadow-xl transition-all duration-300 ${viewMode === 'grid' ? 'hover:-translate-y-1' : ''} cursor-pointer overflow-hidden`}
                     onClick={() => setEditingCharacter(character)}
                   >
                     {/* Preview Section */}
@@ -315,15 +418,23 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
                         </Badge>
                       </div>
 
-                      {/* Error Badge */}
-                      {charErrors && (
-                        <div className="absolute top-3 left-3">
+                      {/* Error Badge + Favorite Star */}
+                      <div className="absolute top-3 left-3 flex gap-2">
+                        {charErrors && (
                           <Badge variant={hasErrors ? "destructive" : "outline"} className="shadow-lg">
                             <AlertCircle className="h-3 w-3 mr-1" />
                             {hasErrors ? 'Erreur' : 'Attention'}
                           </Badge>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 bg-background/80 hover:bg-background"
+                          onClick={toggleFavorite}
+                        >
+                          <Star className={`h-4 w-4 ${isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                        </Button>
+                      </div>
                     </div>
 
                     <CardHeader className="pb-3">

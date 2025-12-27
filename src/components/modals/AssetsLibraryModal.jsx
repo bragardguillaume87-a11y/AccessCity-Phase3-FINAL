@@ -10,51 +10,213 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, ImageIcon, Users as UsersIcon, Palette, AlertCircle, Upload, Lightbulb } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Loader2,
+  Package,
+  ImageIcon,
+  Users as UsersIcon,
+  Palette,
+  AlertCircle,
+  Upload,
+  Lightbulb,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  MapPin,
+  Sparkles,
+  Grid3x3,
+  List,
+  SlidersHorizontal,
+  Tag,
+  Trash2,
+  FileUp
+} from 'lucide-react';
 
 /**
- * AssetsLibraryModal - Modal for managing project assets (Redesigned with shadcn/ui)
- * Converted from AssetsLibraryPanel to modal format
- * Supports initial category selection via initialCategory prop
+ * AssetsLibraryModal - AAA Visual Asset Manager
+ * Inspired by Unity Content Browser and Adobe Bridge
+ *
+ * Features:
+ * - Lightbox preview on click (full-screen)
+ * - Usage tracking badges ("Utilisé dans 3 scènes")
+ * - Smart filters with counts
+ * - Search with live filtering
+ * - Large grid previews with hover zoom
+ * - Professional animations
  */
-export default function AssetsLibraryModal({ isOpen, onClose, initialCategory }) {
+export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, targetSceneId }) {
   const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [lightboxAsset, setLightboxAsset] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+
+  // Phase 5 enhancements
+  const [selectedAssets, setSelectedAssets] = useState(new Set());
+  const [assetTags, setAssetTags] = useState(new Map()); // assetId -> Set of tags
+  const [filterTags, setFilterTags] = useState(new Set());
+  const [newTagInput, setNewTagInput] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const { assets, loading, error } = useAssets();
 
   // Zustand stores (granular selectors)
   const scenes = useScenesStore(state => state.scenes);
+  const updateScene = useScenesStore(state => state.updateScene);
   const characters = useCharactersStore(state => state.characters);
+
+  // Get target scene if provided
+  const targetScene = targetSceneId ? scenes.find(s => s.id === targetSceneId) : null;
+  const isSelectionMode = !!targetSceneId && !!targetScene;
 
   // Set initial category when modal opens
   useEffect(() => {
-    if (isOpen && initialCategory) {
-      setActiveCategory(initialCategory);
+    if (isOpen) {
+      if (isSelectionMode) {
+        // Force backgrounds category in selection mode
+        setActiveCategory('backgrounds');
+      } else if (initialCategory) {
+        setActiveCategory(initialCategory);
+      }
     }
-  }, [isOpen, initialCategory]);
+  }, [isOpen, initialCategory, isSelectionMode]);
 
-  // Filter assets by category
-  const filteredAssets = useMemo(() => {
-    if (activeCategory === 'all') return assets;
-    return assets.filter(a => a.category === activeCategory);
-  }, [assets, activeCategory]);
+  // Reset selection when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedAssets(new Set());
+      setFilterTags(new Set());
+    }
+  }, [isOpen]);
 
-  // Calculate usage statistics
-  const usageStats = useMemo(() => {
-    const usedAssets = new Set();
+  // Phase 5 Handlers
+  const toggleAssetSelection = (assetId) => {
+    setSelectedAssets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assetId)) {
+        newSet.delete(assetId);
+      } else {
+        newSet.add(assetId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssets.size === filteredAssets.length) {
+      setSelectedAssets(new Set());
+    } else {
+      setSelectedAssets(new Set(filteredAssets.map(a => a.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedAssets.size === 0) return;
+    if (window.confirm(`Supprimer ${selectedAssets.size} asset(s) sélectionné(s) ?`)) {
+      // Note: This would need actual delete implementation in useAssets hook
+      console.log('Bulk delete:', Array.from(selectedAssets));
+      setSelectedAssets(new Set());
+    }
+  };
+
+  const addTagToAsset = (assetId, tag) => {
+    if (!tag.trim()) return;
+    setAssetTags(prev => {
+      const newMap = new Map(prev);
+      const tags = newMap.get(assetId) || new Set();
+      tags.add(tag.trim());
+      newMap.set(assetId, tags);
+      return newMap;
+    });
+  };
+
+  const removeTagFromAsset = (assetId, tag) => {
+    setAssetTags(prev => {
+      const newMap = new Map(prev);
+      const tags = newMap.get(assetId);
+      if (tags) {
+        tags.delete(tag);
+        if (tags.size === 0) {
+          newMap.delete(assetId);
+        } else {
+          newMap.set(assetId, tags);
+        }
+      }
+      return newMap;
+    });
+  };
+
+  const toggleFilterTag = (tag) => {
+    setFilterTags(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tag)) {
+        newSet.delete(tag);
+      } else {
+        newSet.add(tag);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle background selection for scene
+  const handleSelectBackground = (assetPath) => {
+    if (!isSelectionMode) return;
+
+    updateScene(targetSceneId, { backgroundUrl: assetPath });
+    onClose();
+  };
+
+  // Drag & Drop upload handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+
+    if (imageFiles.length > 0) {
+      console.log('Files dropped:', imageFiles);
+      // Note: This would need actual upload implementation
+      alert(`${imageFiles.length} fichier(s) détecté(s). Implémentation de l'upload à venir.`);
+    }
+  };
+
+  // Calculate usage for each asset
+  const assetUsage = useMemo(() => {
+    const usage = new Map();
 
     // Assets used in scenes (backgrounds)
     scenes.forEach(scene => {
-      if (scene.background) {
-        usedAssets.add(scene.background);
-      }
-      if (scene.backgroundUrl) {
-        usedAssets.add(scene.backgroundUrl);
+      const bg = scene.background || scene.backgroundUrl;
+      if (bg) {
+        if (!usage.has(bg)) {
+          usage.set(bg, { scenes: [], characters: [] });
+        }
+        usage.get(bg).scenes.push(scene.name || scene.id);
       }
     });
 
@@ -62,186 +224,900 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory })
     characters.forEach(character => {
       if (character.sprites) {
         Object.values(character.sprites).forEach(sprite => {
-          if (sprite) usedAssets.add(sprite);
+          if (sprite) {
+            if (!usage.has(sprite)) {
+              usage.set(sprite, { scenes: [], characters: [] });
+            }
+            usage.get(sprite).characters.push(character.name);
+          }
         });
       }
     });
 
+    return usage;
+  }, [scenes, characters]);
+
+  // Filter and search assets
+  const filteredAssets = useMemo(() => {
+    let filtered = assets;
+
+    // Filter by category
+    if (activeCategory !== 'all') {
+      filtered = filtered.filter(a => a.category === activeCategory);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(a =>
+        a.name.toLowerCase().includes(query) ||
+        a.category.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by tags (Phase 5)
+    if (filterTags.size > 0) {
+      filtered = filtered.filter(asset => {
+        const tags = assetTags.get(asset.id);
+        if (!tags || tags.size === 0) return false;
+        // Asset must have ALL selected filter tags
+        return Array.from(filterTags).every(tag => tags.has(tag));
+      });
+    }
+
+    return filtered;
+  }, [assets, activeCategory, searchQuery, filterTags, assetTags]);
+
+  // Get all unique tags (Phase 5)
+  const allTags = useMemo(() => {
+    const tagsSet = new Set();
+    assetTags.forEach(tags => {
+      tags.forEach(tag => tagsSet.add(tag));
+    });
+    return Array.from(tagsSet).sort();
+  }, [assetTags]);
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const categoryCount = {
+      all: assets.length,
+      backgrounds: assets.filter(a => a.category === 'backgrounds').length,
+      characters: assets.filter(a => a.category === 'characters').length,
+      illustrations: assets.filter(a => a.category === 'illustrations').length
+    };
+
+    const usedCount = Array.from(assetUsage.keys()).length;
+
     return {
       total: assets.length,
-      used: usedAssets.size,
-      unused: assets.length - usedAssets.size
+      used: usedCount,
+      unused: assets.length - usedCount,
+      categoryCount
     };
-  }, [assets, scenes, characters]);
+  }, [assets, assetUsage]);
+
+  // Get usage info for an asset
+  const getAssetUsageInfo = (assetPath) => {
+    const usage = assetUsage.get(assetPath);
+    if (!usage) return null;
+
+    const sceneCount = usage.scenes.length;
+    const characterCount = usage.characters.length;
+    const totalUsage = sceneCount + characterCount;
+
+    if (totalUsage === 0) return null;
+
+    return {
+      total: totalUsage,
+      scenes: usage.scenes,
+      characters: usage.characters,
+      sceneCount,
+      characterCount
+    };
+  };
+
+  // Navigate lightbox
+  const navigateLightbox = (direction) => {
+    if (!lightboxAsset) return;
+    const currentIndex = filteredAssets.findIndex(a => a.id === lightboxAsset.id);
+    if (direction === 'prev') {
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredAssets.length - 1;
+      setLightboxAsset(filteredAssets[prevIndex]);
+    } else {
+      const nextIndex = currentIndex < filteredAssets.length - 1 ? currentIndex + 1 : 0;
+      setLightboxAsset(filteredAssets[nextIndex]);
+    }
+  };
+
+  // Close lightbox on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && lightboxAsset) {
+        setLightboxAsset(null);
+      } else if (e.key === 'ArrowLeft' && lightboxAsset) {
+        navigateLightbox('prev');
+      } else if (e.key === 'ArrowRight' && lightboxAsset) {
+        navigateLightbox('next');
+      }
+    };
+
+    if (lightboxAsset) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [lightboxAsset, filteredAssets]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Package className="h-6 w-6" />
-            Bibliothèque d'Assets
-          </DialogTitle>
-          <DialogDescription>
-            Parcourez et gérez vos assets (backgrounds, sprites, illustrations)
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-[95vw] h-[95vh] p-0 gap-0 dark bg-slate-900 text-slate-100">
+          {/* Header */}
+          <DialogHeader className="px-8 pt-8 pb-6 border-b bg-gradient-to-b from-background to-muted/20">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <DialogTitle className="flex items-center gap-3 text-2xl font-bold mb-2">
+                  <div className="p-2 rounded-lg bg-blue-600/10 text-blue-500">
+                    {isSelectionMode ? <MapPin className="h-6 w-6" /> : <Package className="h-6 w-6" />}
+                  </div>
+                  {isSelectionMode ? `Sélectionner un arrière-plan` : 'Bibliothèque d\'Assets'}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-400">
+                  {isSelectionMode
+                    ? `Pour la scène : "${targetScene?.title || targetScene?.id}"`
+                    : 'Gestionnaire visuel professionnel'
+                  }
+                </DialogDescription>
+              </div>
 
-        <div className="space-y-6">
-          {/* Stats Overview */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-primary mb-1">{usageStats.total}</div>
-                <div className="text-sm text-muted-foreground font-medium">Assets totaux</div>
-              </CardContent>
-            </Card>
-            <Card className="border-green-500/20 bg-green-50">
-              <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-green-600 mb-1">{usageStats.used}</div>
-                <div className="text-sm text-muted-foreground font-medium">Utilisés</div>
-              </CardContent>
-            </Card>
-            <Card className="border-amber-500/20 bg-amber-50">
-              <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-amber-600 mb-1">{usageStats.unused}</div>
-                <div className="text-sm text-muted-foreground font-medium">Non utilisés</div>
+              {/* View Mode Toggle - Hide in selection mode */}
+              {!isSelectionMode && (
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Stats Dashboard - Hide in selection mode */}
+            {!isSelectionMode && (
+              <div className="grid grid-cols-4 gap-4">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Package className="h-8 w-8 text-primary" />
+                  <div>
+                    <div className="text-2xl font-bold">{stats.total}</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-green-500/20 bg-green-500/5">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Sparkles className="h-8 w-8 text-green-500" />
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">{stats.used}</div>
+                    <div className="text-xs text-muted-foreground">Utilisés</div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-amber-500/20 bg-amber-500/5">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <AlertCircle className="h-8 w-8 text-amber-500" />
+                  <div>
+                    <div className="text-2xl font-bold text-amber-600">{stats.unused}</div>
+                    <div className="text-xs text-muted-foreground">Non utilisés</div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <SlidersHorizontal className="h-8 w-8 text-primary" />
+                  <div>
+                    <div className="text-2xl font-bold">{filteredAssets.length}</div>
+                    <div className="text-xs text-muted-foreground">Filtrés</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            )}
+          </DialogHeader>
+
+          {/* Filters & Search */}
+          <div className="px-8 py-4 border-b bg-slate-800/50">
+            <div className="flex items-center gap-4">
+              {/* Search Bar */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={isSelectionMode ? "Rechercher un arrière-plan..." : "Rechercher un asset..."}
+                  className="pl-10 pr-10 bg-slate-900 border-slate-700 text-slate-100"
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Category Filters - Simplified in selection mode */}
+              {!isSelectionMode && (
+                <div className="flex gap-2">
+                <Button
+                  variant={activeCategory === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory('all')}
+                  className="gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  Tous
+                  <Badge variant="secondary" className="ml-1">
+                    {stats.categoryCount.all}
+                  </Badge>
+                </Button>
+                <Button
+                  variant={activeCategory === 'backgrounds' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory('backgrounds')}
+                  className="gap-2"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Arrière-plans
+                  <Badge variant="secondary" className="ml-1">
+                    {stats.categoryCount.backgrounds}
+                  </Badge>
+                </Button>
+                <Button
+                  variant={activeCategory === 'characters' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory('characters')}
+                  className="gap-2"
+                >
+                  <UsersIcon className="h-4 w-4" />
+                  Sprites
+                  <Badge variant="secondary" className="ml-1">
+                    {stats.categoryCount.characters}
+                  </Badge>
+                </Button>
+                <Button
+                  variant={activeCategory === 'illustrations' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory('illustrations')}
+                  className="gap-2"
+                >
+                  <Palette className="h-4 w-4" />
+                  Illustrations
+                  <Badge variant="secondary" className="ml-1">
+                    {stats.categoryCount.illustrations}
+                  </Badge>
+                </Button>
+              </div>
+              )}
+            </div>
+
+            {/* Phase 5: Bulk Actions & Tags Filter - Hide in selection mode */}
+            {!isSelectionMode && filteredAssets.length > 0 && (
+              <div className="flex items-center justify-between mt-4">
+                {/* Bulk Selection */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedAssets.size === filteredAssets.length && filteredAssets.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      id="select-all"
+                    />
+                    <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                      Tout sélectionner
+                    </label>
+                  </div>
+
+                  {selectedAssets.size > 0 && (
+                    <>
+                      <Badge variant="secondary" className="px-3">
+                        {selectedAssets.size} sélectionné{selectedAssets.size > 1 ? 's' : ''}
+                      </Badge>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Supprimer la sélection
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {/* Tags Filter */}
+                {allTags.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Filtrer par tags:</span>
+                    <div className="flex gap-1 flex-wrap">
+                      {allTags.map(tag => (
+                        <Badge
+                          key={tag}
+                          variant={filterTags.has(tag) ? 'default' : 'outline'}
+                          className="cursor-pointer hover:bg-primary/80 transition-colors"
+                          onClick={() => toggleFilterTag(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Assets Grid */}
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full px-8 py-6">
+              {loading && (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+                  <p className="text-lg font-medium text-muted-foreground">Chargement des assets...</p>
+                </div>
+              )}
+
+              {error && (
+                <Alert variant="destructive" className="max-w-2xl mx-auto">
+                  <AlertCircle className="h-5 w-5" />
+                  <AlertDescription>
+                    <strong>Erreur de chargement:</strong> {error.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!loading && !error && filteredAssets.length === 0 && (
+                <Card className="max-w-2xl mx-auto border-dashed">
+                  <CardContent className="p-20 text-center">
+                    <Package className="h-24 w-24 mx-auto mb-6 text-muted-foreground" />
+                    <h3 className="text-2xl font-bold mb-2">
+                      {searchQuery ? 'Aucun résultat' : 'Aucun asset'}
+                    </h3>
+                    <p className="text-muted-foreground mb-6">
+                      {searchQuery
+                        ? `Aucun asset ne correspond à "${searchQuery}"`
+                        : 'Cette catégorie est vide pour le moment'}
+                    </p>
+                    {searchQuery && (
+                      <Button variant="outline" onClick={() => setSearchQuery('')}>
+                        <X className="h-4 w-4 mr-2" />
+                        Effacer la recherche
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {!loading && !error && filteredAssets.length > 0 && viewMode === 'grid' && (
+                <div className="grid grid-cols-5 gap-6">
+                  {filteredAssets.map(asset => {
+                    const usage = getAssetUsageInfo(asset.path);
+                    const isUsed = usage !== null;
+
+                    const assetTagsList = assetTags.get(asset.id) || new Set();
+                    const isSelected = selectedAssets.has(asset.id);
+
+                    return (
+                      <Card
+                        key={asset.id}
+                        className={`group cursor-pointer hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 overflow-hidden ${
+                          isSelected ? 'ring-2 ring-primary' : ''
+                        }`}
+                        onClick={(e) => {
+                          if (!e.target.closest('.checkbox-wrapper') && !e.target.closest('.tag-input-wrapper')) {
+                            setLightboxAsset(asset);
+                          }
+                        }}
+                      >
+                        {/* Image Preview */}
+                        <div className="relative aspect-square bg-gradient-to-br from-muted/50 to-muted overflow-hidden">
+                          <img
+                            src={asset.path}
+                            alt={asset.name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23e2e8f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-size="16"%3EImage%3C/text%3E%3C/svg%3E';
+                            }}
+                          />
+
+                          {/* Checkbox (Phase 5) */}
+                          <div className="absolute top-2 left-2 checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleAssetSelection(asset.id)}
+                              className="bg-white border-2"
+                            />
+                          </div>
+
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="flex gap-2">
+                              {isSelectionMode && asset.category === 'backgrounds' ? (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectBackground(asset.path);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <MapPin className="h-4 w-4 mr-2" />
+                                  Utiliser
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="secondary">
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Voir
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Usage Badge */}
+                          {isUsed && (
+                            <div className="absolute top-2 right-2">
+                              <Badge variant="default" className="backdrop-blur-sm bg-green-600">
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                Utilisé ({usage.total})
+                              </Badge>
+                            </div>
+                          )}
+
+                          {/* Category Badge */}
+                          <div className="absolute bottom-2 left-2">
+                            <Badge variant="secondary" className="backdrop-blur-sm">
+                              {asset.category === 'backgrounds' && <ImageIcon className="h-3 w-3 mr-1" />}
+                              {asset.category === 'characters' && <UsersIcon className="h-3 w-3 mr-1" />}
+                              {asset.category === 'illustrations' && <Palette className="h-3 w-3 mr-1" />}
+                              {asset.category}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Info Section */}
+                        <CardContent className="p-4">
+                          <p className="font-semibold text-sm truncate mb-2" title={asset.name}>
+                            {asset.name}
+                          </p>
+
+                          {/* Tags (Phase 5) */}
+                          {assetTagsList.size > 0 && (
+                            <div className="flex gap-1 flex-wrap mb-2">
+                              {Array.from(assetTagsList).map(tag => (
+                                <Badge
+                                  key={tag}
+                                  variant="outline"
+                                  className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeTagFromAsset(asset.id, tag);
+                                  }}
+                                >
+                                  <Tag className="h-2 w-2 mr-1" />
+                                  {tag}
+                                  <X className="h-2 w-2 ml-1" />
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Add Tag Input (Phase 5) */}
+                          <div className="tag-input-wrapper mb-2" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              type="text"
+                              placeholder="+ tag"
+                              className="h-7 text-xs"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                  addTagToAsset(asset.id, e.target.value);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                          </div>
+
+                          {/* Usage Details */}
+                          {isUsed && (
+                            <div className="space-y-1">
+                              {usage.sceneCount > 0 && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{usage.sceneCount} scène{usage.sceneCount > 1 ? 's' : ''}</span>
+                                </div>
+                              )}
+                              {usage.characterCount > 0 && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <UsersIcon className="h-3 w-3" />
+                                  <span>{usage.characterCount} personnage{usage.characterCount > 1 ? 's' : ''}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {!isUsed && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Non utilisé
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* List View (Phase 5) */}
+              {!loading && !error && filteredAssets.length > 0 && viewMode === 'list' && (
+                <div className="space-y-2">
+                  {filteredAssets.map(asset => {
+                    const usage = getAssetUsageInfo(asset.path);
+                    const isUsed = usage !== null;
+                    const assetTagsList = assetTags.get(asset.id) || new Set();
+                    const isSelected = selectedAssets.has(asset.id);
+
+                    return (
+                      <Card
+                        key={asset.id}
+                        className={`cursor-pointer hover:shadow-lg transition-all ${
+                          isSelected ? 'ring-2 ring-primary' : ''
+                        }`}
+                        onClick={(e) => {
+                          if (!e.target.closest('.checkbox-wrapper') && !e.target.closest('.tag-input-wrapper')) {
+                            setLightboxAsset(asset);
+                          }
+                        }}
+                      >
+                        <CardContent className="p-4 flex items-center gap-4">
+                          {/* Checkbox */}
+                          <div className="checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleAssetSelection(asset.id)}
+                            />
+                          </div>
+
+                          {/* Thumbnail */}
+                          <div className="w-20 h-20 rounded overflow-hidden bg-gradient-to-br from-muted/50 to-muted flex-shrink-0">
+                            <img
+                              src={asset.path}
+                              alt={asset.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              onError={(e) => {
+                                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23e2e8f0" width="80" height="80"/%3E%3C/svg%3E';
+                              }}
+                            />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold truncate">{asset.name}</p>
+                              <Badge variant="secondary">
+                                {asset.category === 'backgrounds' && <ImageIcon className="h-3 w-3 mr-1" />}
+                                {asset.category === 'characters' && <UsersIcon className="h-3 w-3 mr-1" />}
+                                {asset.category === 'illustrations' && <Palette className="h-3 w-3 mr-1" />}
+                                {asset.category}
+                              </Badge>
+                              {isUsed && (
+                                <Badge variant="default" className="bg-green-600">
+                                  <Sparkles className="h-3 w-3 mr-1" />
+                                  Utilisé ({usage.total})
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Tags */}
+                            {assetTagsList.size > 0 && (
+                              <div className="flex gap-1 flex-wrap mb-2">
+                                {Array.from(assetTagsList).map(tag => (
+                                  <Badge
+                                    key={tag}
+                                    variant="outline"
+                                    className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeTagFromAsset(asset.id, tag);
+                                    }}
+                                  >
+                                    <Tag className="h-2 w-2 mr-1" />
+                                    {tag}
+                                    <X className="h-2 w-2 ml-1" />
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Usage Details */}
+                            {isUsed && (
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                {usage.sceneCount > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {usage.sceneCount} scène{usage.sceneCount > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {usage.characterCount > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <UsersIcon className="h-3 w-3" />
+                                    {usage.characterCount} personnage{usage.characterCount > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Add Tag Input */}
+                          <div className="tag-input-wrapper w-32" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              type="text"
+                              placeholder="+ tag"
+                              className="h-8 text-xs"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                  addTagToAsset(asset.id, e.target.value);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                          </div>
+
+                          {/* View/Select Button */}
+                          {isSelectionMode && asset.category === 'backgrounds' ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectBackground(asset.path);
+                              }}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <MapPin className="h-4 w-4 mr-2" />
+                              Utiliser
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* Upload Section (Phase 5: Drag & Drop Zone) */}
+          <div className="px-8 py-6 border-t bg-muted/30">
+            <div className="flex items-start gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-4">
+                  <Upload className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Uploader de nouveaux assets</h3>
+                </div>
+
+                {/* Drag & Drop Zone */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                    isDragOver
+                      ? 'border-primary bg-primary/10 scale-[1.02]'
+                      : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <FileUp className={`h-12 w-12 mx-auto mb-4 transition-colors ${
+                    isDragOver ? 'text-primary animate-bounce' : 'text-muted-foreground'
+                  }`} />
+                  <p className="text-lg font-semibold mb-2">
+                    {isDragOver ? 'Déposez vos fichiers ici!' : 'Glissez-déposez vos images'}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    ou utilisez le sélecteur ci-dessous
+                  </p>
+
+                  <AssetPicker
+                    type={activeCategory === 'all' ? 'background' : activeCategory === 'characters' ? 'character' : 'background'}
+                    value=""
+                    onChange={(url) => {
+                      console.log('Asset uploaded:', url);
+                    }}
+                    allowUpload={true}
+                    allowUrl={true}
+                  />
+                </div>
+              </div>
+
+              <Alert className="flex-1 bg-blue-50 border-blue-200">
+                <Lightbulb className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900">
+                  <strong>Astuce :</strong> Après avoir uploadé des fichiers manuellement dans{' '}
+                  <code className="bg-blue-100 px-1 rounded text-blue-800">/public/assets</code>, exécutez{' '}
+                  <code className="bg-blue-100 px-1 rounded text-blue-800">npm run generate-assets</code>{' '}
+                  pour mettre à jour le manifest.
+                </AlertDescription>
+              </Alert>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lightbox Modal */}
+      {lightboxAsset && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-8"
+          onClick={() => setLightboxAsset(null)}
+        >
+          {/* Close Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setLightboxAsset(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+
+          {/* Navigation */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigateLightbox('prev');
+            }}
+          >
+            <ChevronLeft className="h-8 w-8" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigateLightbox('next');
+            }}
+          >
+            <ChevronRight className="h-8 w-8" />
+          </Button>
+
+          {/* Image */}
+          <div
+            className="max-w-5xl max-h-full flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightboxAsset.path}
+              alt={lightboxAsset.name}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl"
+            />
+
+            {/* Info Panel */}
+            <Card className="mt-6 bg-background/95 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-2xl font-bold mb-2">{lightboxAsset.name}</h3>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline">
+                        {lightboxAsset.category === 'backgrounds' && <ImageIcon className="h-3 w-3 mr-1" />}
+                        {lightboxAsset.category === 'characters' && <UsersIcon className="h-3 w-3 mr-1" />}
+                        {lightboxAsset.category === 'illustrations' && <Palette className="h-3 w-3 mr-1" />}
+                        {lightboxAsset.category}
+                      </Badge>
+
+                      {(() => {
+                        const usage = getAssetUsageInfo(lightboxAsset.path);
+                        if (usage) {
+                          return (
+                            <Badge variant="default">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Utilisé dans {usage.total} élément{usage.total > 1 ? 's' : ''}
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <Badge variant="secondary">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Non utilisé
+                          </Badge>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Usage Details */}
+                {(() => {
+                  const usage = getAssetUsageInfo(lightboxAsset.path);
+                  if (usage) {
+                    return (
+                      <div className="space-y-3">
+                        <Separator />
+                        <div className="grid grid-cols-2 gap-6">
+                          {usage.sceneCount > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                Scènes ({usage.sceneCount})
+                              </h4>
+                              <ul className="space-y-1">
+                                {usage.scenes.map((scene, i) => (
+                                  <li key={i} className="text-sm text-muted-foreground">• {scene}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {usage.characterCount > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                <UsersIcon className="h-4 w-4" />
+                                Personnages ({usage.characterCount})
+                              </h4>
+                              <ul className="space-y-1">
+                                {usage.characters.map((char, i) => (
+                                  <li key={i} className="text-sm text-muted-foreground">• {char}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </CardContent>
             </Card>
           </div>
 
-          {/* Tabs for Categories */}
-          <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all" className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Tous
-              </TabsTrigger>
-              <TabsTrigger value="backgrounds" className="flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                Arrière-plans
-              </TabsTrigger>
-              <TabsTrigger value="characters" className="flex items-center gap-2">
-                <UsersIcon className="h-4 w-4" />
-                Sprites
-              </TabsTrigger>
-              <TabsTrigger value="illustrations" className="flex items-center gap-2">
-                <Palette className="h-4 w-4" />
-                Illustrations
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeCategory} className="mt-4">
-              <Card>
-                <CardContent className="p-6">
-                  {loading && (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                      <p className="text-sm text-muted-foreground">Chargement des assets...</p>
-                    </div>
-                  )}
-
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>Erreur : {error.message}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  {!loading && !error && filteredAssets.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <Package className="h-16 w-16 text-muted-foreground mb-4" />
-                      <p className="text-lg font-semibold mb-2">Aucun asset dans cette catégorie</p>
-                      <p className="text-sm text-muted-foreground">Uploadez vos premiers assets ci-dessous</p>
-                    </div>
-                  )}
-
-                  {!loading && !error && filteredAssets.length > 0 && (
-                    <ScrollArea className="h-[400px]">
-                      <div className="grid grid-cols-4 gap-4 pr-4">
-                        {filteredAssets.map(asset => (
-                          <TooltipProvider key={asset.id}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Card className="cursor-pointer hover:ring-2 hover:ring-primary transition-all">
-                                  <CardContent className="p-3">
-                                    {/* Thumbnail */}
-                                    <div className="aspect-square bg-muted rounded-lg mb-2 overflow-hidden">
-                                      <img
-                                        src={asset.path}
-                                        alt={asset.name}
-                                        className="w-full h-full object-cover"
-                                        loading="lazy"
-                                        onError={(e) => {
-                                          e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23e2e8f0" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
-                                        }}
-                                      />
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="space-y-1">
-                                      <p className="text-xs font-medium truncate" title={asset.name}>
-                                        {asset.name}
-                                      </p>
-                                      <Badge variant="outline" className="text-xs">
-                                        {asset.category}
-                                      </Badge>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{asset.name}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-
-          {/* Upload Section */}
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Upload className="h-5 w-5" />
-                <h3 className="text-lg font-semibold">
-                  Uploader de nouveaux assets
-                </h3>
-              </div>
-
-              <AssetPicker
-                type={activeCategory === 'all' ? 'background' : activeCategory === 'characters' ? 'character' : 'background'}
-                value=""
-                onChange={(url) => {
-                  console.log('Asset uploaded:', url);
-                  // Note: Le manifest sera régénéré manuellement avec npm run generate-assets
-                }}
-                allowUpload={true}
-                allowUrl={true}
-              />
-
-              <Alert className="bg-blue-50 border-blue-200">
-                <Lightbulb className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-900">
-                  <strong>Astuce :</strong> Après avoir uploadé des fichiers manuellement dans /public/assets,
-                  exécutez <code className="bg-blue-100 px-1 rounded text-blue-800">npm run generate-assets</code> pour mettre à jour le manifest.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
+          {/* Hint */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm flex items-center gap-4">
+            <span>← → pour naviguer</span>
+            <span>•</span>
+            <span>ESC pour fermer</span>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+    </>
   );
 }
 
 AssetsLibraryModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  initialCategory: PropTypes.string // Optional - 'backgrounds' | 'characters' | 'illustrations'
+  initialCategory: PropTypes.string, // Optional - 'backgrounds' | 'characters' | 'illustrations'
+  targetSceneId: PropTypes.string // Optional - Scene ID for background selection mode
 };

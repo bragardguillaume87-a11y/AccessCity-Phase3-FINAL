@@ -14,7 +14,7 @@ import { AutoSaveIndicator } from '../ui/AutoSaveIndicator.jsx';
  * - Dialogue (speaker, text, choices, effects)
  * ASCII only, form-based editing.
  */
-function PropertiesPanel({ selectedElement, selectedScene, characters }) {
+function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenModal }) {
   // Zustand stores (granular selectors)
   const updateScene = useScenesStore(state => state.updateScene);
   const updateDialogue = useScenesStore(state => state.updateDialogue);
@@ -97,31 +97,82 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
             />
           </div>
 
-          {/* Background URL */}
+          {/* Background Image */}
           <div>
-            <label htmlFor="scene-background" className="block text-xs font-semibold text-slate-400 mb-1.5">
-              Background Image URL
+            <label className="block text-xs font-semibold text-slate-400 mb-2">
+              Arrière-plan
             </label>
-            <input
-              id="scene-background"
-              type="text"
-              value={selectedScene.backgroundUrl || ''}
-              onChange={(e) => updateScene(selectedScene.id, { backgroundUrl: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="assets/backgrounds/scene.jpg"
-            />
-            {selectedScene.backgroundUrl && (
-              <div className="mt-2 rounded-lg overflow-hidden border border-slate-700">
+
+            {/* Preview or Empty State */}
+            {selectedScene.backgroundUrl ? (
+              <div className="relative group rounded-lg overflow-hidden border border-slate-700 mb-3">
                 <img
                   src={selectedScene.backgroundUrl}
                   alt="Background preview"
-                  className="w-full h-32 object-cover"
+                  className="w-full h-40 object-cover"
                   onError={(e) => {
-                    e.target.style.display = 'none';
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23334155" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%2364748b" font-family="sans-serif" font-size="14"%3EImage non disponible%3C/text%3E%3C/svg%3E';
                   }}
                 />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (onOpenModal) {
+                        onOpenModal('assets', { category: 'backgrounds', targetSceneId: selectedScene.id });
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
+                  >
+                    Changer
+                  </button>
+                  <button
+                    onClick={() => updateScene(selectedScene.id, { backgroundUrl: '' })}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </div>
+            ) : (
+              <button
+                onClick={() => {
+                  if (onOpenModal) {
+                    onOpenModal('assets', { category: 'backgrounds', targetSceneId: selectedScene.id });
+                  }
+                }}
+                className="w-full h-40 border-2 border-dashed border-slate-700 rounded-lg hover:border-blue-500 hover:bg-slate-900/50 transition-all flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-blue-400 group"
+              >
+                <svg className="w-12 h-12 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-medium">Parcourir la bibliothèque</span>
+                <span className="text-xs text-slate-600">Ou coller une URL ci-dessous</span>
+              </button>
             )}
+
+            {/* Advanced: Manual URL Input */}
+            <details className="mt-2">
+              <summary className="text-xs text-slate-500 hover:text-slate-400 cursor-pointer select-none">
+                Avancé : Saisir URL manuellement
+              </summary>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={selectedScene.backgroundUrl || ''}
+                  onChange={(e) => updateScene(selectedScene.id, { backgroundUrl: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="assets/backgrounds/scene.jpg"
+                />
+                {selectedScene.backgroundUrl && (
+                  <button
+                    onClick={() => updateScene(selectedScene.id, { backgroundUrl: '' })}
+                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors"
+                  >
+                    Effacer
+                  </button>
+                )}
+              </div>
+            </details>
           </div>
 
           {/* Stats */}
@@ -410,6 +461,221 @@ function PropertiesPanel({ selectedElement, selectedScene, characters }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Auto-save indicator */}
+        <div className="flex-shrink-0 border-t border-slate-700 p-3">
+          <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} />
+        </div>
+      </div>
+    );
+  }
+
+  // Render scene character properties (character placed in a specific scene)
+  if (selectedElement.type === 'sceneCharacter' && selectedScene) {
+    const sceneChar = selectedScene.characters?.find(sc => sc.id === selectedElement.sceneCharacterId);
+    const character = sceneChar ? characters.find(c => c.id === sceneChar.characterId) : null;
+
+    if (!sceneChar || !character) {
+      return (
+        <div className="h-full flex items-center justify-center p-6">
+          <p className="text-sm text-slate-500">Character not found in scene</p>
+        </div>
+      );
+    }
+
+    const updateSceneCharacter = useScenesStore.getState().updateSceneCharacter;
+    const currentPosition = sceneChar.position || { x: 50, y: 50 };
+    const currentScale = sceneChar.scale || 1.0;
+    const currentMood = sceneChar.mood || 'neutral';
+    const currentZIndex = sceneChar.zIndex || 1;
+
+    // Position presets
+    const applyPositionPreset = (preset) => {
+      const positions = {
+        left: { x: 20, y: 50 },
+        center: { x: 50, y: 50 },
+        right: { x: 80, y: 50 }
+      };
+      updateSceneCharacter(selectedScene.id, sceneChar.id, { position: positions[preset] });
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-slate-800">
+        {/* Header */}
+        <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wide">Scene Character Placement</h3>
+          <p className="text-xs text-slate-400 mt-1">{character.name} in this scene</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Character Info - Collapsible (readonly) */}
+          <CollapsibleSection title="Character Info" defaultOpen={false}>
+            <div className="space-y-3">
+              <FormField label="Name">
+                <input
+                  type="text"
+                  value={character.name}
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-400 cursor-not-allowed"
+                />
+              </FormField>
+              <FormField label="Description">
+                <textarea
+                  value={character.description || 'No description'}
+                  disabled
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-400 cursor-not-allowed resize-none"
+                />
+              </FormField>
+            </div>
+          </CollapsibleSection>
+
+          {/* Scene Placement - Always open */}
+          <CollapsibleSection title="Scene Placement" defaultOpen={true}>
+            <div className="space-y-4">
+              {/* Position Presets */}
+              <FormField label="Quick Position">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => applyPositionPreset('left')}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                      Math.abs(currentPosition.x - 20) < 5
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    ← Left
+                  </button>
+                  <button
+                    onClick={() => applyPositionPreset('center')}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                      Math.abs(currentPosition.x - 50) < 5
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    Center
+                  </button>
+                  <button
+                    onClick={() => applyPositionPreset('right')}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                      Math.abs(currentPosition.x - 80) < 5
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    Right →
+                  </button>
+                </div>
+              </FormField>
+
+              {/* Manual Position */}
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Position X (%)">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={Math.round(currentPosition.x)}
+                    onChange={(e) => {
+                      const x = Math.max(0, Math.min(100, Number(e.target.value)));
+                      updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                        position: { ...currentPosition, x }
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </FormField>
+                <FormField label="Position Y (%)">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={Math.round(currentPosition.y)}
+                    onChange={(e) => {
+                      const y = Math.max(0, Math.min(100, Number(e.target.value)));
+                      updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                        position: { ...currentPosition, y }
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </FormField>
+              </div>
+
+              {/* Scale/Size */}
+              <FormField label={`Scale: ${Math.round(currentScale * 100)}%`}>
+                <input
+                  type="range"
+                  min="50"
+                  max="200"
+                  step="5"
+                  value={currentScale * 100}
+                  onChange={(e) => {
+                    updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                      scale: Number(e.target.value) / 100
+                    });
+                  }}
+                  className="w-full accent-purple-600"
+                />
+                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                  <span>50%</span>
+                  <span>200%</span>
+                </div>
+              </FormField>
+
+              {/* Mood */}
+              <FormField label="Mood (Expression)">
+                <select
+                  value={currentMood}
+                  onChange={(e) => {
+                    updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                      mood: e.target.value
+                    });
+                  }}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {(character.moods || ['neutral']).map(mood => (
+                    <option key={mood} value={mood}>{mood}</option>
+                  ))}
+                </select>
+              </FormField>
+
+              {/* Z-Index (Layer) */}
+              <FormField label={`Layer (Z-Index): ${currentZIndex}`}>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={currentZIndex}
+                  onChange={(e) => {
+                    updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                      zIndex: Number(e.target.value)
+                    });
+                  }}
+                  className="w-full accent-purple-600"
+                />
+                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                  <span>Back (1)</span>
+                  <span>Front (10)</span>
+                </div>
+              </FormField>
+
+              {/* Helper Text */}
+              <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg text-xs text-blue-300">
+                <p className="font-semibold mb-1">💡 Tips:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-blue-200">
+                  <li>Use Quick Position for standard layouts</li>
+                  <li>Adjust Layer to control overlap (higher = front)</li>
+                  <li>Scale affects character size on canvas</li>
+                </ul>
+              </div>
+            </div>
+          </CollapsibleSection>
         </div>
 
         {/* Auto-save indicator */}
@@ -885,7 +1151,8 @@ PropertiesPanel.propTypes = {
     backgroundUrl: PropTypes.string,
     dialogues: PropTypes.array
   }),
-  characters: PropTypes.array.isRequired
+  characters: PropTypes.array.isRequired,
+  onOpenModal: PropTypes.func
 };
 
 export default PropertiesPanel;

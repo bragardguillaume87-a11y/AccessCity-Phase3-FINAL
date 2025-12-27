@@ -6,15 +6,18 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
-    // Instrumentation Istanbul activée en mode test/coverage via variable d'environnement
-    istanbul({
-      include: ['src/**/*.{js,jsx}', 'core/**/*.js', 'ui/**/*.js'],
-      exclude: ['node_modules', 'test', 'e2e', 'tools'],
-      extension: ['.js', '.jsx'],
-      requireEnv: false, // Active l'instrumentation même sans VITE_COVERAGE
-      forceBuildInstrument: process.env.VITE_COVERAGE === 'true', // Force pour build de production
+    react({
+      jsxRuntime: 'automatic',
+      fastRefresh: true, // Force l'activation de Fast Refresh pour HMR
     }),
+    // Instrumentation Istanbul - TEMPORAIREMENT DÉSACTIVÉE pour debug HMR
+    // istanbul({
+    //   include: ['src/**/*.{js,jsx}', 'core/**/*.js', 'ui/**/*.js'],
+    //   exclude: ['node_modules', 'test', 'e2e', 'tools'],
+    //   extension: ['.js', '.jsx'],
+    //   requireEnv: false,
+    //   forceBuildInstrument: process.env.VITE_COVERAGE === 'true',
+    // }),
   ],
   resolve: {
     alias: {
@@ -27,6 +30,17 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true, // Ouvre automatiquement le navigateur
+    // Configuration HMR explicite (critique pour Windows + React 19)
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+    },
+    // File watching avec polling (CRITIQUE pour Windows)
+    watch: {
+      usePolling: true, // Force le polling des fichiers sur Windows
+      interval: 100, // Vérifie les changements toutes les 100ms
+    },
   },
   build: {
     outDir: 'dist',

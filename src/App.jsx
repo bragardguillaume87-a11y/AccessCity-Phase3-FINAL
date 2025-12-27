@@ -4,6 +4,8 @@ import { ToastProvider } from "./contexts/ToastContext.jsx";
 import SkipToContent from "./components/SkipToContent.jsx";
 import HomePage from "./components/HomePage.jsx";
 import EditorShell from "./components/EditorShell.jsx";
+import DesignSystemDemo from "./pages/DesignSystemDemo.jsx";
+import { Toaster } from "sonner";
 
 // État initial des quêtes (données de démo)
 const DEMO_QUESTS = [
@@ -22,7 +24,9 @@ function App() {
   });
   const [selectedQuestId, setSelectedQuestId] = useState(null);
   const [newQuestName, setNewQuestName] = useState("");
-  const [currentView, setCurrentView] = useState("home"); // 'home' | 'editor'
+  // Check URL for demo mode (?demo=true)
+  const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'true';
+  const [currentView, setCurrentView] = useState(isDemoMode ? "design-demo" : "home"); // 'home' | 'editor' | 'design-demo'
 
   // Créer une nouvelle quête
   function handleCreateQuest() {
@@ -66,7 +70,9 @@ function App() {
     <AppProvider>
       <ToastProvider>
         <SkipToContent />
-        {currentView === "editor" ? (
+        {currentView === "design-demo" ? (
+          <DesignSystemDemo />
+        ) : currentView === "editor" ? (
           <EditorShell onBack={handleBackHome} />
         ) : (
           <HomePage
@@ -80,6 +86,7 @@ function App() {
             onDeleteQuest={handleDeleteQuest}
           />
         )}
+        <Toaster position="top-center" richColors closeButton />
       </ToastProvider>
     </AppProvider>
   );

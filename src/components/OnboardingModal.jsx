@@ -1,6 +1,7 @@
 // src/components/OnboardingModal.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import trapFocus from '../utils/trapFocus.js';
+import { getZIndexClass } from '../utils/zIndexLayers.js';
 
 export default function OnboardingModal({ onClose }) {
   const [step, setStep] = useState(0);
@@ -68,8 +69,8 @@ export default function OnboardingModal({ onClose }) {
   }
 
   return (
-    <div 
-      className="fixed inset-0 bg-gradient-to-br from-black/70 via-game-purple/25 to-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn"
+    <div
+      className={`fixed inset-0 bg-gradient-to-br from-black/70 via-game-purple/25 to-black/60 backdrop-blur-sm ${getZIndexClass('ONBOARDING')} flex items-center justify-center p-4 animate-fadeIn`}
       onKeyDown={handleKeyDown}
     >
       <div

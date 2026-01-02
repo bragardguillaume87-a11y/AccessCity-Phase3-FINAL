@@ -3,6 +3,7 @@ import { useScenesStore } from '../stores/scenesStore.js';
 import { useCharactersStore } from '../stores/charactersStore.js';
 import { useSettingsStore } from '../stores/settingsStore.js';
 import { useUIStore } from '../stores/uiStore.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * useAutoSave
@@ -42,7 +43,7 @@ export function useAutoSave() {
         setLastSaved(new Date());
         setIsSaving(false);
       } catch (error) {
-        console.error('[AutoSave] Failed to save:', error);
+        logger.error('[AutoSave] Failed to save:', error);
         setIsSaving(false);
       }
     }, 500);

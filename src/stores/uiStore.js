@@ -10,12 +10,16 @@ import { devtools, subscribeWithSelector } from 'zustand/middleware';
  * - selectedSceneForEdit: string | null
  * - lastSaved: Date | null
  * - isSaving: boolean
+ * - announcement: string (for screen reader announcements)
+ * - urgentAnnouncement: string (for critical screen reader alerts)
  *
  * Actions:
  * - setSelectedSceneId(sceneId)
  * - setSelectedSceneForEdit(sceneId)
  * - setLastSaved(date)
  * - setIsSaving(isSaving)
+ * - setAnnouncement(message)
+ * - setUrgentAnnouncement(message)
  */
 
 export const useUIStore = create(
@@ -26,6 +30,8 @@ export const useUIStore = create(
       selectedSceneForEdit: null,
       lastSaved: null,
       isSaving: false,
+      announcement: '',
+      urgentAnnouncement: '',
 
       // Actions
       setSelectedSceneId: (sceneId) => {
@@ -42,6 +48,14 @@ export const useUIStore = create(
 
       setIsSaving: (isSaving) => {
         set({ isSaving }, false, 'ui/setIsSaving');
+      },
+
+      setAnnouncement: (message) => {
+        set({ announcement: message }, false, 'ui/setAnnouncement');
+      },
+
+      setUrgentAnnouncement: (message) => {
+        set({ urgentAnnouncement: message }, false, 'ui/setUrgentAnnouncement');
       },
     })),
     { name: 'UIStore' }

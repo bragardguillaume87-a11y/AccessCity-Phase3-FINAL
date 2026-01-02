@@ -1,0 +1,54 @@
+import React, { useState, useEffect } from 'react';
+import { useUndoRedoStore } from '../../stores/index.js';
+
+/**
+ * AutoSaveTimestamp - Displays elapsed time since last save
+ *
+ * Performance optimization: Isolates the 1-second interval timer to prevent
+ * re-rendering the entire EditorShell component tree.
+ *
+ * Before: ~60 re-renders/minute of entire app
+ * After: <1 re-render/minute of entire app
+ *
+ * @returns {JSX.Element}
+ */
+export const AutoSaveTimestamp = React.memo(() => {
+  const lastSaved = useUndoRedoStore(state => state.lastSaved);
+  const [elapsed, setElapsed] = useState(Date.now());
+
+  // Isolated timer - only re-renders this component
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getTimeSinceLastSave = (timestamp) => {
+    if (!timestamp) return null;
+
+    const seconds = Math.floor((elapsed - new Date(timestamp).getTime()) / 1000);
+
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}min`;
+  };
+
+  const timeSince = getTimeSinceLastSave(lastSaved);
+
+  if (!timeSince) {
+    return null;
+  }
+
+  return (
+    <span className="text-slate-400 text-xs">
+      {timeSince}
+    </span>
+  );
+});
+
+AutoSaveTimestamp.displayName = 'AutoSaveTimestamp';

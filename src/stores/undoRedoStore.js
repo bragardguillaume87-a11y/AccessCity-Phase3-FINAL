@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger } from '../utils/logger.js';
 
 /**
  * Undo/Redo Store + Auto-save Status
@@ -20,12 +21,12 @@ export const useUndoRedoStore = create((set, get) => ({
 
   // Undo/Redo actions (stubs - to be implemented with temporal middleware)
   undo: () => {
-    console.log('[undoRedoStore] undo() called - not yet implemented');
+    logger.debug('[undoRedoStore] undo() called - not yet implemented');
     // TODO: Implement with Zustand temporal middleware or useUndoRedo integration
   },
 
   redo: () => {
-    console.log('[undoRedoStore] redo() called - not yet implemented');
+    logger.debug('[undoRedoStore] redo() called - not yet implemented');
     // TODO: Implement with Zustand temporal middleware or useUndoRedo integration
   },
 

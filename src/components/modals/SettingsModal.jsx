@@ -55,11 +55,11 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   // Sidebar sections (Phase 5)
   const sections = [
-    { id: 'project', label: 'Project', icon: FileText, keywords: ['title', 'author', 'description', 'version', 'metadata'] },
-    { id: 'editor', label: 'Editor', icon: Palette, keywords: ['theme', 'autosave', 'grid', 'snap', 'preferences'] },
-    { id: 'game', label: 'Game', icon: Gamepad2, keywords: ['variables', 'empathie', 'autonomie', 'confiance', 'moral'] },
-    { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard, keywords: ['keyboard', 'keybindings', 'hotkeys'] },
-    { id: 'accessibility', label: 'Accessibility', icon: Accessibility, keywords: ['a11y', 'contrast', 'screen reader', 'aria'] }
+    { id: 'project', label: 'Projet', icon: FileText, keywords: ['titre', 'auteur', 'description', 'version', 'métadonnées'] },
+    { id: 'editor', label: 'Éditeur', icon: Palette, keywords: ['thème', 'sauvegarde auto', 'grille', 'aimantation', 'préférences'] },
+    { id: 'game', label: 'Jeu', icon: Gamepad2, keywords: ['variables', 'empathie', 'autonomie', 'confiance', 'moral'] },
+    { id: 'shortcuts', label: 'Raccourcis', icon: Keyboard, keywords: ['clavier', 'raccourcis', 'touches rapides'] },
+    { id: 'accessibility', label: 'Accessibilité', icon: Accessibility, keywords: ['a11y', 'contraste', 'lecteur écran', 'aria'] }
   ];
 
   // Filter sections by search query (Phase 5)
@@ -110,9 +110,9 @@ export default function SettingsModal({ isOpen, onClose }) {
   };
 
   const handleResetDefaults = () => {
-    if (window.confirm('Reset all settings to default values?')) {
+    if (window.confirm('Réinitialiser tous les paramètres aux valeurs par défaut\u00A0?')) {
       const defaults = {
-        project: { title: 'Untitled Project', author: '', description: '', version: '1.0.0' },
+        project: { title: 'Projet sans titre', author: '', description: '', version: '1.0.0' },
         editor: { theme: 'dark', autosave: true, autosaveInterval: 30000, gridSize: 20, snapToGrid: false, showGrid: true },
         game: {
           variables: {
@@ -132,7 +132,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'accesscity-settings.json';
+    link.download = 'accesscity-parametres.json';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -146,9 +146,9 @@ export default function SettingsModal({ isOpen, onClose }) {
       try {
         const imported = JSON.parse(event.target.result);
         setFormData(imported);
-        alert('Settings imported successfully!');
+        alert('Paramètres importés avec succès\u00A0!');
       } catch (error) {
-        alert('Failed to import settings: Invalid JSON file');
+        alert('Échec de l\'importation\u00A0: fichier JSON invalide');
       }
     };
     reader.readAsText(file);
@@ -169,10 +169,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
                   <Settings className="h-7 w-7" />
                 </div>
-                Project Settings
+                Paramètres du Projet
               </DialogTitle>
               <DialogDescription className="text-base">
-                Configure your AccessCity project, editor preferences, and game variables
+                Configure ton projet AccessCity, tes préférences d'éditeur et tes variables de jeu
               </DialogDescription>
             </div>
 
@@ -180,15 +180,15 @@ export default function SettingsModal({ isOpen, onClose }) {
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleResetDefaults}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Reset Defaults
+                Réinitialiser
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportSettings}>
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Exporter
               </Button>
               <Button variant="outline" size="sm" onClick={() => document.getElementById('import-settings').click()}>
                 <UploadIcon className="h-4 w-4 mr-2" />
-                Import
+                Importer
               </Button>
               <input
                 id="import-settings"
@@ -206,14 +206,19 @@ export default function SettingsModal({ isOpen, onClose }) {
           <div className="w-64 border-r bg-muted/30 flex flex-col">
             {/* Search */}
             <div className="p-4 border-b">
+              <label htmlFor="settings-search" className="sr-only">
+                Rechercher des paramètres
+              </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
+                  id="settings-search"
                   type="text"
-                  placeholder="Search settings..."
+                  placeholder="Rechercher des paramètres..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
+                  aria-label="Rechercher dans les paramètres"
                 />
               </div>
             </div>
@@ -254,32 +259,32 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <div>
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                       <FileText className="h-5 w-5 text-primary" />
-                      Project Metadata
+                      Infos du Projet
                     </h3>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        Project Title
+                        Titre du projet
                       </label>
                       <Input
                         type="text"
                         value={formData.project.title}
                         onChange={(e) => handleFieldChange('project', 'title', e.target.value)}
-                        placeholder="My AccessCity Story"
+                        placeholder="Mon histoire AccessCity"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        Author
+                        Auteur
                       </label>
                       <Input
                         type="text"
                         value={formData.project.author}
                         onChange={(e) => handleFieldChange('project', 'author', e.target.value)}
-                        placeholder="Author Name"
+                        placeholder="Nom de l'auteur"
                       />
                     </div>
 
@@ -292,7 +297,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                         onChange={(e) => handleFieldChange('project', 'description', e.target.value)}
                         rows={4}
                         className="w-full px-4 py-2 border border-input bg-background rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        placeholder="Describe your interactive story..."
+                        placeholder="Décris ton histoire interactive..."
                       />
                     </div>
 
@@ -317,22 +322,22 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <div>
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                       <Palette className="h-5 w-5 text-primary" />
-                      Editor Preferences
+                      Préférences de l'Éditeur
                     </h3>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        Theme
+                        Thème
                       </label>
                       <select
                         value={formData.editor.theme}
                         onChange={(e) => handleFieldChange('editor', 'theme', e.target.value)}
                         className="w-full px-4 py-2 border border-input bg-background rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
+                        <option value="dark">Sombre</option>
+                        <option value="light">Clair</option>
                       </select>
                     </div>
 
@@ -345,13 +350,13 @@ export default function SettingsModal({ isOpen, onClose }) {
                         onCheckedChange={(checked) => handleFieldChange('editor', 'autosave', checked)}
                       />
                       <label htmlFor="autosave" className="text-sm font-semibold cursor-pointer">
-                        Enable Auto-save
+                        Activer la sauvegarde automatique
                       </label>
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        Auto-save Interval (seconds)
+                        Intervalle de sauvegarde (secondes)
                       </label>
                       <Input
                         type="number"
@@ -366,7 +371,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        Grid Size (pixels)
+                        Taille de la grille (pixels)
                       </label>
                       <select
                         value={formData.editor.gridSize}
@@ -374,8 +379,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                         className="w-full px-4 py-2 border border-input bg-background rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         <option value={10}>10px (Fine)</option>
-                        <option value={20}>20px (Medium)</option>
-                        <option value={50}>50px (Coarse)</option>
+                        <option value={20}>20px (Moyenne)</option>
+                        <option value={50}>50px (Grossière)</option>
                       </select>
                     </div>
 
@@ -386,7 +391,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                         onCheckedChange={(checked) => handleFieldChange('editor', 'snapToGrid', checked)}
                       />
                       <label htmlFor="snapToGrid" className="text-sm font-semibold cursor-pointer">
-                        Snap to Grid
+                        Aimanter à la grille
                       </label>
                     </div>
 
@@ -397,7 +402,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                         onCheckedChange={(checked) => handleFieldChange('editor', 'showGrid', checked)}
                       />
                       <label htmlFor="showGrid" className="text-sm font-semibold cursor-pointer">
-                        Show Grid Overlay
+                        Afficher la grille
                       </label>
                     </div>
                   </div>
@@ -410,7 +415,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <div>
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                       <Gamepad2 className="h-5 w-5 text-primary" />
-                      Game Variables
+                      Variables de Jeu
                     </h3>
                   </div>
 
@@ -422,7 +427,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                           <div className="grid grid-cols-3 gap-4">
                             <div>
                               <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                                Initial Value
+                                Valeur initiale
                               </label>
                               <Input
                                 type="number"
@@ -466,7 +471,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <div>
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                       <Keyboard className="h-5 w-5 text-primary" />
-                      Keyboard Shortcuts
+                      Raccourcis Clavier
                     </h3>
                   </div>
 
@@ -475,8 +480,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <CardContent className="p-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="font-semibold">Save Project</p>
-                            <p className="text-sm text-muted-foreground">Save all changes</p>
+                            <p className="font-semibold">Sauvegarder le projet</p>
+                            <p className="text-sm text-muted-foreground">Enregistrer tous les changements</p>
                           </div>
                           <code className="px-3 py-1 bg-muted rounded text-sm">Ctrl+S</code>
                         </div>
@@ -487,8 +492,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <CardContent className="p-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="font-semibold">New Scene</p>
-                            <p className="text-sm text-muted-foreground">Create a new scene</p>
+                            <p className="font-semibold">Nouvelle scène</p>
+                            <p className="text-sm text-muted-foreground">Créer une nouvelle scène</p>
                           </div>
                           <code className="px-3 py-1 bg-muted rounded text-sm">Ctrl+N</code>
                         </div>
@@ -499,8 +504,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <CardContent className="p-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="font-semibold">Delete Selected</p>
-                            <p className="text-sm text-muted-foreground">Delete selected element</p>
+                            <p className="font-semibold">Supprimer la sélection</p>
+                            <p className="text-sm text-muted-foreground">Supprimer l'élément sélectionné</p>
                           </div>
                           <code className="px-3 py-1 bg-muted rounded text-sm">Delete</code>
                         </div>
@@ -508,7 +513,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     </Card>
 
                     <p className="text-sm text-muted-foreground mt-4">
-                      Keyboard shortcuts are currently read-only. Customization coming soon.
+                      Les raccourcis clavier sont actuellement en lecture seule. Personnalisation bientôt disponible.
                     </p>
                   </div>
                 </div>
@@ -520,13 +525,13 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <div>
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                       <Accessibility className="h-5 w-5 text-primary" />
-                      Accessibility Settings
+                      Paramètres d'Accessibilité
                     </h3>
                   </div>
 
                   <div className="space-y-4">
                     <p className="text-muted-foreground">
-                      Configure accessibility features to improve the editor experience.
+                      Configure les fonctionnalités d'accessibilité pour améliorer ton expérience de l'éditeur.
                     </p>
 
                     <Separator />
@@ -534,21 +539,21 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <div className="flex items-center gap-3">
                       <Checkbox id="high-contrast" />
                       <label htmlFor="high-contrast" className="text-sm font-semibold cursor-pointer">
-                        High Contrast Mode
+                        Mode Contraste Élevé
                       </label>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <Checkbox id="reduce-motion" />
                       <label htmlFor="reduce-motion" className="text-sm font-semibold cursor-pointer">
-                        Reduce Motion
+                        Réduire les animations
                       </label>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <Checkbox id="screen-reader" />
                       <label htmlFor="screen-reader" className="text-sm font-semibold cursor-pointer">
-                        Screen Reader Optimizations
+                        Optimisations Lecteur d'Écran
                       </label>
                     </div>
 
@@ -556,17 +561,17 @@ export default function SettingsModal({ isOpen, onClose }) {
 
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        Font Size
+                        Taille de police
                       </label>
                       <select className="w-full px-4 py-2 border border-input bg-background rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-                        <option value="small">Small</option>
-                        <option value="medium">Medium (Default)</option>
-                        <option value="large">Large</option>
+                        <option value="small">Petite</option>
+                        <option value="medium">Moyenne (Par défaut)</option>
+                        <option value="large">Grande</option>
                       </select>
                     </div>
 
                     <p className="text-sm text-muted-foreground mt-4">
-                      Accessibility features are in development. Some options may not be fully functional.
+                      Les fonctionnalités d'accessibilité sont en développement. Certaines options peuvent ne pas être totalement fonctionnelles.
                     </p>
                   </div>
                 </div>
@@ -576,10 +581,10 @@ export default function SettingsModal({ isOpen, onClose }) {
             {/* Footer */}
             <div className="border-t px-8 py-4 flex justify-end gap-3">
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                Annuler
               </Button>
               <Button onClick={handleSave}>
-                Save Settings
+                Enregistrer les paramètres
               </Button>
             </div>
           </div>

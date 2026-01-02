@@ -8,6 +8,8 @@
  * avec la touche Escape, les autres modales en arrière-plan restent ouvertes.
  */
 
+import { logger } from './logger.js';
+
 class ModalStack {
   constructor() {
     this.stack = [];
@@ -20,7 +22,7 @@ class ModalStack {
   push(modalId) {
     if (!this.stack.includes(modalId)) {
       this.stack.push(modalId);
-      console.log(`[ModalStack] Pushed: ${modalId}, stack:`, this.stack);
+      logger.debug(`[ModalStack] Pushed: ${modalId}, stack:`, this.stack);
     }
   }
 
@@ -32,7 +34,7 @@ class ModalStack {
     const index = this.stack.indexOf(modalId);
     if (index !== -1) {
       this.stack.splice(index, 1);
-      console.log(`[ModalStack] Popped: ${modalId}, stack:`, this.stack);
+      logger.debug(`[ModalStack] Popped: ${modalId}, stack:`, this.stack);
     }
   }
 
@@ -58,7 +60,7 @@ class ModalStack {
    */
   clear() {
     this.stack = [];
-    console.log('[ModalStack] Cleared');
+    logger.debug('[ModalStack] Cleared');
   }
 }
 

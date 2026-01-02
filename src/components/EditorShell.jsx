@@ -8,10 +8,11 @@ import { useValidation } from '../hooks/useValidation.js';
 import TopBar from './layout/TopBar.jsx';
 import Sidebar from './layout/Sidebar.jsx';
 import Inspector from './layout/Inspector.jsx';
+import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.jsx';
 
-const ExplorerPanel = React.lazy(() => import('./panels/ExplorerPanel.jsx'));
+const LeftPanel = React.lazy(() => import('./panels/LeftPanel.jsx'));
 const MainCanvas = React.lazy(() => import('./panels/MainCanvas.jsx'));
-const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel.jsx'));
+const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel.jsx'));
 const CharactersModal = React.lazy(() => import('./modals/CharactersModal.jsx'));
 const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal.jsx'));
 const SettingsModal = React.lazy(() => import('./modals/SettingsModal.jsx'));
@@ -39,31 +40,19 @@ export default function EditorShell({ onBack = null }) {
   const canRedo = useUndoRedoStore(state => state.canRedo);
 
   const validation = useValidation();
-  const [, _forceUpdate] = useState(0);
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
 
+  // PHASE 4: Toggle panneau droit masquable
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+
+  // PHASE 6: Fullscreen mode state (null | 'graph' | 'canvas' | 'preview')
+  const [fullscreenMode, setFullscreenMode] = useState(null);
+
   // Modal state management
   const [activeModal, setActiveModal] = useState(null); // 'characters' | 'assets' | 'export' | 'preview' | null
   const [modalContext, setModalContext] = useState({}); // { characterId, category, sceneId, ... }
-
-  // Force re-render every second for elapsed time display
-  useEffect(() => {
-    const interval = setInterval(() => {
-      _forceUpdate(n => n + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Helper to calculate time since last save
-  const getTimeSinceLastSave = () => {
-    if (!lastSaved) return null;
-    const seconds = Math.floor((Date.now() - new Date(lastSaved).getTime()) / 1000);
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}min`;
-  };
 
   // Handler for ProblemsPanel navigation
   const handleNavigateTo = (tab, params) => {
@@ -104,6 +93,13 @@ export default function EditorShell({ onBack = null }) {
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
+      {/* Main page title - Screen reader only */}
+      <h1 className="sr-only">AccessCity Studio - Éditeur de Visual Novels</h1>
+
+      {/* Live regions for screen reader announcements */}
+      <AnnouncementRegion />
+      <AssertiveAnnouncementRegion />
+
       {/* Global keyboard shortcuts */}
       <KeyboardShortcuts
         activeTab="editor"
@@ -136,7 +132,6 @@ export default function EditorShell({ onBack = null }) {
         onToggleProblemsPanel={() => setShowProblemsPanel(!showProblemsPanel)}
         isSaving={isSaving}
         lastSaved={lastSaved}
-        getTimeSinceLastSave={getTimeSinceLastSave}
       />
 
       {/* Problems Panel (displayed at top when activated) */}
@@ -148,6 +143,9 @@ export default function EditorShell({ onBack = null }) {
 
       {/* Main 3-pane layout - Resizable with react-resizable-panels */}
       <main className="flex-1 overflow-hidden" id="main-content" tabIndex="-1">
+        {/* Main content heading - Screen reader only */}
+        <h2 className="sr-only">Zone d'édition principale</h2>
+
         <React.Suspense fallback={
           <div className="flex-1 flex items-center justify-center bg-slate-900">
             <div className="text-center">
@@ -157,30 +155,28 @@ export default function EditorShell({ onBack = null }) {
           </div>
         }>
           <Group direction="horizontal" className="h-full">
-            {/* Left panel: Explorer/Sidebar - Resizable 15-40% */}
+            {/* Left panel: Explorer/Sidebar - Resizable 15-40% (PHASE 6: Hidden in fullscreen) */}
             <Panel
               defaultSize="20%"
               minSize="15%"
               maxSize="40%"
               collapsible={true}
+              collapsed={!!fullscreenMode}
               className="bg-slate-800 border-r border-slate-700 overflow-y-auto"
               id="explorer-panel"
+              role="complementary"
+              aria-label="Explorateur de scènes et personnages"
             >
+              <h3 className="sr-only">Explorateur de scènes</h3>
               <Sidebar>
-                <ExplorerPanel
-                  scenes={scenes}
-                  characters={characters}
-                  selectedSceneId={selectedSceneForEdit}
-                  selectedElement={selectedElement}
-                  onSceneSelect={handleSceneSelect}
-                  onCharacterSelect={handleCharacterSelect}
-                  onDialogueSelect={handleDialogueSelect}
-                />
+                <LeftPanel onDialogueSelect={handleDialogueSelect} />
               </Sidebar>
             </Panel>
 
-            {/* Resize handle (drag border) */}
-            <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+            {/* Resize handle (drag border) - Hidden in fullscreen */}
+            {!fullscreenMode && (
+              <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+            )}
 
             {/* Center panel: Main Canvas - Flexible */}
             <Panel
@@ -188,9 +184,11 @@ export default function EditorShell({ onBack = null }) {
               minSize="30%"
               className="bg-slate-900 overflow-auto"
               id="canvas-panel"
+              role="main"
+              aria-label="Canvas de scène"
             >
-              <div role="main">
-                <MainCanvas
+              <h3 className="sr-only">Canvas de scène</h3>
+              <MainCanvas
                   selectedScene={selectedScene}
                   scenes={scenes}
                   selectedElement={selectedElement}
@@ -199,27 +197,35 @@ export default function EditorShell({ onBack = null }) {
                     setActiveModal(modal);
                     setModalContext(context);
                   }}
+                  isRightPanelOpen={isRightPanelOpen}
+                  onToggleRightPanel={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                  fullscreenMode={fullscreenMode}
+                  onFullscreenChange={setFullscreenMode}
                 />
-              </div>
             </Panel>
 
-            {/* Resize handle */}
-            <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+            {/* Resize handle - Hidden in fullscreen */}
+            {!fullscreenMode && (
+              <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+            )}
 
-            {/* Right panel: Inspector/Properties - Resizable 20-40% */}
+            {/* Right panel: Inspector/Properties - Resizable 20-40% (PHASE 4: Collapsible, PHASE 6: Hidden in fullscreen) */}
             <Panel
               defaultSize="30%"
               minSize="20%"
               maxSize="40%"
               collapsible={true}
+              collapsed={!isRightPanelOpen || !!fullscreenMode}
+              onCollapse={() => setIsRightPanelOpen(false)}
+              onExpand={() => setIsRightPanelOpen(true)}
               className="bg-slate-800 border-l border-slate-700 overflow-y-auto"
               id="properties-panel"
+              role="complementary"
+              aria-label="Propriétés et outils"
             >
+              <h3 className="sr-only">Propriétés</h3>
               <Inspector>
-                <PropertiesPanel
-                  selectedElement={selectedElement}
-                  selectedScene={selectedScene}
-                  characters={characters}
+                <UnifiedPanel
                   onOpenModal={(modal, context) => {
                     setActiveModal(modal);
                     setModalContext(context);

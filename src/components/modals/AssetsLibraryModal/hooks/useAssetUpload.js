@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { API } from '@/config/constants';
 
 /**
  * Hook pour gérer l'upload d'assets avec progress tracking et celebrations
@@ -40,7 +41,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
         });
       }, 200);
 
-      const response = await fetch('http://localhost:3001/api/assets/upload', {
+      const response = await fetch(`${API.BASE_URL}/api/assets/upload`, {
         method: 'POST',
         body: formData,
       });

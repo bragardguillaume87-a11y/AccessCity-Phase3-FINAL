@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import SkipToContent from "./components/SkipToContent.jsx";
 import HomePage from "./components/HomePage.jsx";
 import EditorShell from "./components/EditorShell.jsx";
-import DesignSystemDemo from "./pages/DesignSystemDemo.jsx";
 import TokensDemo from "./pages/TokensDemo.jsx";
 import { Toaster } from "sonner";
 
@@ -31,9 +30,8 @@ function App() {
   const isTokensMode = urlParams.get('tokens') === 'true';
   const [currentView, setCurrentView] = useState(
     isTokensMode ? "tokens-demo" :
-    isDemoMode ? "design-demo" :
     "home"
-  ); // 'home' | 'editor' | 'design-demo' | 'tokens-demo'
+  ); // 'home' | 'editor' | 'tokens-demo'
 
   // Créer une nouvelle quête
   function handleCreateQuest() {
@@ -79,8 +77,6 @@ function App() {
         <SkipToContent />
         {currentView === "tokens-demo" ? (
           <TokensDemo />
-        ) : currentView === "design-demo" ? (
-          <DesignSystemDemo />
         ) : currentView === "editor" ? (
           <EditorShell onBack={handleBackHome} />
         ) : (

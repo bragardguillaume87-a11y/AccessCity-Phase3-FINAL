@@ -86,8 +86,8 @@ describe("useCharactersStore", () => {
 });
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import trapFocus from "../utils/trapFocus.js";
-import useUndoRedo from "../core/useUndoRedo.js";
-import { MOODS_PRESET } from "../data/moodsPreset.js";
+import { useUndoRedo } from "../hooks/useUndoRedo.js";
+import { DEFAULTS } from "../config/constants.js";
 
 function clampNumber(value, min, max) {
   const n = Number(value);
@@ -131,7 +131,7 @@ function buildDefaultCharacter(character) {
 }
 
 function getPresetByKey(key) {
-  return MOODS_PRESET.find((m) => m.key === key) || null;
+  return DEFAULTS.CHARACTER_MOODS_LIST.find((m) => m.key === key) || null;
 }
 
 export default function CharacterEditor({ character, onSave, onClose }) {
@@ -540,7 +540,7 @@ export default function CharacterEditor({ character, onSave, onClose }) {
                       onChange={(e) => setAddMoodSelect(e.target.value)}
                       className="mt-1 w-full h-12 rounded-xl border border-slate-300 px-4 text-base focus:border-game-blue bg-white"
                     >
-                      {MOODS_PRESET.map((m) => (
+                      {DEFAULTS.CHARACTER_MOODS_LIST.map((m) => (
                         <option key={m.key} value={m.key}>
                           {m.label}
                         </option>

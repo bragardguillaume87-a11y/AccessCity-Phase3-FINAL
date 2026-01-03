@@ -5,6 +5,8 @@ import {
   addToRecentAssets,
 } from "../hooks/useAssets.js";
 import { toAbsoluteAssetPath } from "../utils/pathUtils.js";
+import { API } from "@/config/constants";
+import { TIMING } from "@/config/timing";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +55,7 @@ export default function AssetPicker({
   const checkServerHealth = useCallback(async () => {
     setServerStatus('checking');
     try {
-      const response = await fetch('http://localhost:3001/api/health', {
+      const response = await fetch(`${API.BASE_URL}/api/health`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -111,7 +113,7 @@ export default function AssetPicker({
 
       try {
         const response = await fetch(
-          "http://localhost:3001/api/assets/upload",
+          `${API.BASE_URL}/api/assets/upload`,
           {
             method: "POST",
             body: formData,
@@ -131,10 +133,10 @@ export default function AssetPicker({
 
         // Reload manifest to update library
         if (reloadManifest) {
-          setTimeout(() => reloadManifest(), 1000); // Small delay for manifest generation
+          setTimeout(() => reloadManifest(), TIMING.DEBOUNCE_AUTOSAVE); // Small delay for manifest generation
         } else {
           // Fallback: reload page
-          setTimeout(() => window.location.reload(), 1500);
+          setTimeout(() => window.location.reload(), TIMING.UPLOAD_RELOAD_DELAY);
         }
 
         setUploadStatus("success");

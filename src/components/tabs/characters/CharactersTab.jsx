@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { CharactersExplorer } from './panels/CharactersExplorer.jsx';
 import { CharacterEditor } from './panels/CharacterEditor.jsx';
 import { CharacterProperties } from './panels/CharacterProperties.jsx';
-import { useCharacters } from './hooks/useCharacters.js';
+import { useCharacters } from '@/hooks/useCharacters';
 
 // Import du CSS Module
 import styles from './CharactersTab.module.css';

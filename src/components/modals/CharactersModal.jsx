@@ -5,6 +5,7 @@ import { useValidation } from '../../hooks/useValidation.js';
 import ConfirmModal from '../ConfirmModal.jsx';
 import CharacterEditorModal from '../character-editor/CharacterEditorModal.jsx';
 import { duplicateCharacter } from '../../utils/duplication.js';
+import { TIMING } from '@/config/timing';
 import {
   Dialog,
   DialogContent,
@@ -148,7 +149,7 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
 
     // Show creation animation
     setShowCreateAnimation(true);
-    setTimeout(() => setShowCreateAnimation(false), 2000);
+    setTimeout(() => setShowCreateAnimation(false), TIMING.TOAST_DURATION_SHORT);
 
     // Open editor for new character
     const createdChar = characters.find(c => c.id === newId) || { ...newChar, id: newId };
@@ -175,7 +176,7 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
 
     // Show duplication feedback
     setShowCreateAnimation(true);
-    setTimeout(() => setShowCreateAnimation(false), 1500);
+    setTimeout(() => setShowCreateAnimation(false), TIMING.ANIMATION_CREATE);
   };
 
   // Get total stats

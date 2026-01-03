@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCharactersStore } from '../../../stores/index.js';
+import { useCharactersStore } from '@/stores';
 
 /**
  * CharacterMoodPicker - Gallery avatars with mood preview

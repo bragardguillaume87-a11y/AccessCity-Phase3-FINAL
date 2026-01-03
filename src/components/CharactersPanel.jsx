@@ -4,6 +4,7 @@ import { useValidation } from '../hooks/useValidation.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import CharacterEditor from './CharacterEditor.jsx';
 import { duplicateCharacter } from '../utils/duplication.js';
+import { TIMING } from '@/config/timing';
 
 function CharactersPanel({ onPrev, onNext }) {
   const characters = useCharactersStore(state => state.characters);
@@ -24,7 +25,7 @@ function CharactersPanel({ onPrev, onNext }) {
     const trimmed = newCharacterName.trim();
     if (!trimmed) {
       setNameError(true);
-      setTimeout(() => setNameError(false), 400);
+      setTimeout(() => setNameError(false), TIMING.SHAKE_ERROR_DURATION);
       return;
     }
     addCharacter({ name: trimmed });

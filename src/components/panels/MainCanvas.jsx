@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '../ui/tabs.jsx';
 import { UserPlus, List, Network, Grid3x3, ChevronLeft, ChevronRight, Maximize2, Minimize2, Eye } from 'lucide-react';
 import { useTypewriter } from '../../hooks/useTypewriter.js';
 import { logger } from '../../utils/logger.js';
+import { TIMING } from '@/config/timing';
 
 /**
  * Animation variants for character entrance/exit animations
@@ -151,7 +152,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
           });
           logger.debug(`[PHASE 3] Auto-scroll to dialogue ${selectedElement.index}`);
         }
-      }, 150);
+      }, TIMING.ANIMATION_FAST);
 
       return () => clearTimeout(timeoutId);
     }
@@ -456,7 +457,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
           setSceneBackground(selectedScene.id, data.backgroundUrl);
           // Flash green border feedback
           setDropFeedback('background');
-          setTimeout(() => setDropFeedback(null), 500);
+          setTimeout(() => setDropFeedback(null), TIMING.LOADING_MIN_DISPLAY);
           break;
 
         case 'character':

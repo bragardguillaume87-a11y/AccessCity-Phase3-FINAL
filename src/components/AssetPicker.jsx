@@ -62,7 +62,6 @@ export default function AssetPicker({
 
       if (response.ok) {
         setServerStatus('online');
-        console.log('[AssetPicker] Server is online');
         return true;
       } else {
         setServerStatus('offline');
@@ -126,7 +125,6 @@ export default function AssetPicker({
         }
 
         const data = await response.json();
-        console.log("[AssetPicker] Upload success:", data);
 
         // Select the newly uploaded asset
         handleSelect(data.path);

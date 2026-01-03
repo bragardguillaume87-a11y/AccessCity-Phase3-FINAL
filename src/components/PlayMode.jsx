@@ -6,6 +6,7 @@ import StageDirector from '../core/StageDirector.simple.js';
 // FIX: Utiliser systeme son simplifie
 import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '../utils/simpleSound.js';
 import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { TIMING } from '@/config/timing';
 
 
 export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
@@ -101,7 +102,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
       if (avgScore >= 60) {
         playSound('/sounds/victory.mp3', 0.6);
         setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 5000);
+        setTimeout(() => setShowConfetti(false), TIMING.CONFETTI_DURATION);
       } else {
         playSound('/sounds/game-over.mp3', 0.5);
       }
@@ -118,7 +119,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
   function handleMuteToggle() {
     const newMuted = toggleSoundMute();
     setIsMuted(newMuted);
-    console.log(`[PlayMode] Son ${newMuted ? 'coupe' : 'active'}`);
   }
 
 

@@ -37,8 +37,7 @@ export default function KeyboardShortcuts({ onOpenCommandPalette, onOpenModal, a
         // On laisse passer Ctrl+S pour sauvegarder
         if (modifier && e.key === 's') {
           e.preventDefault();
-          // Auto-save est déjà actif, on montre juste une notification
-          console.log('[KeyboardShortcuts] Ctrl+S: Auto-save actif');
+          // Auto-save est déjà actif
           return;
         }
         return; // Bloquer les autres raccourcis dans les inputs

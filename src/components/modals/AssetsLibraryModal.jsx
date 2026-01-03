@@ -130,7 +130,6 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
     if (selectedAssets.size === 0) return;
     if (window.confirm(`Supprimer ${selectedAssets.size} asset(s) sélectionné(s) ?`)) {
       // Note: This would need actual delete implementation in useAssets hook
-      console.log('Bulk delete:', Array.from(selectedAssets));
       setSelectedAssets(new Set());
     }
   };
@@ -206,7 +205,6 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
 
     if (imageFiles.length > 0) {
-      console.log('Files dropped:', imageFiles);
       // Note: This would need actual upload implementation
       alert(`${imageFiles.length} fichier(s) détecté(s). Implémentation de l'upload à venir.`);
     }

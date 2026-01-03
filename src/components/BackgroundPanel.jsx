@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useScenesStore, useUIStore } from '../stores/index.js';
 import { GALLERY_ASSETS } from '../constants/assets.js';
+import { TIMING } from '@/config/timing';
 
 export default function BackgroundPanel() {
   const scenes = useScenesStore(state => state.scenes);
@@ -57,7 +58,7 @@ export default function BackgroundPanel() {
 
     // Show success message
     setShowSaveSuccess(true);
-    setTimeout(() => setShowSaveSuccess(false), 2000);
+    setTimeout(() => setShowSaveSuccess(false), TIMING.TOAST_DURATION_SHORT);
 
     if (trimmed && !history.includes(trimmed)) {
       const newHistory = [trimmed, ...history.filter(u => u !== trimmed)].slice(0, 6);

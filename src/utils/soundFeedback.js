@@ -1,6 +1,8 @@
 // utils/soundFeedback.js
 // Système de feedback sonore pour AccessCity
 
+import { TIMING } from '@/config/timing';
+
 // État global du son
 let globalMuted = false;
 let globalVolume = 0.7; // Volume par défaut à 70%
@@ -169,7 +171,7 @@ export function testAllSounds() {
   sounds.forEach((sound, index) => {
     setTimeout(() => {
       playAudio(`/sounds/${sound}.mp3`);
-    }, index * 500);
+    }, index * TIMING.SOUND_TEST_INTERVAL);
   });
 }
 

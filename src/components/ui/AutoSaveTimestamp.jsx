@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUndoRedoStore } from '../../stores/index.js';
+import { TIMING } from '@/config/timing';
 
 /**
  * AutoSaveTimestamp - Displays elapsed time since last save
@@ -20,7 +21,7 @@ export const AutoSaveTimestamp = React.memo(() => {
   useEffect(() => {
     const interval = setInterval(() => {
       setElapsed(Date.now());
-    }, 1000);
+    }, TIMING.UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
   }, []);

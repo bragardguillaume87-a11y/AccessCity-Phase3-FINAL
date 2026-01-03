@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { AlignLeft, AlignCenter, AlignRight, Minimize2, Maximize2 } from 'lucide-react';
 import { Button } from '../../ui/button.jsx';
-import { useScenesStore } from '../../../stores/scenesStore.js';
+import { useScenesStore } from '@/stores/scenesStore';
 
 /**
  * CharacterPositioningTools - Outils de positionnement rapide (PHASE 8)

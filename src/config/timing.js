@@ -12,6 +12,8 @@ export const TIMING = {
   ANIMATION_DELAY: 300,        // Standard animation delay (CSS transitions)
   ANIMATION_FAST: 150,          // Fast animations
   ANIMATION_SLOW: 500,          // Slow animations
+  ANIMATION_CREATE: 1500,       // Element creation animation duration
+  SHAKE_ERROR_DURATION: 400,    // Error shake animation duration
 
   // UI Feedback
   TOOLTIP_DELAY: 300,           // Delay before showing tooltips
@@ -26,11 +28,17 @@ export const TIMING = {
   // Gaming Effects
   CONFETTI_DURATION: 5000,      // Confetti celebration duration
   TYPEWRITER_DELAY: 40,         // Typewriter effect delay per character
+  DICE_ROLL_DURATION: 700,      // Dice roll animation duration
+  DICE_ANIMATION_DURATION: 1000, // Full dice animation cycle
 
   // Debounce & Throttle
   DEBOUNCE_SEARCH: 300,         // Search input debounce
   DEBOUNCE_AUTOSAVE: 1000,      // Auto-save debounce
   THROTTLE_RESIZE: 200,         // Window resize throttle
+
+  // Update & Polling
+  UPDATE_INTERVAL: 1000,        // General state update interval
+  SOUND_TEST_INTERVAL: 500,     // Sound test playback interval
 
   // Loading States
   LOADING_MIN_DISPLAY: 500,     // Minimum time to show loading spinner (prevent flashing)

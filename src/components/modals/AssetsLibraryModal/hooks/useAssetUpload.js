@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { API } from '@/config/constants';
+import { TIMING } from '@/config/timing';
 
 /**
  * Hook pour gérer l'upload d'assets avec progress tracking et celebrations
@@ -93,7 +94,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
       // Reload manifest pour rafraîchir la liste
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('asset-manifest-updated'));
-      }, 500);
+      }, TIMING.LOADING_MIN_DISPLAY);
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -102,7 +103,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
       });
     } finally {
       setIsUploading(false);
-      setTimeout(() => setProgress(0), 1000);
+      setTimeout(() => setProgress(0), TIMING.DEBOUNCE_AUTOSAVE);
     }
   }, [category, onUploadComplete]);
 

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { TIMING } from '@/config/timing';
 
 export function AnimatedDice({ finalValue, onComplete }) {
   const [rolling, setRolling] = useState(true);
@@ -8,7 +9,7 @@ export function AnimatedDice({ finalValue, onComplete }) {
     const timer = setTimeout(() => {
       setRolling(false);
       onComplete?.();
-    }, 1000);
+    }, TIMING.DICE_ANIMATION_DURATION);
     return () => clearTimeout(timer);
   }, [onComplete]);
 

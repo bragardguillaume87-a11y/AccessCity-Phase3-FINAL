@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { TIMING } from '@/config/timing';
 
 const DEFAULT_STATS = {};
 
@@ -58,7 +59,7 @@ export function useGameState({ scenes, initialSceneId, initialStats = DEFAULT_ST
   const resolveDiceCheck = useCallback(async (diceCheck) => {
     if (!diceCheck) return null;
     setDiceState({ rolling: true, lastRoll: null, lastResult: null });
-    await new Promise((r) => setTimeout(r, 700));
+    await new Promise((r) => setTimeout(r, TIMING.DICE_ROLL_DURATION));
     const roll = Math.floor(Math.random() * 20) + 1;
     const statValue = stats[diceCheck.stat] ?? 0;
     const success = (roll + statValue) >= diceCheck.difficulty;

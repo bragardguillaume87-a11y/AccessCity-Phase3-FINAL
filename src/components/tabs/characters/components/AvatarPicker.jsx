@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAssets, getRecentAssets, addToRecentAssets } from '../../../../hooks/useAssets.js';
+import { useAssets, getRecentAssets, addToRecentAssets } from '@/hooks/useAssets';
 
 /**
  * Sélecteur d'avatar pour un personnage

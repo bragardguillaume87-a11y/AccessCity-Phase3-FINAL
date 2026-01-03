@@ -162,7 +162,6 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
           type={activeCategory === 'all' ? 'background' : activeCategory === 'characters' ? 'character' : 'background'}
           value=""
           onChange={(url) => {
-            console.log('Asset uploaded:', url);
             // Note: Le manifest sera régénéré manuellement avec npm run generate-assets
           }}
           allowUpload={true}

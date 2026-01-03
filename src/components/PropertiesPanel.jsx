@@ -41,9 +41,6 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
   const handleApply = () => {
     // Auto-save via AppContext autosave
     // Visual feedback only
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Changes applied and saved');
-    }
   };
 
   return (

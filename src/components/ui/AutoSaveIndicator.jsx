@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { TIMING } from '@/config/timing';
 
 /**
  * AutoSaveIndicator - Visual feedback for auto-save status
@@ -39,7 +40,7 @@ export function AutoSaveIndicator({
 
     const interval = setInterval(() => {
       forceUpdate(n => n + 1);
-    }, 1000);
+    }, TIMING.UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
   }, [lastSaved]);

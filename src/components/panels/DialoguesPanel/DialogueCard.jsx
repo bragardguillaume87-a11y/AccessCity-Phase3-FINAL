@@ -4,8 +4,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, GitBranch, Edit2, Copy, Trash2 } from 'lucide-react';
 import { Button } from '../../ui/button.jsx';
-import { useScenesStore } from '../../../stores/scenesStore.js';
-import { useCharactersStore } from '../../../stores/charactersStore.js';
+import { useScenesStore } from '@/stores/scenesStore';
+import { useCharactersStore } from '@/stores/charactersStore';
 
 /**
  * DialogueCard - Carte dialogue individuelle avec drag-and-drop (PHASE 2)
@@ -135,7 +135,6 @@ export default function DialogueCard({ id, dialogue, index, sceneId, onDialogueS
             onClick={(e) => {
               e.stopPropagation();
               // TODO: Ouvrir modal édition dialogue
-              console.log('[DialogueCard] Edit dialogue:', index);
             }}
             aria-label="Éditer le dialogue"
           >

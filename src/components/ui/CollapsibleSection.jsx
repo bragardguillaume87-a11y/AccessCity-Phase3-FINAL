@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { cn } from '../../utils/cn.js';
+import { cn } from '@/lib/utils';
 
 /**
  * CollapsibleSection - Accordion component for organizing properties

@@ -5,6 +5,8 @@ import { AvatarPicker } from '../tabs/characters/components/AvatarPicker.jsx';
 import { duplicateDialogue } from '../../utils/duplication.js';
 import { CollapsibleSection, FormField } from '../ui/CollapsibleSection.jsx';
 import { AutoSaveIndicator } from '../ui/AutoSaveIndicator.jsx';
+import { Button } from '@/components/ui/button';
+import { Upload, X, Copy, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 
 /**
  * PropertiesPanel - Right sidebar for editing selected element properties
@@ -49,9 +51,9 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
           <svg className="w-16 h-16 mx-auto mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h3 className="text-sm font-semibold text-slate-400 mb-1">No selection</h3>
+          <h3 className="text-sm font-semibold text-slate-400 mb-1">Aucune sélection</h3>
           <p className="text-xs text-slate-600">
-            Select a scene, character, or dialogue to view its properties
+            Sélectionne une scène, un personnage ou un dialogue pour voir ses propriétés
           </p>
         </div>
       </div>
@@ -115,39 +117,42 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
                   }}
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
+                  <Button
+                    variant="default"
+                    size="sm"
                     onClick={() => {
                       if (onOpenModal) {
                         onOpenModal('assets', { category: 'backgrounds', targetSceneId: selectedScene.id });
                       }
                     }}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
                   >
+                    <Upload className="h-3 w-3" />
                     Changer
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger-ghost"
+                    size="sm"
                     onClick={() => updateScene(selectedScene.id, { backgroundUrl: '' })}
-                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
                   >
+                    <X className="h-3 w-3" />
                     Supprimer
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
-              <button
+              <Button
+                variant="outline"
                 onClick={() => {
                   if (onOpenModal) {
                     onOpenModal('assets', { category: 'backgrounds', targetSceneId: selectedScene.id });
                   }
                 }}
-                className="w-full h-40 border-2 border-dashed border-slate-700 rounded-lg hover:border-blue-500 hover:bg-slate-900/50 transition-all flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-blue-400 group"
+                className="w-full h-40 border-2 border-dashed border-slate-700 hover:border-blue-500 hover:bg-slate-900/50 flex flex-col gap-2 text-slate-500 hover:text-blue-400"
               >
-                <svg className="w-12 h-12 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon className="w-12 h-12" />
                 <span className="text-sm font-medium">Parcourir la bibliothèque</span>
                 <span className="text-xs text-slate-600">Ou coller une URL ci-dessous</span>
-              </button>
+              </Button>
             )}
 
             {/* Advanced: Manual URL Input */}
@@ -164,12 +169,14 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
                   placeholder="assets/backgrounds/scene.jpg"
                 />
                 {selectedScene.backgroundUrl && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => updateScene(selectedScene.id, { backgroundUrl: '' })}
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors"
                   >
+                    <X className="h-3 w-3" />
                     Effacer
-                  </button>
+                  </Button>
                 )}
               </div>
             </details>
@@ -282,13 +289,15 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
         {/* Header with duplicate button */}
         <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white uppercase tracking-wide">Character Properties</h3>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleDuplicate}
-            className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded transition-colors"
             title="Duplicate this character"
           >
-            📋 Duplicate
-          </button>
+            <Copy className="h-3 w-3" />
+            Duplicate
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -388,13 +397,14 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
                     aria-invalid={!!moodError}
                     aria-describedby={moodError ? "mood-error" : undefined}
                   />
-                  <button
+                  <Button
+                    variant="gaming-success"
+                    size="sm"
                     onClick={handleAddMood}
-                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded transition-colors disabled:opacity-50"
                     disabled={!newMood.trim()}
                   >
-                    +
-                  </button>
+                    <Plus className="h-3 w-3" />
+                  </Button>
                 </div>
                 {moodError && (
                   <p id="mood-error" className="text-xs text-red-400 flex items-center gap-1">
@@ -537,36 +547,27 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
               {/* Position Presets */}
               <FormField label="Quick Position">
                 <div className="grid grid-cols-3 gap-2">
-                  <button
+                  <Button
+                    variant={Math.abs(currentPosition.x - 20) < 5 ? 'default' : 'secondary'}
+                    size="sm"
                     onClick={() => applyPositionPreset('left')}
-                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
-                      Math.abs(currentPosition.x - 20) < 5
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
                   >
                     ← Left
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={Math.abs(currentPosition.x - 50) < 5 ? 'default' : 'secondary'}
+                    size="sm"
                     onClick={() => applyPositionPreset('center')}
-                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
-                      Math.abs(currentPosition.x - 50) < 5
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
                   >
                     Center
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={Math.abs(currentPosition.x - 80) < 5 ? 'default' : 'secondary'}
+                    size="sm"
                     onClick={() => applyPositionPreset('right')}
-                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
-                      Math.abs(currentPosition.x - 80) < 5
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
                   >
                     Right →
-                  </button>
+                  </Button>
                 </div>
               </FormField>
 
@@ -707,13 +708,15 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
         {/* Header with duplicate button */}
         <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white uppercase tracking-wide">Dialogue Properties</h3>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleDuplicateDialogue}
-            className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded transition-colors"
             title="Duplicate this dialogue"
           >
-            📋 Duplicate
-          </button>
+            <Copy className="h-3 w-3" />
+            Duplicate
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -805,7 +808,9 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
         {activeTab === 'choices' && (
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {/* Add Choice button */}
-            <button
+            <Button
+              variant="gaming-success"
+              size="default"
               onClick={() => {
                 const newChoice = {
                   id: `choice-${Date.now()}`,
@@ -816,10 +821,11 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
                 const updatedChoices = [...(dialogue.choices || []), newChoice];
                 updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
               }}
-              className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="w-full"
             >
-              + Add Choice
-            </button>
+              <Plus className="h-4 w-4" />
+              Add Choice
+            </Button>
 
             {dialogue.choices && dialogue.choices.length > 0 ? (
               dialogue.choices.map((choice, choiceIdx) => (
@@ -827,17 +833,19 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
                   {/* Choice header */}
                   <div className="flex items-center justify-between">
                     <div className="text-xs font-semibold text-blue-400">Choice {choiceIdx + 1}</div>
-                    <button
+                    <Button
+                      variant="danger-ghost"
+                      size="sm"
                       onClick={() => {
                         if (confirm(`Delete choice ${choiceIdx + 1}?`)) {
                           const updatedChoices = dialogue.choices.filter((_, i) => i !== choiceIdx);
                           updateDialogue(selectedScene.id, selectedElement.index, { choices: updatedChoices });
                         }
                       }}
-                      className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                     >
+                      <Trash2 className="h-3 w-3" />
                       Delete
-                    </button>
+                    </Button>
                   </div>
 
                   {/* Choice text */}

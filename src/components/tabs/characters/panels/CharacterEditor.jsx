@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AvatarPicker } from '../components/AvatarPicker.jsx';
-import { useCharacterValidation } from '../hooks/useCharacterValidation.js';
+import { useCharacterValidation } from '@/hooks/useCharacterValidation';
 
 /**
  * Éditeur de personnage (Modal)

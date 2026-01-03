@@ -13,6 +13,8 @@ export const Z_INDEX = {
   CANVAS_BACKGROUND: 0,
   CANVAS_CHARACTER_MIN: 1,
   CANVAS_CHARACTER_MAX: 10,
+  CANVAS_PROPS: 15,           // Props (emoji objects) - between characters and dialogue overlay
+  CANVAS_TEXTBOXES: 18,       // Text boxes - above props, below dialogue overlay
   CANVAS_DIALOGUE_OVERLAY: 20,
   CANVAS_FLOATING_BUTTONS: 30,
 

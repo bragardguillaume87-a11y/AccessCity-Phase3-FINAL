@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useScenesStore, useSettingsStore } from '../../stores/index.js';
 import { useGameState } from '../../hooks/useGameState';
+import { Button } from '../ui/button.jsx';
+import { ChevronRight } from 'lucide-react';
 
 export default function PreviewPlayer({ initialSceneId, onClose }) {
   // Zustand stores (granular selectors)
@@ -9,7 +11,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const liveRegionRef = useRef(null);
 
-  const { currentScene, currentDialogue, stats, history, isPaused, chooseOption, goToScene, setIsPaused } = useGameState({
+  const { currentScene, currentDialogue, stats, history, isPaused, chooseOption, goToNextDialogue, goToScene, setIsPaused } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
     initialStats: variables || {}
@@ -72,7 +74,20 @@ export default function PreviewPlayer({ initialSceneId, onClose }) {
               </button>
             ))}
             {(!currentDialogue?.choices || currentDialogue.choices.length === 0) && (
-              <div className="text-slate-400 italic text-sm">Fin du dialogue ou navigation automatique...</div>
+              <div className="flex flex-col items-center gap-3">
+                <Button
+                  onClick={goToNextDialogue}
+                  variant="gaming-primary"
+                  size="lg"
+                  className="group animate-pulse hover:animate-none min-w-[200px]"
+                >
+                  Suivant
+                  <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                </Button>
+                <p className="text-slate-500 text-xs animate-bounce">
+                  Cliquez pour continuer ▼
+                </p>
+              </div>
             )}
           </div>
         </section>

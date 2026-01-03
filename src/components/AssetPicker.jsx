@@ -5,6 +5,13 @@ import {
   addToRecentAssets,
 } from "../hooks/useAssets.js";
 import { toAbsoluteAssetPath } from "../utils/pathUtils.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Package, Upload as UploadIcon, Link as LinkIcon, Loader2, AlertCircle, Check, Image as ImageIcon } from "lucide-react";
 
 /**
  * AssetPicker - Composant de selection d'assets avec 3 modes
@@ -172,106 +179,72 @@ export default function AssetPicker({
   }, []);
 
   return (
-    <div
-      className={`bg-white rounded-xl shadow-lg border-2 border-slate-200 ${className}`}
-    >
-      {/* Tabs */}
-      <div className="flex gap-2 px-4 pt-4 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab("library")}
-          className={`px-4 py-2 font-semibold text-sm transition-all rounded-t-lg ${
-            activeTab === "library"
-              ? "bg-blue-600 text-white"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-          }`}
-        >
-          📚 Bibliotheque
-        </button>
-        {allowUpload && (
-          <button
-            onClick={() => setActiveTab("upload")}
-            className={`px-4 py-2 font-semibold text-sm transition-all rounded-t-lg ${
-              activeTab === "upload"
-                ? "bg-blue-600 text-white"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            📤 Upload
-          </button>
-        )}
-        {allowUrl && (
-          <button
-            onClick={() => setActiveTab("url")}
-            className={`px-4 py-2 font-semibold text-sm transition-all rounded-t-lg ${
-              activeTab === "url"
-                ? "bg-blue-600 text-white"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            🔗 URL
-          </button>
-        )}
-      </div>
+    <div className={`bg-slate-900 rounded-lg border border-slate-700 ${className}`}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="w-full bg-slate-800 border-b border-slate-700 rounded-none justify-start p-2">
+          <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <Package className="h-4 w-4" />
+            Bibliothèque
+          </TabsTrigger>
+          {allowUpload && (
+            <TabsTrigger value="upload" className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <UploadIcon className="h-4 w-4" />
+              Upload
+            </TabsTrigger>
+          )}
+          {allowUrl && (
+            <TabsTrigger value="url" className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <LinkIcon className="h-4 w-4" />
+              URL
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-      {/* Content */}
-      <div className="p-4 min-h-[300px]">
-        {activeTab === "library" && (
-          <div>
-            {loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                  <p className="text-sm text-slate-600">
-                    Chargement des assets...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center">
-                <p className="text-red-700 font-semibold mb-2">
-                  Erreur de chargement
+        <TabsContent value="library" className="p-4 m-0 min-h-[300px]">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-3" />
+                <p className="text-sm text-slate-400">
+                  Chargement des assets...
                 </p>
-                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <Alert variant="destructive" className="bg-red-900/20 border-red-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-red-200">
+                <p className="font-semibold mb-1">Erreur de chargement</p>
+                <p className="text-sm">{error}</p>
                 <p className="text-xs text-slate-500 mt-2">
-                  Le manifeste n'a pas pu etre charge. Verifiez que le script de
-                  generation est lance.
+                  Le manifeste n'a pas pu être chargé. Vérifiez que le script de génération est lancé.
                 </p>
-              </div>
-            )}
+              </AlertDescription>
+            </Alert>
+          )}
 
-            {!loading && !error && assets.length === 0 && (
-              <div className="text-center py-12">
-                <svg
-                  className="w-16 h-16 mx-auto mb-3 text-slate-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="text-slate-600 font-medium mb-2">
-                  Aucun asset disponible
-                </p>
-                <p className="text-sm text-slate-500">
-                  Ajoutez des images dans{" "}
-                  <code className="bg-slate-100 px-2 py-1 rounded text-xs">
-                    /public/assets/{type}s/
-                  </code>
-                </p>
-              </div>
-            )}
+          {!loading && !error && assets.length === 0 && (
+            <div className="text-center py-12">
+              <ImageIcon className="w-16 h-16 mx-auto mb-3 text-slate-600" />
+              <p className="text-slate-400 font-medium mb-2">
+                Aucun asset disponible
+              </p>
+              <p className="text-sm text-slate-500">
+                Ajoutez des images dans{" "}
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs text-slate-300 border border-slate-700">
+                  /public/assets/{type}s/
+                </code>
+              </p>
+            </div>
+          )}
 
-            {!loading && !error && assets.length > 0 && (
-              <>
-                {/* Grid */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
+          {!loading && !error && assets.length > 0 && (
+            <>
+              {/* Grid - Taille réduite pour éviter débordement */}
+              <ScrollArea className="max-h-[400px] pr-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {assets.map((asset) => (
                     <AssetThumbnail
                       key={asset.id}
@@ -282,47 +255,49 @@ export default function AssetPicker({
                     />
                   ))}
                 </div>
+              </ScrollArea>
 
-                {/* Recent */}
-                {recentAssets.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <p className="text-xs font-semibold text-slate-600 mb-2">
-                      Recemment utilises
-                    </p>
-                    <div className="flex gap-2 flex-wrap">
-                      {recentAssets.map((assetPath, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSelect(assetPath)}
-                          className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
-                            value === assetPath
-                              ? "bg-blue-500 text-white border-blue-600"
-                              : "bg-slate-100 hover:bg-blue-50 border-slate-300 hover:border-blue-500 text-slate-700"
-                          }`}
-                        >
-                          {assetPath.split("/").pop().slice(0, 20)}
-                        </button>
-                      ))}
-                    </div>
+              {/* Recent */}
+              {recentAssets.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-700">
+                  <p className="text-xs font-semibold text-slate-400 mb-2">
+                    Récemment utilisés
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {recentAssets.map((assetPath, idx) => (
+                      <Badge
+                        key={idx}
+                        variant={value === assetPath ? "default" : "outline"}
+                        className={`cursor-pointer text-xs px-3 py-1.5 ${
+                          value === assetPath
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300"
+                        }`}
+                        onClick={() => handleSelect(assetPath)}
+                      >
+                        {assetPath.split("/").pop().slice(0, 20)}
+                      </Badge>
+                    ))}
                   </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
 
-        {activeTab === "upload" && (
-          <div>
+        <TabsContent value="upload" className="p-4 m-0 min-h-[300px]">
             {/* Server Status Banners */}
             {serverStatus === 'checking' && (
-              <div className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-blue-700 text-sm">Checking upload server...</p>
-              </div>
+              <Alert className="mb-4 bg-blue-900/20 border-blue-800">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription className="text-blue-200 text-sm">
+                  Vérification du serveur d'upload...
+                </AlertDescription>
+              </Alert>
             )}
 
             {serverStatus === 'offline' && (
-              <div className="mb-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-4">
+              <Alert variant="destructive" className="mb-4 bg-amber-900/20 border-amber-700">
                 <div className="flex items-start gap-3">
                   <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -337,15 +312,16 @@ export default function AssetPicker({
                       </code>
                     </div>
                     <p className="text-xs text-amber-600">This starts Vite (port 5173) + upload server (port 3001).</p>
-                    <button
+                    <Button
                       onClick={checkServerHealth}
-                      className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded transition-colors"
+                      className="mt-3 bg-amber-600 hover:bg-amber-700"
+                      size="sm"
                     >
-                      Retry connection
-                    </button>
+                      Réessayer
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </Alert>
             )}
 
             {serverStatus === 'online' && (
@@ -441,60 +417,56 @@ export default function AssetPicker({
                 ✨ Uploaded to /public/assets - Max 10MB
               </p>
             </div>
-          </div>
-        )}
+        </TabsContent>
 
-        {activeTab === "url" && (
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              URL de l'image
-            </label>
-            <input
-              type="url"
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-              placeholder="https://example.com/image.jpg"
-              defaultValue={value}
-              onBlur={(e) => handleSelect(e.target.value)}
-            />
-            <p className="text-xs text-slate-500 mt-2">
-              Entrez l'URL complete d'une image hebergee en ligne
-            </p>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-800">
-                💡 <strong>Astuce :</strong> Vous pouvez aussi utiliser des
-                chemins relatifs comme
-                <code className="bg-white px-2 py-1 rounded ml-1">
-                  /assets/backgrounds/custom.jpg
-                </code>
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+        <TabsContent value="url" className="p-4 m-0 min-h-[300px]">
+          <label className="block text-sm font-semibold text-slate-300 mb-2">
+            URL de l'image
+          </label>
+          <Input
+            type="url"
+            className="w-full bg-slate-800 border-slate-700 text-slate-100"
+            placeholder="https://example.com/image.jpg"
+            defaultValue={value}
+            onBlur={(e) => handleSelect(e.target.value)}
+          />
+          <p className="text-xs text-slate-500 mt-2">
+            Entrez l'URL complète d'une image hébergée en ligne
+          </p>
+          <Alert className="mt-4 bg-blue-900/20 border-blue-800">
+            <AlertDescription className="text-sm text-blue-200">
+              💡 <strong>Astuce :</strong> Vous pouvez aussi utiliser des chemins relatifs comme
+              <code className="bg-slate-800 px-2 py-1 rounded ml-1 text-slate-300 border border-slate-700">
+                /assets/backgrounds/custom.jpg
+              </code>
+            </AlertDescription>
+          </Alert>
+        </TabsContent>
+      </Tabs>
 
       {/* Preview */}
       {(previewAsset || value) && (
-        <div className="px-4 pb-4 pt-0 border-t border-slate-200">
-          <p className="text-xs font-semibold text-slate-600 mb-2 mt-3">
-            Apercu
+        <div className="px-4 pb-4 pt-0 border-t border-slate-700">
+          <p className="text-xs font-semibold text-slate-400 mb-2 mt-3">
+            Aperçu
           </p>
-          <div className="bg-slate-100 rounded-lg p-3">
+          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
             <LazyImage
               src={previewAsset?.path || value}
               alt="Preview"
               className="w-full h-40 object-contain rounded"
             />
             {previewAsset && (
-              <div className="mt-2 text-xs text-slate-600 space-y-1">
+              <div className="mt-2 text-xs text-slate-400 space-y-1">
                 <p>
-                  <strong>Nom :</strong> {previewAsset.name}
+                  <strong className="text-slate-300">Nom :</strong> {previewAsset.name}
                 </p>
                 <p>
-                  <strong>Type :</strong> {previewAsset.type.toUpperCase()}
+                  <strong className="text-slate-300">Type :</strong> {previewAsset.type.toUpperCase()}
                 </p>
                 {previewAsset.size && (
                   <p>
-                    <strong>Taille :</strong>{" "}
+                    <strong className="text-slate-300">Taille :</strong>{" "}
                     {(previewAsset.size / 1024).toFixed(1)} KB
                   </p>
                 )}
@@ -517,20 +489,20 @@ function AssetThumbnail({ asset, selected, onSelect, onHover }) {
       onMouseEnter={onHover}
       className={`relative rounded-lg overflow-hidden border-2 transition-all group ${
         selected
-          ? "border-blue-500 shadow-md ring-2 ring-blue-200"
-          : "border-slate-200 hover:border-blue-400 hover:shadow-md"
+          ? "border-blue-500 shadow-md ring-2 ring-blue-500/50"
+          : "border-slate-700 hover:border-blue-500 hover:shadow-md"
       }`}
     >
       <LazyImage
         src={asset.path}
         alt={asset.name}
-        className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
+        className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
       />
       <div
-        className={`text-xs px-2 py-1.5 text-center font-medium transition-colors truncate ${
+        className={`text-[10px] px-2 py-1 text-center font-medium transition-colors truncate ${
           selected
-            ? "bg-blue-500 text-white"
-            : "bg-slate-50 text-slate-700 group-hover:bg-blue-50"
+            ? "bg-blue-600 text-white"
+            : "bg-slate-800 text-slate-300 group-hover:bg-blue-600/20"
         }`}
       >
         {asset.name}
@@ -549,11 +521,11 @@ function LazyImage({ src, alt, className }) {
   return (
     <div className="relative">
       {!loaded && !failed && (
-        <div className={`${className} bg-slate-200 animate-pulse`} />
+        <div className={`${className} bg-slate-700 animate-pulse`} />
       )}
       {failed && (
         <div
-          className={`${className} bg-slate-100 flex items-center justify-center text-xs text-slate-400`}
+          className={`${className} bg-slate-800 flex items-center justify-center text-xs text-slate-500 border border-slate-700`}
         >
           Image non disponible
         </div>

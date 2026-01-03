@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+@import './styles/tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -543,6 +544,20 @@ textarea {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
+}
+
+/* Bounce slow animation - EmptyAssetState */
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
 }
 
 /* ========================================

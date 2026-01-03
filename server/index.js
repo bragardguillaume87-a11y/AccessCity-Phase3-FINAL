@@ -74,18 +74,23 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'AccessCity Asset Server is running' });
 });
 
-// Upload endpoint
-app.post('/api/assets/upload', upload.single('file'), async (req, res) => {
+// Upload endpoint - supports multiple files
+app.post('/api/assets/upload', upload.array('files', 20), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
     }
 
     const category = req.body.category || 'illustrations';
-    const relativePath = `/assets/${category}/${req.file.filename}`;
+    const uploadedFiles = req.files.map(file => ({
+      filename: file.filename,
+      path: `/assets/${category}/${file.filename}`,
+      size: file.size,
+      category
+    }));
 
     // Regenerate manifest
-    console.log('[Asset Upload] Regenerating manifest...');
+    console.log(`[Asset Upload] ${req.files.length} file(s) uploaded. Regenerating manifest...`);
     try {
       const manifestScript = path.join(__dirname, '../tools/generate-assets-manifest.js');
       const { stdout, stderr } = await execAsync(`node "${manifestScript}"`);
@@ -99,11 +104,10 @@ app.post('/api/assets/upload', upload.single('file'), async (req, res) => {
 
       res.json({
         success: true,
-        path: relativePath,
-        file: req.file.filename,
+        files: uploadedFiles,
+        count: uploadedFiles.length,
         category,
-        size: req.file.size,
-        message: 'File uploaded and manifest regenerated successfully'
+        message: `${uploadedFiles.length} file(s) uploaded and manifest regenerated successfully`
       });
     } catch (manifestError) {
       console.error('[Asset Upload] Manifest generation failed:', manifestError);
@@ -111,11 +115,10 @@ app.post('/api/assets/upload', upload.single('file'), async (req, res) => {
       // Still return success for the upload, but warn about manifest
       res.json({
         success: true,
-        path: relativePath,
-        file: req.file.filename,
+        files: uploadedFiles,
+        count: uploadedFiles.length,
         category,
-        size: req.file.size,
-        warning: 'File uploaded but manifest regeneration failed',
+        warning: 'Files uploaded but manifest regeneration failed',
         manifestError: manifestError.message
       });
     }
@@ -175,3 +178,4 @@ app.listen(PORT, () => {
   console.log(`✅ AccessCity Asset Upload Server running on http://localhost:${PORT}`);
   console.log(`📁 Serving assets from: ${path.join(__dirname, '../public/assets')}`);
 });
+

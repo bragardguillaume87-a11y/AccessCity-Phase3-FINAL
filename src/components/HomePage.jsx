@@ -1,3 +1,7 @@
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Plus, Rocket, Trash2 } from 'lucide-react';
 import "../styles/home.css";
 
 function HomePage({
@@ -109,7 +113,7 @@ function HomePage({
                 </h3>
                 <span className="card-badge card-badge--local">📍 Local</span>
                 <span className="card-badge card-badge--date">
-                  {new Date(quest.createdAt).toLocaleDateString()}
+                  {format(new Date(quest.createdAt), 'dd/MM/yyyy', { locale: fr })}
                 </span>
               </div>
             </div>
@@ -143,35 +147,38 @@ function HomePage({
               maxLength={60}
               aria-label="Nom de la nouvelle quête"
             />
-            <button
-              className="btn btn-primary"
-              onClick={onCreateQuest}
-              disabled={!newQuestName.trim() || quotaUsed >= quotaMax}
-              aria-disabled={!newQuestName.trim() || quotaUsed >= quotaMax}
-            >
-              + Créer cette quête
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={onLaunchEditor}
-              disabled={!selectedQuestId}
-              aria-disabled={!selectedQuestId}
-              style={{
-                backgroundColor: selectedQuestId ? 'var(--accent-purple)' : undefined,
-                borderColor: selectedQuestId ? 'var(--accent-purple)' : undefined,
-                color: selectedQuestId ? 'white' : undefined,
-              }}
-            >
-              🚀 Lancer l'éditeur
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={onDeleteQuest}
-              disabled={!selectedQuestId}
-              aria-disabled={!selectedQuestId}
-            >
-              🗑️ Supprimer
-            </button>
+            <div className="flex gap-2">
+              <Button
+                variant="gaming-primary"
+                size="sm"
+                onClick={onCreateQuest}
+                disabled={!newQuestName.trim() || quotaUsed >= quotaMax}
+                className="flex-1"
+              >
+                <Plus className="h-3 w-3" />
+                Créer
+              </Button>
+              <Button
+                variant={selectedQuestId ? "gaming-accent" : "secondary"}
+                size="sm"
+                onClick={onLaunchEditor}
+                disabled={!selectedQuestId}
+                className="flex-1"
+              >
+                <Rocket className="h-3 w-3" />
+                Lancer
+              </Button>
+              <Button
+                variant="danger-ghost"
+                size="sm"
+                onClick={onDeleteQuest}
+                disabled={!selectedQuestId}
+                className="flex-shrink-0"
+                title="Supprimer la quête sélectionnée"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </section>
       </main>

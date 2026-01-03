@@ -1,11 +1,10 @@
 // src/components/ImportPanel.jsx
 import React from 'react';
 import { useSettingsStore } from '../stores/index.js';
-import { useToast } from '../contexts/ToastContext.jsx';
+import { toast } from 'sonner';
 
 export default function ImportPanel() {
   const setContextField = useSettingsStore(state => state.setContextField);
-  const { showToast } = useToast();
 
   function onFileChange(e) {
     const file = e.target.files && e.target.files[0];
@@ -38,21 +37,21 @@ export default function ImportPanel() {
           }
           
           if (imported) {
-            showToast(`Configuration importee avec succes depuis ${file.name}`, 'success');
+            toast.success(`Configuration importee avec succes depuis ${file.name}`);
           } else {
-            showToast('Aucune donnee reconnue dans le fichier', 'warning');
+            toast.warning('Aucune donnee reconnue dans le fichier');
           }
         } else {
-          showToast('Fichier JSON invalide', 'error');
+          toast.error('Fichier JSON invalide');
         }
       } catch (err) {
-        showToast('Erreur de lecture du fichier JSON', 'error');
+        toast.error('Erreur de lecture du fichier JSON');
         console.error('Import error:', err);
       }
     };
-    
+
     reader.onerror = () => {
-      showToast('Impossible de lire le fichier', 'error');
+      toast.error('Impossible de lire le fichier');
     };
     
     reader.readAsText(file);

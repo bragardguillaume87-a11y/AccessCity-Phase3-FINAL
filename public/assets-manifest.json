@@ -1,11 +1,23 @@
 {
-  "generated": "2025-12-27T00:02:22.279Z",
+  "generated": "2026-01-03T14:59:40.050Z",
   "version": "1.0.0",
-  "totalAssets": 3,
+  "totalAssets": 4,
   "categories": [
+    "backgrounds",
     "illustrations"
   ],
   "assets": {
+    "backgrounds": [
+      {
+        "id": "backgrounds/1152407-1766912155373",
+        "name": "1152407-1766912155373",
+        "path": "/assets/backgrounds/1152407-1766912155373.jpg",
+        "type": "jpg",
+        "category": "backgrounds",
+        "size": 257048,
+        "modified": "2025-12-28T08:55:55.377Z"
+      }
+    ],
     "illustrations": [
       {
         "id": "illustrations/1152407-1766108312655",

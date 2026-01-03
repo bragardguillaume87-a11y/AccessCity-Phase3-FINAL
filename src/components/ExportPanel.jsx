@@ -1,7 +1,7 @@
 // src/components/ExportPanel.jsx
 import React from 'react';
 import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.js';
-import { useToast } from '../contexts/ToastContext.jsx';
+import { toast } from 'sonner';
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -19,14 +19,13 @@ export default function ExportPanel({ onPrev }) {
   const scenes = useScenesStore(state => state.scenes);
   const characters = useCharactersStore(state => state.characters);
   const context = useSettingsStore(state => state.projectData);
-  const { showToast } = useToast();
 
   function handleExport(type, data, filename) {
     try {
       downloadJson(filename, data);
-      showToast(`Fichier ${filename} exporte avec succes`, 'success');
+      toast.success(`Fichier ${filename} exporte avec succes`);
     } catch (error) {
-      showToast(`Echec de l export de ${filename}`, 'error');
+      toast.error(`Echec de l export de ${filename}`);
       console.error('Export error:', error);
     }
   }

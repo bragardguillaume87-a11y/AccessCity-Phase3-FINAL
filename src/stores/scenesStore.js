@@ -7,73 +7,164 @@ import { toAbsoluteAssetPath } from '../utils/pathUtils.js';
  * Gere les scenes, leurs dialogues, et les personnages places sur la scene.
  *
  * State:
- * - scenes: array of { id, title, description, backgroundUrl?, dialogues: [], characters?: [] }
+ * - scenes: array of { id, title, description, backgroundUrl?, dialogues: [], characters?: [], textBoxes?: [], props?: [] }
  *
  * Actions:
  * - addScene()
  * - updateScene(sceneId, patch)
  * - deleteScene(sceneId)
  * - reorderScenes(newScenesOrder)
+ * - setSceneBackground(sceneId, backgroundUrl)
  * - addDialogue(sceneId, dialogue)
  * - addDialogues(sceneId, dialogues)
  * - updateDialogue(sceneId, index, patch)
  * - deleteDialogue(sceneId, index)
- * - addCharacterToScene(sceneId, characterId, mood, position)
+ * - addCharacterToScene(sceneId, characterId, mood, position, entranceAnimation)
  * - removeCharacterFromScene(sceneId, sceneCharId)
  * - updateSceneCharacter(sceneId, sceneCharId, updates)
+ * - updateCharacterAnimation(sceneId, characterId, animations)
+ * - addTextBoxToScene(sceneId, textBox)
+ * - removeTextBoxFromScene(sceneId, textBoxId)
+ * - updateTextBox(sceneId, textBoxId, updates)
+ * - addPropToScene(sceneId, prop)
+ * - removePropFromScene(sceneId, propId)
+ * - updateProp(sceneId, propId, updates)
  */
 
 const SAMPLE_SCENES = [
   {
     id: "scenetest01",
     title: "Rencontre Mairie",
-    description: "Premiere scene de test.",
+    description: "Première rencontre avec le conseiller municipal pour discuter du projet AccessCity.",
     backgroundUrl: "",
-    characters: [],
+    characters: [
+      // Player character (left position)
+      {
+        id: "scene-char-player-01",
+        characterId: 'player',
+        mood: 'neutral',
+        position: { x: 20, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'fadeIn',
+        exitAnimation: 'none',
+      },
+      // Counsellor character (right position)
+      {
+        id: "scene-char-counsellor-01",
+        characterId: 'counsellor',
+        mood: 'neutral',
+        position: { x: 80, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'slideInRight',
+        exitAnimation: 'none',
+      }
+    ],
+    textBoxes: [],
+    props: [],
     dialogues: [
       {
         id: "dialogue-01-01",
         speaker: "narrator",
-        text: "Vous arrivez devant la mairie.",
+        text: "Vous arrivez devant la mairie pour présenter votre projet AccessCity, une initiative visant à rendre la ville plus accessible aux personnes à mobilité réduite.",
         choices: [],
       },
       {
         id: "dialogue-01-02",
         speaker: "counsellor",
-        text: "Bonjour ! Discutons du projet.",
+        text: "Bonjour ! Bienvenue à la mairie. J'ai hâte de discuter de votre projet avec vous.",
         choices: [],
       },
       {
         id: "dialogue-01-03",
         speaker: "player",
+        text: "Bonjour ! Merci de me recevoir.",
+        choices: [],
+      },
+      {
+        id: "dialogue-01-04",
+        speaker: "counsellor",
+        text: "Alors, parlez-moi de ce projet AccessCity. Comment comptez-vous améliorer l'accessibilité de notre ville ?",
+        choices: [],
+      },
+      {
+        id: "dialogue-01-05",
+        speaker: "player",
         text: "...",
         choices: [
           {
-            id: "choice-01-03-01",
-            text: "Bonjour, motive !",
+            id: "choice-01-05-01",
+            text: "Nous allons cartographier tous les points d'accès problématiques et proposer des solutions concrètes !",
             effects: [{ variable: "Mentale", value: 5, operation: "add" }],
           },
           {
-            id: "choice-01-03-02",
-            text: "Pas beaucoup de temps.",
+            id: "choice-01-05-02",
+            text: "Je n'ai pas beaucoup de temps pour les détails, mais c'est un projet important.",
             effects: [{ variable: "Mentale", value: -5, operation: "add" }],
           },
         ],
+      },
+      {
+        id: "dialogue-01-06",
+        speaker: "counsellor",
+        text: "Excellent ! J'approuve votre approche. Tenez-moi au courant de vos progrès.",
+        choices: [],
       },
     ],
   },
   {
     id: "scenetest02",
-    title: "Suite de laventure",
-    description: "Deuxieme scene.",
+    title: "Exploration du quartier",
+    description: "Vous commencez à explorer le quartier pour identifier les zones à problèmes.",
     backgroundUrl: "",
-    characters: [],
+    characters: [
+      // Player character (default position)
+      {
+        id: "scene-char-player-02",
+        characterId: 'player',
+        mood: 'neutral',
+        position: { x: 20, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'fadeIn',
+        exitAnimation: 'none',
+      }
+    ],
+    textBoxes: [],
+    props: [],
     dialogues: [
       {
         id: "dialogue-02-01",
         speaker: "narrator",
-        text: "Une nouvelle journee commence...",
+        text: "Une nouvelle journée commence. Vous sortez dans le quartier avec votre carnet de notes pour recenser les obstacles à l'accessibilité.",
         choices: [],
+      },
+      {
+        id: "dialogue-02-02",
+        speaker: "player",
+        text: "Par où commencer ? Il y a tant à faire...",
+        choices: [],
+      },
+      {
+        id: "dialogue-02-03",
+        speaker: "narrator",
+        text: "Vous remarquez un trottoir avec une marche trop haute devant la pharmacie. C'est un bon point de départ.",
+        choices: [],
+      },
+      {
+        id: "dialogue-02-04",
+        speaker: "player",
+        text: "...",
+        choices: [
+          {
+            id: "choice-02-04-01",
+            text: "Je prends une photo et note les dimensions exactes.",
+            effects: [{ variable: "Mentale", value: 3, operation: "add" }],
+          },
+          {
+            id: "choice-02-04-02",
+            text: "Je note rapidement l'emplacement et continue.",
+            effects: [{ variable: "Mentale", value: 1, operation: "add" }],
+          },
+        ],
       },
     ],
   },
@@ -94,7 +185,20 @@ export const useScenesStore = create(
           description: "",
           backgroundUrl: toAbsoluteAssetPath(""),
           dialogues: [],
-          characters: [],
+          characters: [
+            // Player character is always present by default (left position)
+            {
+              id: `scene-char-player-${Date.now()}`,
+              characterId: 'player',
+              mood: 'neutral',
+              position: { x: 20, y: 50 },
+              size: { width: 200, height: 300 },
+              entranceAnimation: 'fadeIn',
+              exitAnimation: 'none',
+            }
+          ],
+          textBoxes: [],
+          props: [],
         };
 
         set((state) => ({
@@ -132,6 +236,16 @@ export const useScenesStore = create(
 
       reorderScenes: (newScenesOrder) => {
         set({ scenes: newScenesOrder }, false, 'scenes/reorderScenes');
+      },
+
+      setSceneBackground: (sceneId, backgroundUrl) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : { ...s, backgroundUrl: toAbsoluteAssetPath(backgroundUrl) }
+          ),
+        }), false, 'scenes/setSceneBackground');
       },
 
       // Actions: Dialogues
@@ -189,8 +303,48 @@ export const useScenesStore = create(
         }), false, 'scenes/deleteDialogue');
       },
 
+      reorderDialogues: (sceneId, oldIndex, newIndex) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) => {
+            if (s.id !== sceneId) return s;
+
+            const list = [...(s.dialogues || [])];
+            if (oldIndex < 0 || oldIndex >= list.length || newIndex < 0 || newIndex >= list.length) return s;
+
+            // Réorganiser: retirer puis insérer
+            const [movedItem] = list.splice(oldIndex, 1);
+            list.splice(newIndex, 0, movedItem);
+
+            return { ...s, dialogues: list };
+          }),
+        }), false, 'scenes/reorderDialogues');
+      },
+
+      duplicateDialogue: (sceneId, index) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) => {
+            if (s.id !== sceneId) return s;
+
+            const list = [...(s.dialogues || [])];
+            if (index < 0 || index >= list.length) return s;
+
+            // Dupliquer le dialogue
+            const original = list[index];
+            const duplicate = {
+              ...original,
+              text: `${original.text} (copie)`,
+            };
+
+            // Insérer juste après l'original
+            list.splice(index + 1, 0, duplicate);
+
+            return { ...s, dialogues: list };
+          }),
+        }), false, 'scenes/duplicateDialogue');
+      },
+
       // Actions: Scene Characters
-      addCharacterToScene: (sceneId, characterId, mood = 'neutral', position = { x: 50, y: 50 }) => {
+      addCharacterToScene: (sceneId, characterId, mood = 'neutral', position = { x: 50, y: 50 }, entranceAnimation = 'none') => {
         set((state) => ({
           scenes: state.scenes.map((s) =>
             s.id !== sceneId
@@ -204,6 +358,9 @@ export const useScenesStore = create(
                       characterId,
                       mood,
                       position,
+                      size: { width: 200, height: 300 },
+                      entranceAnimation,
+                      exitAnimation: 'none',
                     },
                   ],
                 }
@@ -239,6 +396,152 @@ export const useScenesStore = create(
                 }
           ),
         }), false, 'scenes/updateSceneCharacter');
+      },
+
+      updateCharacterAnimation: (sceneId, characterInstanceId, animations) => {
+        set((state) => ({
+          scenes: state.scenes.map((scene) => {
+            if (scene.id !== sceneId) return scene;
+
+            return {
+              ...scene,
+              characters: (scene.characters || []).map((char) => {
+                if (char.id !== characterInstanceId) return char;
+
+                return {
+                  ...char,
+                  ...animations // { entranceAnimation, exitAnimation }
+                };
+              })
+            };
+          })
+        }), false, 'scenes/updateCharacterAnimation');
+      },
+
+      // PHASE 8: Character Positioning Quick Tools
+      updateCharacterPosition: (sceneId, sceneCharacterId, updates) => {
+        set((state) => ({
+          scenes: state.scenes.map((scene) => {
+            if (scene.id !== sceneId) return scene;
+
+            return {
+              ...scene,
+              characters: (scene.characters || []).map((char) => {
+                if (char.id !== sceneCharacterId) return char;
+
+                // Merge position updates (x, y) and scale
+                const updatedChar = { ...char };
+
+                if (updates.x !== undefined || updates.y !== undefined) {
+                  updatedChar.position = {
+                    x: updates.x ?? char.position?.x ?? 50,
+                    y: updates.y ?? char.position?.y ?? 50
+                  };
+                }
+
+                if (updates.scale !== undefined) {
+                  updatedChar.scale = updates.scale;
+                }
+
+                return updatedChar;
+              })
+            };
+          })
+        }), false, 'scenes/updateCharacterPosition');
+      },
+
+      // Actions: Text Boxes
+      addTextBoxToScene: (sceneId, textBox) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : {
+                  ...s,
+                  textBoxes: [
+                    ...(s.textBoxes || []),
+                    textBox
+                  ],
+                }
+          ),
+        }), false, 'scenes/addTextBoxToScene');
+      },
+
+      removeTextBoxFromScene: (sceneId, textBoxId) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : {
+                  ...s,
+                  textBoxes: (s.textBoxes || []).filter(
+                    (tb) => tb.id !== textBoxId
+                  ),
+                }
+          ),
+        }), false, 'scenes/removeTextBoxFromScene');
+      },
+
+      updateTextBox: (sceneId, textBoxId, updates) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : {
+                  ...s,
+                  textBoxes: (s.textBoxes || []).map((tb) =>
+                    tb.id !== textBoxId ? tb : { ...tb, ...updates }
+                  ),
+                }
+          ),
+        }), false, 'scenes/updateTextBox');
+      },
+
+      // Actions: Props
+      addPropToScene: (sceneId, prop) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : {
+                  ...s,
+                  props: [
+                    ...(s.props || []),
+                    prop
+                  ],
+                }
+          ),
+        }), false, 'scenes/addPropToScene');
+      },
+
+      removePropFromScene: (sceneId, propId) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : {
+                  ...s,
+                  props: (s.props || []).filter(
+                    (p) => p.id !== propId
+                  ),
+                }
+          ),
+        }), false, 'scenes/removePropFromScene');
+      },
+
+      updateProp: (sceneId, propId, updates) => {
+        set((state) => ({
+          scenes: state.scenes.map((s) =>
+            s.id !== sceneId
+              ? s
+              : {
+                  ...s,
+                  props: (s.props || []).map((p) =>
+                    p.id !== propId ? p : { ...p, ...updates }
+                  ),
+                }
+          ),
+        }), false, 'scenes/updateProp');
       },
     })),
     { name: 'ScenesStore' }

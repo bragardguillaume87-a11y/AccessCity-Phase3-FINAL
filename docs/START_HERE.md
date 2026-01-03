@@ -60,6 +60,8 @@ Sélectionnez le lien correspondant à votre besoin :
 - **Collaborer avec une IA** : [Guide de collaboration IA](guides/AI_COLLABORATION.md)
 - **Explorer les détails d'un composant** : [Documentation technique des composants](reference/architecture/)
 - **Respecter les standards d'accessibilité** : [Standards d'accessibilité du projet](reference/standards/ACCESSIBILITY_STANDARDS.md)
+- **🔄 Reprendre une session IA précédente** : [Continuation Context](CONTINUATION_CONTEXT.md) ⭐ NOUVEAU
+- **🎮 Créer des interfaces gaming engageantes** : [Gaming UI/UX Guidelines](GAMING_UI_GUIDELINES.md) ⭐ NOUVEAU
 
 ## 🚨 Règles critiques avant toute modification
 

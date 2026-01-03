@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { cn } from '../../utils/cn.js';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 /**
  * AutoSaveIndicator - Visual feedback for auto-save status
@@ -42,26 +44,9 @@ export function AutoSaveIndicator({
     return () => clearInterval(interval);
   }, [lastSaved]);
 
-  const getTimeSince = () => {
-    if (!lastSaved) return null;
-
-    const now = Date.now();
-    const saved = new Date(lastSaved).getTime();
-    const diffSeconds = Math.floor((now - saved) / 1000);
-
-    if (diffSeconds < 5) return 'just now';
-    if (diffSeconds < 60) return `${diffSeconds}s ago`;
-
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    if (diffMinutes < 60) return `${diffMinutes}min ago`;
-
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-
-    return 'more than a day ago';
-  };
-
-  const timeSince = getTimeSince();
+  const timeSince = lastSaved
+    ? formatDistanceToNow(new Date(lastSaved), { addSuffix: true, locale: fr })
+    : null;
 
   // Determine current state
   let state = 'idle';

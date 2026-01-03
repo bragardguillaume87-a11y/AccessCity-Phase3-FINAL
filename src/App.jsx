@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { AppProvider } from "./AppContext.jsx";
-import { ToastProvider } from "./contexts/ToastContext.jsx";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import SkipToContent from "./components/SkipToContent.jsx";
 import HomePage from "./components/HomePage.jsx";
 import EditorShell from "./components/EditorShell.jsx";
 import DesignSystemDemo from "./pages/DesignSystemDemo.jsx";
+import TokensDemo from "./pages/TokensDemo.jsx";
 import { Toaster } from "sonner";
 
 // État initial des quêtes (données de démo)
@@ -24,9 +25,15 @@ function App() {
   });
   const [selectedQuestId, setSelectedQuestId] = useState(null);
   const [newQuestName, setNewQuestName] = useState("");
-  // Check URL for demo mode (?demo=true)
-  const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'true';
-  const [currentView, setCurrentView] = useState(isDemoMode ? "design-demo" : "home"); // 'home' | 'editor' | 'design-demo'
+  // Check URL for demo mode (?demo=true) and tokens mode (?tokens=true)
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDemoMode = urlParams.get('demo') === 'true';
+  const isTokensMode = urlParams.get('tokens') === 'true';
+  const [currentView, setCurrentView] = useState(
+    isTokensMode ? "tokens-demo" :
+    isDemoMode ? "design-demo" :
+    "home"
+  ); // 'home' | 'editor' | 'design-demo' | 'tokens-demo'
 
   // Créer une nouvelle quête
   function handleCreateQuest() {
@@ -68,9 +75,11 @@ function App() {
 
   return (
     <AppProvider>
-      <ToastProvider>
+      <TooltipProvider delayDuration={300} skipDelayDuration={100}>
         <SkipToContent />
-        {currentView === "design-demo" ? (
+        {currentView === "tokens-demo" ? (
+          <TokensDemo />
+        ) : currentView === "design-demo" ? (
           <DesignSystemDemo />
         ) : currentView === "editor" ? (
           <EditorShell onBack={handleBackHome} />
@@ -86,8 +95,8 @@ function App() {
             onDeleteQuest={handleDeleteQuest}
           />
         )}
-        <Toaster position="top-center" richColors closeButton />
-      </ToastProvider>
+        <Toaster position="top-right" richColors closeButton duration={5000} theme="dark" />
+      </TooltipProvider>
     </AppProvider>
   );
 }

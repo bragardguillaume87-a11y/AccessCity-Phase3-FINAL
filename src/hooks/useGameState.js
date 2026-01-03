@@ -107,6 +107,7 @@ export function useGameState({ scenes, initialSceneId, initialStats = DEFAULT_ST
     readingSpeed,
     diceState,
     goToScene,
+    goToNextDialogue,
     chooseOption,
     jumpToHistoryIndex,
     setReadingSpeed,

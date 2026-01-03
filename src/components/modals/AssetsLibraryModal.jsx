@@ -3,6 +3,9 @@ import PropTypes from 'prop-types';
 import { useAssets } from '../../hooks/useAssets.js';
 import { useScenesStore, useCharactersStore } from '../../stores/index.js';
 import AssetPicker from '../AssetPicker.jsx';
+import { UploadZone } from './AssetsLibraryModal/components/UploadZone.jsx';
+import { EmptyAssetState } from './AssetsLibraryModal/components/EmptyAssetState.jsx';
+import { useFavorites } from './AssetsLibraryModal/hooks/useFavorites.js';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +42,8 @@ import {
   SlidersHorizontal,
   Tag,
   Trash2,
-  FileUp
+  FileUp,
+  Star
 } from 'lucide-react';
 
 /**
@@ -68,6 +72,9 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
   const [isDragOver, setIsDragOver] = useState(false);
 
   const { assets, loading, error } = useAssets();
+
+  // Favorites hook (Phase 2)
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
   // Zustand stores (granular selectors)
   const scenes = useScenesStore(state => state.scenes);
@@ -241,8 +248,11 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
   const filteredAssets = useMemo(() => {
     let filtered = assets;
 
-    // Filter by category
-    if (activeCategory !== 'all') {
+    // Filter by favorites (Phase 2)
+    if (activeCategory === 'favorites') {
+      filtered = filtered.filter(a => isFavorite(a.path));
+    } else if (activeCategory !== 'all') {
+      // Filter by category
       filtered = filtered.filter(a => a.category === activeCategory);
     }
 
@@ -266,7 +276,7 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
     }
 
     return filtered;
-  }, [assets, activeCategory, searchQuery, filterTags, assetTags]);
+  }, [assets, activeCategory, searchQuery, filterTags, assetTags, isFavorite]);
 
   // Get all unique tags (Phase 5)
   const allTags = useMemo(() => {
@@ -474,6 +484,18 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
                   </Badge>
                 </Button>
                 <Button
+                  variant={activeCategory === 'favorites' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory('favorites')}
+                  className="gap-2"
+                >
+                  <Star className="h-4 w-4" />
+                  Favoris
+                  <Badge variant="secondary" className="ml-1">
+                    {favorites.length}
+                  </Badge>
+                </Button>
+                <Button
                   variant={activeCategory === 'backgrounds' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setActiveCategory('backgrounds')}
@@ -573,6 +595,26 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
           {/* Assets Grid */}
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full px-8 py-6">
+              {/* NEW: Upload Zone - TOUJOURS visible, même en mode sélection */}
+              <div className="mb-6">
+                {isSelectionMode ? (
+                  // Mode compact: Petit bouton upload dans le header
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">Sélectionner un {activeCategory}</h3>
+                    <UploadZone category={activeCategory} compact={true} />
+                  </div>
+                ) : (
+                  // Mode full: Grande drop zone quand 0 assets, ou compacte sinon
+                  filteredAssets.length === 0 && !searchQuery && !loading ? (
+                    // Empty state géré plus bas, pas de UploadZone ici
+                    null
+                  ) : (
+                    // Assets existants: Upload zone compacte en haut
+                    <UploadZone category={activeCategory} compact={false} />
+                  )
+                )}
+              </div>
+
               {loading && (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
@@ -590,25 +632,36 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
               )}
 
               {!loading && !error && filteredAssets.length === 0 && (
-                <Card className="max-w-2xl mx-auto border-dashed">
-                  <CardContent className="p-20 text-center">
-                    <Package className="h-24 w-24 mx-auto mb-6 text-muted-foreground" />
-                    <h3 className="text-2xl font-bold mb-2">
-                      {searchQuery ? 'Aucun résultat' : 'Aucun asset'}
-                    </h3>
-                    <p className="text-muted-foreground mb-6">
-                      {searchQuery
-                        ? `Aucun asset ne correspond à "${searchQuery}"`
-                        : 'Cette catégorie est vide pour le moment'}
-                    </p>
-                    {searchQuery && (
+                searchQuery ? (
+                  // Search results empty - simple message
+                  <Card className="max-w-2xl mx-auto border-dashed">
+                    <CardContent className="p-20 text-center">
+                      <Package className="h-24 w-24 mx-auto mb-6 text-muted-foreground" />
+                      <h3 className="text-2xl font-bold mb-2">Aucun résultat</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Aucun asset ne correspond à "{searchQuery}"
+                      </p>
                       <Button variant="outline" onClick={() => setSearchQuery('')}>
                         <X className="h-4 w-4 mr-2" />
                         Effacer la recherche
                       </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  // Category empty - Gaming empty state with upload
+                  <div>
+                    <EmptyAssetState
+                      category={activeCategory === 'all' ? 'all' : activeCategory.replace(/s$/, '')}
+                      onUploadClick={() => {
+                        // Trigger file input click - will be handled by UploadZone below
+                        document.getElementById(`upload-input-full-${activeCategory}`)?.click();
+                      }}
+                    />
+                    <div className="mt-8">
+                      <UploadZone category={activeCategory} compact={false} />
+                    </div>
+                  </div>
+                )
               )}
 
               {!loading && !error && filteredAssets.length > 0 && viewMode === 'grid' && (
@@ -653,20 +706,39 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
                             />
                           </div>
 
-                          {/* Hover Overlay */}
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          {/* Favorite Star Toggle (Phase 2) */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(asset.path);
+                            }}
+                            className={`absolute top-2 right-2 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                              isFavorite(asset.path)
+                                ? 'bg-amber-500 text-white scale-110'
+                                : 'bg-slate-800/80 text-slate-300 hover:bg-amber-500 hover:text-white opacity-0 group-hover:opacity-100'
+                            }`}
+                            title={isFavorite(asset.path) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                            aria-label={isFavorite(asset.path) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                          >
+                            <Star className={`w-4 h-4 ${isFavorite(asset.path) ? 'fill-current' : ''}`} />
+                          </button>
+
+                          {/* Overlay - Always visible in selection mode */}
+                          <div className={`absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center ${
+                            isSelectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}>
                             <div className="flex gap-2">
                               {isSelectionMode && asset.category === 'backgrounds' ? (
                                 <Button
-                                  size="sm"
+                                  size={isSelectionMode ? "default" : "sm"}
                                   variant="default"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleSelectBackground(asset.path);
                                   }}
-                                  className="bg-green-600 hover:bg-green-700"
+                                  className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg"
                                 >
-                                  <MapPin className="h-4 w-4 mr-2" />
+                                  <MapPin className="h-5 w-5 mr-2" />
                                   Utiliser
                                 </Button>
                               ) : (
@@ -916,59 +988,7 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
             </ScrollArea>
           </div>
 
-          {/* Upload Section (Phase 5: Drag & Drop Zone) */}
-          <div className="px-8 py-6 border-t bg-muted/30">
-            <div className="flex items-start gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-4">
-                  <Upload className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">Uploader de nouveaux assets</h3>
-                </div>
-
-                {/* Drag & Drop Zone */}
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                    isDragOver
-                      ? 'border-primary bg-primary/10 scale-[1.02]'
-                      : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <FileUp className={`h-12 w-12 mx-auto mb-4 transition-colors ${
-                    isDragOver ? 'text-primary animate-bounce' : 'text-muted-foreground'
-                  }`} />
-                  <p className="text-lg font-semibold mb-2">
-                    {isDragOver ? 'Déposez vos fichiers ici!' : 'Glissez-déposez vos images'}
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    ou utilisez le sélecteur ci-dessous
-                  </p>
-
-                  <AssetPicker
-                    type={activeCategory === 'all' ? 'background' : activeCategory === 'characters' ? 'character' : 'background'}
-                    value=""
-                    onChange={(url) => {
-                      console.log('Asset uploaded:', url);
-                    }}
-                    allowUpload={true}
-                    allowUrl={true}
-                  />
-                </div>
-              </div>
-
-              <Alert className="flex-1 bg-blue-50 border-blue-200">
-                <Lightbulb className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-900">
-                  <strong>Astuce :</strong> Après avoir uploadé des fichiers manuellement dans{' '}
-                  <code className="bg-blue-100 px-1 rounded text-blue-800">/public/assets</code>, exécutez{' '}
-                  <code className="bg-blue-100 px-1 rounded text-blue-800">npm run generate-assets</code>{' '}
-                  pour mettre à jour le manifest.
-                </AlertDescription>
-              </Alert>
-            </div>
-          </div>
+          {/* OLD Upload Section removed - replaced by UploadZone component above */}
         </DialogContent>
       </Dialog>
 

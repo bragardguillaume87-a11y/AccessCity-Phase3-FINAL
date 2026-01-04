@@ -16,6 +16,7 @@ import { logger } from '../../utils/logger.js';
 import { TIMING } from '@/config/timing';
 import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
 import { percentToPixels, pixelsToPercent, RESIZING_CONFIG } from '@/utils/canvasPositioning';
+import { useCanvasKeyboard } from '@/hooks/useCanvasKeyboard';
 
 /**
  * MainCanvas - Center panel for visual scene editing
@@ -157,58 +158,16 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
     };
   }, [selectedScene]);
 
-  // Keyboard shortcuts for character manipulation
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!selectedCharacterId || !selectedScene) return;
-
-      const selectedChar = sceneCharacters.find(sc => sc.id === selectedCharacterId);
-      if (!selectedChar) return;
-
-      // Delete key - remove character
-      if (e.key === 'Delete') {
-        e.preventDefault();
-        const character = characters.find(c => c.id === selectedChar.characterId);
-        const confirmed = window.confirm(`Remove ${character?.name || 'character'} from this scene?`);
-        if (confirmed) {
-          removeCharacterFromScene(selectedScene.id, selectedChar.id);
-          setSelectedCharacterId(null);
-        }
-        return;
-      }
-
-      // Arrow keys - nudge character position
-      const nudgeAmount = e.shiftKey ? 1 : 0.5; // 1% with Shift, 0.5% without
-      const currentPosition = selectedChar.position || { x: 50, y: 50 };
-      let newPosition = { ...currentPosition };
-
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          newPosition.x = Math.max(0, currentPosition.x - nudgeAmount);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          newPosition.x = Math.min(100, currentPosition.x + nudgeAmount);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          newPosition.y = Math.max(0, currentPosition.y - nudgeAmount);
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          newPosition.y = Math.min(100, currentPosition.y + nudgeAmount);
-          break;
-        default:
-          return;
-      }
-
-      updateSceneCharacter(selectedScene.id, selectedChar.id, { position: newPosition });
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedCharacterId, selectedScene, sceneCharacters, characters, removeCharacterFromScene, updateSceneCharacter]);
+  // Keyboard shortcuts for character manipulation (Delete, Arrow keys)
+  useCanvasKeyboard({
+    selectedCharacterId,
+    selectedScene,
+    sceneCharacters,
+    characters,
+    removeCharacterFromScene,
+    updateSceneCharacter,
+    setSelectedCharacterId
+  });
 
   const handleAddDialogue = () => {
     if (!selectedScene) return;

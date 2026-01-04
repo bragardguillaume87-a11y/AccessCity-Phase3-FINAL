@@ -8,6 +8,7 @@ import { AutoSaveIndicator } from '../ui/AutoSaveIndicator.jsx';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Copy, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { POSITION_PRESETS } from '@/utils/canvasPositioning';
+import { useMoodManagement } from '@/hooks/useMoodManagement';
 
 /**
  * PropertiesPanel - Right sidebar for editing selected element properties
@@ -29,21 +30,28 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
   const isSaving = useUIStore(state => state.isSaving);
 
   const [activeTab, setActiveTab] = useState('properties');
-  const [newMood, setNewMood] = useState('');
-  const [activeMood, setActiveMood] = useState('neutral');
-  const [moodError, setMoodError] = useState('');
 
-  // Sync activeMood when character changes
-  useEffect(() => {
-    if (selectedElement?.type === 'character') {
-      const char = characters.find(c => c.id === selectedElement.id);
-      if (char && char.moods && char.moods.length > 0) {
-        setActiveMood(char.moods[0]);
-      } else {
-        setActiveMood('neutral');
-      }
-    }
-  }, [selectedElement, characters]);
+  // Get current character (null if not viewing a character)
+  const currentCharacter = selectedElement?.type === 'character'
+    ? characters.find(c => c.id === selectedElement.id)
+    : null;
+
+  // Mood management (only active when viewing a character)
+  const {
+    newMood,
+    setNewMood,
+    activeMood,
+    setActiveMood,
+    moodError,
+    setMoodError,
+    handleAddMood,
+    handleRemoveMood
+  } = useMoodManagement({
+    character: currentCharacter,
+    characters,
+    selectedElement,
+    updateCharacter
+  });
 
   if (!selectedElement) {
     return (
@@ -209,7 +217,7 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
 
   // Render character properties
   if (selectedElement.type === 'character') {
-    const character = characters.find(c => c.id === selectedElement.id);
+    const character = currentCharacter; // Already fetched at top level
     if (!character) {
       return (
         <div className="h-full flex items-center justify-center p-6">
@@ -228,51 +236,6 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
       const sceneLines = scene.dialogues?.filter(d => d.speaker === character.id).length || 0;
       return total + sceneLines;
     }, 0);
-
-    const handleAddMood = () => {
-      const trimmed = newMood.trim();
-
-      // Validation
-      if (!trimmed) {
-        setMoodError('Mood name cannot be empty');
-        return;
-      }
-
-      if (trimmed.length > 20) {
-        setMoodError('Mood name too long (20 chars max)');
-        return;
-      }
-
-      const moods = character.moods || [];
-      if (moods.includes(trimmed)) {
-        setMoodError('This mood already exists');
-        return;
-      }
-
-      // Success
-      updateCharacter({
-        ...character,
-        moods: [...moods, trimmed],
-        sprites: { ...character.sprites, [trimmed]: '' }
-      });
-      setNewMood('');
-      setMoodError('');
-      setActiveMood(trimmed);
-    };
-
-    const handleRemoveMood = (moodToRemove) => {
-      if (moodToRemove === 'neutral') {
-        alert('Cannot remove the "neutral" mood');
-        return;
-      }
-      const moods = (character.moods || []).filter(m => m !== moodToRemove);
-      const sprites = { ...character.sprites };
-      delete sprites[moodToRemove];
-      updateCharacter({ ...character, moods, sprites });
-      if (activeMood === moodToRemove) {
-        setActiveMood(moods[0] || 'neutral');
-      }
-    };
 
     const handleDuplicate = () => {
       const duplicate = {

@@ -330,7 +330,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
           {/* Scene Canvas Container */}
           <div
             ref={canvasRef}
-            className={`relative aspect-video bg-slate-950 flex items-center justify-center transition-all ${
+            className={`relative aspect-video bg-slate-950 transition-all ${
               isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
             } ${
               dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''

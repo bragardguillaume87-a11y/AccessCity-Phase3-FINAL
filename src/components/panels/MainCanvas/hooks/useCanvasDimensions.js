@@ -12,29 +12,46 @@ export function useCanvasDimensions(canvasRef) {
   useEffect(() => {
     const updateDimensions = () => {
       if (canvasRef.current) {
-        requestAnimationFrame(() => {
-          const { width, height } = canvasRef.current.getBoundingClientRect();
-          if (width > 0 && height > 0) {
-            setDimensions({ width, height });
-          }
-        });
+        const rect = canvasRef.current.getBoundingClientRect();
+        const newWidth = Math.round(rect.width);
+        const newHeight = Math.round(rect.height);
+
+        if (newWidth > 0 && newHeight > 0) {
+          setDimensions(prev => {
+            // Only update if dimensions actually changed
+            if (prev.width !== newWidth || prev.height !== newHeight) {
+              return { width: newWidth, height: newHeight };
+            }
+            return prev;
+          });
+        }
       }
     };
 
-    // Create ResizeObserver to watch for size changes
-    const resizeObserver = new ResizeObserver(updateDimensions);
+    // Retry mechanism: check multiple times if ref isn't ready
+    const retryIntervals = [0, 50, 100, 200, 500];
+    const timeouts = retryIntervals.map(delay =>
+      setTimeout(updateDimensions, delay)
+    );
 
-    if (canvasRef.current) {
-      // Start observing the canvas element
-      resizeObserver.observe(canvasRef.current);
-      // Initial dimension update
-      updateDimensions();
-    }
+    // Create ResizeObserver to watch for size changes
+    let resizeObserver = null;
+
+    // Set up observer after a short delay to ensure ref is attached
+    setTimeout(() => {
+      if (canvasRef.current) {
+        resizeObserver = new ResizeObserver(updateDimensions);
+        resizeObserver.observe(canvasRef.current);
+      }
+    }, 100);
 
     return () => {
-      resizeObserver.disconnect();
+      timeouts.forEach(clearTimeout);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
-  }, [canvasRef]);
+  }, []); // Empty deps - run once on mount
 
   return dimensions;
 }

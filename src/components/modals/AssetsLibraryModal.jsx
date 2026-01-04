@@ -39,7 +39,8 @@ import {
   Star,
   X,
   Tag,
-  Eye
+  Eye,
+  Package
 } from 'lucide-react';
 
 /**

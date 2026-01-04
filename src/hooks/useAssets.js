@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 /**
  * Hook pour charger et filtrer les assets depuis le manifeste JSON
@@ -22,7 +23,7 @@ export function useAssets(options = {}) {
       .then(res => {
         if (!res.ok) {
           // Fallback: manifeste vide si 404 ou autre erreur HTTP
-          console.warn('[useAssets] Manifest not found (HTTP ' + res.status + '), using empty fallback');
+          logger.warn('[useAssets] Manifest not found (HTTP ' + res.status + '), using empty fallback');
           return {
             generated: new Date().toISOString(),
             version: '1.0.0',
@@ -39,11 +40,11 @@ export function useAssets(options = {}) {
 
         // Warning si manifeste vide
         if (data.totalAssets === 0) {
-          console.warn('[useAssets] Assets manifest is empty. Add files to /public/assets/ and regenerate manifest.');
+          logger.warn('[useAssets] Assets manifest is empty. Add files to /public/assets/ and regenerate manifest.');
         }
       })
       .catch(err => {
-        console.error('[useAssets] Error loading manifest:', err);
+        logger.error('[useAssets] Error loading manifest:', err);
 
         // Fallback: manifeste vide si erreur réseau
         setManifest({
@@ -107,7 +108,7 @@ export function getRecentAssets(type, maxItems = 6) {
     const stored = localStorage.getItem(`accesscity-recent-${type}`);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
-    console.error('[useAssets] Error loading recent assets:', error);
+    logger.error('[useAssets] Error loading recent assets:', error);
     return [];
   }
 }
@@ -123,7 +124,7 @@ export function addToRecentAssets(type, assetPath, maxItems = 6) {
     localStorage.setItem(`accesscity-recent-${type}`, JSON.stringify(newHistory));
     return newHistory;
   } catch (error) {
-    console.error('[useAssets] Error saving recent assets:', error);
+    logger.error('[useAssets] Error saving recent assets:', error);
     return [];
   }
 }

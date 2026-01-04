@@ -2,6 +2,7 @@
 import React from 'react';
 import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.js';
 import { toast } from 'sonner';
+import { logger } from '../utils/logger';
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -26,7 +27,7 @@ export default function ExportPanel({ onPrev }) {
       toast.success(`Fichier ${filename} exporte avec succes`);
     } catch (error) {
       toast.error(`Echec de l export de ${filename}`);
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
     }
   }
 

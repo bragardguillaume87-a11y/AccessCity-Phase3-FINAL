@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../../../utils/logger';
 
 const FAVORITES_STORAGE_KEY = 'accesscity-favorite-assets';
 
@@ -13,7 +14,7 @@ export function useFavorites() {
       const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Failed to load favorites:', error);
+      logger.error('Failed to load favorites:', error);
       return [];
     }
   });
@@ -23,7 +24,7 @@ export function useFavorites() {
     try {
       localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
     } catch (error) {
-      console.error('Failed to save favorites:', error);
+      logger.error('Failed to save favorites:', error);
     }
   }, [favorites]);
 

@@ -5,6 +5,7 @@ import {
   addToRecentAssets,
 } from "../hooks/useAssets.js";
 import { toAbsoluteAssetPath } from "../utils/pathUtils.js";
+import { logger } from "../utils/logger";
 import { API } from "@/config/constants";
 import { TIMING } from "@/config/timing";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,12 +66,12 @@ export default function AssetPicker({
         return true;
       } else {
         setServerStatus('offline');
-        console.warn('[AssetPicker] Server returned non-200 status');
+        logger.warn('[AssetPicker] Server returned non-200 status');
         return false;
       }
     } catch (error) {
       setServerStatus('offline');
-      console.error('[AssetPicker] Server health check failed:', error);
+      logger.error('[AssetPicker] Server health check failed:', error);
       return false;
     }
   }, []);
@@ -85,7 +86,7 @@ export default function AssetPicker({
   const handleFileUpload = useCallback(
     async (file) => {
       if (!file || !file.type.startsWith("image/")) {
-        console.warn("[AssetPicker] Invalid file type:", file?.type);
+        logger.warn("[AssetPicker] Invalid file type:", file?.type);
         setUploadError("Invalid file type. Only images allowed.");
         setUploadStatus("error");
         return;
@@ -139,7 +140,7 @@ export default function AssetPicker({
 
         setUploadStatus("success");
       } catch (error) {
-        console.error("[AssetPicker] Upload error:", error);
+        logger.error("[AssetPicker] Upload error:", error);
         setUploadError(error.message);
         setUploadStatus("error");
       }

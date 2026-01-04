@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useScenesStore, useCharactersStore } from '../stores/index.js';
 import { IconByName } from './IconByName.jsx';
+import { logger } from '../utils/logger';
 // FIX: Utiliser StageDirector simplifie
 import StageDirector from '../core/StageDirector.simple.js';
 // FIX: Utiliser systeme son simplifie
@@ -30,7 +31,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
       // Vérifier qu'il y a au moins un dialogue
       if (allDialogues.length === 0) {
-        console.warn('[PlayMode] Aucun dialogue dans le scenario');
+        logger.warn('[PlayMode] Aucun dialogue dans le scenario');
         alert('Ce scenario n\'a pas de dialogues. Ajoutez-en dans l\'editeur avant de jouer !');
         setIsLoading(false);
         setTimeout(onExit, 100);
@@ -48,7 +49,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
 
       // FIX: Verifier qu'il y a des dialogues
       if (!dialogue) {
-        console.warn('[PlayMode] Aucun dialogue pour cette scene');
+        logger.warn('[PlayMode] Aucun dialogue pour cette scene');
         alert('Cette scene n\'a pas de dialogues. Ajoutez-en dans l\'editeur avant de jouer !');
         setIsLoading(false);
         setTimeout(onExit, 100);

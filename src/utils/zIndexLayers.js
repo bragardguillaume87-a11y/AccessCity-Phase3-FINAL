@@ -7,6 +7,8 @@
  * IMPORTANT : Toujours utiliser ces constantes au lieu de valeurs hardcodées
  */
 
+import { logger } from './logger';
+
 export const Z_INDEX = {
   // Canvas layers - Scene editor (MainCanvas)
   CANVAS_GRID: 0,
@@ -47,7 +49,7 @@ export const Z_INDEX = {
 export function getZIndexClass(layer) {
   const zIndex = Z_INDEX[layer];
   if (zIndex === undefined) {
-    console.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
+    logger.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
     return `z-[${Z_INDEX.DIALOG_BASE}]`;
   }
   return `z-[${zIndex}]`;
@@ -66,7 +68,7 @@ export function getZIndexClass(layer) {
 export function getZIndexValue(layer) {
   const zIndex = Z_INDEX[layer];
   if (zIndex === undefined) {
-    console.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
+    logger.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
     return Z_INDEX.DIALOG_BASE;
   }
   return zIndex;

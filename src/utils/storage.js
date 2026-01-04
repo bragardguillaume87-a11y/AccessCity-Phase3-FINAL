@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEYS } from '@/config/storageKeys';
+import { logger } from './logger';
 
 /**
  * Custom hook for localStorage management with React state sync
@@ -30,7 +31,7 @@ export function useLocalStorage(key, initialValue) {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
+      logger.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
@@ -50,7 +51,7 @@ export function useLocalStorage(key, initialValue) {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
+      logger.error(`Error setting localStorage key "${key}":`, error);
     }
   }, [key, storedValue]);
 
@@ -62,7 +63,7 @@ export function useLocalStorage(key, initialValue) {
         window.localStorage.removeItem(key);
       }
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error);
+      logger.error(`Error removing localStorage key "${key}":`, error);
     }
   }, [key, initialValue]);
 
@@ -139,7 +140,7 @@ export function useLocalStorageSync(key, callback) {
           const newValue = JSON.parse(e.newValue);
           callback(newValue);
         } catch (error) {
-          console.error(`Error parsing storage event for key "${key}":`, error);
+          logger.error(`Error parsing storage event for key "${key}":`, error);
         }
       }
     };

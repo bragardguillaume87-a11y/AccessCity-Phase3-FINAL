@@ -2,6 +2,7 @@
 import React from 'react';
 import { useSettingsStore } from '../stores/index.js';
 import { toast } from 'sonner';
+import { logger } from '../utils/logger';
 
 export default function ImportPanel() {
   const setContextField = useSettingsStore(state => state.setContextField);
@@ -46,7 +47,7 @@ export default function ImportPanel() {
         }
       } catch (err) {
         toast.error('Erreur de lecture du fichier JSON');
-        console.error('Import error:', err);
+        logger.error('Import error:', err);
       }
     };
 

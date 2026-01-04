@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { useUndoRedo } from "./hooks/useUndoRedo.js";
 import { toAbsoluteAssetPath } from "./utils/pathUtils.js";
+import { logger } from "./utils/logger";
 
 /**
  * AppContext centralizes editor state:
@@ -190,7 +191,7 @@ export function AppProvider({ children }) {
         setLastSaved(new Date());
         setIsSaving(false);
       } catch (error) {
-        console.error("[AutoSave] Failed to save:", error);
+        logger.error("[AutoSave] Failed to save:", error);
         setIsSaving(false);
       }
     }, 500);

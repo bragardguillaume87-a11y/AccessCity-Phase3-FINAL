@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { logger } from '../../../../utils/logger';
 import { API } from '@/config/constants';
 import { TIMING } from '@/config/timing';
 
@@ -97,7 +98,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
       }, TIMING.LOADING_MIN_DISPLAY);
 
     } catch (error) {
-      console.error('Upload error:', error);
+      logger.error('Upload error:', error);
       toast.error('Erreur lors de l\'upload', {
         description: error.message,
       });

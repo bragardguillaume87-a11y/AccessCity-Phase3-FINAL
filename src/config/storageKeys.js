@@ -6,6 +6,8 @@
  * localStorage.getItem(STORAGE_KEYS.BACKGROUNDS_HISTORY);
  */
 
+import { logger } from '../utils/logger';
+
 export const STORAGE_KEYS = {
   // Asset management
   BACKGROUNDS_HISTORY: 'ac_backgrounds_history',
@@ -37,7 +39,7 @@ export const getStorageItem = (key, defaultValue = null) => {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
-    console.error(`Error reading from localStorage key "${key}":`, error);
+    logger.error(`Error reading from localStorage key "${key}":`, error);
     return defaultValue;
   }
 };
@@ -53,7 +55,7 @@ export const setStorageItem = (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (error) {
-    console.error(`Error writing to localStorage key "${key}":`, error);
+    logger.error(`Error writing to localStorage key "${key}":`, error);
     return false;
   }
 };
@@ -68,7 +70,7 @@ export const removeStorageItem = (key) => {
     localStorage.removeItem(key);
     return true;
   } catch (error) {
-    console.error(`Error removing from localStorage key "${key}":`, error);
+    logger.error(`Error removing from localStorage key "${key}":`, error);
     return false;
   }
 };

@@ -24,6 +24,7 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const iconMap = {
   'x': X,
@@ -55,7 +56,7 @@ export function IconByName({ name, className = '', size = 20, ...props }) {
   const IconComponent = iconMap[name];
 
   if (!IconComponent) {
-    console.warn(`[IconByName] Unknown icon: "${name}"`);
+    logger.warn(`[IconByName] Unknown icon: "${name}"`);
     return <AlertCircle className={className} size={size} {...props} />;
   }
 

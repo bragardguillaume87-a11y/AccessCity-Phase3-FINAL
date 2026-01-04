@@ -7,6 +7,7 @@ import { CollapsibleSection, FormField } from '../ui/CollapsibleSection.jsx';
 import { AutoSaveIndicator } from '../ui/AutoSaveIndicator.jsx';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Copy, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { POSITION_PRESETS } from '@/utils/canvasPositioning';
 
 /**
  * PropertiesPanel - Right sidebar for editing selected element properties
@@ -502,12 +503,7 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
 
     // Position presets
     const applyPositionPreset = (preset) => {
-      const positions = {
-        left: { x: 20, y: 50 },
-        center: { x: 50, y: 50 },
-        right: { x: 80, y: 50 }
-      };
-      updateSceneCharacter(selectedScene.id, sceneChar.id, { position: positions[preset] });
+      updateSceneCharacter(selectedScene.id, sceneChar.id, { position: POSITION_PRESETS[preset] });
     };
 
     return (

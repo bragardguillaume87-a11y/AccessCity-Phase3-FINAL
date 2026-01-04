@@ -14,57 +14,8 @@ import { UserPlus, List, Network, Grid3x3, ChevronLeft, ChevronRight, Maximize2,
 import { useTypewriter } from '../../hooks/useTypewriter.js';
 import { logger } from '../../utils/logger.js';
 import { TIMING } from '@/config/timing';
-
-/**
- * Animation variants for character entrance/exit animations
- */
-const CHARACTER_ANIMATION_VARIANTS = {
-  // No animation
-  none: {
-    initial: { opacity: 1, scale: 1, x: 0, y: 0 },
-    animate: { opacity: 1, scale: 1, x: 0, y: 0 },
-    exit: { opacity: 1, scale: 1, x: 0, y: 0 }
-  },
-  // Fade animations
-  fadeIn: {
-    initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: 0.5 } },
-    exit: { opacity: 0, transition: { duration: 0.3 } }
-  },
-  // Slide animations
-  slideInLeft: {
-    initial: { x: -100, opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { x: -100, opacity: 0, transition: { duration: 0.3 } }
-  },
-  slideInRight: {
-    initial: { x: 100, opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { x: 100, opacity: 0, transition: { duration: 0.3 } }
-  },
-  slideInUp: {
-    initial: { y: 100, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { y: 100, opacity: 0, transition: { duration: 0.3 } }
-  },
-  slideInDown: {
-    initial: { y: -100, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { y: -100, opacity: 0, transition: { duration: 0.3 } }
-  },
-  // Pop animations
-  pop: {
-    initial: { scale: 0, opacity: 0 },
-    animate: { scale: 1, opacity: 1, transition: { duration: 0.4, type: 'spring', bounce: 0.5 } },
-    exit: { scale: 0, opacity: 0, transition: { duration: 0.2 } }
-  },
-  // Bounce animation
-  bounce: {
-    initial: { y: -50, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: 0.6, type: 'spring', bounce: 0.6 } },
-    exit: { y: 50, opacity: 0, transition: { duration: 0.3 } }
-  }
-};
+import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
+import { percentToPixels, pixelsToPercent, RESIZING_CONFIG } from '@/utils/canvasPositioning';
 
 /**
  * MainCanvas - Center panel for visual scene editing
@@ -258,16 +209,6 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCharacterId, selectedScene, sceneCharacters, characters, removeCharacterFromScene, updateSceneCharacter]);
-
-  // Convert percentage to pixels
-  const percentToPixels = (percent, dimension) => {
-    return (percent / 100) * dimension;
-  };
-
-  // Convert pixels to percentage
-  const pixelsToPercent = (pixels, dimension) => {
-    return (pixels / dimension) * 100;
-  };
 
   const handleAddDialogue = () => {
     if (!selectedScene) return;
@@ -746,16 +687,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
                   lockAspectRatio={true}
                   style={{ zIndex }}
                   className="group"
-                  enableResizing={{
-                    top: false,
-                    right: true,
-                    bottom: true,
-                    left: false,
-                    topRight: false,
-                    bottomRight: true,
-                    bottomLeft: false,
-                    topLeft: false
-                  }}
+                  enableResizing={RESIZING_CONFIG}
                 >
                   <motion.div
                     className="w-full h-full cursor-move"
@@ -852,16 +784,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
                   lockAspectRatio={true}
                   style={{ zIndex: Z_INDEX.CANVAS_PROPS }}
                   className="group"
-                  enableResizing={{
-                    top: false,
-                    right: true,
-                    bottom: true,
-                    left: false,
-                    topRight: false,
-                    bottomRight: true,
-                    bottomLeft: false,
-                    topLeft: false
-                  }}
+                  enableResizing={RESIZING_CONFIG}
                 >
                   <div className="w-full h-full cursor-move relative">
                     {/* Emoji Prop */}
@@ -936,16 +859,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
                   resizeGrid={dragGrid}
                   style={{ zIndex: Z_INDEX.CANVAS_TEXTBOXES }}
                   className="group"
-                  enableResizing={{
-                    top: false,
-                    right: true,
-                    bottom: true,
-                    left: false,
-                    topRight: false,
-                    bottomRight: true,
-                    bottomLeft: false,
-                    topLeft: false
-                  }}
+                  enableResizing={RESIZING_CONFIG}
                 >
                   <div className="w-full h-full cursor-move relative bg-white/90 backdrop-blur-sm border-2 border-slate-400 rounded-lg p-3 shadow-lg hover:border-blue-500 transition-all">
                     {/* ContentEditable Text */}

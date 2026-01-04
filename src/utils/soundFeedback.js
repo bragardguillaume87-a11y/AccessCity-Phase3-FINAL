@@ -2,6 +2,7 @@
 // Système de feedback sonore pour AccessCity
 
 import { TIMING } from '@/config/timing';
+import { logger } from './logger';
 
 // État global du son
 let globalMuted = false;
@@ -13,7 +14,7 @@ let globalVolume = 0.7; // Volume par défaut à 70%
  */
 export function setGlobalMute(muted) {
   globalMuted = muted;
-  console.log(`[Sound] Mute: ${muted}`);
+  logger.debug(`[Sound] Mute: ${muted}`);
 }
 
 /**
@@ -30,7 +31,7 @@ export function isGlobalMuted() {
  */
 export function setGlobalVolume(volume) {
   globalVolume = Math.max(0, Math.min(1, volume));
-  console.log(`[Sound] Volume: ${(globalVolume * 100).toFixed(0)}%`);
+  logger.debug(`[Sound] Volume: ${(globalVolume * 100).toFixed(0)}%`);
 }
 
 /**
@@ -48,21 +49,21 @@ export function getGlobalVolume() {
  */
 function playAudio(path, volumeMultiplier = 1.0) {
   if (globalMuted) {
-    console.log(`[Sound] Skipped (muted): ${path}`);
+    logger.debug(`[Sound] Skipped (muted): ${path}`);
     return;
   }
-  
+
   try {
     const audio = new Audio(path);
     audio.volume = globalVolume * volumeMultiplier;
-    
+
     audio.play().catch(err => {
-      console.warn(`[Sound] Failed to play ${path}:`, err.message);
+      logger.warn(`[Sound] Failed to play ${path}:`, err.message);
     });
-    
-    console.log(`[Sound] Playing: ${path} (volume: ${(audio.volume * 100).toFixed(0)}%)`);
+
+    logger.debug(`[Sound] Playing: ${path} (volume: ${(audio.volume * 100).toFixed(0)}%)`);
   } catch (error) {
-    console.error(`[Sound] Error creating audio for ${path}:`, error);
+    logger.error(`[Sound] Error creating audio for ${path}:`, error);
   }
 }
 
@@ -166,8 +167,8 @@ export function testAllSounds() {
     'click', 'hover', 'error', 'success'
   ];
   
-  console.log('[Sound] Testing all sounds...');
-  
+  logger.debug('[Sound] Testing all sounds...');
+
   sounds.forEach((sound, index) => {
     setTimeout(() => {
       playAudio(`/sounds/${sound}.mp3`);

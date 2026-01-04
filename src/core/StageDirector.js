@@ -1,6 +1,7 @@
 // core/StageDirector.js
 // Moteur de jeu pour AccessCity Studio (React)
 
+import { logger } from '../utils/logger';
 
 export default class StageDirector {
   constructor(scenes, dialogues, characters, initialSceneIndex = 0) {
@@ -28,24 +29,24 @@ export default class StageDirector {
   initialize() {
     // S'assurer que l'index de scène est valide
     if (this.currentSceneIndex < 0 || this.currentSceneIndex >= this.scenes.length) {
-      console.warn(`[StageDirector] Scene index ${this.currentSceneIndex} invalide, reset à 0`);
+      logger.warn(`[StageDirector] Scene index ${this.currentSceneIndex} invalide, reset à 0`);
       this.currentSceneIndex = 0;
     }
-    
+
     this.currentDialogueIndex = 0;
     this.gameEnded = false;
-    
-    console.log(`[StageDirector] Initialisation: scène ${this.currentSceneIndex}/${this.scenes.length}`);
+
+    logger.debug(`[StageDirector] Initialisation: scène ${this.currentSceneIndex}/${this.scenes.length}`);
   }
 
 
   getCurrentScene() {
     if (this.currentSceneIndex >= 0 && this.currentSceneIndex < this.scenes.length) {
       const scene = this.scenes[this.currentSceneIndex];
-      console.log(`[StageDirector] getCurrentScene(): scène ${scene?.id || 'undefined'}`);
+      logger.debug(`[StageDirector] getCurrentScene(): scène ${scene?.id || 'undefined'}`);
       return scene;
     }
-    console.warn(`[StageDirector] getCurrentScene(): index ${this.currentSceneIndex} hors limites`);
+    logger.warn(`[StageDirector] getCurrentScene(): index ${this.currentSceneIndex} hors limites`);
     return null;
   }
 
@@ -53,37 +54,37 @@ export default class StageDirector {
   getCurrentDialogue() {
     const currentScene = this.getCurrentScene();
     if (!currentScene) {
-      console.warn('[StageDirector] getCurrentDialogue(): aucune scène actuelle');
+      logger.warn('[StageDirector] getCurrentDialogue(): aucune scène actuelle');
       return null;
     }
-    
+
     // ✅ FIX: Filtrer par scene.id au lieu de l'index
     const dialoguesInScene = this.dialogues.filter(
       d => d.sceneId === currentScene.id
     );
-    
-    console.log(`[StageDirector] Scène "${currentScene.id}": ${dialoguesInScene.length} dialogues trouvés`);
-    
+
+    logger.debug(`[StageDirector] Scène "${currentScene.id}": ${dialoguesInScene.length} dialogues trouvés`);
+
     if (this.currentDialogueIndex >= 0 && this.currentDialogueIndex < dialoguesInScene.length) {
       const dialogue = dialoguesInScene[this.currentDialogueIndex];
-      console.log(`[StageDirector] Dialogue ${this.currentDialogueIndex}: "${dialogue.text?.substring(0, 50)}..."`);
+      logger.debug(`[StageDirector] Dialogue ${this.currentDialogueIndex}: "${dialogue.text?.substring(0, 50)}..."`);
       return dialogue;
     }
-    
-    console.log(`[StageDirector] Aucun dialogue à l'index ${this.currentDialogueIndex}`);
+
+    logger.debug(`[StageDirector] Aucun dialogue à l'index ${this.currentDialogueIndex}`);
     return null;
   }
 
 
   makeChoice(choice) {
-    console.log('[StageDirector] Choice made:', choice);
-    
+    logger.debug('[StageDirector] Choice made:', choice);
+
     // Appliquer les effets sur les variables
     if (choice.effects) {
       Object.entries(choice.effects).forEach(([key, value]) => {
         if (this.variables.hasOwnProperty(key)) {
           this.variables[key] = Math.max(0, Math.min(100, this.variables[key] + value));
-          console.log(`[StageDirector] Variable ${key}: ${this.variables[key]}`);
+          logger.debug(`[StageDirector] Variable ${key}: ${this.variables[key]}`);
         }
       });
     }
@@ -93,17 +94,17 @@ export default class StageDirector {
     if (choice.riskLevel && choice.riskLevel > 0) {
       const diceRoll = Math.floor(Math.random() * 6) + 1;
       const threshold = 7 - choice.riskLevel; // riskLevel 1 = seuil 6, riskLevel 2 = seuil 5, etc.
-      
-      console.log(`[StageDirector] Dice roll: ${diceRoll}, threshold: ${threshold}`);
-      
+
+      logger.debug(`[StageDirector] Dice roll: ${diceRoll}, threshold: ${threshold}`);
+
       if (diceRoll < threshold) {
         // Échec : pénalité sur les variables
         Object.keys(this.variables).forEach(key => {
           this.variables[key] = Math.max(0, this.variables[key] - 5);
         });
-        console.log('[StageDirector] Risk failed! Variables reduced.');
+        logger.debug('[StageDirector] Risk failed! Variables reduced.');
       } else {
-        console.log('[StageDirector] Risk succeeded!');
+        logger.debug('[StageDirector] Risk succeeded!');
       }
     }
 
@@ -112,13 +113,13 @@ export default class StageDirector {
     if (choice.nextSceneId !== null && choice.nextSceneId !== undefined) {
       // ✅ FIX: Chercher l'index de la scène par son ID
       const nextSceneIndex = this.scenes.findIndex(s => s.id === choice.nextSceneId);
-      
+
       if (nextSceneIndex !== -1) {
         this.currentSceneIndex = nextSceneIndex;
         this.currentDialogueIndex = 0;
-        console.log(`[StageDirector] Moving to scene ${choice.nextSceneId} (index ${nextSceneIndex})`);
+        logger.debug(`[StageDirector] Moving to scene ${choice.nextSceneId} (index ${nextSceneIndex})`);
       } else {
-        console.warn(`[StageDirector] Scene ${choice.nextSceneId} introuvable, fin du jeu`);
+        logger.warn(`[StageDirector] Scene ${choice.nextSceneId} introuvable, fin du jeu`);
         this.gameEnded = true;
       }
     } else {
@@ -126,7 +127,7 @@ export default class StageDirector {
       if (!this.nextDialogue()) {
         // Fin du jeu
         this.gameEnded = true;
-        console.log('[StageDirector] Game ended.');
+        logger.debug('[StageDirector] Game ended.');
       }
     }
 
@@ -146,7 +147,7 @@ export default class StageDirector {
     
     // Si aucun dialogue dans la scène actuelle, le jeu est terminé
     if (dialoguesInScene.length === 0) {
-      console.warn(`[StageDirector] Aucun dialogue pour la scène ${currentScene.id}, jeu terminé`);
+      logger.warn(`[StageDirector] Aucun dialogue pour la scène ${currentScene.id}, jeu terminé`);
       return true;
     }
     
@@ -168,7 +169,7 @@ export default class StageDirector {
       Autonomie: 50,
       Confiance: 50
     };
-    console.log('[StageDirector] Game reset');
+    logger.debug('[StageDirector] Game reset');
   }
 
 
@@ -183,11 +184,11 @@ export default class StageDirector {
     
     if (this.currentDialogueIndex < dialoguesInScene.length - 1) {
       this.currentDialogueIndex++;
-      console.log(`[StageDirector] Avancé au dialogue ${this.currentDialogueIndex}`);
+      logger.debug(`[StageDirector] Avancé au dialogue ${this.currentDialogueIndex}`);
       return true;
     }
-    
-    console.log('[StageDirector] Aucun dialogue suivant');
+
+    logger.debug('[StageDirector] Aucun dialogue suivant');
     return false; // Pas de dialogue suivant
   }
 

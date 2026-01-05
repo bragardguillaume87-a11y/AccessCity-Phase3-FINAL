@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { devtools, subscribeWithSelector } from 'zustand/middleware';
+import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
+import { temporal } from 'zundo';
 import { toAbsoluteAssetPath } from '../utils/pathUtils.js';
 
 /**
@@ -171,8 +172,10 @@ const SAMPLE_SCENES = [
 ];
 
 export const useScenesStore = create(
-  devtools(
-    subscribeWithSelector((set, get) => ({
+  temporal(
+    persist(
+      devtools(
+        subscribeWithSelector((set, get) => ({
       // State
       scenes: SAMPLE_SCENES,
 
@@ -544,6 +547,41 @@ export const useScenesStore = create(
         }), false, 'scenes/updateProp');
       },
     })),
-    { name: 'ScenesStore' }
+        { name: 'ScenesStore' }
+      ),
+      {
+        name: 'scenes-storage',
+        storage: createJSONStorage(() => localStorage),
+        version: 1,
+      }
+    ),
+    {
+      limit: 50,
+      equality: (pastState, currentState) => pastState === currentState,
+    }
   )
 );
+
+// Subscribe to scenes store changes to update autosave timestamp
+// Debounced to avoid updating on every keystroke
+let scenesSaveTimeout;
+const unsubscribeScenes = useScenesStore.subscribe(
+  (state) => state.scenes,
+  () => {
+    clearTimeout(scenesSaveTimeout);
+    scenesSaveTimeout = setTimeout(() => {
+      // Dynamically import UIStore to avoid circular dependency
+      import('./uiStore.js').then(({ useUIStore }) => {
+        useUIStore.getState().setLastSaved(new Date().toISOString());
+      });
+    }, 1000); // 1 second debounce
+  }
+);
+
+// Cleanup on HMR (Hot Module Replacement) to prevent memory leaks
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    clearTimeout(scenesSaveTimeout);
+    unsubscribeScenes();
+  });
+}

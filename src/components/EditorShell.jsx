@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useScenesStore, useCharactersStore, useUIStore, useUndoRedoStore } from '../stores/index.js';
+import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.js';
+import { useUndoRedo } from '../hooks/useUndoRedo.js';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
@@ -9,9 +10,9 @@ import TopBar from './layout/TopBar.jsx';
 import Sidebar from './layout/Sidebar.jsx';
 import Inspector from './layout/Inspector.jsx';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.jsx';
+import MainCanvas from './panels/MainCanvas.jsx';
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel.jsx'));
-const MainCanvas = React.lazy(() => import('./panels/MainCanvas.jsx'));
 const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel.jsx'));
 const CharactersModal = React.lazy(() => import('./modals/CharactersModal.jsx'));
 const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal.jsx'));
@@ -32,12 +33,11 @@ export default function EditorShell({ onBack = null }) {
   const characters = useCharactersStore(state => state.characters);
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
-  const lastSaved = useUndoRedoStore(state => state.lastSaved);
-  const isSaving = useUndoRedoStore(state => state.isSaving);
-  const undo = useUndoRedoStore(state => state.undo);
-  const redo = useUndoRedoStore(state => state.redo);
-  const canUndo = useUndoRedoStore(state => state.canUndo);
-  const canRedo = useUndoRedoStore(state => state.canRedo);
+  const lastSaved = useUIStore(state => state.lastSaved);
+  const isSaving = useUIStore(state => state.isSaving);
+
+  // Undo/Redo functionality from zundo
+  const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
   const validation = useValidation();
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);

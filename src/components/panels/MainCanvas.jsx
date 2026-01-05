@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useScenesStore, useCharactersStore } from '../../stores/index.js';
 import ContextMenu from '../ui/ContextMenu.jsx';
@@ -56,8 +56,7 @@ function MainCanvas({ selectedScene, scenes, selectedElement, onSelectDialogue, 
   const [isPlaying, setIsPlaying] = useState(false);
   const [dropFeedback, setDropFeedback] = useState(null);
 
-  const canvasRef = useRef(null);
-  const canvasDimensions = useCanvasDimensions(canvasRef);
+  const [canvasRef, canvasDimensions] = useCanvasDimensions();
   const { currentDialogueText, currentTime, setCurrentTime } = useDialogueSync(selectedElement, selectedScene);
 
   const sceneCharacters = selectedScene?.characters || [];

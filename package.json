@@ -33,7 +33,9 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.4",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",
     "c8": "^9.1.0",
@@ -50,7 +52,7 @@
     "postcss": "^8.5.6",
     "prettier": "^3.7.4",
     "tailwindcss": "^3.4.19",
-    "typescript": "^5.3.3",
+    "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-istanbul": "^7.2.1",
     "vitest": "^4.0.16"
@@ -85,8 +87,8 @@
     "immer": "^11.1.0",
     "lucide-react": "^0.561.0",
     "prop-types": "^15.8.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-hook-form": "^7.69.0",
     "react-resizable-panels": "^4.0.13",
     "react-rnd": "^10.5.2",
@@ -95,6 +97,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^13.0.0",
     "zod": "^4.2.1",
+    "zundo": "^2.3.0",
     "zustand": "^5.0.9"
   }
 }

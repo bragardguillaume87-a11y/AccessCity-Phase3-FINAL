@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { AppProvider } from "./AppContext.jsx";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SkipToContent from "./components/SkipToContent.jsx";
 import HomePage from "./components/HomePage.jsx";
@@ -72,28 +71,26 @@ function App() {
   }
 
   return (
-    <AppProvider>
-      <TooltipProvider delayDuration={300} skipDelayDuration={100}>
-        <SkipToContent />
-        {currentView === "tokens-demo" ? (
-          <TokensDemo />
-        ) : currentView === "editor" ? (
-          <EditorShell onBack={handleBackHome} />
-        ) : (
-          <HomePage
-            quests={quests}
-            selectedQuestId={selectedQuestId}
-            newQuestName={newQuestName}
-            onNewQuestNameChange={setNewQuestName}
-            onCreateQuest={handleCreateQuest}
-            onSelectQuest={handleSelectQuest}
-            onLaunchEditor={handleLaunchEditor}
-            onDeleteQuest={handleDeleteQuest}
-          />
-        )}
-        <Toaster position="top-right" richColors closeButton duration={5000} theme="dark" />
-      </TooltipProvider>
-    </AppProvider>
+    <TooltipProvider delayDuration={300} skipDelayDuration={100}>
+      <SkipToContent />
+      {currentView === "tokens-demo" ? (
+        <TokensDemo />
+      ) : currentView === "editor" ? (
+        <EditorShell onBack={handleBackHome} />
+      ) : (
+        <HomePage
+          quests={quests}
+          selectedQuestId={selectedQuestId}
+          newQuestName={newQuestName}
+          onNewQuestNameChange={setNewQuestName}
+          onCreateQuest={handleCreateQuest}
+          onSelectQuest={handleSelectQuest}
+          onLaunchEditor={handleLaunchEditor}
+          onDeleteQuest={handleDeleteQuest}
+        />
+      )}
+      <Toaster position="top-right" richColors closeButton duration={5000} theme="dark" />
+    </TooltipProvider>
   );
 }
 

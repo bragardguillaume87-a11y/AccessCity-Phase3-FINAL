@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUndoRedoStore } from '../../stores/index.js';
+import { useUIStore } from '../../stores/index.js';
 import { TIMING } from '@/config/timing';
 
 /**
@@ -14,7 +14,7 @@ import { TIMING } from '@/config/timing';
  * @returns {JSX.Element}
  */
 export const AutoSaveTimestamp = React.memo(() => {
-  const lastSaved = useUndoRedoStore(state => state.lastSaved);
+  const lastSaved = useUIStore(state => state.lastSaved);
   const [elapsed, setElapsed] = useState(Date.now());
 
   // Isolated timer - only re-renders this component

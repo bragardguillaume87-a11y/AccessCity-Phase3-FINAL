@@ -259,7 +259,7 @@ export default function UnifiedPanel({ onOpenModal }) {
         <CollapsibleSection
           title="Characters"
           icon={<Users className="w-4 h-4" />}
-          defaultOpen={true}
+          defaultOpen={false}
         >
           <div className="space-y-3">
             <CharacterMoodPicker

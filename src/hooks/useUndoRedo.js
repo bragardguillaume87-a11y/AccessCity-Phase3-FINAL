@@ -1,88 +1,67 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useStore } from 'zustand';
+import { useScenesStore } from '../stores/scenesStore.js';
+import { useCharactersStore } from '../stores/charactersStore.js';
 
 /**
- * Hook pour gerer l'historique Undo/Redo avec Ctrl+Z et Ctrl+Y
- * @param {*} initialState - Etat initial
- * @param {number} maxHistory - Nombre maximum d'etats dans l'historique (default: 50)
+ * useUndoRedo - Unified hook for undo/redo functionality
+ *
+ * Uses zundo's temporal middleware to provide undo/redo for both
+ * scenes and characters stores with proper keyboard shortcuts.
+ *
+ * REACTIVE: Subscribes to temporal state changes to update UI in real-time.
+ *
+ * @returns {Object} { undo, redo, canUndo, canRedo, clear }
  */
-export function useUndoRedo(initialState, maxHistory = 50) {
-  const [history, setHistory] = useState([initialState]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const isUndoRedoAction = useRef(false);
+export function useUndoRedo() {
+  // REACTIVE: Subscribe to scenes temporal state
+  const scenesPastStates = useStore(useScenesStore.temporal, (state) => state.pastStates);
+  const scenesFutureStates = useStore(useScenesStore.temporal, (state) => state.futureStates);
 
-  // Etat actuel
-  const currentState = history[currentIndex];
+  // REACTIVE: Subscribe to characters temporal state
+  const charsPastStates = useStore(useCharactersStore.temporal, (state) => state.pastStates);
+  const charsFutureStates = useStore(useCharactersStore.temporal, (state) => state.futureStates);
 
-  // Ajouter un nouvel etat a l'historique
-  const pushState = useCallback((newState) => {
-    // Ne pas ajouter si c'est une action undo/redo
-    if (isUndoRedoAction.current) {
-      isUndoRedoAction.current = false;
-      return;
-    }
+  /**
+   * Undo the last action in both stores
+   */
+  const undo = () => {
+    const scenesState = useScenesStore.temporal.getState();
+    const charsState = useCharactersStore.temporal.getState();
 
-    setHistory((prev) => {
-      // Supprimer tous les etats apres l'index actuel
-      const newHistory = prev.slice(0, currentIndex + 1);
-      // Ajouter le nouvel etat
-      newHistory.push(newState);
-      // Limiter la taille de l'historique
-      if (newHistory.length > maxHistory) {
-        newHistory.shift();
-        return newHistory;
-      }
-      return newHistory;
-    });
+    if (scenesState.pastStates.length > 0) scenesState.undo();
+    if (charsState.pastStates.length > 0) charsState.undo();
+  };
 
-    setCurrentIndex((prev) => {
-      const newIndex = prev + 1;
-      return newIndex >= maxHistory ? maxHistory - 1 : newIndex;
-    });
-  }, [currentIndex, maxHistory]);
+  /**
+   * Redo the last undone action in both stores
+   */
+  const redo = () => {
+    const scenesState = useScenesStore.temporal.getState();
+    const charsState = useCharactersStore.temporal.getState();
 
-  // Undo
-  const undo = useCallback(() => {
-    if (currentIndex > 0) {
-      isUndoRedoAction.current = true;
-      setCurrentIndex((prev) => prev - 1);
-    }
-  }, [currentIndex]);
+    if (scenesState.futureStates.length > 0) scenesState.redo();
+    if (charsState.futureStates.length > 0) charsState.redo();
+  };
 
-  // Redo
-  const redo = useCallback(() => {
-    if (currentIndex < history.length - 1) {
-      isUndoRedoAction.current = true;
-      setCurrentIndex((prev) => prev + 1);
-    }
-  }, [currentIndex, history.length]);
-
-  // Gestion des raccourcis clavier
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Ctrl+Z (ou Cmd+Z sur Mac)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      // Ctrl+Y ou Ctrl+Shift+Z (ou Cmd+Y / Cmd+Shift+Z sur Mac)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
-        e.preventDefault();
-        redo();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  /**
+   * Clear undo/redo history for both stores
+   */
+  const clear = () => {
+    useScenesStore.temporal.getState().clear();
+    useCharactersStore.temporal.getState().clear();
+  };
 
   return {
-    state: currentState,
-    pushState,
     undo,
     redo,
-    canUndo: currentIndex > 0,
-    canRedo: currentIndex < history.length - 1,
-    historyLength: history.length,
-    currentIndex
+    // REACTIVE: These values update automatically when undo/redo state changes
+    canUndo: scenesPastStates.length > 0 || charsPastStates.length > 0,
+    canRedo: scenesFutureStates.length > 0 || charsFutureStates.length > 0,
+    clear,
+    // Expose individual store states for debugging
+    stats: {
+      scenes: { past: scenesPastStates.length, future: scenesFutureStates.length },
+      characters: { past: charsPastStates.length, future: charsFutureStates.length },
+    },
   };
 }

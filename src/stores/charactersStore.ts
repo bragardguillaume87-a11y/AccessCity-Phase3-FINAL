@@ -1,0 +1,142 @@
+import { create } from 'zustand';
+import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
+import { temporal } from 'zundo';
+import type { Character } from '../types';
+
+/**
+ * Characters Store
+ * Manages characters in the project.
+ */
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface CharactersState {
+  // State
+  characters: Character[];
+
+  // Actions
+  addCharacter: () => string;
+  updateCharacter: (updated: Partial<Character> & { id: string }) => void;
+  deleteCharacter: (charId: string) => void;
+
+  // Helpers (selectors)
+  getCharacterById: (charId: string) => Character | undefined;
+}
+
+// ============================================================================
+// DEFAULTS
+// ============================================================================
+
+const SAMPLE_CHARACTERS: Character[] = [
+  {
+    id: "player",
+    name: "Joueur",
+    description: "",
+    sprites: { neutral: "assets/characters/player/neutral.svg" },
+    moods: ["neutral"],
+  },
+  {
+    id: "counsellor",
+    name: "Conseiller municipal",
+    description: "",
+    sprites: { neutral: "assets/characters/counsellor/neutral.svg" },
+    moods: ["neutral", "professional", "helpful"],
+  },
+  {
+    id: "narrator",
+    name: "Narrateur",
+    description: "",
+    sprites: {},
+    moods: [],
+  },
+];
+
+// ============================================================================
+// STORE
+// ============================================================================
+
+export const useCharactersStore = create<CharactersState>()(
+  temporal(
+    persist(
+      devtools(
+        subscribeWithSelector((set, get) => ({
+          // State
+          characters: SAMPLE_CHARACTERS,
+
+          // Actions
+          addCharacter: () => {
+            const id = "char-" + Date.now();
+            const newCharacter: Character = {
+              id,
+              name: "New character",
+              description: "",
+              sprites: { neutral: "" },
+              moods: ["neutral"],
+            };
+
+            set((state) => ({
+              characters: [...state.characters, newCharacter],
+            }), false, 'characters/addCharacter');
+
+            return id;
+          },
+
+          updateCharacter: (updated) => {
+            set((state) => ({
+              characters: state.characters.map((c) =>
+                c.id === updated.id ? { ...c, ...updated } : c
+              ),
+            }), false, 'characters/updateCharacter');
+          },
+
+          deleteCharacter: (charId) => {
+            set((state) => ({
+              characters: state.characters.filter((c) => c.id !== charId),
+            }), false, 'characters/deleteCharacter');
+          },
+
+          // Helpers (selectors)
+          getCharacterById: (charId) => {
+            return get().characters.find((c) => c.id === charId);
+          },
+        })),
+        { name: 'CharactersStore' }
+      ),
+      {
+        name: 'characters-storage',
+        storage: createJSONStorage(() => localStorage),
+        version: 1,
+      }
+    ),
+    {
+      limit: 50,
+      equality: (pastState, currentState) => pastState === currentState,
+    }
+  )
+);
+
+// Subscribe to characters store changes to update autosave timestamp
+// Debounced to avoid updating on every keystroke
+let charactersSaveTimeout: ReturnType<typeof setTimeout>;
+const unsubscribeCharacters = useCharactersStore.subscribe(
+  (state) => state.characters,
+  () => {
+    clearTimeout(charactersSaveTimeout);
+    charactersSaveTimeout = setTimeout(() => {
+      // Dynamically import UIStore to avoid circular dependency
+      import('./uiStore').then(({ useUIStore }) => {
+        useUIStore.getState().setLastSaved(new Date().toISOString());
+      });
+    }, 1000); // 1 second debounce
+  }
+);
+
+// Cleanup on HMR (Hot Module Replacement) to prevent memory leaks
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    clearTimeout(charactersSaveTimeout);
+    unsubscribeCharacters();
+  });
+}

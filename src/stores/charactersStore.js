@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { devtools, subscribeWithSelector } from 'zustand/middleware';
+import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
+import { temporal } from 'zundo';
 
 /**
  * Characters Store
@@ -39,8 +40,10 @@ const SAMPLE_CHARACTERS = [
 ];
 
 export const useCharactersStore = create(
-  devtools(
-    subscribeWithSelector((set, get) => ({
+  temporal(
+    persist(
+      devtools(
+        subscribeWithSelector((set, get) => ({
       // State
       characters: SAMPLE_CHARACTERS,
 
@@ -81,6 +84,41 @@ export const useCharactersStore = create(
         return get().characters.find((c) => c.id === charId);
       },
     })),
-    { name: 'CharactersStore' }
+        { name: 'CharactersStore' }
+      ),
+      {
+        name: 'characters-storage',
+        storage: createJSONStorage(() => localStorage),
+        version: 1,
+      }
+    ),
+    {
+      limit: 50,
+      equality: (pastState, currentState) => pastState === currentState,
+    }
   )
 );
+
+// Subscribe to characters store changes to update autosave timestamp
+// Debounced to avoid updating on every keystroke
+let charactersSaveTimeout;
+const unsubscribeCharacters = useCharactersStore.subscribe(
+  (state) => state.characters,
+  () => {
+    clearTimeout(charactersSaveTimeout);
+    charactersSaveTimeout = setTimeout(() => {
+      // Dynamically import UIStore to avoid circular dependency
+      import('./uiStore.js').then(({ useUIStore }) => {
+        useUIStore.getState().setLastSaved(new Date().toISOString());
+      });
+    }, 1000); // 1 second debounce
+  }
+);
+
+// Cleanup on HMR (Hot Module Replacement) to prevent memory leaks
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    clearTimeout(charactersSaveTimeout);
+    unsubscribeCharacters();
+  });
+}

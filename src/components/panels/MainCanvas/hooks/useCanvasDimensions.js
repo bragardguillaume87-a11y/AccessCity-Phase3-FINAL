@@ -1,57 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 /**
- * useCanvasDimensions - Track canvas dimensions using ResizeObserver
+ * useCanvasDimensions - Track canvas dimensions using callback ref + ResizeObserver
  *
- * @param {React.RefObject} canvasRef - Reference to canvas element
- * @returns {{ width: number, height: number }} Canvas dimensions
+ * This hook uses the callback ref pattern to handle dimension tracking correctly
+ * with React.lazy, Suspense, and dynamic component mounting. The callback ref
+ * executes synchronously when the element attaches to the DOM, eliminating timing
+ * issues that occur with useRef + useEffect/useLayoutEffect.
+ *
+ * @returns {[function, {width: number, height: number}]} Tuple of [ref callback, dimensions]
+ *
+ * @example
+ * const [canvasRef, canvasDimensions] = useCanvasDimensions();
+ * return <div ref={canvasRef}>...</div>
  */
-export function useCanvasDimensions(canvasRef) {
+export function useCanvasDimensions() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const observerRef = useRef(null);
 
+  // Callback ref - executes synchronously when element attaches
+  const measureRef = useCallback((node) => {
+    // Cleanup previous observer if it exists
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    // If node is null, element was unmounted
+    if (!node) {
+      setDimensions({ width: 0, height: 0 });
+      return;
+    }
+
+    // Get initial dimensions immediately
+    const rect = node.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setDimensions({
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      });
+    }
+
+    // Set up ResizeObserver to track future dimension changes
+    observerRef.current = new ResizeObserver((entries) => {
+      if (entries.length === 0) return;
+
+      const { width, height } = entries[0].contentRect;
+      const newWidth = Math.round(width);
+      const newHeight = Math.round(height);
+
+      if (newWidth > 0 && newHeight > 0) {
+        setDimensions(prev =>
+          prev.width !== newWidth || prev.height !== newHeight
+            ? { width: newWidth, height: newHeight }
+            : prev
+        );
+      }
+    });
+
+    observerRef.current.observe(node);
+  }, []); // Empty deps - callback remains stable across re-renders
+
+  // Cleanup observer on unmount
   useEffect(() => {
-    const updateDimensions = () => {
-      if (canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const newWidth = Math.round(rect.width);
-        const newHeight = Math.round(rect.height);
-
-        if (newWidth > 0 && newHeight > 0) {
-          setDimensions(prev => {
-            // Only update if dimensions actually changed
-            if (prev.width !== newWidth || prev.height !== newHeight) {
-              return { width: newWidth, height: newHeight };
-            }
-            return prev;
-          });
-        }
-      }
-    };
-
-    // Retry mechanism: check multiple times if ref isn't ready
-    const retryIntervals = [0, 50, 100, 200, 500];
-    const timeouts = retryIntervals.map(delay =>
-      setTimeout(updateDimensions, delay)
-    );
-
-    // Create ResizeObserver to watch for size changes
-    let resizeObserver = null;
-
-    // Set up observer after a short delay to ensure ref is attached
-    setTimeout(() => {
-      if (canvasRef.current) {
-        resizeObserver = new ResizeObserver(updateDimensions);
-        resizeObserver.observe(canvasRef.current);
-      }
-    }, 100);
-
     return () => {
-      timeouts.forEach(clearTimeout);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
+      if (observerRef.current) {
+        observerRef.current.disconnect();
       }
     };
-  }, []); // Empty deps - run once on mount
+  }, []);
 
-  return dimensions;
+  return [measureRef, dimensions];
 }

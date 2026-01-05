@@ -6,6 +6,35 @@
  */
 
 // ============================================================================
+// GAME MECHANICS
+// ============================================================================
+
+/**
+ * Game statistics as key-value pairs
+ */
+export interface GameStats {
+  [key: string]: number;
+}
+
+/**
+ * Branch configuration after dice check result
+ */
+export interface DiceCheckBranch {
+  nextSceneId?: string;
+  nextDialogueId?: string;
+}
+
+/**
+ * Dice check configuration for gameplay mechanics
+ */
+export interface DiceCheck {
+  stat: string;
+  difficulty: number;
+  success?: DiceCheckBranch;
+  failure?: DiceCheckBranch;
+}
+
+// ============================================================================
 // SCENES & DIALOGUES
 // ============================================================================
 
@@ -16,11 +45,19 @@ export interface Dialogue {
   choices: DialogueChoice[];
 }
 
+/**
+ * Dialogue choice with full game mechanics support
+ */
 export interface DialogueChoice {
   id: string;
   text: string;
   effects: Effect[];
   nextSceneId?: string;
+  nextDialogueId?: string;
+  // Legacy support for old format
+  statsDelta?: GameStats;
+  // Game mechanic: dice check
+  diceCheck?: DiceCheck;
 }
 
 export interface Effect {
@@ -45,7 +82,7 @@ export interface TextBox {
   content: string;
   position: Position;
   size: Size;
-  style?: Record<string, unknown>;
+  style?: React.CSSProperties;
 }
 
 export interface Prop {
@@ -123,6 +160,20 @@ export interface ValidationProblem {
 // ASSETS
 // ============================================================================
 
+/**
+ * Individual asset from the manifest
+ */
+export interface Asset {
+  name: string;
+  path: string;
+  category: string;
+  subcategory?: string;
+  tags?: string[];
+}
+
+/**
+ * Asset manifest structure (legacy format from assets-manifest.json)
+ */
 export interface AssetManifest {
   backgrounds?: Record<string, string[]>;
   illustrations?: Record<string, string[]>;

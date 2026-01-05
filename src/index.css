@@ -81,9 +81,9 @@ select:focus-visible {
   border-width: 0;
 }
 
-/* Improved contrast for placeholders */
+/* Improved contrast for placeholders - WCAG AA compliant */
 ::placeholder {
-  color: #6B7280; /* gray-600 instead of gray-400 */
+  color: #94A3B8; /* slate-400 - 4.5:1 contrast ratio on dark bg */
   opacity: 1;
 }
 

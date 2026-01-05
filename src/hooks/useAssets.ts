@@ -51,11 +51,14 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
 
   const loadManifest = useCallback(() => {
     let isMounted = true;
+    const abortController = new AbortController();
 
     setLoading(true);
     setError(null);
 
-    fetch('/assets-manifest.json?t=' + Date.now()) // Cache bust
+    fetch('/assets-manifest.json?t=' + Date.now(), {
+      signal: abortController.signal
+    })
       .then(res => {
         if (!isMounted) return null;
 
@@ -86,6 +89,9 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
       .catch(err => {
         if (!isMounted) return;
 
+        // Ignore abort errors (expected when component unmounts)
+        if (err.name === 'AbortError') return;
+
         logger.error('[useAssets] Error loading manifest:', err);
 
         // Fallback: empty manifest if network error
@@ -103,6 +109,7 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
 
     return () => {
       isMounted = false;
+      abortController.abort();
     };
   }, []);
 

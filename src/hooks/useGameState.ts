@@ -1,13 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { TIMING } from '@/config/timing';
-import type { Scene, Dialogue, DialogueChoice } from '@/types';
-
-/**
- * Game statistics as key-value pairs
- */
-interface GameStats {
-  [key: string]: number;
-}
+import type { Scene, Dialogue, DialogueChoice, GameStats, DiceCheck, DiceCheckBranch } from '@/types';
 
 /**
  * History entry for game state tracking
@@ -20,23 +13,6 @@ interface HistoryEntry {
   timestamp: number;
 }
 
-/**
- * Dice check configuration
- */
-interface DiceCheck {
-  stat: string;
-  difficulty: number;
-  success?: DiceCheckBranch;
-  failure?: DiceCheckBranch;
-}
-
-/**
- * Branch after dice check result
- */
-interface DiceCheckBranch {
-  nextSceneId?: string;
-  nextDialogueId?: string;
-}
 
 /**
  * Current state of dice rolling
@@ -199,24 +175,26 @@ export function useGameState({
       applyStatsDelta(delta);
     }
 
-    // Legacy support: statsDelta object
-    if ('statsDelta' in choice && choice.statsDelta) {
-      applyStatsDelta(choice.statsDelta as GameStats);
+    // Legacy support: statsDelta object (now properly typed in DialogueChoice)
+    if (choice.statsDelta) {
+      applyStatsDelta(choice.statsDelta);
     }
 
+    // Handle dice check (now properly typed in DialogueChoice)
     let branch: DiceCheckBranch | null = null;
-    if ('diceCheck' in choice && choice.diceCheck) {
-      const result = await resolveDiceCheck(choice.diceCheck as DiceCheck);
-      const diceCheck = choice.diceCheck as DiceCheck;
-      branch = diceCheck[result] || null;
+    if (choice.diceCheck) {
+      const result = await resolveDiceCheck(choice.diceCheck);
+      branch = choice.diceCheck[result] || null;
     }
 
+    // Determine navigation target
     const target = branch || choice;
 
-    if ('nextSceneId' in target && target.nextSceneId) {
-      goToScene(target.nextSceneId, ('nextDialogueId' in target ? target.nextDialogueId : null) as string | null);
-    } else if ('nextDialogueId' in target && target.nextDialogueId) {
-      setCurrentDialogueId(target.nextDialogueId as string);
+    // Navigate based on target (all properties now properly typed)
+    if (target.nextSceneId) {
+      goToScene(target.nextSceneId, target.nextDialogueId || null);
+    } else if (target.nextDialogueId) {
+      setCurrentDialogueId(target.nextDialogueId);
     } else {
       goToNextDialogue();
     }

@@ -130,7 +130,7 @@ export function useValidation(): ValidationResult {
 
           // Validation des effets (si la variable existe)
           (choice.effects || []).forEach((effect) => {
-            const variableExists = variables.hasOwnProperty(effect.variable);
+            const variableExists = effect.variable in (variables ?? {});
             if (!variableExists) {
               choiceErrors.push({
                 field: 'effects',

@@ -19,11 +19,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        // Gaming variants (AccessCity theme)
+        // Gaming variants (AccessCity theme) - WCAG AA compliant
         "gaming-primary":
-          "bg-gradient-to-br from-purple-500 to-blue-600 text-white shadow-lg hover:from-purple-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all",
+          "bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-lg hover:from-purple-700 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all",
         "gaming-accent":
-          "bg-gradient-to-br from-cyan-400 to-purple-500 text-white shadow-lg hover:from-cyan-500 hover:to-purple-600 hover:shadow-xl hover:scale-105 transition-all",
+          "bg-gradient-to-br from-cyan-600 to-purple-600 text-white shadow-lg hover:from-cyan-700 hover:to-purple-700 hover:shadow-xl hover:scale-105 transition-all",
         "gaming-success":
           "bg-gradient-to-br from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700",
         "gaming-danger":

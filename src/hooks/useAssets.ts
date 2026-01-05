@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '../utils/logger';
-import type { AssetManifest } from '../types';
 
 /**
  * Hook to load and filter assets from JSON manifest
@@ -22,12 +21,20 @@ interface Asset {
   [key: string]: unknown;
 }
 
+interface AssetsManifest {
+  generated: string;
+  version: string;
+  totalAssets: number;
+  categories: string[];
+  assets: Record<string, Asset[]>;
+}
+
 interface UseAssetsReturn {
   assets: Asset[];
   loading: boolean;
   error: string | null;
   categories: string[];
-  manifest: AssetManifest | null;
+  manifest: AssetsManifest | null;
   reloadManifest: () => void;
 }
 
@@ -37,7 +44,7 @@ interface UseAssetsReturn {
 
 export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
   const { category = null, autoLoad = true } = options;
-  const [manifest, setManifest] = useState<AssetManifest | null>(null);
+  const [manifest, setManifest] = useState<AssetsManifest | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
@@ -112,24 +119,17 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
   const assets = useMemo(() => {
     if (!manifest || !manifest.assets) return [];
 
-    let filtered: string[] = [];
+    let filtered: Asset[] = [];
 
     if (category && manifest.assets[category]) {
       // Filter by category
-      filtered = manifest.assets[category] as string[];
+      filtered = manifest.assets[category];
     } else {
       // All assets, all categories combined
-      filtered = Object.values(manifest.assets).flat() as string[];
+      filtered = Object.values(manifest.assets).flat();
     }
 
-    // Convert to Asset objects and sort
-    return filtered
-      .map(path => ({
-        name: path.split('/').pop() || path,
-        path,
-        category: category || 'unknown'
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [manifest, category]);
 
   const categories = useMemo(() => {
@@ -153,8 +153,11 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
 
 /**
  * Get recently used assets from localStorage
+ * @param type - Asset type (backgrounds, characters, etc.)
+ * @param maxItems - Maximum number of items to retrieve
+ * @returns Array of recent asset paths
  */
-export function getRecentAssets(type: string, maxItems = 6): string[] {
+export function getRecentAssets(type: string, maxItems: number = 6): string[] {
   try {
     const stored = localStorage.getItem(`accesscity-recent-${type}`);
     return stored ? JSON.parse(stored) : [];
@@ -165,9 +168,13 @@ export function getRecentAssets(type: string, maxItems = 6): string[] {
 }
 
 /**
- * Add asset to recently used list
+ * Add an asset to the recent history
+ * @param type - Asset type
+ * @param assetPath - Path to the asset
+ * @param maxItems - Maximum items to keep in history
+ * @returns Updated history array
  */
-export function addToRecentAssets(type: string, assetPath: string, maxItems = 6): string[] {
+export function addToRecentAssets(type: string, assetPath: string, maxItems: number = 6): string[] {
   try {
     const history = getRecentAssets(type, maxItems);
     const newHistory = [

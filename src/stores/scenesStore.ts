@@ -24,6 +24,9 @@ interface ScenesState {
   reorderScenes: (newScenesOrder: Scene[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
 
+  // PERFORMANCE: Batch operations to reduce re-renders
+  batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<Scene> }>) => void;
+
   // Actions: Dialogues
   addDialogue: (sceneId: string, dialogue: Dialogue) => void;
   addDialogues: (sceneId: string, dialogues: Dialogue[]) => void;
@@ -31,6 +34,9 @@ interface ScenesState {
   deleteDialogue: (sceneId: string, index: number) => void;
   reorderDialogues: (sceneId: string, oldIndex: number, newIndex: number) => void;
   duplicateDialogue: (sceneId: string, index: number) => void;
+
+  // PERFORMANCE: Batch dialogue operations
+  batchUpdateDialogues: (sceneId: string, updates: Array<{ index: number; patch: Partial<Dialogue> }>) => void;
 
   // Actions: Scene Characters
   addCharacterToScene: (
@@ -283,6 +289,30 @@ export const useScenesStore = create<ScenesState>()(
             }), false, 'scenes/setSceneBackground');
           },
 
+          // PERFORMANCE: Batch scene updates (single re-render for multiple changes)
+          batchUpdateScenes: (updates) => {
+            if (!updates || updates.length === 0) return;
+
+            // Create a Map for O(1) lookup
+            const updatesMap = new Map(updates.map(u => [u.sceneId, u.patch]));
+
+            set((state) => ({
+              scenes: state.scenes.map((s) => {
+                const patch = updatesMap.get(s.id);
+                if (!patch) return s;
+
+                let next = { ...s, ...patch };
+
+                // Normalize backgroundUrl if present
+                if (Object.prototype.hasOwnProperty.call(next, 'backgroundUrl')) {
+                  next.backgroundUrl = toAbsoluteAssetPath(next.backgroundUrl);
+                }
+
+                return next;
+              }),
+            }), false, 'scenes/batchUpdateScenes');
+          },
+
           // Actions: Dialogues
           addDialogue: (sceneId, dialogue) => {
             set((state) => ({
@@ -376,6 +406,30 @@ export const useScenesStore = create<ScenesState>()(
                 return { ...s, dialogues: list };
               }),
             }), false, 'scenes/duplicateDialogue');
+          },
+
+          // PERFORMANCE: Batch dialogue updates (single re-render for multiple changes)
+          batchUpdateDialogues: (sceneId, updates) => {
+            if (!updates || updates.length === 0) return;
+
+            // Create a Map for O(1) lookup
+            const updatesMap = new Map(updates.map(u => [u.index, u.patch]));
+
+            set((state) => ({
+              scenes: state.scenes.map((s) => {
+                if (s.id !== sceneId) return s;
+
+                const list = [...(s.dialogues || [])];
+
+                // Apply all updates in one pass
+                const updatedList = list.map((dialogue, idx) => {
+                  const patch = updatesMap.get(idx);
+                  return patch ? { ...dialogue, ...patch } : dialogue;
+                });
+
+                return { ...s, dialogues: updatedList };
+              }),
+            }), false, 'scenes/batchUpdateDialogues');
           },
 
           // Actions: Scene Characters

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, startTransition } from 'react';
 import { TIMING } from '@/config/timing';
 import type { Scene, Dialogue, DialogueChoice, GameStats, DiceCheck, DiceCheckBranch } from '@/types';
 
@@ -99,12 +99,15 @@ export function useGameState({
   }, []);
 
   const applyStatsDelta = useCallback((delta: GameStats = {}) => {
-    setStats((prev) => {
-      const updated = { ...prev };
-      Object.keys(delta).forEach((key) => {
-        updated[key] = (prev[key] ?? 0) + (delta[key] ?? 0);
+    // REACT 19: Mark stats update as non-urgent (can be interrupted)
+    startTransition(() => {
+      setStats((prev) => {
+        const updated = { ...prev };
+        Object.keys(delta).forEach((key) => {
+          updated[key] = (prev[key] ?? 0) + (delta[key] ?? 0);
+        });
+        return updated;
       });
-      return updated;
     });
   }, []);
 
@@ -113,23 +116,29 @@ export function useGameState({
     dialogueId: string | null;
     choiceId: string | null;
   }) => {
-    setHistory((prev) => [...prev, {
-      sceneId,
-      dialogueId,
-      choiceId,
-      statsSnapshot: stats,
-      timestamp: Date.now()
-    }]);
+    // REACT 19: History updates are non-urgent (can be deferred)
+    startTransition(() => {
+      setHistory((prev) => [...prev, {
+        sceneId,
+        dialogueId,
+        choiceId,
+        statsSnapshot: stats,
+        timestamp: Date.now()
+      }]);
+    });
   }, [stats]);
 
   const jumpToHistoryIndex = useCallback((index: number) => {
     const item = history[index];
     if (!item) return;
-    setCurrentSceneId(item.sceneId);
-    setCurrentDialogueId(item.dialogueId);
-    setStats(item.statsSnapshot);
-    setHistory(history.slice(0, index + 1));
-    setDiceState({ rolling: false, lastRoll: null, lastResult: null });
+    // REACT 19: Time-travel updates are non-urgent (can be deferred)
+    startTransition(() => {
+      setCurrentSceneId(item.sceneId);
+      setCurrentDialogueId(item.dialogueId);
+      setStats(item.statsSnapshot);
+      setHistory(history.slice(0, index + 1));
+      setDiceState({ rolling: false, lastRoll: null, lastResult: null });
+    });
   }, [history]);
 
   const goToNextDialogue = useCallback(() => {

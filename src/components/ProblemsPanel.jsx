@@ -1,103 +1,120 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { shallow } from 'zustand/shallow';
 import { useValidation } from '../hooks/useValidation.js';
 import { useScenesStore, useCharactersStore } from '../stores/index.js';
 
 /**
  * Problems Panel - Inspiré de VS Code Issue Browser
  * Liste centralisée de toutes les erreurs/warnings avec navigation rapide
+ *
+ * PERFORMANCE: Uses Map selectors for O(1) lookups instead of array.find()
  */
 export default function ProblemsPanel({ onNavigateTo }) {
   const validation = useValidation();
-  const scenes = useScenesStore(state => state.scenes);
-  const characters = useCharactersStore(state => state.characters);
+
+  // OPTIMIZATION: Use Map selectors for O(1) lookups (instead of array.find)
+  const sceneMap = useScenesStore(
+    useCallback((state) => new Map(state.scenes.map(s => [s.id, s])), []),
+    shallow
+  );
+
+  const characterMap = useCharactersStore(
+    useCallback((state) => new Map(state.characters.map(c => [c.id, c])), []),
+    shallow
+  );
+
   const [filter, setFilter] = useState('all'); // all | errors | warnings
 
-  // Agréger tous les problèmes avec leur localisation
-  const allProblems = [];
+  // OPTIMIZATION: Memoize problem aggregation (only recomputes when validation changes)
+  const allProblems = useMemo(() => {
+    const problems = [];
 
-  // Erreurs de scènes
-  Object.entries(validation.errors.scenes).forEach(([sceneId, errors]) => {
-    const scene = scenes.find(s => s.id === sceneId);
-    errors.forEach(error => {
-      allProblems.push({
-        id: `scene-${sceneId}-${error.field}`,
-        severity: error.severity,
-        message: error.message,
-        location: `Scene: ${scene?.title || sceneId}`,
-        type: 'scene',
-        sceneId,
-        field: error.field
+    // Erreurs de scènes - O(1) lookup with Map
+    Object.entries(validation.errors.scenes).forEach(([sceneId, errors]) => {
+      const scene = sceneMap.get(sceneId);
+      errors.forEach(error => {
+        problems.push({
+          id: `scene-${sceneId}-${error.field}`,
+          severity: error.severity,
+          message: error.message,
+          location: `Scene: ${scene?.title || sceneId}`,
+          type: 'scene',
+          sceneId,
+          field: error.field
+        });
       });
     });
-  });
 
-  // Dialogue errors
-  Object.entries(validation.errors.dialogues).forEach(([key, errors]) => {
-    const [sceneId, dialogueIdx] = key.split('-');
-    const scene = scenes.find(s => s.id === sceneId);
-    errors.forEach(error => {
-      allProblems.push({
-        id: `dialogue-${key}-${error.field}`,
-        severity: error.severity,
-        message: error.message,
-        location: `Scene: ${scene?.title || sceneId} > Dialogue #${parseInt(dialogueIdx) + 1}`,
-        type: 'dialogue',
-        sceneId,
-        dialogueIdx: parseInt(dialogueIdx),
-        field: error.field
+    // Dialogue errors - O(1) lookup with Map
+    Object.entries(validation.errors.dialogues).forEach(([key, errors]) => {
+      const [sceneId, dialogueIdx] = key.split('-');
+      const scene = sceneMap.get(sceneId);
+      errors.forEach(error => {
+        problems.push({
+          id: `dialogue-${key}-${error.field}`,
+          severity: error.severity,
+          message: error.message,
+          location: `Scene: ${scene?.title || sceneId} > Dialogue #${parseInt(dialogueIdx) + 1}`,
+          type: 'dialogue',
+          sceneId,
+          dialogueIdx: parseInt(dialogueIdx),
+          field: error.field
+        });
       });
     });
-  });
 
-  // Choice errors
-  Object.entries(validation.errors.choices).forEach(([key, errors]) => {
-    const [sceneId, dialogueIdx, choiceIdx] = key.split('-');
-    const scene = scenes.find(s => s.id === sceneId);
-    errors.forEach(error => {
-      allProblems.push({
-        id: `choice-${key}-${error.field}`,
-        severity: error.severity,
-        message: error.message,
-        location: `Scene: ${scene?.title || sceneId} > Dialogue #${parseInt(dialogueIdx) + 1} > Choix #${parseInt(choiceIdx) + 1}`,
-        type: 'choice',
-        sceneId,
-        dialogueIdx: parseInt(dialogueIdx),
-        choiceIdx: parseInt(choiceIdx),
-        field: error.field
+    // Choice errors - O(1) lookup with Map
+    Object.entries(validation.errors.choices).forEach(([key, errors]) => {
+      const [sceneId, dialogueIdx, choiceIdx] = key.split('-');
+      const scene = sceneMap.get(sceneId);
+      errors.forEach(error => {
+        problems.push({
+          id: `choice-${key}-${error.field}`,
+          severity: error.severity,
+          message: error.message,
+          location: `Scene: ${scene?.title || sceneId} > Dialogue #${parseInt(dialogueIdx) + 1} > Choix #${parseInt(choiceIdx) + 1}`,
+          type: 'choice',
+          sceneId,
+          dialogueIdx: parseInt(dialogueIdx),
+          choiceIdx: parseInt(choiceIdx),
+          field: error.field
+        });
       });
     });
-  });
 
-  // Character errors
-  Object.entries(validation.errors.characters).forEach(([charId, errors]) => {
-    const character = characters.find(c => c.id === charId);
-    errors.forEach(error => {
-      allProblems.push({
-        id: `char-${charId}-${error.field}`,
-        severity: error.severity,
-        message: error.message,
-        location: `Personnage: ${character?.name || charId}`,
-        type: 'character',
-        charId,
-        field: error.field
+    // Character errors - O(1) lookup with Map
+    Object.entries(validation.errors.characters).forEach(([charId, errors]) => {
+      const character = characterMap.get(charId);
+      errors.forEach(error => {
+        problems.push({
+          id: `char-${charId}-${error.field}`,
+          severity: error.severity,
+          message: error.message,
+          location: `Personnage: ${character?.name || charId}`,
+          type: 'character',
+          charId,
+          field: error.field
+        });
       });
     });
-  });
 
-  // Variable errors
-  Object.entries(validation.errors.variables).forEach(([varName, errors]) => {
-    errors.forEach(error => {
-      allProblems.push({
-        id: `var-${varName}-${error.field}`,
-        severity: error.severity,
-        message: error.message,
-        location: `Variable: ${varName}`,
-        type: 'variable',
-        varName,
-        field: error.field
+    // Variable errors
+    Object.entries(validation.errors.variables).forEach(([varName, errors]) => {
+      errors.forEach(error => {
+        problems.push({
+          id: `var-${varName}-${error.field}`,
+          severity: error.severity,
+          message: error.message,
+          location: `Variable: ${varName}`,
+          type: 'variable',
+          varName,
+          field: error.field
+        });
       });
     });
-  });
+
+    return problems;
+  }, [validation, sceneMap, characterMap]);
 
   // Filtrer selon le filtre actif
   const filteredProblems = allProblems.filter(p => {

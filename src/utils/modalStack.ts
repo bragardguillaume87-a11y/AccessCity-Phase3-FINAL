@@ -8,18 +8,16 @@
  * avec la touche Escape, les autres modales en arrière-plan restent ouvertes.
  */
 
-import { logger } from './logger.js';
+import { logger } from './logger';
 
 class ModalStack {
-  constructor() {
-    this.stack = [];
-  }
+  private stack: string[] = [];
 
   /**
    * Enregistre une modale dans la stack
-   * @param {string} modalId - Identifiant unique de la modale
+   * @param modalId - Identifiant unique de la modale
    */
-  push(modalId) {
+  push(modalId: string): void {
     if (!this.stack.includes(modalId)) {
       this.stack.push(modalId);
       logger.debug(`[ModalStack] Pushed: ${modalId}, stack:`, this.stack);
@@ -28,9 +26,9 @@ class ModalStack {
 
   /**
    * Retire une modale de la stack
-   * @param {string} modalId - Identifiant unique de la modale
+   * @param modalId - Identifiant unique de la modale
    */
-  pop(modalId) {
+  pop(modalId: string): void {
     const index = this.stack.indexOf(modalId);
     if (index !== -1) {
       this.stack.splice(index, 1);
@@ -40,25 +38,25 @@ class ModalStack {
 
   /**
    * Vérifie si une modale est en haut de la stack (la plus récente)
-   * @param {string} modalId - Identifiant unique de la modale
-   * @returns {boolean} true si la modale est en haut de la stack
+   * @param modalId - Identifiant unique de la modale
+   * @returns true si la modale est en haut de la stack
    */
-  isTop(modalId) {
+  isTop(modalId: string): boolean {
     return this.stack.length > 0 && this.stack[this.stack.length - 1] === modalId;
   }
 
   /**
    * Retourne la modale en haut de la stack
-   * @returns {string|null} L'ID de la modale en haut, ou null si stack vide
+   * @returns L'ID de la modale en haut, ou null si stack vide
    */
-  getTop() {
+  getTop(): string | null {
     return this.stack.length > 0 ? this.stack[this.stack.length - 1] : null;
   }
 
   /**
    * Réinitialise la stack (pour debugging ou cleanup global)
    */
-  clear() {
+  clear(): void {
     this.stack = [];
     logger.debug('[ModalStack] Cleared');
   }

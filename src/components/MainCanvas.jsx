@@ -1,5 +1,5 @@
 import React from 'react';
-import { useScenesStore, useUIStore } from '../stores/index.js';
+import { useScenesStore, useUIStore } from '../stores/index.ts';
 import ScenesList from './ScenesList';
 import VisualSceneEditor from './VisualSceneEditor';
 import PropertiesPanel from './PropertiesPanel';

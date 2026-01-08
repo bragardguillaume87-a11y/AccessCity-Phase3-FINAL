@@ -1,6 +1,6 @@
 // src/components/ImportPanel.jsx
 import React from 'react';
-import { useSettingsStore } from '../stores/index.js';
+import { useSettingsStore } from '../stores/index.ts';
 import { toast } from 'sonner';
 import { logger } from '../utils/logger';
 

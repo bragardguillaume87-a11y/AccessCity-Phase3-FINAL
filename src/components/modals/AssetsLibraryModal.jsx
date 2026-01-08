@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useAssets } from '../../hooks/useAssets.js';
+import { useAssets } from '@/hooks/useAssets';
 import { useScenesStore, useCharactersStore } from '../../stores/index.js';
 import { UploadZone } from './AssetsLibraryModal/components/UploadZone.jsx';
 import { EmptyAssetState } from './AssetsLibraryModal/components/EmptyAssetState.jsx';

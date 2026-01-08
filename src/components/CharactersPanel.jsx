@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useCharactersStore } from '../stores/index.js';
-import { useValidation } from '../hooks/useValidation.js';
+import { useCharactersStore } from '../stores/index.ts';
+import { useValidation } from '../hooks/useValidation.ts';
 import ConfirmModal from './ConfirmModal.jsx';
 import CharacterEditor from './CharacterEditor.jsx';
 import { duplicateCharacter } from '../utils/duplication.js';

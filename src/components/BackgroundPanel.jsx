@@ -1,6 +1,6 @@
 // src/components/BackgroundPanel.jsx
 import React, { useState, useEffect } from 'react';
-import { useScenesStore, useUIStore } from '../stores/index.js';
+import { useScenesStore, useUIStore } from '../stores/index.ts';
 import { GALLERY_ASSETS } from '../constants/assets.js';
 import { TIMING } from '@/config/timing';
 

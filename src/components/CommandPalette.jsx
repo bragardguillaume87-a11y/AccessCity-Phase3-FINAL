@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.js';
+import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.ts';
 
 /**
  * Command Palette - Inspiré de VS Code

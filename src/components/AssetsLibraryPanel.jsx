@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useAssets } from '../hooks/useAssets.js';
-import { useScenesStore, useCharactersStore } from '../stores/index.js';
+import { useAssets } from '@/hooks/useAssets';
+import { useScenesStore, useCharactersStore } from '../stores/index.ts';
 import AssetPicker from './AssetPicker.jsx';
 
 /**

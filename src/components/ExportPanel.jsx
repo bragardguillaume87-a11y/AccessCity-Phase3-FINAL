@@ -1,6 +1,6 @@
 // src/components/ExportPanel.jsx
 import React from 'react';
-import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.js';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.ts';
 import { toast } from 'sonner';
 import { logger } from '../utils/logger';
 

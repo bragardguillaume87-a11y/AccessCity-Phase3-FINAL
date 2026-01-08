@@ -3,7 +3,7 @@ import {
   useAssets,
   getRecentAssets,
   addToRecentAssets,
-} from "../hooks/useAssets.js";
+} from "@/hooks/useAssets";
 import { toAbsoluteAssetPath } from "../utils/pathUtils.js";
 import { logger } from "../utils/logger";
 import { API } from "@/config/constants";

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useScenesStore, useCharactersStore } from '../stores/index.js';
+import { useScenesStore, useCharactersStore } from '../stores/index.ts';
 
 /**
  * Composant pour gérer les raccourcis clavier globaux

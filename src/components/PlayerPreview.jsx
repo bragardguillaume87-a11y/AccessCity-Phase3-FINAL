@@ -2,7 +2,7 @@
 // ASCII only
 import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine.js';
-import { useCharactersStore } from '../stores/index.js';
+import { useCharactersStore } from '../stores/index.ts';
 import HUDVariables from './HUDVariables.jsx';
 import DeltaBadges from './DeltaBadges.jsx';
 import DiceResultModal from './DiceResultModal.jsx';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useScenesStore, useCharactersStore } from '../stores/index.js';
+import { useScenesStore, useCharactersStore } from '../stores/index.ts';
 import { IconByName } from './IconByName.jsx';
 import { logger } from '../utils/logger';
 // FIX: Utiliser StageDirector simplifie

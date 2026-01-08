@@ -6,7 +6,7 @@ import CharacterPositioningTools from './UnifiedPanel/CharacterPositioningTools.
 import { Image, Type, Users, Box, BarChart3, Volume2, ImagePlus, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button.jsx';
 import { motion } from 'framer-motion';
-import { useAssets } from '../../hooks/useAssets.js';
+import { useAssets } from '@/hooks/useAssets';
 import { cn } from '@/lib/utils';
 import { useScenesStore, useUIStore } from '../../stores/index.js';
 import { logger } from '../../utils/logger.js';

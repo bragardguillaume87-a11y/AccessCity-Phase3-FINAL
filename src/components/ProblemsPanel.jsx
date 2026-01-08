@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { shallow } from 'zustand/shallow';
-import { useValidation } from '../hooks/useValidation.js';
-import { useScenesStore, useCharactersStore } from '../stores/index.js';
+import { useValidation } from '../hooks/useValidation.ts';
+import { useScenesStore, useCharactersStore } from '../stores/index.ts';
 
 /**
  * Problems Panel - Inspiré de VS Code Issue Browser

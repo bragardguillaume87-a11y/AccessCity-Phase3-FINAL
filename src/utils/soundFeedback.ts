@@ -1,53 +1,53 @@
-// utils/soundFeedback.js
+// utils/soundFeedback.ts
 // Système de feedback sonore pour AccessCity
 
 import { TIMING } from '@/config/timing';
 import { logger } from './logger';
 
 // État global du son
-let globalMuted = false;
-let globalVolume = 0.7; // Volume par défaut à 70%
+let globalMuted: boolean = false;
+let globalVolume: number = 0.7; // Volume par défaut à 70%
 
 /**
  * Active ou désactive le son globalement
- * @param {boolean} muted - true pour couper le son, false pour l'activer
+ * @param muted - true pour couper le son, false pour l'activer
  */
-export function setGlobalMute(muted) {
+export function setGlobalMute(muted: boolean): void {
   globalMuted = muted;
   logger.debug(`[Sound] Mute: ${muted}`);
 }
 
 /**
  * Obtenir l'état actuel du mute
- * @returns {boolean}
+ * @returns État mute actuel
  */
-export function isGlobalMuted() {
+export function isGlobalMuted(): boolean {
   return globalMuted;
 }
 
 /**
  * Définir le volume global (0.0 à 1.0)
- * @param {number} volume - Volume entre 0 et 1
+ * @param volume - Volume entre 0 et 1
  */
-export function setGlobalVolume(volume) {
+export function setGlobalVolume(volume: number): void {
   globalVolume = Math.max(0, Math.min(1, volume));
   logger.debug(`[Sound] Volume: ${(globalVolume * 100).toFixed(0)}%`);
 }
 
 /**
  * Obtenir le volume actuel
- * @returns {number}
+ * @returns Volume actuel
  */
-export function getGlobalVolume() {
+export function getGlobalVolume(): number {
   return globalVolume;
 }
 
 /**
  * Fonction interne pour jouer un son
- * @param {string} path - Chemin vers le fichier audio
- * @param {number} volumeMultiplier - Multiplicateur de volume (optionnel)
+ * @param path - Chemin vers le fichier audio
+ * @param volumeMultiplier - Multiplicateur de volume (optionnel)
  */
-function playAudio(path, volumeMultiplier = 1.0) {
+function playAudio(path: string, volumeMultiplier: number = 1.0): void {
   if (globalMuted) {
     logger.debug(`[Sound] Skipped (muted): ${path}`);
     return;
@@ -57,7 +57,7 @@ function playAudio(path, volumeMultiplier = 1.0) {
     const audio = new Audio(path);
     audio.volume = globalVolume * volumeMultiplier;
 
-    audio.play().catch(err => {
+    audio.play().catch((err: Error) => {
       logger.warn(`[Sound] Failed to play ${path}:`, err.message);
     });
 
@@ -72,14 +72,14 @@ function playAudio(path, volumeMultiplier = 1.0) {
 /**
  * Son joué quand un dialogue apparaît
  */
-export function playDialogue() {
+export function playDialogue(): void {
   playAudio('/sounds/dialogue.mp3', 0.8);
 }
 
 /**
  * Son joué quand le joueur fait un choix
  */
-export function playChoice() {
+export function playChoice(): void {
   playAudio('/sounds/choice.mp3', 0.9);
 }
 
@@ -88,7 +88,7 @@ export function playChoice() {
 /**
  * Son joué lors d'un changement de scène
  */
-export function playSceneChange() {
+export function playSceneChange(): void {
   playAudio('/sounds/scene-change.mp3', 0.7);
 }
 
@@ -97,14 +97,14 @@ export function playSceneChange() {
 /**
  * Son joué quand une variable augmente
  */
-export function playStatIncrease() {
+export function playStatIncrease(): void {
   playAudio('/sounds/stat-up.mp3', 0.8);
 }
 
 /**
  * Son joué quand une variable diminue
  */
-export function playStatDecrease() {
+export function playStatDecrease(): void {
   playAudio('/sounds/stat-down.mp3', 0.8);
 }
 
@@ -113,14 +113,14 @@ export function playStatDecrease() {
 /**
  * Son joué en cas de game over
  */
-export function playGameOver() {
+export function playGameOver(): void {
   playAudio('/sounds/game-over.mp3', 1.0);
 }
 
 /**
  * Son joué en cas de victoire
  */
-export function playVictory() {
+export function playVictory(): void {
   playAudio('/sounds/victory.mp3', 1.0);
 }
 
@@ -129,28 +129,28 @@ export function playVictory() {
 /**
  * Son de clic générique
  */
-export function playClick() {
+export function playClick(): void {
   playAudio('/sounds/click.mp3', 0.5);
 }
 
 /**
  * Son de hover sur bouton
  */
-export function playHover() {
+export function playHover(): void {
   playAudio('/sounds/hover.mp3', 0.3);
 }
 
 /**
  * Son d'erreur
  */
-export function playError() {
+export function playError(): void {
   playAudio('/sounds/error.mp3', 0.8);
 }
 
 /**
  * Son de succès
  */
-export function playSuccess() {
+export function playSuccess(): void {
   playAudio('/sounds/success.mp3', 0.8);
 }
 
@@ -159,14 +159,21 @@ export function playSuccess() {
 /**
  * Teste tous les sons disponibles
  */
-export function testAllSounds() {
+export function testAllSounds(): void {
   const sounds = [
-    'dialogue', 'choice', 'scene-change',
-    'stat-up', 'stat-down',
-    'game-over', 'victory',
-    'click', 'hover', 'error', 'success'
+    'dialogue',
+    'choice',
+    'scene-change',
+    'stat-up',
+    'stat-down',
+    'game-over',
+    'victory',
+    'click',
+    'hover',
+    'error',
+    'success',
   ];
-  
+
   logger.debug('[Sound] Testing all sounds...');
 
   sounds.forEach((sound, index) => {
@@ -193,5 +200,5 @@ export const SoundManager = {
   playHover,
   playError,
   playSuccess,
-  testAllSounds
+  testAllSounds,
 };

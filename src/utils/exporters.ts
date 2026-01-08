@@ -2,13 +2,64 @@
  * Utilities for exporting scenarios in various formats
  */
 
+// Types for scenario validation
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+// Types for scenario structure (based on existing usage)
+interface Character {
+  id: string;
+  name: string;
+  sprites?: Record<string, string>;
+}
+
+interface StatsDelta {
+  physique?: number;
+  mentale?: number;
+  sociale?: number;
+}
+
+interface Choice {
+  label: string;
+  nextSceneId?: string;
+  nextDialogueId?: string;
+  statsDelta?: StatsDelta;
+}
+
+interface Dialogue {
+  id?: string;
+  speaker?: string;
+  text?: string;
+  choices?: Choice[];
+}
+
+interface Scene {
+  id: string;
+  title: string;
+  background?: string;
+  dialogues: Dialogue[];
+}
+
+interface ScenarioContext {
+  title?: string;
+  description?: string;
+}
+
+interface ScenarioData {
+  scenes: Scene[];
+  characters: Character[];
+  context?: ScenarioContext;
+}
+
 /**
  * Validates the scenario structure
- * @param {Object} data - The scenario data to validate
- * @returns {Object} - { valid: boolean, errors: string[] }
+ * @param data - The scenario data to validate
+ * @returns { valid: boolean, errors: string[] }
  */
-export function validateScenario(data) {
-  const errors = [];
+export function validateScenario(data: ScenarioData | null): ValidationResult {
+  const errors: string[] = [];
 
   if (!data) {
     errors.push('No data provided');
@@ -42,16 +93,16 @@ export function validateScenario(data) {
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
 /**
  * Exports scenario to JSON format
- * @param {Object} data - The scenario data
- * @returns {string} - JSON string
+ * @param data - The scenario data
+ * @returns JSON string
  */
-export function exportToJSON(data) {
+export function exportToJSON(data: ScenarioData): string {
   const validation = validateScenario(data);
   if (!validation.valid) {
     throw new Error(`Invalid scenario: ${validation.errors.join(', ')}`);
@@ -62,11 +113,11 @@ export function exportToJSON(data) {
 
 /**
  * Downloads a file to the user's computer
- * @param {string} content - File content
- * @param {string} filename - Name of the file
- * @param {string} mimeType - MIME type of the file
+ * @param content - File content
+ * @param filename - Name of the file
+ * @param mimeType - MIME type of the file
  */
-function downloadFile(content, filename, mimeType = 'application/json') {
+function downloadFile(content: string, filename: string, mimeType: string = 'application/json'): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -80,10 +131,10 @@ function downloadFile(content, filename, mimeType = 'application/json') {
 
 /**
  * Exports scenario to standalone HTML file
- * @param {Object} data - The scenario data
- * @returns {string} - HTML string
+ * @param data - The scenario data
+ * @returns HTML string
  */
-export function exportToHTMLStandalone(data) {
+export function exportToHTMLStandalone(data: ScenarioData): string {
   const validation = validateScenario(data);
   if (!validation.valid) {
     throw new Error(`Invalid scenario: ${validation.errors.join(', ')}`);
@@ -263,10 +314,10 @@ export function exportToHTMLStandalone(data) {
 
 /**
  * Exports scenario to Phaser game engine format
- * @param {Object} data - The scenario data
- * @returns {string} - JavaScript code for Phaser
+ * @param data - The scenario data
+ * @returns JavaScript code for Phaser
  */
-export function exportToPhaser(data) {
+export function exportToPhaser(data: ScenarioData): string {
   const validation = validateScenario(data);
   if (!validation.valid) {
     throw new Error(`Invalid scenario: ${validation.errors.join(', ')}`);
@@ -409,10 +460,17 @@ const game = new Phaser.Game(config);
 }
 
 /**
+ * Export formats supported
+ */
+export type ExportFormat = 'json' | 'html' | 'phaser';
+
+/**
  * Helper to trigger download of exported content
  */
-export function downloadExport(data, format = 'json') {
-  let content, filename, mimeType;
+export function downloadExport(data: ScenarioData, format: ExportFormat = 'json'): void {
+  let content: string;
+  let filename: string;
+  let mimeType: string;
 
   switch (format) {
     case 'json':

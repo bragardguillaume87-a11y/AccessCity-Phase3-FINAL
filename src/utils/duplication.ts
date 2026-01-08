@@ -5,13 +5,15 @@
  * ASCII only - No fragments
  */
 
+import type { Scene, Dialogue, Character } from '@/types';
+
 /**
  * Generate a unique copy name
- * @param {string} originalName - Original name
- * @param {string[]} existingNames - List of existing names to avoid conflicts
- * @returns {string} - Unique copy name
+ * @param originalName - Original name
+ * @param existingNames - List of existing names to avoid conflicts
+ * @returns Unique copy name
  */
-function generateCopyName(originalName, existingNames) {
+function generateCopyName(originalName: string, existingNames: string[]): string {
   let copyName = `${originalName} (copie)`;
   let counter = 2;
 
@@ -26,34 +28,34 @@ function generateCopyName(originalName, existingNames) {
 /**
  * Generate a unique ID using crypto.randomUUID (modern browsers)
  * Falls back to timestamp + performance.now + random for older environments
- * @param {string} prefix - ID prefix
- * @returns {string} - Unique ID
+ * @param prefix - ID prefix
+ * @returns Unique ID
  */
-function generateUniqueId(prefix = 'item') {
+function generateUniqueId(prefix = 'item'): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return `${prefix}-${crypto.randomUUID()}`;
   }
-  
+
   const timestamp = Date.now();
   const perfNow = typeof performance !== 'undefined' ? performance.now() : 0;
   const random = Math.random().toString(36).substr(2, 12);
-  
+
   return `${prefix}-${timestamp}-${perfNow.toFixed(0)}-${random}`;
 }
 
 /**
  * Duplicate a scene with all its dialogues
- * @param {Object} scene - Scene to duplicate
- * @param {string[]} existingSceneIds - List of existing scene IDs
- * @param {string[]} existingSceneTitles - List of existing scene titles
- * @returns {Object} - Duplicated scene
+ * @param scene - Scene to duplicate
+ * @param existingSceneIds - List of existing scene IDs
+ * @param existingSceneTitles - List of existing scene titles
+ * @returns Duplicated scene
  */
-export function duplicateScene(scene, existingSceneIds, existingSceneTitles) {
+export function duplicateScene(scene: Scene, existingSceneIds: string[], existingSceneTitles: string[]): Scene {
   const newSceneId = generateUniqueId('scene');
   const newTitle = generateCopyName(scene.title || 'Scene sans titre', existingSceneTitles);
 
   const cloned = structuredClone(scene);
-  
+
   return {
     ...cloned,
     id: newSceneId,
@@ -63,7 +65,7 @@ export function duplicateScene(scene, existingSceneIds, existingSceneTitles) {
       id: generateUniqueId('dialogue'),
       choices: (dialogue.choices || []).map(choice => {
         const clean = { ...choice };
-        delete clean.diceCheck;
+        delete (clean as any).diceCheck;
         return clean;
       })
     }))
@@ -72,19 +74,19 @@ export function duplicateScene(scene, existingSceneIds, existingSceneTitles) {
 
 /**
  * Duplicate a dialogue with all its choices
- * @param {Object} dialogue - Dialogue to duplicate
- * @returns {Object} - Duplicated dialogue
+ * @param dialogue - Dialogue to duplicate
+ * @returns Duplicated dialogue
  */
-export function duplicateDialogue(dialogue) {
+export function duplicateDialogue(dialogue: Dialogue): Dialogue {
   const cloned = structuredClone(dialogue);
-  
+
   return {
     ...cloned,
     id: generateUniqueId('dialogue'),
     text: cloned.text || 'Dialogue duplique',
     choices: (cloned.choices || []).map(choice => {
       const clean = { ...choice };
-      delete clean.diceCheck;
+      delete (clean as any).diceCheck;
       return clean;
     })
   };
@@ -92,10 +94,10 @@ export function duplicateDialogue(dialogue) {
 
 /**
  * Duplicate a choice
- * @param {Object} choice - Choice to duplicate
- * @returns {Object} - Duplicated choice
+ * @param choice - Choice to duplicate
+ * @returns Duplicated choice
  */
-export function duplicateChoice(choice) {
+export function duplicateChoice(choice: any): any {
   const cloned = structuredClone(choice);
   delete cloned.diceCheck;
   return cloned;
@@ -103,12 +105,12 @@ export function duplicateChoice(choice) {
 
 /**
  * Duplicate a character with all sprites
- * @param {Object} character - Character to duplicate
- * @param {string[]} existingCharacterIds - List of existing character IDs
- * @param {string[]} existingCharacterNames - List of existing character names
- * @returns {Object} - Duplicated character
+ * @param character - Character to duplicate
+ * @param existingCharacterIds - List of existing character IDs
+ * @param existingCharacterNames - List of existing character names
+ * @returns Duplicated character
  */
-export function duplicateCharacter(character, existingCharacterIds, existingCharacterNames) {
+export function duplicateCharacter(character: Character, existingCharacterIds: string[], existingCharacterNames: string[]): Character {
   const newCharacterId = generateUniqueId('char');
   const newName = generateCopyName(character.name || 'Personnage sans nom', existingCharacterNames);
 

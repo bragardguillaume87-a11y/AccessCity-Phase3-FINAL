@@ -26,42 +26,50 @@ interface UndoRedoState {
 }
 
 export function useUndoRedo(): UndoRedoState {
-  // REACTIVE: Subscribe to scenes temporal state
-  const scenesPastStates = useStore(useScenesStore.temporal, (state) => state.pastStates);
-  const scenesFutureStates = useStore(useScenesStore.temporal, (state) => state.futureStates);
+  // REACTIVE: Subscribe to scenes temporal state with defensive fallbacks
+  const scenesPastStates = useStore(useScenesStore.temporal, (state) => state?.pastStates ?? []);
+  const scenesFutureStates = useStore(useScenesStore.temporal, (state) => state?.futureStates ?? []);
 
-  // REACTIVE: Subscribe to characters temporal state
-  const charsPastStates = useStore(useCharactersStore.temporal, (state) => state.pastStates);
-  const charsFutureStates = useStore(useCharactersStore.temporal, (state) => state.futureStates);
+  // REACTIVE: Subscribe to characters temporal state with defensive fallbacks
+  const charsPastStates = useStore(useCharactersStore.temporal, (state) => state?.pastStates ?? []);
+  const charsFutureStates = useStore(useCharactersStore.temporal, (state) => state?.futureStates ?? []);
 
   /**
-   * Undo the last action in both stores
+   * Undo the last action in both stores (with defensive wrappers)
    */
   const undo = () => {
-    const scenesState = useScenesStore.temporal.getState();
-    const charsState = useCharactersStore.temporal.getState();
+    const scenesState = useScenesStore.temporal.getState?.();
+    const charsState = useCharactersStore.temporal.getState?.();
 
-    if (scenesState.pastStates.length > 0) scenesState.undo();
-    if (charsState.pastStates.length > 0) charsState.undo();
+    if (scenesState?.pastStates?.length > 0) {
+      scenesState.undo?.();
+    }
+    if (charsState?.pastStates?.length > 0) {
+      charsState.undo?.();
+    }
   };
 
   /**
-   * Redo the last undone action in both stores
+   * Redo the last undone action in both stores (with defensive wrappers)
    */
   const redo = () => {
-    const scenesState = useScenesStore.temporal.getState();
-    const charsState = useCharactersStore.temporal.getState();
+    const scenesState = useScenesStore.temporal.getState?.();
+    const charsState = useCharactersStore.temporal.getState?.();
 
-    if (scenesState.futureStates.length > 0) scenesState.redo();
-    if (charsState.futureStates.length > 0) charsState.redo();
+    if (scenesState?.futureStates?.length > 0) {
+      scenesState.redo?.();
+    }
+    if (charsState?.futureStates?.length > 0) {
+      charsState.redo?.();
+    }
   };
 
   /**
-   * Clear undo/redo history for both stores
+   * Clear undo/redo history for both stores (with defensive wrappers)
    */
   const clear = () => {
-    useScenesStore.temporal.getState().clear();
-    useCharactersStore.temporal.getState().clear();
+    useScenesStore.temporal.getState?.()?.clear?.();
+    useCharactersStore.temporal.getState?.()?.clear?.();
   };
 
   return {

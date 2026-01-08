@@ -646,8 +646,10 @@ export const useScenesStore = create<ScenesState>()(
       // PERFORMANCE: Only compare reference equality (fast)
       equality: (pastState, currentState) => pastState === currentState,
       // PERFORMANCE: Only track 'scenes' in undo history (not actions)
-      // @ts-expect-error - Zundo partialize expects full state but we only need data
-      partialize: (state) => ({ scenes: state.scenes }),
+      // @ts-expect-error - Zundo partialize expects subset of state (this is correct behavior)
+      partialize: (state) => ({
+        scenes: state.scenes
+      }),
     }
   )
 );

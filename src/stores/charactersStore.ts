@@ -115,8 +115,10 @@ export const useCharactersStore = create<CharactersState>()(
       // PERFORMANCE: Only compare reference equality (fast)
       equality: (pastState, currentState) => pastState === currentState,
       // PERFORMANCE: Only track 'characters' in undo history (not actions)
-      // @ts-expect-error - Zundo partialize expects full state but we only need data
-      partialize: (state) => ({ characters: state.characters }),
+      // @ts-expect-error - Zundo partialize expects subset of state (this is correct behavior)
+      partialize: (state) => ({
+        characters: state.characters
+      }),
     }
   )
 );

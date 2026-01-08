@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.js';
-import { useUndoRedo } from '../hooks/useUndoRedo.js';
+import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.ts';
+import { useUndoRedo } from '../hooks/useUndoRedo.ts';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
 import CommandPalette from './CommandPalette.jsx';
-import { useValidation } from '../hooks/useValidation.js';
+import { useValidation } from '../hooks/useValidation.ts';
 import TopBar from './layout/TopBar.jsx';
 import Sidebar from './layout/Sidebar.jsx';
 import Inspector from './layout/Inspector.jsx';
@@ -53,6 +54,14 @@ export default function EditorShell({ onBack = null }) {
   // Modal state management
   const [activeModal, setActiveModal] = useState(null); // 'characters' | 'assets' | 'export' | 'preview' | null
   const [modalContext, setModalContext] = useState({}); // { characterId, category, sceneId, ... }
+
+  // KEYBOARD SHORTCUTS: Register global keyboard shortcuts (Ctrl+Z, Ctrl+Y, etc.)
+  useKeyboardShortcuts({
+    onUndo: undo,
+    onRedo: redo,
+    onPreview: () => setActiveModal('preview'),
+    onCommandPalette: () => setCommandPaletteOpen(true),
+  });
 
   // Handler for ProblemsPanel navigation
   const handleNavigateTo = (tab, params) => {

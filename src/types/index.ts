@@ -181,3 +181,17 @@ export interface AssetManifest {
   props?: Record<string, string[]>;
   [category: string]: Record<string, string[]> | undefined;
 }
+
+// ============================================================================
+// MOOD PRESETS
+// ============================================================================
+
+/**
+ * Mood preset configuration for character expressions
+ */
+export interface MoodPreset {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+}

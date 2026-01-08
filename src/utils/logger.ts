@@ -23,11 +23,11 @@ const isDevelopment = import.meta.env.DEV;
 
 /**
  * Formats log arguments with timestamp and context
- * @param {string} level - Log level (DEBUG, INFO, WARN, ERROR)
- * @param {Array} args - Arguments to log
- * @returns {Array} Formatted arguments
+ * @param level - Log level (DEBUG, INFO, WARN, ERROR)
+ * @param args - Arguments to log
+ * @returns Formatted arguments
  */
-const formatLog = (level, args) => {
+const formatLog = (level: string, args: unknown[]): unknown[] => {
   const timestamp = new Date().toISOString().split('T')[1].split('.')[0]; // HH:MM:SS
   return [`[${timestamp}] [${level}]`, ...args];
 };
@@ -36,9 +36,9 @@ export const logger = {
   /**
    * Debug level - Detailed diagnostic information
    * Only logs in development mode
-   * @param {...any} args - Arguments to log
+   * @param args - Arguments to log
    */
-  debug: (...args) => {
+  debug: (...args: unknown[]): void => {
     if (isDevelopment) {
       console.log(...formatLog('DEBUG', args));
     }
@@ -47,9 +47,9 @@ export const logger = {
   /**
    * Info level - General informational messages
    * Only logs in development mode
-   * @param {...any} args - Arguments to log
+   * @param args - Arguments to log
    */
-  info: (...args) => {
+  info: (...args: unknown[]): void => {
     if (isDevelopment) {
       console.info(...formatLog('INFO', args));
     }
@@ -58,27 +58,27 @@ export const logger = {
   /**
    * Warn level - Warning messages
    * Always logs (even in production)
-   * @param {...any} args - Arguments to log
+   * @param args - Arguments to log
    */
-  warn: (...args) => {
+  warn: (...args: unknown[]): void => {
     console.warn(...formatLog('WARN', args));
   },
 
   /**
    * Error level - Error messages
    * Always logs (even in production)
-   * @param {...any} args - Arguments to log
+   * @param args - Arguments to log
    */
-  error: (...args) => {
+  error: (...args: unknown[]): void => {
     console.error(...formatLog('ERROR', args));
   },
 
   /**
    * Group - Start a collapsible log group
    * Only in development mode
-   * @param {string} label - Group label
+   * @param label - Group label
    */
-  group: (label) => {
+  group: (label: string): void => {
     if (isDevelopment) {
       console.group(label);
     }
@@ -88,7 +88,7 @@ export const logger = {
    * GroupEnd - End the current log group
    * Only in development mode
    */
-  groupEnd: () => {
+  groupEnd: (): void => {
     if (isDevelopment) {
       console.groupEnd();
     }
@@ -97,9 +97,9 @@ export const logger = {
   /**
    * Table - Display data as a table
    * Only in development mode
-   * @param {any} data - Data to display
+   * @param data - Data to display
    */
-  table: (data) => {
+  table: (data: unknown): void => {
     if (isDevelopment) {
       console.table(data);
     }
@@ -108,9 +108,9 @@ export const logger = {
   /**
    * Time - Start a timer
    * Only in development mode
-   * @param {string} label - Timer label
+   * @param label - Timer label
    */
-  time: (label) => {
+  time: (label: string): void => {
     if (isDevelopment) {
       console.time(label);
     }
@@ -119,9 +119,9 @@ export const logger = {
   /**
    * TimeEnd - End a timer and log elapsed time
    * Only in development mode
-   * @param {string} label - Timer label
+   * @param label - Timer label
    */
-  timeEnd: (label) => {
+  timeEnd: (label: string): void => {
     if (isDevelopment) {
       console.timeEnd(label);
     }
@@ -130,10 +130,11 @@ export const logger = {
 
 /**
  * Performance logger for tracking component render times
- * @param {string} componentName - Name of the component
- * @param {Function} callback - Function to measure
+ * @param componentName - Name of the component
+ * @param callback - Function to measure
+ * @returns Result of the callback
  */
-export const logPerformance = (componentName, callback) => {
+export const logPerformance = <T>(componentName: string, callback: () => T): T => {
   if (isDevelopment) {
     const startTime = performance.now();
     const result = callback();
@@ -146,11 +147,11 @@ export const logPerformance = (componentName, callback) => {
 
 /**
  * Redux/Zustand action logger
- * @param {string} storeName - Store name
- * @param {string} actionName - Action name
- * @param {any} payload - Action payload
+ * @param storeName - Store name
+ * @param actionName - Action name
+ * @param payload - Action payload
  */
-export const logStoreAction = (storeName, actionName, payload) => {
+export const logStoreAction = (storeName: string, actionName: string, payload: unknown): void => {
   if (isDevelopment) {
     logger.group(`📦 ${storeName}.${actionName}`);
     logger.debug('Payload:', payload);

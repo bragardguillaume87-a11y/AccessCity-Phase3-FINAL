@@ -9,7 +9,33 @@
 
 import { logger } from './logger';
 
-export const Z_INDEX = {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface ZIndexLayers {
+  readonly CANVAS_GRID: number;
+  readonly CANVAS_BACKGROUND: number;
+  readonly CANVAS_CHARACTER_MIN: number;
+  readonly CANVAS_CHARACTER_MAX: number;
+  readonly CANVAS_PROPS: number;
+  readonly CANVAS_TEXTBOXES: number;
+  readonly CANVAS_DIALOGUE_OVERLAY: number;
+  readonly CANVAS_FLOATING_BUTTONS: number;
+  readonly DIALOG_BASE: number;
+  readonly DIALOG_NESTED: number;
+  readonly ALERT_DIALOG: number;
+  readonly ONBOARDING: number;
+  readonly TOAST: number;
+}
+
+export type ZIndexLayerKey = keyof ZIndexLayers;
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+export const Z_INDEX: ZIndexLayers = {
   // Canvas layers - Scene editor (MainCanvas)
   CANVAS_GRID: 0,
   CANVAS_BACKGROUND: 0,
@@ -34,19 +60,23 @@ export const Z_INDEX = {
 
   // Toasts - Notifications temporaires au-dessus de tout
   TOAST: 90,
-};
+} as const;
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /**
  * Utilitaire pour obtenir le z-index sous forme de className Tailwind
  *
- * @param {keyof Z_INDEX} layer - Nom de la couche
- * @returns {string} Classe Tailwind (ex: "z-[50]")
+ * @param layer - Nom de la couche
+ * @returns Classe Tailwind (ex: "z-[50]")
  *
  * @example
  * <div className={getZIndexClass('DIALOG_BASE')} />
  * // Résultat: <div className="z-[50]" />
  */
-export function getZIndexClass(layer) {
+export function getZIndexClass(layer: ZIndexLayerKey): string {
   const zIndex = Z_INDEX[layer];
   if (zIndex === undefined) {
     logger.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
@@ -58,14 +88,14 @@ export function getZIndexClass(layer) {
 /**
  * Utilitaire pour obtenir le z-index sous forme de valeur numérique
  *
- * @param {keyof Z_INDEX} layer - Nom de la couche
- * @returns {number} Valeur numérique du z-index
+ * @param layer - Nom de la couche
+ * @returns Valeur numérique du z-index
  *
  * @example
  * <div style={{ zIndex: getZIndexValue('DIALOG_BASE') }} />
  * // Résultat: <div style={{ zIndex: 50 }} />
  */
-export function getZIndexValue(layer) {
+export function getZIndexValue(layer: ZIndexLayerKey): number {
   const zIndex = Z_INDEX[layer];
   if (zIndex === undefined) {
     logger.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);

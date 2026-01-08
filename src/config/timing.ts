@@ -7,7 +7,50 @@
  * setTimeout(() => {...}, TIMING.ANIMATION_DELAY);
  */
 
-export const TIMING = {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type TailwindDuration =
+  | 'duration-75'
+  | 'duration-100'
+  | 'duration-150'
+  | 'duration-200'
+  | 'duration-300'
+  | 'duration-500'
+  | 'duration-700'
+  | 'duration-1000';
+
+interface TimingConstants {
+  readonly ANIMATION_DELAY: number;
+  readonly ANIMATION_FAST: number;
+  readonly ANIMATION_SLOW: number;
+  readonly ANIMATION_CREATE: number;
+  readonly SHAKE_ERROR_DURATION: number;
+  readonly TOOLTIP_DELAY: number;
+  readonly TOAST_DURATION: number;
+  readonly TOAST_DURATION_SHORT: number;
+  readonly TOAST_DURATION_LONG: number;
+  readonly UPLOAD_RELOAD_DELAY: number;
+  readonly UPLOAD_PROGRESS_UPDATE: number;
+  readonly CONFETTI_DURATION: number;
+  readonly TYPEWRITER_DELAY: number;
+  readonly DICE_ROLL_DURATION: number;
+  readonly DICE_ANIMATION_DURATION: number;
+  readonly DEBOUNCE_SEARCH: number;
+  readonly DEBOUNCE_AUTOSAVE: number;
+  readonly THROTTLE_RESIZE: number;
+  readonly UPDATE_INTERVAL: number;
+  readonly SOUND_TEST_INTERVAL: number;
+  readonly LOADING_MIN_DISPLAY: number;
+  readonly LOADING_TIMEOUT: number;
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+export const TIMING: TimingConstants = {
   // Animation & Transitions
   ANIMATION_DELAY: 300,        // Standard animation delay (CSS transitions)
   ANIMATION_FAST: 150,          // Fast animations
@@ -43,15 +86,19 @@ export const TIMING = {
   // Loading States
   LOADING_MIN_DISPLAY: 500,     // Minimum time to show loading spinner (prevent flashing)
   LOADING_TIMEOUT: 10000,       // Maximum loading time before timeout error
-};
+} as const;
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /**
  * Get animation duration from Tailwind duration classes
- * @param {'duration-75'|'duration-100'|'duration-150'|'duration-200'|'duration-300'|'duration-500'|'duration-700'|'duration-1000'} className
- * @returns {number} Duration in milliseconds
+ * @param className - Tailwind duration class name
+ * @returns Duration in milliseconds
  */
-export const getTailwindDuration = (className) => {
-  const durations = {
+export const getTailwindDuration = (className: TailwindDuration): number => {
+  const durations: Record<TailwindDuration, number> = {
     'duration-75': 75,
     'duration-100': 100,
     'duration-150': 150,
@@ -66,7 +113,8 @@ export const getTailwindDuration = (className) => {
 
 /**
  * Create a delay Promise for async operations
- * @param {number} ms - Milliseconds to wait
- * @returns {Promise<void>}
+ * @param ms - Milliseconds to wait
+ * @returns Promise that resolves after delay
  */
-export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+export const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));

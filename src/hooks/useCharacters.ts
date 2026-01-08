@@ -93,7 +93,7 @@ export const useCharacters = (): UseCharactersReturn => {
     }
 
     // Protection: cannot delete system characters
-    if (SYSTEM_CHARACTERS.includes(characterId)) {
+    if ((SYSTEM_CHARACTERS as readonly string[]).includes(characterId)) {
       return {
         success: false,
         error: `Cannot delete system character: ${characterId}`

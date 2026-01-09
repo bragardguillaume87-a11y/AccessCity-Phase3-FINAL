@@ -1,5 +1,29 @@
 import { useMemo } from 'react';
 import dagre from 'dagre';
+import type { Node, Edge } from '@xyflow/react';
+import type { Dialogue, DialogueChoice, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme } from '@/types';
+
+/**
+ * Union type for all graph node types
+ */
+type GraphNode = Node<DialogueNodeData> | Node<TerminalNodeData>;
+
+/**
+ * Return type of useDialogueGraph hook
+ */
+interface UseDialogueGraphReturn {
+  nodes: GraphNode[];
+  edges: Edge[];
+}
+
+/**
+ * Validation object with optional errors structure
+ */
+interface ValidationWithErrors {
+  errors?: {
+    dialogues?: Record<string, ValidationProblem[]>;
+  };
+}
 
 /**
  * useDialogueGraph - Transform dialogues into ReactFlow graph structure
@@ -11,19 +35,29 @@ import dagre from 'dagre';
  * - Handles linear flow and branching choices
  * - Enriches with validation issues (if provided)
  *
- * @param {Array} dialogues - Array of dialogue objects from scene
- * @param {string} sceneId - Scene ID for unique node IDs
- * @param {Object} validation - Optional validation object with issues
- * @returns {Object} {nodes, edges} for ReactFlow
+ * @param dialogues - Array of dialogue objects from scene
+ * @param sceneId - Scene ID for unique node IDs
+ * @param validation - Optional validation object with issues
+ * @returns Graph structure with nodes and edges for ReactFlow
+ *
+ * @example
+ * ```tsx
+ * const { nodes, edges } = useDialogueGraph(scene.dialogues, scene.id, validation);
+ * return <ReactFlow nodes={nodes} edges={edges} />;
+ * ```
  */
-export function useDialogueGraph(dialogues = [], sceneId = '', validation = null) {
+export function useDialogueGraph(
+  dialogues: Dialogue[] = [],
+  sceneId: string = '',
+  validation: ValidationWithErrors | null = null
+): UseDialogueGraphReturn {
   return useMemo(() => {
     if (!dialogues || dialogues.length === 0) {
       return { nodes: [], edges: [] };
     }
 
     // Step 1: Transform dialogues to nodes
-    const nodes = dialogues.map((dialogue, index) => {
+    const nodes: GraphNode[] = dialogues.map((dialogue, index) => {
       const hasChoices = dialogue.choices && dialogue.choices.length > 0;
       const nodeType = hasChoices ? 'choiceNode' : 'dialogueNode';
 
@@ -36,7 +70,7 @@ export function useDialogueGraph(dialogues = [], sceneId = '', validation = null
           index,
           speaker: dialogue.speaker || 'narrator',
           text: dialogue.text || '',
-          speakerMood: dialogue.speakerMood || 'neutral',
+          speakerMood: (dialogue as any).speakerMood || 'neutral',
           choices: dialogue.choices || [],
           // Enrich with validation issues if available
           issues: validation?.errors?.dialogues?.[dialogue.id] || []
@@ -45,7 +79,7 @@ export function useDialogueGraph(dialogues = [], sceneId = '', validation = null
     });
 
     // Step 2: Create edges
-    const edges = [];
+    const edges: Edge[] = [];
 
     dialogues.forEach((dialogue, index) => {
       const sourceId = `${sceneId}-d-${index}`;
@@ -66,9 +100,9 @@ export function useDialogueGraph(dialogues = [], sceneId = '', validation = null
       // Choice edges: dialogue → target dialogue (from choice.nextDialogue)
       if (hasChoices) {
         dialogue.choices.forEach((choice, choiceIdx) => {
-          if (choice.nextDialogue) {
+          if (choice.nextDialogueId) {
             // Find target dialogue by ID
-            const targetIdx = dialogues.findIndex(d => d.id === choice.nextDialogue);
+            const targetIdx = dialogues.findIndex(d => d.id === choice.nextDialogueId);
 
             if (targetIdx !== -1) {
               const targetId = `${sceneId}-d-${targetIdx}`;
@@ -89,7 +123,7 @@ export function useDialogueGraph(dialogues = [], sceneId = '', validation = null
           }
 
           // Scene jump edge (nextScene)
-          if (choice.nextScene) {
+          if (choice.nextSceneId) {
             // For scene jumps, create a special terminal node
             const terminalId = `${sourceId}-terminal-${choiceIdx}`;
 
@@ -99,8 +133,8 @@ export function useDialogueGraph(dialogues = [], sceneId = '', validation = null
               type: 'terminalNode',
               position: { x: 0, y: 0 },
               data: {
-                sceneId: choice.nextScene,
-                label: `→ Scene: ${choice.nextScene}`,
+                sceneId: choice.nextSceneId,
+                label: `→ Scene: ${choice.nextSceneId}`,
                 choiceText: choice.text
               }
             });
@@ -135,11 +169,11 @@ export function useDialogueGraph(dialogues = [], sceneId = '', validation = null
 /**
  * Calculate auto-layout positions using dagre algorithm
  *
- * @param {Array} nodes - ReactFlow nodes (without positions)
- * @param {Array} edges - ReactFlow edges
- * @returns {Array} Nodes with calculated positions
+ * @param nodes - ReactFlow nodes (without positions)
+ * @param edges - ReactFlow edges
+ * @returns Nodes with calculated positions
  */
-function calculateLayoutWithDagre(nodes, edges) {
+function calculateLayoutWithDagre(nodes: GraphNode[], edges: Edge[]): GraphNode[] {
   const dagreGraph = new dagre.graphlib.Graph();
 
   // Configure graph layout
@@ -190,13 +224,13 @@ function calculateLayoutWithDagre(nodes, edges) {
 /**
  * Helper: Get node color based on type and issues
  *
- * @param {string} nodeType - Type of node (dialogueNode, choiceNode, terminalNode)
- * @param {Array} issues - Validation issues array
- * @returns {Object} Color theme for node
+ * @param nodeType - Type of node (dialogueNode, choiceNode, terminalNode)
+ * @param issues - Validation issues array
+ * @returns Color theme for node
  */
-export function getNodeColorTheme(nodeType, issues = []) {
-  const hasErrors = issues.some(issue => issue.severity === 'error');
-  const hasWarnings = issues.some(issue => issue.severity === 'warning');
+export function getNodeColorTheme(nodeType: string, issues: ValidationProblem[] = []): NodeColorTheme {
+  const hasErrors = issues.some(issue => issue.type === 'error');
+  const hasWarnings = issues.some(issue => issue.type === 'warning');
 
   // Error state (red)
   if (hasErrors) {

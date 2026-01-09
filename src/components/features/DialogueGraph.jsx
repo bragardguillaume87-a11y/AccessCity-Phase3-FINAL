@@ -11,7 +11,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import './DialogueGraph.css';
 
-import { useDialogueGraph } from '../../hooks/useDialogueGraph.js';
+import { useDialogueGraph } from '../../hooks/useDialogueGraph';
 import { nodeTypes } from './DialogueGraphNodes.jsx';
 import { useValidation } from '../../hooks/useValidation.js';
 

@@ -1,5 +1,33 @@
 import { useMemo } from 'react';
 import { VALIDATION_RULES } from '@/config/constants';
+import type { Character, ValidationLocale, ValidationMessages } from '@/types';
+
+/**
+ * Result of validation operations
+ */
+interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string[]>;
+  warnings: Record<string, string[]>;
+}
+
+/**
+ * Configuration options for useCharacterValidation hook
+ */
+interface UseCharacterValidationOptions {
+  locale?: ValidationLocale;
+}
+
+/**
+ * Return type of useCharacterValidation hook
+ */
+interface UseCharacterValidationReturn {
+  validateAll: (formData: Partial<Character>) => ValidationResult;
+  validateField: (field: string, value: any) => string[];
+  validateName: (value: string) => string[];
+  validateDescription: (value: string) => string[];
+  validateMoods: (value: string[]) => string[];
+}
 
 /**
  * Unified Character Validation Hook
@@ -10,23 +38,28 @@ import { VALIDATION_RULES } from '@/config/constants';
  * - i18n support (messages can be translated)
  * - Warnings for missing sprites
  *
- * @param {Array} characters - All existing characters
- * @param {Object} currentCharacter - The character being edited (null for new)
- * @param {Object} options - Configuration options
- * @param {string} options.locale - Locale for messages ('en' | 'fr'), default 'en'
- * @returns {Object} Validation functions
+ * @param characters - All existing characters
+ * @param currentCharacter - The character being edited (null for new)
+ * @param options - Configuration options
+ * @returns Validation functions
  *
  * @example
+ * ```tsx
  * const { validateAll, validateField } = useCharacterValidation(characters, editingChar);
  * const result = validateAll(formData);
  * // { isValid: false, errors: { name: ['Name is required'] }, warnings: {} }
+ * ```
  */
-export function useCharacterValidation(characters = [], currentCharacter = null, options = {}) {
+export function useCharacterValidation(
+  characters: Character[] = [],
+  currentCharacter: Character | null = null,
+  options: UseCharacterValidationOptions = {}
+): UseCharacterValidationReturn {
   const { locale = 'en' } = options;
 
   // Validation messages (i18n ready)
-  const messages = useMemo(() => {
-    const i18n = {
+  const messages = useMemo<ValidationMessages>(() => {
+    const i18n: Record<ValidationLocale, ValidationMessages> = {
       en: {
         nameRequired: 'Character name is required',
         nameMinLength: `Name must be at least ${VALIDATION_RULES.CHARACTER_NAME_MIN_LENGTH} character`,
@@ -39,7 +72,7 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
         moodsDuplicate: 'Duplicate moods are not allowed',
         moodsEmpty: 'Mood names cannot be empty',
 
-        spritesWarning: (count, moods) => `${count} mood(s) don't have sprites assigned: ${moods}`,
+        spritesWarning: (count: number, moods: string) => `${count} mood(s) don't have sprites assigned: ${moods}`,
       },
       fr: {
         nameRequired: 'Le nom du personnage est obligatoire',
@@ -53,7 +86,7 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
         moodsDuplicate: 'Les humeurs en double ne sont pas autorisées',
         moodsEmpty: 'Les noms d\'humeur ne peuvent pas être vides',
 
-        spritesWarning: (count, moods) => `${count} humeur(s) n'ont pas de sprites assignés : ${moods}`,
+        spritesWarning: (count: number, moods: string) => `${count} humeur(s) n'ont pas de sprites assignés : ${moods}`,
       }
     };
 
@@ -62,10 +95,13 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
 
   /**
    * Validate name field
+   *
+   * @param value - Name to validate
+   * @returns Array of error messages (empty if valid)
    */
   const validateName = useMemo(() => {
-    return (value) => {
-      const errors = [];
+    return (value: string): string[] => {
+      const errors: string[] = [];
 
       if (!value || !value.trim()) {
         errors.push(messages.nameRequired);
@@ -96,10 +132,13 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
 
   /**
    * Validate description field
+   *
+   * @param value - Description to validate
+   * @returns Array of error messages (empty if valid)
    */
   const validateDescription = useMemo(() => {
-    return (value) => {
-      const errors = [];
+    return (value: string): string[] => {
+      const errors: string[] = [];
 
       if (value && value.length > VALIDATION_RULES.CHARACTER_DESCRIPTION_MAX_LENGTH) {
         errors.push(messages.descriptionMaxLength);
@@ -111,10 +150,13 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
 
   /**
    * Validate moods field
+   *
+   * @param value - Array of mood names to validate
+   * @returns Array of error messages (empty if valid)
    */
   const validateMoods = useMemo(() => {
-    return (value) => {
-      const errors = [];
+    return (value: string[]): string[] => {
+      const errors: string[] = [];
 
       if (!value || value.length < VALIDATION_RULES.CHARACTER_MOODS_MIN) {
         errors.push(messages.moodsRequired);
@@ -138,12 +180,13 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
 
   /**
    * Validate a specific field
-   * @param {string} field - Field name ('name' | 'description' | 'moods')
-   * @param {*} value - Field value
-   * @returns {Array} Array of error messages (empty if valid)
+   *
+   * @param field - Field name ('name' | 'description' | 'moods')
+   * @param value - Field value
+   * @returns Array of error messages (empty if valid)
    */
   const validateField = useMemo(() => {
-    return (field, value) => {
+    return (field: string, value: any): string[] => {
       switch (field) {
         case 'name':
           return validateName(value);
@@ -159,28 +202,29 @@ export function useCharacterValidation(characters = [], currentCharacter = null,
 
   /**
    * Validate all character fields
-   * @param {Object} formData - The character data to validate
-   * @returns {Object} { isValid: boolean, errors: {}, warnings: {} }
+   *
+   * @param formData - The character data to validate
+   * @returns Validation result with errors and warnings
    */
   const validateAll = useMemo(() => {
-    return (formData) => {
-      const errors = {};
-      const warnings = {};
+    return (formData: Partial<Character>): ValidationResult => {
+      const errors: Record<string, string[]> = {};
+      const warnings: Record<string, string[]> = {};
 
       // Validate name
-      const nameErrors = validateName(formData.name);
+      const nameErrors = validateName(formData.name || '');
       if (nameErrors.length > 0) {
         errors.name = nameErrors;
       }
 
       // Validate description
-      const descErrors = validateDescription(formData.description);
+      const descErrors = validateDescription(formData.description || '');
       if (descErrors.length > 0) {
         errors.description = descErrors;
       }
 
       // Validate moods
-      const moodsErrors = validateMoods(formData.moods);
+      const moodsErrors = validateMoods(formData.moods || []);
       if (moodsErrors.length > 0) {
         errors.moods = moodsErrors;
       }

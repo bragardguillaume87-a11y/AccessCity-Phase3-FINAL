@@ -195,3 +195,62 @@ export interface MoodPreset {
   emoji: string;
   description: string;
 }
+
+// ============================================================================
+// CHARACTER VALIDATION (useCharacterValidation)
+// ============================================================================
+
+/**
+ * Supported locales for validation messages
+ */
+export type ValidationLocale = 'en' | 'fr';
+
+/**
+ * Validation messages for character fields (i18n ready)
+ */
+export interface ValidationMessages {
+  nameRequired: string;
+  nameMinLength: string;
+  nameMaxLength: string;
+  nameDuplicate: string;
+  descriptionMaxLength: string;
+  moodsRequired: string;
+  moodsDuplicate: string;
+  moodsEmpty: string;
+  spritesWarning: (count: number, moods: string) => string;
+}
+
+// ============================================================================
+// DIALOGUE GRAPH (useDialogueGraph)
+// ============================================================================
+
+/**
+ * Data payload for dialogue nodes in ReactFlow graph
+ */
+export interface DialogueNodeData extends Record<string, unknown> {
+  dialogue: Dialogue;
+  index: number;
+  speaker: string;
+  text: string;
+  speakerMood: string;
+  choices: DialogueChoice[];
+  issues: ValidationProblem[];
+}
+
+/**
+ * Data payload for terminal nodes (scene jumps) in ReactFlow graph
+ */
+export interface TerminalNodeData extends Record<string, unknown> {
+  sceneId: string;
+  label: string;
+  choiceText?: string;
+}
+
+/**
+ * Color theme for graph nodes
+ */
+export interface NodeColorTheme {
+  bg: string;
+  border: string;
+  text: string;
+}

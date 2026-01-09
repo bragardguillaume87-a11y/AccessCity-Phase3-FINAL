@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { MessageSquare, GitBranch, ExternalLink, AlertCircle, AlertTriangle } from 'lucide-react';
-import { getNodeColorTheme } from '../../hooks/useDialogueGraph.js';
+import { getNodeColorTheme } from '../../hooks/useDialogueGraph';
 
 /**
  * DialogueNode - Standard dialogue node

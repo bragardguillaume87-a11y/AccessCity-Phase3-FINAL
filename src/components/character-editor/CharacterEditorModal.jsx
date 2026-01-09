@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useCharacterForm } from '../../hooks/useCharacterForm.js';
+import { useCharacterForm } from '../../hooks/useCharacterForm';
 import { useMoodPresets } from '../../hooks/useMoodPresets.js';
 import {
   Dialog,

@@ -1,31 +1,113 @@
 import { useState, useCallback } from 'react';
-import { useCharacterValidation } from './useCharacterValidation.js';
+import { useCharacterValidation } from './useCharacterValidation';
+import type { Character } from '@/types';
+
+/**
+ * Form data structure for character editing
+ */
+interface CharacterFormData {
+  /** Unique character identifier */
+  id: string;
+  /** Character display name */
+  name: string;
+  /** Character description */
+  description: string;
+  /** List of mood identifiers (e.g., ['neutral', 'happy', 'sad']) */
+  moods: string[];
+  /** Mapping of mood IDs to sprite file paths */
+  sprites: Record<string, string>;
+}
+
+/**
+ * Validation result structure
+ */
+interface ValidationResult {
+  /** Whether the validation passed */
+  isValid: boolean;
+  /** Validation errors by field */
+  errors?: Record<string, string[]>;
+  /** Validation warnings by field */
+  warnings?: Record<string, string[]>;
+}
+
+/**
+ * Return type for useCharacterForm hook
+ */
+interface UseCharacterFormReturn {
+  /** Current form data state */
+  formData: CharacterFormData;
+  /** Currently active tab in the form */
+  activeTab: string;
+  /** Set active tab */
+  setActiveTab: (tab: string) => void;
+  /** Current validation errors by field */
+  errors: Record<string, string[]>;
+  /** Current validation warnings by field */
+  warnings: Record<string, string[]>;
+  /** Whether the form has unsaved changes */
+  hasChanges: boolean;
+  /** Update a single form field */
+  updateField: (field: string, value: any) => void;
+  /** Add a new mood to the character */
+  addMood: (moodId: string) => boolean;
+  /** Remove a mood from the character */
+  removeMood: (moodId: string) => boolean;
+  /** Update sprite path for a specific mood */
+  updateSprite: (mood: string, spritePath: string) => void;
+  /** Rename an existing mood */
+  renameMood: (oldMoodId: string, newMoodId: string) => boolean;
+  /** Validate and save the form */
+  handleSave: () => boolean;
+  /** Reset form to initial values */
+  resetForm: () => void;
+}
 
 /**
  * useCharacterForm - Manage character editor form state
  *
- * @param {Object} initialCharacter - The character to edit
- * @param {Array} characters - All characters (for validation)
- * @param {Function} onSave - Callback when form is saved
- * @returns {Object} Form state and handlers
+ * Provides comprehensive form state management for character editing,
+ * including field updates, mood management, sprite assignment, and validation.
+ *
+ * @param initialCharacter - The character to edit
+ * @param characters - All characters (for validation)
+ * @param onSave - Callback when form is saved successfully
+ * @returns Form state and handlers
+ *
+ * @example
+ * const {
+ *   formData,
+ *   activeTab,
+ *   errors,
+ *   updateField,
+ *   addMood,
+ *   handleSave
+ * } = useCharacterForm(character, allCharacters, (updated) => {
+ *   console.log('Character saved:', updated);
+ * });
  */
-export function useCharacterForm(initialCharacter, characters, onSave) {
+export function useCharacterForm(
+  initialCharacter: Character,
+  characters: Character[],
+  onSave: (character: Character) => void
+): UseCharacterFormReturn {
   // Ensure moods and sprites are initialized
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CharacterFormData>({
     ...initialCharacter,
     moods: initialCharacter.moods || ['neutral'],
     sprites: initialCharacter.sprites || {}
   });
 
-  const [activeTab, setActiveTab] = useState('identity');
-  const [errors, setErrors] = useState({});
-  const [warnings, setWarnings] = useState({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('identity');
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [warnings, setWarnings] = useState<Record<string, string[]>>({});
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   const { validateAll } = useCharacterValidation(characters, initialCharacter);
 
-  // Update a form field
-  const updateField = useCallback((field, value) => {
+  /**
+   * Update a form field
+   */
+  const updateField = useCallback((field: string, value: any): void => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
 
@@ -39,8 +121,10 @@ export function useCharacterForm(initialCharacter, characters, onSave) {
     }
   }, [errors]);
 
-  // Add a new mood
-  const addMood = useCallback((moodId) => {
+  /**
+   * Add a new mood
+   */
+  const addMood = useCallback((moodId: string): boolean => {
     if (!moodId || !moodId.trim()) return false;
 
     const trimmedMood = moodId.trim().toLowerCase();
@@ -60,8 +144,10 @@ export function useCharacterForm(initialCharacter, characters, onSave) {
     return true;
   }, [formData.moods]);
 
-  // Remove a mood
-  const removeMood = useCallback((moodId) => {
+  /**
+   * Remove a mood
+   */
+  const removeMood = useCallback((moodId: string): boolean => {
     // Prevent removing the last mood
     if (formData.moods.length === 1) {
       setErrors(prev => ({ ...prev, moods: ['Character must have at least one mood'] }));
@@ -83,8 +169,10 @@ export function useCharacterForm(initialCharacter, characters, onSave) {
     return true;
   }, [formData.moods]);
 
-  // Update sprite for a mood
-  const updateSprite = useCallback((mood, spritePath) => {
+  /**
+   * Update sprite for a mood
+   */
+  const updateSprite = useCallback((mood: string, spritePath: string): void => {
     setFormData(prev => ({
       ...prev,
       sprites: { ...prev.sprites, [mood]: spritePath }
@@ -101,8 +189,10 @@ export function useCharacterForm(initialCharacter, characters, onSave) {
     }
   }, [warnings.sprites]);
 
-  // Rename a mood
-  const renameMood = useCallback((oldMoodId, newMoodId) => {
+  /**
+   * Rename a mood
+   */
+  const renameMood = useCallback((oldMoodId: string, newMoodId: string): boolean => {
     if (!newMoodId || !newMoodId.trim()) return false;
 
     const trimmedNewMood = newMoodId.trim().toLowerCase();
@@ -133,9 +223,11 @@ export function useCharacterForm(initialCharacter, characters, onSave) {
     return true;
   }, [formData.moods]);
 
-  // Validate and save the form
-  const handleSave = useCallback(() => {
-    const validation = validateAll(formData);
+  /**
+   * Validate and save the form
+   */
+  const handleSave = useCallback((): boolean => {
+    const validation = validateAll(formData) as ValidationResult;
 
     if (!validation.isValid) {
       setErrors(validation.errors || {});
@@ -146,13 +238,15 @@ export function useCharacterForm(initialCharacter, characters, onSave) {
     // Show warnings but allow save
     setWarnings(validation.warnings || {});
 
-    onSave(formData);
+    onSave(formData as Character);
     setHasChanges(false);
     return true;
   }, [formData, validateAll, onSave]);
 
-  // Reset form to original values
-  const resetForm = useCallback(() => {
+  /**
+   * Reset form to original values
+   */
+  const resetForm = useCallback((): void => {
     setFormData({
       ...initialCharacter,
       moods: initialCharacter.moods || ['neutral'],

@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs.jsx';
 import { Film, MessageSquare } from 'lucide-react';
-import ScenesSidebar from './ScenesSidebar.jsx';
+import ScenesSidebar from './ScenesSidebar.tsx';
 import DialoguesPanel from './DialoguesPanel.jsx';
 import { useScenesStore, useUIStore } from '../../stores/index.js';
 

@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ProgressStepper } from './onboarding/ProgressStepper.jsx';
+import { ProgressStepper } from './onboarding/ProgressStepper';
 
 export default function OnboardingModal({ onClose }) {
   const [step, setStep] = useState(0);

@@ -7,9 +7,9 @@ import KeyboardShortcuts from './KeyboardShortcuts.jsx';
 import ProblemsPanel from './ProblemsPanel.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import { useValidation } from '../hooks/useValidation.ts';
-import TopBar from './layout/TopBar.jsx';
-import Sidebar from './layout/Sidebar.jsx';
-import Inspector from './layout/Inspector.jsx';
+import TopBar from './layout/TopBar';
+import Sidebar from './layout/Sidebar';
+import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas.jsx';
 

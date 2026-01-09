@@ -254,3 +254,106 @@ export interface NodeColorTheme {
   border: string;
   text: string;
 }
+
+// ============================================================================
+// GAME ENGINE (Phase F - engine.ts)
+// ============================================================================
+
+/**
+ * Comparison operators for condition evaluation in dialogues
+ */
+export type ConditionOperator = '>=' | '<=' | '>' | '<' | '==' | '!=';
+
+/**
+ * Condition for dialogue branching based on game variables
+ */
+export interface Condition {
+  variable: string;
+  operator: ConditionOperator;
+  value: number;
+}
+
+/**
+ * Event bus event types and their typed payloads
+ */
+export interface EventBusEvents {
+  'dialogue:show': {
+    speaker: string;
+    text: string;
+    choices: DialogueChoice[];
+  };
+  'scene:complete': {
+    sceneId: string;
+  };
+  'variables:updated': GameStats;
+  'variables:delta': Array<{
+    variable: string;
+    delta: number;
+  }>;
+}
+
+/**
+ * Event bus callback function type
+ */
+export type EventCallback<T = unknown> = (data: T) => void;
+
+/**
+ * Parameters for createEngine factory function
+ */
+export interface CreateEngineParams {
+  /** Initial game variable values (default: { Physique: 100, Mentale: 100 }) */
+  initialVars?: GameStats;
+}
+
+/**
+ * Game engine instance returned by createEngine
+ */
+export interface GameEngine {
+  eventBus: EventBus;
+  variableManager: VariableManager;
+  dialogueEngine: DialogueEngine;
+}
+
+/**
+ * Type-safe event bus for game engine communication
+ */
+export interface EventBus {
+  on<K extends keyof EventBusEvents>(
+    event: K,
+    callback: EventCallback<EventBusEvents[K]>
+  ): void;
+  off<K extends keyof EventBusEvents>(
+    event: K,
+    callback: EventCallback<EventBusEvents[K]>
+  ): void;
+  emit<K extends keyof EventBusEvents>(
+    event: K,
+    data: EventBusEvents[K]
+  ): void;
+}
+
+/**
+ * Manages game variables with bounded values
+ */
+export interface VariableManager {
+  get(name: string): number;
+  set(name: string, value: number): void;
+  modify(name: string, delta: number): void;
+  getAll(): GameStats;
+}
+
+/**
+ * Evaluates conditions for dialogue branching
+ */
+export interface ConditionEvaluator {
+  evaluate(conditions?: Condition[]): boolean;
+}
+
+/**
+ * Main dialogue engine for scene playback
+ */
+export interface DialogueEngine {
+  loadScene(scene: Scene | null): void;
+  handleChoice(choice: DialogueChoice): void;
+  next(): void;
+}

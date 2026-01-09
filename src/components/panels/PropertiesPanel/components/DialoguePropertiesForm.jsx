@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from '@/components/ui/button';
-import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator.jsx';
+import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator.tsx';
 import { ChoiceEditor } from './ChoiceEditor.jsx';
 import { Copy, Plus } from 'lucide-react';
 

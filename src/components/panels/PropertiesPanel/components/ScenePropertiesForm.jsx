@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { Button } from '@/components/ui/button';
-import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator.jsx';
+import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator.tsx';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 /**

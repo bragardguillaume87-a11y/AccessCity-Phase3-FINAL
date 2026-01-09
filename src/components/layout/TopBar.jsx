@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Users, Image, Settings, Download, Play } from 'lucide-react';
-import { AutoSaveTimestamp } from '../ui/AutoSaveTimestamp.jsx';
+import { AutoSaveTimestamp } from '../ui/AutoSaveTimestamp.tsx';
 
 /**
  * TopBar - Application header with navigation and status

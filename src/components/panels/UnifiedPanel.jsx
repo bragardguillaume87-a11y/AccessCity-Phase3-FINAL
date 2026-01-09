@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { CollapsibleSection } from '../ui/CollapsibleSection.jsx';
+import { CollapsibleSection } from '../ui/CollapsibleSection.tsx';
 import CharacterMoodPicker from './UnifiedPanel/CharacterMoodPicker.jsx';
 import CharacterPositioningTools from './UnifiedPanel/CharacterPositioningTools.jsx';
 import { Image, Type, Users, Box, BarChart3, Volume2, ImagePlus, Sparkles } from 'lucide-react';

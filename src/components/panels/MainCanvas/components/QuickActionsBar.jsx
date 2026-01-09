@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Button } from '@/components/ui/button.jsx';
+import { Button } from '@/components/ui/button';
 
 /**
  * QuickActionsBar - Bottom action bar with scene ID and quick actions

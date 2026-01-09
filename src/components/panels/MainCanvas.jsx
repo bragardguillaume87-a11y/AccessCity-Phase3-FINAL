@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useScenesStore, useCharactersStore } from '../../stores/index.js';
-import ContextMenu from '../ui/ContextMenu.jsx';
+import ContextMenu from '../ui/ContextMenu.tsx';
 import AddCharacterToSceneModal from '../modals/AddCharacterToSceneModal.jsx';
 import TimelinePlayhead from './TimelinePlayhead.jsx';
 import { useCanvasKeyboard } from '@/hooks/useCanvasKeyboard';

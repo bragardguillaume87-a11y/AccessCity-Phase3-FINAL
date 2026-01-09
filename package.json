@@ -29,6 +29,7 @@
     "install:server": "cd server && npm install"
   },
   "devDependencies": {
+    "@codemod/cli": "^3.3.0",
     "@playwright/test": "^1.45.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
@@ -52,6 +53,8 @@
     "postcss": "^8.5.6",
     "prettier": "^3.7.4",
     "tailwindcss": "^3.4.19",
+    "ts-migrate": "^0.1.35",
+    "type-coverage": "^2.29.7",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-istanbul": "^7.2.1",

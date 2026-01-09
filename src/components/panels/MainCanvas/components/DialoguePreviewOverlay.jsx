@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Button } from '@/components/ui/button.jsx';
+import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTypewriter } from '@/hooks/useTypewriter';
 import { Z_INDEX } from '@/utils/zIndexLayers.js';

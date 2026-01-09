@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { Button } from '@/components/ui/button';
-import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator.jsx';
-import { CollapsibleSection, FormField } from '../../../ui/CollapsibleSection.jsx';
+import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator.tsx';
+import { CollapsibleSection, FormField } from '../../../ui/CollapsibleSection.tsx';
 import { POSITION_PRESETS } from '@/utils/canvasPositioning';
 
 /**

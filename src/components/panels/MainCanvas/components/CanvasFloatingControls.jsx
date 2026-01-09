@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Button } from '@/components/ui/button.jsx';
+import { Button } from '@/components/ui/button';
 import { UserPlus, Grid3x3 } from 'lucide-react';
 
 /**

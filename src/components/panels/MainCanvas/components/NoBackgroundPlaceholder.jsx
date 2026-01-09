@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Button } from '@/components/ui/button.jsx';
+import { Button } from '@/components/ui/button';
 import { Z_INDEX } from '@/utils/zIndexLayers.js';
 
 /**

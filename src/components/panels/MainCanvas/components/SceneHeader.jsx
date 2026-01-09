@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button.jsx';
+import { Button } from '@/components/ui/button';
 import { Network, Maximize2, Eye, Minimize2 } from 'lucide-react';
 
 /**

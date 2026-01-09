@@ -10,7 +10,7 @@ import { useValidation } from '../hooks/useValidation.ts';
 import TopBar from './layout/TopBar.jsx';
 import Sidebar from './layout/Sidebar.jsx';
 import Inspector from './layout/Inspector.jsx';
-import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.jsx';
+import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas.jsx';
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel.jsx'));

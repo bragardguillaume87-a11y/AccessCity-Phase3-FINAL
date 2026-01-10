@@ -6,14 +6,37 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
-  ReactFlowProvider
+  ReactFlowProvider,
+  Node,
+  NodeMouseHandler,
+  FitViewOptions
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './DialogueGraph.css';
 
 import { useDialogueGraph } from '../../hooks/useDialogueGraph';
-import { nodeTypes } from './DialogueGraphNodes.jsx';
-import { useValidation } from '../../hooks/useValidation.js';
+import { nodeTypes } from './DialogueGraphNodes.tsx';
+import { useValidation } from '../../hooks/useValidation';
+import type { Scene, DialogueNodeData, TerminalNodeData } from '@/types';
+
+/**
+ * Props for DialogueGraphInner component
+ */
+interface DialogueGraphInnerProps {
+  /** Selected scene to visualize */
+  selectedScene: Scene | null;
+  /** Currently selected element in the editor */
+  selectedElement: { type: string; sceneId?: string; index?: number } | null;
+  /** Callback when a dialogue is selected */
+  onSelectDialogue: (sceneId: string, dialogueIndex: number) => void;
+  /** Callback to open a modal (unused in current implementation) */
+  onOpenModal?: (modalType: string) => void;
+}
+
+/**
+ * Union type for all graph nodes
+ */
+type GraphNode = Node<DialogueNodeData> | Node<TerminalNodeData>;
 
 /**
  * DialogueGraphInner - Main dialogue graph visualization component
@@ -31,7 +54,7 @@ function DialogueGraphInner({
   selectedElement,
   onSelectDialogue,
   onOpenModal
-}) {
+}: DialogueGraphInnerProps): React.JSX.Element {
   const { fitView } = useReactFlow();
   const validation = useValidation();
 
@@ -40,16 +63,21 @@ function DialogueGraphInner({
   const sceneId = selectedScene?.id || '';
 
   // Transform dialogues to graph structure
-  const { nodes, edges } = useDialogueGraph(dialogues, sceneId, validation);
+  const { nodes, edges } = useDialogueGraph(
+    dialogues,
+    sceneId,
+    validation as { errors?: { dialogues?: Record<string, any[]> } } | null
+  );
 
   // Local state for selected nodes
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Fit view on mount and when nodes change
   useEffect(() => {
     if (nodes.length > 0) {
       setTimeout(() => {
-        fitView({ padding: 0.2, duration: 300 });
+        const fitViewOptions: FitViewOptions = { padding: 0.2, duration: 300 };
+        fitView(fitViewOptions);
       }, 100);
     }
   }, [nodes, fitView]);
@@ -65,8 +93,8 @@ function DialogueGraphInner({
   }, [selectedElement, sceneId]);
 
   // Handle node click (select dialogue)
-  const onNodeClick = useCallback((event, node) => {
-    const dialogueIndex = node.data.index;
+  const onNodeClick = useCallback<NodeMouseHandler>((event, node) => {
+    const dialogueIndex = (node.data as DialogueNodeData).index;
 
     if (dialogueIndex !== undefined) {
       onSelectDialogue(sceneId, dialogueIndex);
@@ -75,8 +103,8 @@ function DialogueGraphInner({
   }, [sceneId, onSelectDialogue]);
 
   // Handle node double-click (edit dialogue)
-  const onNodeDoubleClick = useCallback((event, node) => {
-    const dialogueIndex = node.data.index;
+  const onNodeDoubleClick = useCallback<NodeMouseHandler>((event, node) => {
+    const dialogueIndex = (node.data as DialogueNodeData).index;
 
     if (dialogueIndex !== undefined) {
       // Select dialogue and scroll to it in the editor
@@ -88,10 +116,10 @@ function DialogueGraphInner({
   }, [sceneId, onSelectDialogue]);
 
   // Handle keyboard navigation
-  const handleKeyDown = useCallback((event) => {
+  const handleKeyDown = useCallback((event: KeyboardEvent): void => {
     if (!selectedNodeId) return;
 
-    const currentIndex = nodes.findIndex(n => n.id === selectedNodeId);
+    const currentIndex = nodes.findIndex((n: GraphNode) => n.id === selectedNodeId);
     if (currentIndex === -1) return;
 
     let targetIndex = currentIndex;
@@ -109,8 +137,9 @@ function DialogueGraphInner({
         event.preventDefault();
         // Double-click behavior on Enter
         const node = nodes[currentIndex];
-        if (node.data.index !== undefined) {
-          onSelectDialogue(sceneId, node.data.index);
+        const nodeIndex = (node.data as DialogueNodeData).index;
+        if (nodeIndex !== undefined) {
+          onSelectDialogue(sceneId, nodeIndex);
         }
         break;
       case 'Escape':
@@ -124,8 +153,9 @@ function DialogueGraphInner({
     if (targetIndex !== currentIndex) {
       const targetNode = nodes[targetIndex];
       setSelectedNodeId(targetNode.id);
-      if (targetNode.data.index !== undefined) {
-        onSelectDialogue(sceneId, targetNode.data.index);
+      const targetNodeIndex = (targetNode.data as DialogueNodeData).index;
+      if (targetNodeIndex !== undefined) {
+        onSelectDialogue(sceneId, targetNodeIndex);
       }
     }
   }, [selectedNodeId, nodes, sceneId, onSelectDialogue]);
@@ -137,7 +167,7 @@ function DialogueGraphInner({
   }, [handleKeyDown]);
 
   // Check if node is selected
-  const getNodeClassName = useCallback((node) => {
+  const getNodeClassName = useCallback((node: GraphNode): string => {
     return node.id === selectedNodeId ? 'selected' : '';
   }, [selectedNodeId]);
 
@@ -161,7 +191,7 @@ function DialogueGraphInner({
   return (
     <div className="dialogue-graph-container">
       <ReactFlow
-        nodes={nodes.map(node => ({
+        nodes={nodes.map((node: GraphNode) => ({
           ...node,
           selected: node.id === selectedNodeId
         }))}
@@ -195,7 +225,7 @@ function DialogueGraphInner({
 
         {/* MiniMap */}
         <MiniMap
-          nodeColor={(node) => {
+          nodeColor={(node: GraphNode) => {
             if (node.type === 'choiceNode') return '#8b5cf6';
             if (node.type === 'terminalNode') return '#f59e0b';
             return '#3b82f6';
@@ -226,8 +256,11 @@ function DialogueGraphInner({
 
 /**
  * DialogueGraph - Wrapper with ReactFlowProvider
+ *
+ * This component provides the ReactFlow context to DialogueGraphInner.
+ * Must be used as a wrapper to enable React Flow functionality.
  */
-export default function DialogueGraph(props) {
+export default function DialogueGraph(props: DialogueGraphInnerProps): React.JSX.Element {
   return (
     <ReactFlowProvider>
       <DialogueGraphInner {...props} />

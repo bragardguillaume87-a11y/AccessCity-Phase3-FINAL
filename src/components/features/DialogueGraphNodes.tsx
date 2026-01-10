@@ -2,6 +2,15 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { MessageSquare, GitBranch, ExternalLink, AlertCircle, AlertTriangle } from 'lucide-react';
 import { getNodeColorTheme } from '../../hooks/useDialogueGraph';
+import type { DialogueNodeData, TerminalNodeData, ValidationProblem } from '@/types';
+
+/**
+ * Props for DialogueNode component
+ */
+interface DialogueNodeProps {
+  data: DialogueNodeData;
+  selected?: boolean;
+}
 
 /**
  * DialogueNode - Standard dialogue node
@@ -13,12 +22,12 @@ import { getNodeColorTheme } from '../../hooks/useDialogueGraph';
  * - Error/warning badges
  * - Handles for connections (top + bottom)
  */
-export function DialogueNode({ data, selected }) {
-  const { dialogue, index, speaker, text, speakerMood, issues = [] } = data;
+export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.Element {
+  const { index, speaker, text, speakerMood, issues = [] } = data;
   const colors = getNodeColorTheme('dialogueNode', issues);
 
-  const hasErrors = issues.some(issue => issue.severity === 'error');
-  const hasWarnings = issues.some(issue => issue.severity === 'warning');
+  const hasErrors = issues.some((issue: ValidationProblem) => issue.type === 'error');
+  const hasWarnings = issues.some((issue: ValidationProblem) => issue.type === 'warning');
 
   // Truncate text for display
   const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
@@ -108,7 +117,7 @@ export function DialogueNode({ data, selected }) {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title={issues.filter(i => i.severity === 'error').map(i => i.message).join(', ')}
+              title={issues.filter((i: ValidationProblem) => i.type === 'error').map((i: ValidationProblem) => i.message).join(', ')}
             >
               <AlertCircle size={14} color="#fff" />
             </div>
@@ -124,7 +133,7 @@ export function DialogueNode({ data, selected }) {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title={issues.filter(i => i.severity === 'warning').map(i => i.message).join(', ')}
+              title={issues.filter((i: ValidationProblem) => i.type === 'warning').map((i: ValidationProblem) => i.message).join(', ')}
             >
               <AlertTriangle size={14} color="#fff" />
             </div>
@@ -148,6 +157,14 @@ export function DialogueNode({ data, selected }) {
 }
 
 /**
+ * Props for ChoiceNode component
+ */
+interface ChoiceNodeProps {
+  data: DialogueNodeData;
+  selected?: boolean;
+}
+
+/**
  * ChoiceNode - Dialogue node with branching choices
  *
  * Features:
@@ -156,12 +173,12 @@ export function DialogueNode({ data, selected }) {
  * - Different color scheme (purple)
  * - GitBranch icon
  */
-export function ChoiceNode({ data, selected }) {
-  const { dialogue, index, speaker, text, speakerMood, choices = [], issues = [] } = data;
+export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Element {
+  const { index, speaker, text, speakerMood, choices = [], issues = [] } = data;
   const colors = getNodeColorTheme('choiceNode', issues);
 
-  const hasErrors = issues.some(issue => issue.severity === 'error');
-  const hasWarnings = issues.some(issue => issue.severity === 'warning');
+  const hasErrors = issues.some((issue: ValidationProblem) => issue.type === 'error');
+  const hasWarnings = issues.some((issue: ValidationProblem) => issue.type === 'warning');
 
   // Truncate text for display
   const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
@@ -271,7 +288,7 @@ export function ChoiceNode({ data, selected }) {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title={issues.filter(i => i.severity === 'error').map(i => i.message).join(', ')}
+              title={issues.filter((i: ValidationProblem) => i.type === 'error').map((i: ValidationProblem) => i.message).join(', ')}
             >
               <AlertCircle size={14} color="#fff" />
             </div>
@@ -287,7 +304,7 @@ export function ChoiceNode({ data, selected }) {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title={issues.filter(i => i.severity === 'warning').map(i => i.message).join(', ')}
+              title={issues.filter((i: ValidationProblem) => i.type === 'warning').map((i: ValidationProblem) => i.message).join(', ')}
             >
               <AlertTriangle size={14} color="#fff" />
             </div>
@@ -311,6 +328,14 @@ export function ChoiceNode({ data, selected }) {
 }
 
 /**
+ * Props for TerminalNode component
+ */
+interface TerminalNodeProps {
+  data: TerminalNodeData;
+  selected?: boolean;
+}
+
+/**
  * TerminalNode - Node representing a scene jump
  *
  * Features:
@@ -320,7 +345,7 @@ export function ChoiceNode({ data, selected }) {
  * - External link icon
  * - Only has input handle (no output)
  */
-export function TerminalNode({ data, selected }) {
+export function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.Element {
   const { sceneId, label, choiceText } = data;
   const colors = getNodeColorTheme('terminalNode', []);
 
@@ -385,9 +410,11 @@ export function TerminalNode({ data, selected }) {
   );
 }
 
-// Export node types configuration for ReactFlow
+/**
+ * Node types configuration for ReactFlow
+ */
 export const nodeTypes = {
   dialogueNode: DialogueNode,
   choiceNode: ChoiceNode,
   terminalNode: TerminalNode
-};
+} as const;

@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,25 +13,72 @@ import {
   Tag,
   Trash2
 } from 'lucide-react';
+import type { AssetStats } from '@/types';
+
+/**
+ * Props for AssetFilters component
+ */
+export interface AssetFiltersProps {
+  /** Current search query */
+  searchQuery: string;
+  /** Callback when search query changes */
+  onSearchChange: (query: string) => void;
+  /** Currently active category filter */
+  activeCategory: string;
+  /** Callback when category filter changes */
+  onCategoryChange: (category: string) => void;
+  /** Asset statistics for badge counts */
+  stats: AssetStats;
+  /** Number of favorite assets */
+  favoritesCount: number;
+  /** Set of selected asset IDs */
+  selectedAssets: Set<string>;
+  /** Number of filtered assets */
+  filteredAssetsCount: number;
+  /** Callback for select all checkbox */
+  onSelectAll: () => void;
+  /** Callback for bulk delete action */
+  onBulkDelete: () => void;
+  /** Set of active filter tags */
+  filterTags: Set<string>;
+  /** Callback to toggle a filter tag */
+  onToggleFilterTag: (tag: string) => void;
+  /** Array of all available tags */
+  allTags: string[];
+  /** Whether in selection mode (simplified filters) */
+  isSelectionMode: boolean;
+}
 
 /**
  * AssetFilters - Search, category filters, bulk actions, and tag filters
  *
- * @param {Object} props
- * @param {string} props.searchQuery - Current search query
- * @param {Function} props.onSearchChange - Callback when search changes
- * @param {string} props.activeCategory - Currently active category
- * @param {Function} props.onCategoryChange - Callback when category changes
- * @param {Object} props.stats - Statistics for badge counts
- * @param {number} props.favoritesCount - Number of favorites
- * @param {Set} props.selectedAssets - Set of selected asset IDs
- * @param {number} props.filteredAssetsCount - Number of filtered assets
- * @param {Function} props.onSelectAll - Callback for select all checkbox
- * @param {Function} props.onBulkDelete - Callback for bulk delete
- * @param {Set} props.filterTags - Set of active filter tags
- * @param {Function} props.onToggleFilterTag - Callback to toggle a filter tag
- * @param {Array} props.allTags - Array of all available tags
- * @param {boolean} props.isSelectionMode - Whether in selection mode (simplified filters)
+ * Comprehensive filtering toolbar with:
+ * - **Search bar** with clear button
+ * - **Category filters** with counts (All, Favorites, Backgrounds, Characters, Illustrations)
+ * - **Bulk selection** (select all checkbox + delete button)
+ * - **Tag filters** (toggle tags to filter assets)
+ *
+ * In selection mode, only search bar is shown (simplified UI).
+ *
+ * @example
+ * ```tsx
+ * <AssetFilters
+ *   searchQuery={searchQuery}
+ *   onSearchChange={setSearchQuery}
+ *   activeCategory={activeCategory}
+ *   onCategoryChange={setActiveCategory}
+ *   stats={stats}
+ *   favoritesCount={favorites.length}
+ *   selectedAssets={selectedAssets}
+ *   filteredAssetsCount={filteredAssets.length}
+ *   onSelectAll={toggleSelectAll}
+ *   onBulkDelete={handleBulkDelete}
+ *   filterTags={filterTags}
+ *   onToggleFilterTag={toggleFilterTag}
+ *   allTags={allTags}
+ *   isSelectionMode={false}
+ * />
+ * ```
  */
 export function AssetFilters({
   searchQuery,
@@ -49,7 +95,7 @@ export function AssetFilters({
   onToggleFilterTag,
   allTags,
   isSelectionMode
-}) {
+}: AssetFiltersProps) {
   return (
     <div className="px-8 py-4 border-b bg-slate-800/50">
       <div className="flex items-center gap-4">
@@ -200,22 +246,3 @@ export function AssetFilters({
     </div>
   );
 }
-
-AssetFilters.propTypes = {
-  searchQuery: PropTypes.string.isRequired,
-  onSearchChange: PropTypes.func.isRequired,
-  activeCategory: PropTypes.string.isRequired,
-  onCategoryChange: PropTypes.func.isRequired,
-  stats: PropTypes.shape({
-    categoryCount: PropTypes.object.isRequired
-  }).isRequired,
-  favoritesCount: PropTypes.number.isRequired,
-  selectedAssets: PropTypes.instanceOf(Set).isRequired,
-  filteredAssetsCount: PropTypes.number.isRequired,
-  onSelectAll: PropTypes.func.isRequired,
-  onBulkDelete: PropTypes.func.isRequired,
-  filterTags: PropTypes.instanceOf(Set).isRequired,
-  onToggleFilterTag: PropTypes.func.isRequired,
-  allTags: PropTypes.array.isRequired,
-  isSelectionMode: PropTypes.bool.isRequired
-};

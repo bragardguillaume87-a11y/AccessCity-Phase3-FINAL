@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Package,
@@ -6,24 +5,46 @@ import {
   AlertCircle,
   SlidersHorizontal
 } from 'lucide-react';
+import type { AssetStats } from '@/types';
+
+/**
+ * Props for AssetStatsCards component
+ */
+export interface AssetStatsCardsProps {
+  /** Asset statistics object */
+  stats: AssetStats;
+  /** Number of filtered assets currently displayed */
+  filteredCount: number;
+}
 
 /**
  * AssetStatsCards - Dashboard statistics for asset library
  *
- * Displays 4 cards showing:
- * - Total assets count
- * - Used assets count (in scenes/characters)
- * - Unused assets count
- * - Filtered assets count
+ * Displays 4 metric cards showing:
+ * - Total assets count (all assets in library)
+ * - Used assets count (assets referenced in scenes/characters)
+ * - Unused assets count (orphaned assets)
+ * - Filtered assets count (currently visible after filters)
  *
- * @param {Object} props
- * @param {Object} props.stats - Statistics object
- * @param {number} props.stats.total - Total number of assets
- * @param {number} props.stats.used - Number of used assets
- * @param {number} props.stats.unused - Number of unused assets
- * @param {number} props.filteredCount - Number of filtered assets currently displayed
+ * Each card has:
+ * - Color-coded icon and border
+ * - Large number display
+ * - Descriptive label
+ *
+ * @example
+ * ```tsx
+ * <AssetStatsCards
+ *   stats={{
+ *     total: 150,
+ *     used: 120,
+ *     unused: 30,
+ *     categoryCount: { all: 150, backgrounds: 50, characters: 80, illustrations: 20 }
+ *   }}
+ *   filteredCount={25}
+ * />
+ * ```
  */
-export function AssetStatsCards({ stats, filteredCount }) {
+export function AssetStatsCards({ stats, filteredCount }: AssetStatsCardsProps) {
   return (
     <div className="grid grid-cols-4 gap-4">
       {/* Total Assets */}
@@ -72,13 +93,3 @@ export function AssetStatsCards({ stats, filteredCount }) {
     </div>
   );
 }
-
-AssetStatsCards.propTypes = {
-  stats: PropTypes.shape({
-    total: PropTypes.number.isRequired,
-    used: PropTypes.number.isRequired,
-    unused: PropTypes.number.isRequired,
-    categoryCount: PropTypes.object.isRequired
-  }).isRequired,
-  filteredCount: PropTypes.number.isRequired
-};

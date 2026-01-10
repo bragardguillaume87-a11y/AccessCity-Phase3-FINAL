@@ -1,18 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import { useAssets } from '@/hooks/useAssets';
 import { useScenesStore, useCharactersStore } from '../../stores/index.js';
-import { UploadZone } from './AssetsLibraryModal/components/UploadZone.jsx';
-import { EmptyAssetState } from './AssetsLibraryModal/components/EmptyAssetState.jsx';
-import { AssetStatsCards } from './AssetsLibraryModal/components/AssetStatsCards.jsx';
-import { AssetFilters } from './AssetsLibraryModal/components/AssetFilters.jsx';
-import { useFavorites } from './AssetsLibraryModal/hooks/useFavorites.js';
-import { useAssetUsage, getAssetUsageInfo } from './AssetsLibraryModal/hooks/useAssetUsage.js';
-import { useAssetFiltering } from './AssetsLibraryModal/hooks/useAssetFiltering.js';
-import { useAssetTagging } from './AssetsLibraryModal/hooks/useAssetTagging.js';
-import { AssetLightbox } from './AssetsLibraryModal/components/AssetLightbox.jsx';
-import { AssetGridView } from './AssetsLibraryModal/components/AssetGridView.jsx';
-import { AssetListView } from './AssetsLibraryModal/components/AssetListView.jsx';
+import { UploadZone } from './AssetsLibraryModal/components/UploadZone';
+import { EmptyAssetState } from './AssetsLibraryModal/components/EmptyAssetState';
+import { AssetStatsCards } from './AssetsLibraryModal/components/AssetStatsCards';
+import { AssetFilters } from './AssetsLibraryModal/components/AssetFilters';
+import { useFavorites } from './AssetsLibraryModal/hooks/useFavorites';
+import { useAssetUsage, getAssetUsageInfo } from './AssetsLibraryModal/hooks/useAssetUsage';
+import { useAssetFiltering } from './AssetsLibraryModal/hooks/useAssetFiltering';
+import { useAssetTagging } from './AssetsLibraryModal/hooks/useAssetTagging';
+import { AssetLightbox } from './AssetsLibraryModal/components/AssetLightbox';
+import { AssetGridView } from './AssetsLibraryModal/components/AssetGridView';
+import { AssetListView } from './AssetsLibraryModal/components/AssetListView';
 import {
   Dialog,
   DialogContent,
@@ -23,55 +22,120 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Loader2,
-  ImageIcon,
-  Users as UsersIcon,
-  Palette,
   AlertCircle,
   MapPin,
-  Sparkles,
+  Package,
   Grid3x3,
   List,
-  Star,
   X,
-  Tag,
-  Eye,
-  Package
 } from 'lucide-react';
+import type { Asset } from '@/types';
+
+/**
+ * Props for AssetsLibraryModal component
+ */
+export interface AssetsLibraryModalProps {
+  /** Whether the modal is open */
+  isOpen: boolean;
+  /** Callback when modal should close */
+  onClose: () => void;
+  /** Optional initial category to display ('backgrounds' | 'characters' | 'illustrations') */
+  initialCategory?: string;
+  /** Optional scene ID for background selection mode */
+  targetSceneId?: string;
+}
 
 /**
  * AssetsLibraryModal - AAA Visual Asset Manager
- * Inspired by Unity Content Browser and Adobe Bridge
  *
- * Features:
- * - Lightbox preview on click (full-screen)
- * - Usage tracking badges ("Utilisé dans 3 scènes")
- * - Smart filters with counts
+ * Professional asset management modal inspired by Unity Content Browser and Adobe Bridge.
+ *
+ * ## Features
+ *
+ * ### Phase 1: Core Functionality
+ * - Large grid/list view toggle
+ * - Category filters with counts
  * - Search with live filtering
- * - Large grid previews with hover zoom
- * - Professional animations
+ * - Click for lightbox preview
+ * - Usage tracking badges
+ *
+ * ### Phase 2: Favorites
+ * - Star toggle for favorites
+ * - Favorites filter category
+ * - localStorage persistence
+ *
+ * ### Phase 5: Advanced Features
+ * - Multi-selection with checkboxes
+ * - Bulk delete action
+ * - Tag management (add/remove)
+ * - Tag-based filtering
+ * - Drag & drop upload
+ *
+ * ## Modes
+ *
+ * ### Normal Mode
+ * Full asset library management with all features enabled.
+ *
+ * ### Selection Mode (targetSceneId provided)
+ * Simplified UI for selecting a background for a specific scene:
+ * - Forces backgrounds category
+ * - Hides stats dashboard
+ * - Shows compact upload button
+ * - "Utiliser" button instead of lightbox
+ *
+ * @example
+ * ```tsx
+ * // Normal mode
+ * <AssetsLibraryModal
+ *   isOpen={showAssets}
+ *   onClose={() => setShowAssets(false)}
+ *   initialCategory="backgrounds"
+ * />
+ *
+ * // Selection mode
+ * <AssetsLibraryModal
+ *   isOpen={showBgSelector}
+ *   onClose={() => setShowBgSelector(false)}
+ *   targetSceneId="scene-123"
+ * />
+ * ```
  */
-export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, targetSceneId }) {
+export default function AssetsLibraryModal({
+  isOpen,
+  onClose,
+  initialCategory,
+  targetSceneId
+}: AssetsLibraryModalProps) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [lightboxAsset, setLightboxAsset] = useState(null);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [lightboxAsset, setLightboxAsset] = useState<Asset | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Phase 5 enhancements
-  const [selectedAssets, setSelectedAssets] = useState(new Set());
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const { assets, loading, error } = useAssets();
+  const { assets: rawAssets, loading, error: rawError } = useAssets();
+
+  // Add IDs to assets (useAssets returns assets without IDs)
+  const assets = useMemo(() => {
+    return rawAssets.map(asset => ({
+      ...asset,
+      id: asset.path // Use path as unique ID
+    }));
+  }, [rawAssets]);
+
+  // Convert error to Error object if it's a string
+  const error = rawError ? new Error(rawError) : null;
 
   // Favorites hook (Phase 2)
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
   // Asset tagging hook (Phase 5)
-  const { assetTags, filterTags, allTags, addTagToAsset, removeTagFromAsset, toggleFilterTag } = useAssetTagging();
+  const { assetTags, filterTags, allTags, addTagToAsset, removeTagFromAsset, toggleFilterTag, setFilterTags } = useAssetTagging();
 
   // Zustand stores (granular selectors)
   const scenes = useScenesStore(state => state.scenes);
@@ -100,10 +164,10 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
       setSelectedAssets(new Set());
       setFilterTags(new Set());
     }
-  }, [isOpen]);
+  }, [isOpen, setFilterTags]);
 
   // Phase 5 Handlers
-  const toggleAssetSelection = (assetId) => {
+  const toggleAssetSelection = (assetId: string) => {
     setSelectedAssets(prev => {
       const newSet = new Set(prev);
       if (newSet.has(assetId)) {
@@ -131,9 +195,8 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
     }
   };
 
-
   // Handle background selection for scene
-  const handleSelectBackground = (assetPath) => {
+  const handleSelectBackground = (assetPath: string) => {
     if (!isSelectionMode) return;
 
     updateScene(targetSceneId, { backgroundUrl: assetPath });
@@ -141,13 +204,13 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
   };
 
   // Drag & Drop upload handlers
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.currentTarget === e.target) {
@@ -155,7 +218,7 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
     }
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -202,7 +265,7 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
   }, [assets, assetUsage]);
 
   // Navigate lightbox
-  const navigateLightbox = (direction) => {
+  const navigateLightbox = (direction: 'prev' | 'next') => {
     if (!lightboxAsset) return;
     const currentIndex = filteredAssets.findIndex(a => a.id === lightboxAsset.id);
     if (direction === 'prev') {
@@ -216,7 +279,7 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
 
   // Close lightbox on Escape key
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && lightboxAsset) {
         setLightboxAsset(null);
       } else if (e.key === 'ArrowLeft' && lightboxAsset) {
@@ -302,21 +365,21 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
           {/* Assets Grid */}
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full px-8 py-6">
-              {/* NEW: Upload Zone - TOUJOURS visible, même en mode sélection */}
+              {/* NEW: Upload Zone - Always visible, even in selection mode */}
               <div className="mb-6">
                 {isSelectionMode ? (
-                  // Mode compact: Petit bouton upload dans le header
+                  // Compact mode: Small upload button in header
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">Sélectionner un {activeCategory}</h3>
                     <UploadZone category={activeCategory} compact={true} />
                   </div>
                 ) : (
-                  // Mode full: Grande drop zone quand 0 assets, ou compacte sinon
+                  // Full mode: Large drop zone when assets exist, or handled by empty state
                   filteredAssets.length === 0 && !searchQuery && !loading ? (
-                    // Empty state géré plus bas, pas de UploadZone ici
+                    // Empty state handled below, no UploadZone here
                     null
                   ) : (
-                    // Assets existants: Upload zone compacte en haut
+                    // Assets existing: Compact upload zone at top
                     <UploadZone category={activeCategory} compact={false} />
                   )
                 )}
@@ -358,7 +421,7 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
                   // Category empty - Gaming empty state with upload
                   <div>
                     <EmptyAssetState
-                      category={activeCategory === 'all' ? 'all' : activeCategory.replace(/s$/, '')}
+                      category={activeCategory === 'all' ? 'all' : activeCategory.replace(/s$/, '') as 'background' | 'character' | 'illustration' | 'all'}
                       onUploadClick={() => {
                         // Trigger file input click - will be handled by UploadZone below
                         document.getElementById(`upload-input-full-${activeCategory}`)?.click();
@@ -407,8 +470,6 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
               )}
             </ScrollArea>
           </div>
-
-          {/* OLD Upload Section removed - replaced by UploadZone component above */}
         </DialogContent>
       </Dialog>
 
@@ -424,10 +485,3 @@ export default function AssetsLibraryModal({ isOpen, onClose, initialCategory, t
     </>
   );
 }
-
-AssetsLibraryModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  initialCategory: PropTypes.string, // Optional - 'backgrounds' | 'characters' | 'illustrations'
-  targetSceneId: PropTypes.string // Optional - Scene ID for background selection mode
-};

@@ -1,8 +1,16 @@
-import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, Sparkles, BookOpen } from 'lucide-react';
 
-const CATEGORY_ILLUSTRATIONS = {
+/**
+ * Category illustrations configuration
+ */
+interface CategoryIllustration {
+  emoji: string;
+  title: string;
+  description: string;
+}
+
+const CATEGORY_ILLUSTRATIONS: Record<string, CategoryIllustration> = {
   background: {
     emoji: '🏞️',
     title: 'Aucun arrière-plan pour le moment',
@@ -25,7 +33,39 @@ const CATEGORY_ILLUSTRATIONS = {
   },
 };
 
-export function EmptyAssetState({ category = 'all', onUploadClick, onLoadSamples }) {
+/**
+ * Props for EmptyAssetState component
+ */
+export interface EmptyAssetStateProps {
+  /** Asset category to display empty state for */
+  category?: 'background' | 'character' | 'illustration' | 'all';
+  /** Callback when upload button is clicked */
+  onUploadClick?: () => void;
+  /** Optional callback to load sample assets */
+  onLoadSamples?: () => void;
+}
+
+/**
+ * EmptyAssetState - Gaming-style empty state for asset library
+ *
+ * Displays when no assets exist for a category with:
+ * - Large animated emoji illustration
+ * - Category-specific messaging
+ * - Call-to-action buttons (Upload, Load Samples, Learn More)
+ * - Helpful hints about supported formats and limits
+ *
+ * Designed with gaming aesthetics matching the overall app style.
+ *
+ * @example
+ * ```tsx
+ * <EmptyAssetState
+ *   category="background"
+ *   onUploadClick={() => document.getElementById('file-input')?.click()}
+ *   onLoadSamples={() => loadSampleBackgrounds()}
+ * />
+ * ```
+ */
+export function EmptyAssetState({ category = 'all', onUploadClick, onLoadSamples }: EmptyAssetStateProps) {
   const config = CATEGORY_ILLUSTRATIONS[category] || CATEGORY_ILLUSTRATIONS.all;
 
   return (
@@ -35,7 +75,7 @@ export function EmptyAssetState({ category = 'all', onUploadClick, onLoadSamples
         {config.emoji}
       </div>
 
-      {/* Texte */}
+      {/* Text */}
       <h3 className="text-2xl font-bold text-white mb-2">
         {config.title}
       </h3>
@@ -45,15 +85,17 @@ export function EmptyAssetState({ category = 'all', onUploadClick, onLoadSamples
 
       {/* CTAs */}
       <div className="flex flex-wrap gap-3 justify-center">
-        <Button
-          variant="gaming-primary"
-          size="lg"
-          onClick={onUploadClick}
-          className="shadow-xl"
-        >
-          <Upload className="h-5 w-5" />
-          Uploader mes fichiers
-        </Button>
+        {onUploadClick && (
+          <Button
+            variant="gaming-primary"
+            size="lg"
+            onClick={onUploadClick}
+            className="shadow-xl"
+          >
+            <Upload className="h-5 w-5" />
+            Uploader mes fichiers
+          </Button>
+        )}
 
         {onLoadSamples && (
           <Button

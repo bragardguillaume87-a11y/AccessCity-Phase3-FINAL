@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import PropTypes from 'prop-types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,26 +14,54 @@ import {
   AlertCircle,
   MapPin
 } from 'lucide-react';
+import type { Asset, AssetUsageInfo } from '@/types';
+
+/**
+ * Props for AssetLightbox component
+ */
+export interface AssetLightboxProps {
+  /** Asset to display in lightbox */
+  asset: Asset;
+  /** Callback to close lightbox */
+  onClose: () => void;
+  /** Callback for navigation between assets */
+  onNavigate: (direction: 'prev' | 'next') => void;
+  /** Usage information for the asset */
+  usage: AssetUsageInfo | null;
+}
 
 /**
  * AssetLightbox - Full-screen asset viewer with navigation
  *
- * Features:
- * - Large image display
+ * Premium lightbox modal for viewing assets with:
+ * - Large image display (max 70vh height)
  * - Keyboard navigation (←/→ for prev/next, ESC to close)
- * - Usage information display
+ * - Usage information panel
+ * - Category and status badges
  * - Click backdrop to close
+ * - Prev/Next navigation buttons
  *
- * @param {Object} props
- * @param {Object} props.asset - Asset to display
- * @param {Function} props.onClose - Callback to close lightbox
- * @param {Function} props.onNavigate - Callback for navigation ('prev' | 'next')
- * @param {Object} props.usage - Usage information { total, scenes, characters, sceneCount, characterCount }
+ * Keyboard shortcuts:
+ * - ESC: Close lightbox
+ * - ← Arrow: Previous asset
+ * - → Arrow: Next asset
+ *
+ * @example
+ * ```tsx
+ * {lightboxAsset && (
+ *   <AssetLightbox
+ *     asset={lightboxAsset}
+ *     onClose={() => setLightboxAsset(null)}
+ *     onNavigate={(dir) => navigateAsset(dir)}
+ *     usage={getAssetUsageInfo(lightboxAsset.path, assetUsage)}
+ *   />
+ * )}
+ * ```
  */
-export function AssetLightbox({ asset, onClose, onNavigate, usage }) {
+export function AssetLightbox({ asset, onClose, onNavigate, usage }: AssetLightboxProps) {
   // Keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowLeft') {
@@ -182,21 +209,3 @@ export function AssetLightbox({ asset, onClose, onNavigate, usage }) {
     </div>
   );
 }
-
-AssetLightbox.propTypes = {
-  asset: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    path: PropTypes.string.isRequired,
-    category: PropTypes.string.isRequired
-  }).isRequired,
-  onClose: PropTypes.func.isRequired,
-  onNavigate: PropTypes.func.isRequired,
-  usage: PropTypes.shape({
-    total: PropTypes.number.isRequired,
-    scenes: PropTypes.array.isRequired,
-    characters: PropTypes.array.isRequired,
-    sceneCount: PropTypes.number.isRequired,
-    characterCount: PropTypes.number.isRequired
-  })
-};

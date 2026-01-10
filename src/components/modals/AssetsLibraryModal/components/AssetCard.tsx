@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -16,32 +15,70 @@ import {
   Tag,
   Eye
 } from 'lucide-react';
+import type { Asset, AssetUsageInfo } from '@/types';
+
+/**
+ * Props for AssetCard component
+ */
+export interface AssetCardProps {
+  /** Asset object to display */
+  asset: Asset;
+  /** Whether asset is selected */
+  isSelected: boolean;
+  /** Toggle selection callback */
+  onToggleSelection: () => void;
+  /** Click asset callback (for lightbox) */
+  onClick: (asset: Asset) => void;
+  /** Whether asset is favorited */
+  isFavorite: boolean;
+  /** Toggle favorite callback */
+  onToggleFavorite: () => void;
+  /** Usage information */
+  usage: AssetUsageInfo | null;
+  /** Set of tags for this asset */
+  tags: Set<string>;
+  /** Add tag callback */
+  onAddTag: (tag: string) => void;
+  /** Remove tag callback */
+  onRemoveTag: (tag: string) => void;
+  /** Whether in selection mode */
+  isSelectionMode: boolean;
+  /** Select background callback (selection mode only) */
+  onSelectBackground?: (assetPath: string) => void;
+}
 
 /**
  * AssetCard - Individual asset card for grid view
  *
  * Displays an asset with:
- * - Image preview with hover zoom
- * - Checkbox for selection
- * - Favorite star toggle
- * - Usage badge
+ * - Image preview with hover zoom effect
+ * - Checkbox for multi-selection
+ * - Favorite star toggle (always visible when favorited, on hover otherwise)
+ * - Usage badge (shows number of scenes/characters using this asset)
  * - Category badge
- * - Tags management
- * - Click to open lightbox or select background
+ * - Tags management (add/remove tags)
+ * - Click to open lightbox or select background (selection mode)
  *
- * @param {Object} props
- * @param {Object} props.asset - Asset object
- * @param {boolean} props.isSelected - Whether asset is selected
- * @param {Function} props.onToggleSelection - Toggle selection callback
- * @param {Function} props.onClick - Click asset callback (lightbox)
- * @param {boolean} props.isFavorite - Whether asset is favorite
- * @param {Function} props.onToggleFavorite - Toggle favorite callback
- * @param {Object} props.usage - Usage info { total, scenes, characters, sceneCount, characterCount }
- * @param {Set} props.tags - Set of tags for this asset
- * @param {Function} props.onAddTag - Add tag callback
- * @param {Function} props.onRemoveTag - Remove tag callback
- * @param {boolean} props.isSelectionMode - Whether in selection mode
- * @param {Function} props.onSelectBackground - Select background callback (selection mode only)
+ * The card adapts its behavior based on `isSelectionMode`:
+ * - **Normal mode**: Click opens lightbox, checkbox for selection
+ * - **Selection mode**: Click shows "Utiliser" button to select background
+ *
+ * @example
+ * ```tsx
+ * <AssetCard
+ *   asset={asset}
+ *   isSelected={selectedAssets.has(asset.id)}
+ *   onToggleSelection={() => toggleSelection(asset.id)}
+ *   onClick={setLightboxAsset}
+ *   isFavorite={favorites.includes(asset.path)}
+ *   onToggleFavorite={() => toggleFavorite(asset.path)}
+ *   usage={getAssetUsageInfo(asset.path, assetUsage)}
+ *   tags={assetTags.get(asset.id) || new Set()}
+ *   onAddTag={(tag) => addTagToAsset(asset.id, tag)}
+ *   onRemoveTag={(tag) => removeTagFromAsset(asset.id, tag)}
+ *   isSelectionMode={false}
+ * />
+ * ```
  */
 export function AssetCard({
   asset,
@@ -56,7 +93,7 @@ export function AssetCard({
   onRemoveTag,
   isSelectionMode,
   onSelectBackground
-}) {
+}: AssetCardProps) {
   const isUsed = usage !== null;
 
   return (
@@ -65,7 +102,8 @@ export function AssetCard({
         isSelected ? 'ring-2 ring-primary' : ''
       }`}
       onClick={(e) => {
-        if (!e.target.closest('.checkbox-wrapper') && !e.target.closest('.tag-input-wrapper')) {
+        if (!e.currentTarget.querySelector('.checkbox-wrapper')?.contains(e.target as Node) &&
+            !e.currentTarget.querySelector('.tag-input-wrapper')?.contains(e.target as Node)) {
           onClick(asset);
         }
       }}
@@ -78,7 +116,7 @@ export function AssetCard({
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
           loading="lazy"
           onError={(e) => {
-            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23e2e8f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-size="16"%3EImage%3C/text%3E%3C/svg%3E';
+            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23e2e8f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-size="16"%3EImage%3C/text%3E%3C/svg%3E';
           }}
         />
 
@@ -113,7 +151,7 @@ export function AssetCard({
           isSelectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}>
           <div className="flex gap-2">
-            {isSelectionMode && asset.category === 'backgrounds' ? (
+            {isSelectionMode && asset.category === 'backgrounds' && onSelectBackground ? (
               <Button
                 size={isSelectionMode ? "default" : "sm"}
                 variant="default"
@@ -190,9 +228,9 @@ export function AssetCard({
             placeholder="+ tag"
             className="h-7 text-xs"
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.target.value.trim()) {
-                onAddTag(e.target.value);
-                e.target.value = '';
+              if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                onAddTag((e.target as HTMLInputElement).value);
+                (e.target as HTMLInputElement).value = '';
               }
             }}
           />
@@ -226,29 +264,3 @@ export function AssetCard({
     </Card>
   );
 }
-
-AssetCard.propTypes = {
-  asset: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    path: PropTypes.string.isRequired,
-    category: PropTypes.string.isRequired
-  }).isRequired,
-  isSelected: PropTypes.bool.isRequired,
-  onToggleSelection: PropTypes.func.isRequired,
-  onClick: PropTypes.func.isRequired,
-  isFavorite: PropTypes.bool.isRequired,
-  onToggleFavorite: PropTypes.func.isRequired,
-  usage: PropTypes.shape({
-    total: PropTypes.number.isRequired,
-    scenes: PropTypes.array.isRequired,
-    characters: PropTypes.array.isRequired,
-    sceneCount: PropTypes.number.isRequired,
-    characterCount: PropTypes.number.isRequired
-  }),
-  tags: PropTypes.instanceOf(Set).isRequired,
-  onAddTag: PropTypes.func.isRequired,
-  onRemoveTag: PropTypes.func.isRequired,
-  isSelectionMode: PropTypes.bool.isRequired,
-  onSelectBackground: PropTypes.func
-};

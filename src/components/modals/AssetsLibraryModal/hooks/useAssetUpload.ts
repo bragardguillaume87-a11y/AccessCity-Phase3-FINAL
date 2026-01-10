@@ -6,19 +6,78 @@ import { API } from '@/config/constants';
 import { TIMING } from '@/config/timing';
 
 /**
- * Hook pour gérer l'upload d'assets avec progress tracking et celebrations
- *
- * @param {Object} options
- * @param {string} options.category - Catégorie d'asset (background, character, illustration)
- * @param {Function} options.onUploadComplete - Callback après upload réussi
- * @returns {Object} { uploadFiles, isUploading, progress, uploadedAssets }
+ * Uploaded file result from server
  */
-export function useAssetUpload({ category = 'background', onUploadComplete } = {}) {
+export interface UploadedFile {
+  filename: string;
+  path: string;
+  size: number;
+  category: string;
+}
+
+/**
+ * Options for useAssetUpload hook
+ */
+export interface UseAssetUploadOptions {
+  /** Asset category (background, character, illustration) */
+  category?: string;
+  /** Callback after upload completes successfully */
+  onUploadComplete?: (files: UploadedFile[]) => void;
+}
+
+/**
+ * Return value of useAssetUpload hook
+ */
+export interface UseAssetUploadReturn {
+  /** Upload files to server */
+  uploadFiles: (files: File[]) => Promise<void>;
+  /** Whether upload is in progress */
+  isUploading: boolean;
+  /** Upload progress (0-100) */
+  progress: number;
+  /** Array of successfully uploaded files */
+  uploadedAssets: UploadedFile[];
+}
+
+/**
+ * Hook for managing asset uploads with progress tracking and celebrations
+ *
+ * Features:
+ * - Multi-file upload support
+ * - Real-time progress tracking
+ * - Success toast with undo action
+ * - Confetti celebration on first upload or bulk uploads (5+ files)
+ * - Automatic manifest reload after upload
+ * - Error handling with toast notifications
+ *
+ * @param options - Upload configuration options
+ * @returns Upload state and upload function
+ *
+ * @example
+ * ```tsx
+ * const { uploadFiles, isUploading, progress } = useAssetUpload({
+ *   category: 'backgrounds',
+ *   onUploadComplete: (files) => {
+ *     console.log(`Uploaded ${files.length} files`);
+ *   }
+ * });
+ *
+ * // Upload files from input
+ * const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+ *   const files = Array.from(e.target.files || []);
+ *   uploadFiles(files);
+ * };
+ * ```
+ */
+export function useAssetUpload({
+  category = 'background',
+  onUploadComplete
+}: UseAssetUploadOptions = {}): UseAssetUploadReturn {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [uploadedAssets, setUploadedAssets] = useState([]);
+  const [uploadedAssets, setUploadedAssets] = useState<UploadedFile[]>([]);
 
-  const uploadFiles = useCallback(async (files) => {
+  const uploadFiles = useCallback(async (files: File[]) => {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
@@ -32,7 +91,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
     });
 
     try {
-      // Simuler progress (vrai progress nécessite XMLHttpRequest ou fetch avec streams)
+      // Simulate progress (true progress requires XMLHttpRequest or fetch with streams)
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
@@ -56,23 +115,23 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
       }
 
       const result = await response.json();
-      const uploaded = result.files || [];
+      const uploaded: UploadedFile[] = result.files || [];
       setUploadedAssets(uploaded);
 
-      // Toast de succès avec undo
+      // Success toast with undo action
       toast.success(`${uploaded.length} fichier(s) uploadé(s) !`, {
         description: uploaded.map(f => f.filename).join(', '),
         duration: 5000,
         action: {
           label: 'Annuler',
           onClick: () => {
-            // TODO: Implémenter undo (DELETE request)
+            // TODO: Implement undo (DELETE request)
             toast.info('Undo non implémenté');
           },
         },
       });
 
-      // Celebration animation (premier upload ou bulk > 5 fichiers)
+      // Celebration animation (first upload or bulk > 5 files)
       const isFirstUpload = localStorage.getItem('hasUploadedAsset') !== 'true';
       if (isFirstUpload || uploaded.length >= 5) {
         confetti({
@@ -92,7 +151,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
         onUploadComplete(uploaded);
       }
 
-      // Reload manifest pour rafraîchir la liste
+      // Reload manifest to refresh asset list
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('asset-manifest-updated'));
       }, TIMING.LOADING_MIN_DISPLAY);
@@ -100,7 +159,7 @@ export function useAssetUpload({ category = 'background', onUploadComplete } = {
     } catch (error) {
       logger.error('Upload error:', error);
       toast.error('Erreur lors de l\'upload', {
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       setIsUploading(false);

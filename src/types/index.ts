@@ -165,6 +165,7 @@ export interface ValidationProblem {
  * Individual asset from the manifest
  */
 export interface Asset {
+  id: string;
   name: string;
   path: string;
   category: string;
@@ -181,6 +182,32 @@ export interface AssetManifest {
   characters?: Record<string, string[]>;
   props?: Record<string, string[]>;
   [category: string]: Record<string, string[]> | undefined;
+}
+
+/**
+ * Asset usage information across scenes and characters
+ */
+export interface AssetUsageInfo {
+  total: number;
+  scenes: string[];
+  characters: string[];
+  sceneCount: number;
+  characterCount: number;
+}
+
+/**
+ * Asset statistics for dashboard display
+ */
+export interface AssetStats {
+  total: number;
+  used: number;
+  unused: number;
+  categoryCount: {
+    all: number;
+    backgrounds: number;
+    characters: number;
+    illustrations: number;
+  };
 }
 
 // ============================================================================

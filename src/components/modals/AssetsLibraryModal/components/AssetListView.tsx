@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -14,25 +13,70 @@ import {
   Tag,
   Eye
 } from 'lucide-react';
+import type { Asset, AssetUsageInfo } from '@/types';
+
+/**
+ * Props for AssetListView component
+ */
+export interface AssetListViewProps {
+  /** Array of assets to display */
+  assets: Asset[];
+  /** Set of selected asset IDs */
+  selectedAssets: Set<string>;
+  /** Toggle asset selection */
+  onToggleSelection: (assetId: string) => void;
+  /** Asset click handler (lightbox) */
+  onAssetClick: (asset: Asset) => void;
+  /** Check if asset is favorite */
+  isFavorite: (assetPath: string) => boolean;
+  /** Toggle favorite */
+  onToggleFavorite: (assetPath: string) => void;
+  /** Get usage info for asset */
+  getAssetUsage: (assetPath: string) => AssetUsageInfo | null;
+  /** Map of asset IDs to tag sets */
+  assetTags: Map<string, Set<string>>;
+  /** Add tag to asset */
+  onAddTag: (assetId: string, tag: string) => void;
+  /** Remove tag from asset */
+  onRemoveTag: (assetId: string, tag: string) => void;
+  /** Whether in selection mode */
+  isSelectionMode: boolean;
+  /** Select background callback */
+  onSelectBackground?: (assetPath: string) => void;
+}
 
 /**
  * AssetListView - List layout for assets
  *
- * Displays assets in a compact list view with horizontal layout
+ * Displays assets in a compact list view with horizontal layout.
+ * Each row shows:
+ * - Checkbox for selection
+ * - Small thumbnail (80x80)
+ * - Asset name and metadata
+ * - Category and usage badges
+ * - Tags (with remove on click)
+ * - Tag input field
+ * - View/Select button
  *
- * @param {Object} props
- * @param {Array} props.assets - Array of assets to display
- * @param {Set} props.selectedAssets - Set of selected asset IDs
- * @param {Function} props.onToggleSelection - Toggle asset selection
- * @param {Function} props.onAssetClick - Asset click handler (lightbox)
- * @param {Function} props.isFavorite - Check if asset is favorite
- * @param {Function} props.onToggleFavorite - Toggle favorite
- * @param {Function} props.getAssetUsage - Get usage info for asset
- * @param {Map} props.assetTags - Map of asset IDs to tag sets
- * @param {Function} props.onAddTag - Add tag to asset
- * @param {Function} props.onRemoveTag - Remove tag from asset
- * @param {boolean} props.isSelectionMode - Whether in selection mode
- * @param {Function} props.onSelectBackground - Select background callback
+ * More space-efficient than grid view, allows viewing more
+ * assets at once with detailed metadata visible.
+ *
+ * @example
+ * ```tsx
+ * <AssetListView
+ *   assets={filteredAssets}
+ *   selectedAssets={selectedAssets}
+ *   onToggleSelection={toggleAssetSelection}
+ *   onAssetClick={setLightboxAsset}
+ *   isFavorite={isFavorite}
+ *   onToggleFavorite={toggleFavorite}
+ *   getAssetUsage={(path) => getAssetUsageInfo(path, assetUsage)}
+ *   assetTags={assetTags}
+ *   onAddTag={addTagToAsset}
+ *   onRemoveTag={removeTagFromAsset}
+ *   isSelectionMode={false}
+ * />
+ * ```
  */
 export function AssetListView({
   assets,
@@ -47,13 +91,13 @@ export function AssetListView({
   onRemoveTag,
   isSelectionMode,
   onSelectBackground
-}) {
+}: AssetListViewProps) {
   return (
     <div className="space-y-2">
       {assets.map(asset => {
         const usage = getAssetUsage(asset.path);
         const isUsed = usage !== null;
-        const tags = assetTags.get(asset.id) || new Set();
+        const tags = assetTags.get(asset.id) || new Set<string>();
         const isSelected = selectedAssets.has(asset.id);
 
         return (
@@ -63,7 +107,8 @@ export function AssetListView({
               isSelected ? 'ring-2 ring-primary' : ''
             }`}
             onClick={(e) => {
-              if (!e.target.closest('.checkbox-wrapper') && !e.target.closest('.tag-input-wrapper')) {
+              if (!e.currentTarget.querySelector('.checkbox-wrapper')?.contains(e.target as Node) &&
+                  !e.currentTarget.querySelector('.tag-input-wrapper')?.contains(e.target as Node)) {
                 onAssetClick(asset);
               }
             }}
@@ -85,7 +130,7 @@ export function AssetListView({
                   className="w-full h-full object-cover"
                   loading="lazy"
                   onError={(e) => {
-                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23e2e8f0" width="80" height="80"/%3E%3C/svg%3E';
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23e2e8f0" width="80" height="80"/%3E%3C/svg%3E';
                   }}
                 />
               </div>
@@ -159,16 +204,16 @@ export function AssetListView({
                   placeholder="+ tag"
                   className="h-8 text-xs"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      onAddTag(asset.id, e.target.value);
-                      e.target.value = '';
+                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      onAddTag(asset.id, (e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = '';
                     }
                   }}
                 />
               </div>
 
               {/* View/Select Button */}
-              {isSelectionMode && asset.category === 'backgrounds' ? (
+              {isSelectionMode && asset.category === 'backgrounds' && onSelectBackground ? (
                 <Button
                   size="sm"
                   variant="default"
@@ -193,18 +238,3 @@ export function AssetListView({
     </div>
   );
 }
-
-AssetListView.propTypes = {
-  assets: PropTypes.array.isRequired,
-  selectedAssets: PropTypes.instanceOf(Set).isRequired,
-  onToggleSelection: PropTypes.func.isRequired,
-  onAssetClick: PropTypes.func.isRequired,
-  isFavorite: PropTypes.func.isRequired,
-  onToggleFavorite: PropTypes.func.isRequired,
-  getAssetUsage: PropTypes.func.isRequired,
-  assetTags: PropTypes.instanceOf(Map).isRequired,
-  onAddTag: PropTypes.func.isRequired,
-  onRemoveTag: PropTypes.func.isRequired,
-  isSelectionMode: PropTypes.bool.isRequired,
-  onSelectBackground: PropTypes.func
-};

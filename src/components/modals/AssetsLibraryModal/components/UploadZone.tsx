@@ -1,14 +1,56 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAssetUpload } from '../hooks/useAssetUpload';
 
-export function UploadZone({ category = 'background', compact = false }) {
+/**
+ * Props for UploadZone component
+ */
+export interface UploadZoneProps {
+  /** Asset category for upload */
+  category?: string;
+  /** Compact mode (small button) vs full mode (large drop zone) */
+  compact?: boolean;
+}
+
+/**
+ * UploadZone - Drag & drop upload zone with gaming aesthetics
+ *
+ * Two display modes:
+ * 1. **Compact mode** (for selection mode):
+ *    - Small upload button
+ *    - Minimal space usage
+ *    - File input only (no drag & drop)
+ *
+ * 2. **Full mode** (for library mode):
+ *    - Large drop zone with gradient border
+ *    - Drag & drop support
+ *    - Animated icon transitions
+ *    - Progress indicator
+ *    - Format hints
+ *
+ * Features:
+ * - Multi-file support
+ * - Image type filtering
+ * - Visual drag feedback
+ * - Upload progress tracking
+ * - Automatic manifest reload on completion
+ *
+ * @example
+ * ```tsx
+ * // Compact mode
+ * <UploadZone category="backgrounds" compact={true} />
+ *
+ * // Full mode
+ * <UploadZone category="backgrounds" compact={false} />
+ * ```
+ */
+export function UploadZone({ category = 'background', compact = false }: UploadZoneProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const { uploadFiles, isUploading, progress } = useAssetUpload({ category });
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
@@ -21,20 +63,20 @@ export function UploadZone({ category = 'background', compact = false }) {
     }
   }, [uploadFiles]);
 
-  const handleFileInput = useCallback((e) => {
-    const files = Array.from(e.target.files);
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       uploadFiles(files);
     }
   }, [uploadFiles]);
 
-  const handleDragEnter = useCallback((e) => {
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(true);
   }, []);
 
-  const handleDragLeave = useCallback((e) => {
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.currentTarget === e.target) {
@@ -42,7 +84,7 @@ export function UploadZone({ category = 'background', compact = false }) {
     }
   }, []);
 
-  // Compact mode: Mini upload button (pour mode sélection)
+  // Compact mode: Mini upload button (for selection mode)
   if (compact) {
     return (
       <div className="relative">
@@ -71,7 +113,7 @@ export function UploadZone({ category = 'background', compact = false }) {
     );
   }
 
-  // Full mode: Grande drop zone (pour mode bibliothèque)
+  // Full mode: Large drop zone (for library mode)
   return (
     <div
       className={cn(
@@ -86,7 +128,7 @@ export function UploadZone({ category = 'background', compact = false }) {
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
     >
-      {/* Icon avec animation */}
+      {/* Icon with animation */}
       <div
         className={cn(
           "w-16 h-16 rounded-full flex items-center justify-center",
@@ -102,7 +144,7 @@ export function UploadZone({ category = 'background', compact = false }) {
         )}
       </div>
 
-      {/* Texte */}
+      {/* Text */}
       <div className="text-center">
         <p className="text-base font-semibold text-white">
           {isDragActive
@@ -135,7 +177,7 @@ export function UploadZone({ category = 'background', compact = false }) {
         </Button>
       </label>
 
-      {/* Progress indicator si upload en cours */}
+      {/* Progress indicator if upload in progress */}
       {isUploading && (
         <div className="w-full max-w-xs">
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">

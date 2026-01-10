@@ -1,20 +1,53 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ChevronRight } from 'lucide-react';
+import type { SettingsSection } from '../hooks/useSettingsSearch';
+
+/**
+ * Props for SettingsSidebar component
+ */
+export interface SettingsSidebarProps {
+  /** Array of section objects (id, label, icon, keywords) */
+  sections: SettingsSection[];
+  /** Currently active section ID */
+  activeSection: string;
+  /** Callback when section is selected */
+  onSectionChange: (sectionId: string) => void;
+  /** Current search query */
+  searchQuery: string;
+  /** Callback when search query changes */
+  onSearchChange: (query: string) => void;
+  /** Filtered sections based on search */
+  filteredSections: SettingsSection[];
+}
 
 /**
  * SettingsSidebar - Sidebar navigation for settings sections
- * Includes search input and section navigation items
  *
- * @param {Object} props
- * @param {Array} props.sections - Array of section objects (id, label, icon, keywords)
- * @param {string} props.activeSection - Currently active section ID
- * @param {Function} props.onSectionChange - Callback when section is selected
- * @param {string} props.searchQuery - Current search query
- * @param {Function} props.onSearchChange - Callback when search query changes
- * @param {Array} props.filteredSections - Filtered sections based on search
+ * Includes search input and section navigation items.
+ * Filters sections based on search query using label and keywords matching.
+ * Highlights active section and shows "no results" state when applicable.
+ *
+ * @param props - Component props
+ * @param props.sections - Array of section objects (id, label, icon, keywords)
+ * @param props.activeSection - Currently active section ID
+ * @param props.onSectionChange - Callback when section is selected
+ * @param props.searchQuery - Current search query
+ * @param props.onSearchChange - Callback when search query changes
+ * @param props.filteredSections - Filtered sections based on search
+ *
+ * @example
+ * ```tsx
+ * <SettingsSidebar
+ *   sections={sections}
+ *   activeSection="project"
+ *   onSectionChange={setActiveSection}
+ *   searchQuery={query}
+ *   onSearchChange={setQuery}
+ *   filteredSections={filtered}
+ * />
+ * ```
  */
 export function SettingsSidebar({
   sections,
@@ -23,7 +56,7 @@ export function SettingsSidebar({
   searchQuery,
   onSearchChange,
   filteredSections
-}) {
+}: SettingsSidebarProps): React.ReactElement {
   return (
     <div className="w-64 border-r bg-muted/30 flex flex-col">
       {/* Search Input */}
@@ -88,19 +121,3 @@ export function SettingsSidebar({
     </div>
   );
 }
-
-SettingsSidebar.propTypes = {
-  sections: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-      icon: PropTypes.elementType.isRequired,
-      keywords: PropTypes.arrayOf(PropTypes.string).isRequired
-    })
-  ).isRequired,
-  activeSection: PropTypes.string.isRequired,
-  onSectionChange: PropTypes.func.isRequired,
-  searchQuery: PropTypes.string.isRequired,
-  onSearchChange: PropTypes.func.isRequired,
-  filteredSections: PropTypes.array.isRequired
-};

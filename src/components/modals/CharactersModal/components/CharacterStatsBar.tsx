@@ -1,24 +1,63 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, Sparkles, Eye } from 'lucide-react';
+import type { TotalCharacterStats } from '../hooks/useCharacterStats';
+
+/**
+ * Props for CharacterStatsBar component
+ */
+export interface CharacterStatsBarProps {
+  /** Aggregate statistics for all characters */
+  totalStats: TotalCharacterStats;
+}
+
+/**
+ * Individual stat configuration for display
+ */
+interface StatConfig {
+  id: string;
+  label: string;
+  value: number;
+  icon: typeof Users;
+  bgColor: string;
+  borderColor: string;
+  iconBgColor: string;
+  iconColor: string;
+  valueColor: string;
+}
 
 /**
  * CharacterStatsBar - Displays aggregate statistics for all characters
+ *
+ * Shows three key metrics in visually distinct cards:
+ * - Total number of characters
+ * - Number of complete characters (all moods have sprites)
+ * - Number of characters with at least one sprite
+ *
  * Inspired by Nintendo UX Guide: Visual stats cards with smooth animations
  *
- * THEME FIXES (Phase 6D):
+ * ## Theme Improvements (Phase 6D)
  * - bg-green-50 → bg-green-500/10 (dark mode compatible)
  * - bg-blue-50 → bg-blue-500/10 (dark mode compatible)
  * - text-green-700 → text-green-400 (better contrast on dark)
  * - text-blue-700 → text-blue-400 (better contrast on dark)
  *
- * UX ENHANCEMENTS:
+ * ## UX Enhancements
  * - Hover: scale(1.05) for "magnetic lift" effect
  * - Transition: cubic-bezier(0.4, 0, 0.2, 1) for smooth feel
+ *
+ * @example
+ * ```tsx
+ * <CharacterStatsBar
+ *   totalStats={{
+ *     total: 10,
+ *     complete: 5,
+ *     withSprites: 8
+ *   }}
+ * />
+ * ```
  */
-function CharacterStatsBar({ totalStats }) {
-  const stats = [
+export function CharacterStatsBar({ totalStats }: CharacterStatsBarProps) {
+  const stats: StatConfig[] = [
     {
       id: 'total',
       label: 'Total',
@@ -35,22 +74,22 @@ function CharacterStatsBar({ totalStats }) {
       label: 'Complets',
       value: totalStats.complete,
       icon: Sparkles,
-      bgColor: 'bg-green-500/10', // FIXED: was bg-green-50
+      bgColor: 'bg-green-500/10',
       borderColor: 'border-green-500/20',
       iconBgColor: 'bg-green-500/10',
-      iconColor: 'text-green-500', // FIXED: was text-green-600
-      valueColor: 'text-green-400' // FIXED: was text-green-700
+      iconColor: 'text-green-500',
+      valueColor: 'text-green-400'
     },
     {
       id: 'withSprites',
       label: 'Avec sprites',
       value: totalStats.withSprites,
       icon: Eye,
-      bgColor: 'bg-blue-500/10', // FIXED: was bg-blue-50
+      bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
       iconBgColor: 'bg-blue-500/10',
-      iconColor: 'text-blue-500', // FIXED: was text-blue-600
-      valueColor: 'text-blue-400' // FIXED: was text-blue-700
+      iconColor: 'text-blue-500',
+      valueColor: 'text-blue-400'
     }
   ];
 
@@ -85,13 +124,5 @@ function CharacterStatsBar({ totalStats }) {
     </div>
   );
 }
-
-CharacterStatsBar.propTypes = {
-  totalStats: PropTypes.shape({
-    total: PropTypes.number.isRequired,
-    complete: PropTypes.number.isRequired,
-    withSprites: PropTypes.number.isRequired
-  }).isRequired
-};
 
 export default CharacterStatsBar;

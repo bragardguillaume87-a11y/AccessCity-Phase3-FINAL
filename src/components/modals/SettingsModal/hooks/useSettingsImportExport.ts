@@ -1,19 +1,69 @@
-import { useState } from 'react';
+import React from 'react';
+
+/**
+ * Settings form data structure
+ */
+export interface SettingsFormData {
+  project: {
+    title: string;
+    author: string;
+    description: string;
+    version: string;
+  };
+  editor: {
+    theme: string;
+    autosave: boolean;
+    autosaveInterval: number;
+    gridSize: number;
+    snapToGrid: boolean;
+    showGrid: boolean;
+  };
+  game: {
+    variables: {
+      [key: string]: {
+        initial: number;
+        min: number;
+        max: number;
+      };
+    };
+  };
+}
+
+/**
+ * Return type for useSettingsImportExport hook
+ */
+export interface UseSettingsImportExportReturn {
+  /** Handler to export settings as JSON file */
+  handleExport: () => void;
+  /** Handler to import settings from JSON file */
+  handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
 
 /**
  * Custom hook for managing settings import/export functionality
- * Handles JSON file export and import with validation
  *
- * @param {Object} formData - Current form data to export
- * @param {Function} setFormData - Function to update form data on import
- * @returns {Object} - { handleExport, handleImport }
+ * Handles JSON file export and import with validation.
+ * Exports create a downloadable JSON file with current settings.
+ * Imports validate JSON structure before applying changes.
+ *
+ * @param formData - Current form data to export
+ * @param setFormData - Function to update form data on import
+ * @returns Object containing handleExport and handleImport functions
+ *
+ * @example
+ * ```tsx
+ * const { handleExport, handleImport } = useSettingsImportExport(formData, setFormData);
+ * ```
  */
-export function useSettingsImportExport(formData, setFormData) {
+export function useSettingsImportExport(
+  formData: SettingsFormData,
+  setFormData: React.Dispatch<React.SetStateAction<SettingsFormData>>
+): UseSettingsImportExportReturn {
   /**
    * Export settings as JSON file
    * Creates a downloadable JSON file with current settings
    */
-  const handleExport = () => {
+  const handleExport = (): void => {
     try {
       // Convert form data to formatted JSON string
       const dataStr = JSON.stringify(formData, null, 2);
@@ -44,10 +94,10 @@ export function useSettingsImportExport(formData, setFormData) {
    * Import settings from JSON file
    * Validates JSON structure before importing
    *
-   * @param {Event} e - File input change event
+   * @param e - File input change event
    */
-  const handleImport = (e) => {
-    const file = e.target.files[0];
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     // Validate file type
@@ -58,10 +108,15 @@ export function useSettingsImportExport(formData, setFormData) {
 
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = (event: ProgressEvent<FileReader>): void => {
       try {
+        const result = event.target?.result;
+        if (typeof result !== 'string') {
+          throw new Error('Contenu de fichier invalide');
+        }
+
         // Parse JSON content
-        const imported = JSON.parse(event.target.result);
+        const imported = JSON.parse(result) as SettingsFormData;
 
         // Validate imported structure
         if (!imported.project || !imported.editor || !imported.game) {
@@ -78,7 +133,7 @@ export function useSettingsImportExport(formData, setFormData) {
       }
     };
 
-    reader.onerror = () => {
+    reader.onerror = (): void => {
       alert('Erreur lors de la lecture du fichier');
     };
 

@@ -5,10 +5,17 @@ import { Accessibility } from 'lucide-react';
 
 /**
  * AccessibilitySection - Accessibility settings (placeholder for future implementation)
- * Display-only section for accessibility preferences
- * These settings are not yet functional but provide UI for future implementation
+ *
+ * Display-only section for accessibility preferences.
+ * These settings are not yet functional but provide UI for future implementation.
+ * Includes high contrast mode, reduced motion, screen reader optimizations, and font size controls.
+ *
+ * @example
+ * ```tsx
+ * <AccessibilitySection />
+ * ```
  */
-export function AccessibilitySection() {
+export function AccessibilitySection(): React.ReactElement {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Section Header */}
@@ -101,5 +108,3 @@ export function AccessibilitySection() {
     </div>
   );
 }
-
-AccessibilitySection.propTypes = {};

@@ -1,17 +1,40 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { FileText } from 'lucide-react';
+import type { SettingsFormData } from '../hooks/useSettingsImportExport';
+
+/**
+ * Props for ProjectSettingsSection component
+ */
+export interface ProjectSettingsSectionProps {
+  /** Current form data */
+  formData: SettingsFormData;
+  /** Callback when a field changes (section, field, value) */
+  onFieldChange: (section: string, field: string, value: string) => void;
+}
 
 /**
  * ProjectSettingsSection - Project metadata configuration
- * Allows editing of project title, author, description, and version
  *
- * @param {Object} props
- * @param {Object} props.formData - Current form data
- * @param {Function} props.onFieldChange - Callback when a field changes (section, field, value)
+ * Allows editing of project title, author, description, and version.
+ * Provides text inputs for all project metadata fields with hover animations.
+ *
+ * @param props - Component props
+ * @param props.formData - Current form data
+ * @param props.onFieldChange - Callback when a field changes (section, field, value)
+ *
+ * @example
+ * ```tsx
+ * <ProjectSettingsSection
+ *   formData={formData}
+ *   onFieldChange={handleFieldChange}
+ * />
+ * ```
  */
-export function ProjectSettingsSection({ formData, onFieldChange }) {
+export function ProjectSettingsSection({
+  formData,
+  onFieldChange
+}: ProjectSettingsSectionProps): React.ReactElement {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Section Header */}
@@ -89,15 +112,3 @@ export function ProjectSettingsSection({ formData, onFieldChange }) {
     </div>
   );
 }
-
-ProjectSettingsSection.propTypes = {
-  formData: PropTypes.shape({
-    project: PropTypes.shape({
-      title: PropTypes.string.isRequired,
-      author: PropTypes.string.isRequired,
-      description: PropTypes.string.isRequired,
-      version: PropTypes.string.isRequired
-    }).isRequired
-  }).isRequired,
-  onFieldChange: PropTypes.func.isRequired
-};

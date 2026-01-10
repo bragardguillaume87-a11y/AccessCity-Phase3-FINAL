@@ -1,19 +1,41 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Gamepad2 } from 'lucide-react';
+import type { SettingsFormData } from '../hooks/useSettingsImportExport';
+
+/**
+ * Props for GameSettingsSection component
+ */
+export interface GameSettingsSectionProps {
+  /** Current form data */
+  formData: SettingsFormData;
+  /** Callback when a variable changes (varName, field, value) */
+  onVariableChange: (varName: string, field: string, value: number) => void;
+}
 
 /**
  * GameSettingsSection - Game variables configuration
- * Allows editing of game variables (Empathie, Autonomie, Confiance)
- * Each variable has initial, min, and max values
  *
- * @param {Object} props
- * @param {Object} props.formData - Current form data
- * @param {Function} props.onVariableChange - Callback when a variable changes (varName, field, value)
+ * Allows editing of game variables (Empathie, Autonomie, Confiance).
+ * Each variable has initial, min, and max values that can be configured.
+ *
+ * @param props - Component props
+ * @param props.formData - Current form data
+ * @param props.onVariableChange - Callback when a variable changes (varName, field, value)
+ *
+ * @example
+ * ```tsx
+ * <GameSettingsSection
+ *   formData={formData}
+ *   onVariableChange={handleVariableChange}
+ * />
+ * ```
  */
-export function GameSettingsSection({ formData, onVariableChange }) {
+export function GameSettingsSection({
+  formData,
+  onVariableChange
+}: GameSettingsSectionProps): React.ReactElement {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Section Header */}
@@ -92,18 +114,3 @@ export function GameSettingsSection({ formData, onVariableChange }) {
     </div>
   );
 }
-
-GameSettingsSection.propTypes = {
-  formData: PropTypes.shape({
-    game: PropTypes.shape({
-      variables: PropTypes.objectOf(
-        PropTypes.shape({
-          initial: PropTypes.number.isRequired,
-          min: PropTypes.number.isRequired,
-          max: PropTypes.number.isRequired
-        })
-      ).isRequired
-    }).isRequired
-  }).isRequired,
-  onVariableChange: PropTypes.func.isRequired
-};

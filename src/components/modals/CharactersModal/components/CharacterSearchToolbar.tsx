@@ -1,5 +1,3 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,19 +8,68 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, Grid3x3, List } from 'lucide-react';
+import type { ViewMode } from './CharacterGallery';
+import type { CharacterSortBy } from '../hooks/useCharacterFiltering';
+
+/**
+ * Props for CharacterSearchToolbar component
+ */
+export interface CharacterSearchToolbarProps {
+  /** Current search query */
+  searchQuery: string;
+  /** Callback when search query changes */
+  onSearchChange: (query: string) => void;
+  /** Current view mode (grid or list) */
+  viewMode: ViewMode;
+  /** Callback when view mode changes */
+  onViewModeChange: (mode: ViewMode) => void;
+  /** Current sort option */
+  sortBy: CharacterSortBy;
+  /** Callback when sort option changes */
+  onSortChange: (sort: CharacterSortBy) => void;
+  /** Current mood filter */
+  filterMood: string;
+  /** Callback when mood filter changes */
+  onFilterMoodChange: (mood: string) => void;
+  /** Number of results found (for display) */
+  resultsCount: number;
+}
 
 /**
  * CharacterSearchToolbar - Search, view mode, sorting, and filtering controls
- * Inspired by Nintendo UX Guide: Pokémon Box visual library pattern
  *
- * Features:
- * - Instant search with icon
- * - View mode toggle (grid/list)
- * - Sort dropdown (A-Z, Z-A, Completeness)
+ * Provides comprehensive controls for finding and organizing characters:
+ * - Instant search across name, description, and ID
+ * - View mode toggle between grid and list layouts
+ * - Sort options (A-Z, Z-A, by completeness)
  * - Mood filter dropdown
  * - Results count display
+ *
+ * Inspired by Nintendo UX Guide: Pokémon Box visual library pattern
+ *
+ * ## Features
+ * - Instant search with debouncing handled by parent
+ * - Accessible controls with proper ARIA labels
+ * - Visual feedback on active filters
+ * - Responsive layout that adapts to screen size
+ * - Results count shows only when searching
+ *
+ * @example
+ * ```tsx
+ * <CharacterSearchToolbar
+ *   searchQuery={searchQuery}
+ *   onSearchChange={setSearchQuery}
+ *   viewMode={viewMode}
+ *   onViewModeChange={setViewMode}
+ *   sortBy={sortBy}
+ *   onSortChange={setSortBy}
+ *   filterMood={filterMood}
+ *   onFilterMoodChange={setFilterMood}
+ *   resultsCount={filteredCharacters.length}
+ * />
+ * ```
  */
-function CharacterSearchToolbar({
+export function CharacterSearchToolbar({
   searchQuery,
   onSearchChange,
   viewMode,
@@ -32,7 +79,7 @@ function CharacterSearchToolbar({
   filterMood,
   onFilterMoodChange,
   resultsCount
-}) {
+}: CharacterSearchToolbarProps) {
   return (
     <div className="px-8 py-4 border-b bg-muted/30 space-y-4">
       {/* Search Bar */}
@@ -112,17 +159,5 @@ function CharacterSearchToolbar({
     </div>
   );
 }
-
-CharacterSearchToolbar.propTypes = {
-  searchQuery: PropTypes.string.isRequired,
-  onSearchChange: PropTypes.func.isRequired,
-  viewMode: PropTypes.oneOf(['grid', 'list']).isRequired,
-  onViewModeChange: PropTypes.func.isRequired,
-  sortBy: PropTypes.oneOf(['name', 'name-desc', 'completeness']).isRequired,
-  onSortChange: PropTypes.func.isRequired,
-  filterMood: PropTypes.string.isRequired,
-  onFilterMoodChange: PropTypes.func.isRequired,
-  resultsCount: PropTypes.number.isRequired
-};
 
 export default CharacterSearchToolbar;

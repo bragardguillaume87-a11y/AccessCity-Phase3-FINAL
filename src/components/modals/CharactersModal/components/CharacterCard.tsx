@@ -1,5 +1,3 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,21 +13,92 @@ import {
   Copy,
   Trash2
 } from 'lucide-react';
+import type { Character } from '@/types';
+import type { CharacterStats } from '../hooks/useCharacterStats';
+import type { ViewMode } from './CharacterGallery';
+
+/**
+ * Validation error structure from useValidation hook
+ */
+export interface ValidationError {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+/**
+ * Character validation errors with separated arrays
+ */
+export interface CharacterValidationErrors {
+  /** All validation problems */
+  errors?: ValidationError[];
+  /** Only warning-level problems */
+  warnings?: ValidationError[];
+}
+
+/**
+ * Props for CharacterCard component
+ */
+export interface CharacterCardProps {
+  /** Character data to display */
+  character: Character;
+  /** Character statistics (completeness, mood count, sprite count) */
+  stats: CharacterStats;
+  /** Validation errors for this character */
+  errors?: ValidationError[];
+  /** Whether this character is marked as favorite */
+  isFavorite: boolean;
+  /** Callback when favorite star is toggled */
+  onToggleFavorite: (characterId: string) => void;
+  /** Callback when edit button is clicked */
+  onEdit: (character: Character) => void;
+  /** Callback when duplicate button is clicked */
+  onDuplicate: (characterId: string) => void;
+  /** Callback when delete button is clicked */
+  onDelete: (character: Character) => void;
+  /** View mode (grid or list) */
+  viewMode?: ViewMode;
+}
 
 /**
  * CharacterCard - Individual character card display (grid or list mode)
+ *
+ * Displays a character with preview, stats, and action buttons. Supports both
+ * grid and list view modes with appropriate layouts and interactions.
+ *
  * Inspired by Nintendo UX Guide: Pokémon Card style with visual hierarchy
  *
- * UX Enhancements:
+ * ## Features
+ * - Large avatar preview with fallback icon
+ * - Completeness badge showing sprite coverage
+ * - Error/warning indicator badge
+ * - Favorite star toggle with localStorage persistence
+ * - Stats display (moods and sprites)
+ * - Quick action buttons (Edit, Duplicate, Delete)
+ *
+ * ## UX Enhancements
  * - Hover lift effect (translateY -4px + scale 1.05)
- * - Smooth transitions
- * - Visual avatar preview
- * - Completeness badge
- * - Error/warning indicators
- * - Favorite star toggle
- * - Quick action buttons
+ * - Smooth transitions on all interactive elements
+ * - Visual avatar preview with scale animation on hover
+ * - Accessible buttons with ARIA labels
+ * - Error and warning visual indicators
+ *
+ * @example
+ * ```tsx
+ * <CharacterCard
+ *   character={character}
+ *   stats={{ completeness: 100, moodCount: 5, spriteCount: 5, hasSpriteForAllMoods: true }}
+ *   errors={validationErrors}
+ *   isFavorite={false}
+ *   onToggleFavorite={handleToggleFavorite}
+ *   onEdit={handleEdit}
+ *   onDuplicate={handleDuplicate}
+ *   onDelete={handleDelete}
+ *   viewMode="grid"
+ * />
+ * ```
  */
-function CharacterCard({
+export function CharacterCard({
   character,
   stats,
   errors,
@@ -39,9 +108,9 @@ function CharacterCard({
   onDuplicate,
   onDelete,
   viewMode = 'grid'
-}) {
-  const hasErrors = errors?.errors && errors.errors.length > 0;
-  const hasWarnings = errors?.warnings && errors.warnings.length > 0;
+}: CharacterCardProps) {
+  const hasErrors = errors && errors.some(e => e.severity === 'error');
+  const hasWarnings = errors && errors.some(e => e.severity === 'warning');
 
   return (
     <Card
@@ -90,7 +159,7 @@ function CharacterCard({
 
         {/* Error Badge + Favorite Star */}
         <div className="absolute top-3 left-3 flex gap-2">
-          {errors && (
+          {(hasErrors || hasWarnings) && (
             <Badge
               variant={hasErrors ? "destructive" : "outline"}
               className="shadow-lg"
@@ -197,28 +266,5 @@ function CharacterCard({
     </Card>
   );
 }
-
-CharacterCard.propTypes = {
-  character: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    description: PropTypes.string,
-    sprites: PropTypes.object,
-    moods: PropTypes.object
-  }).isRequired,
-  stats: PropTypes.shape({
-    completeness: PropTypes.number.isRequired,
-    moodCount: PropTypes.number.isRequired,
-    spriteCount: PropTypes.number.isRequired,
-    hasSpriteForAllMoods: PropTypes.bool.isRequired
-  }).isRequired,
-  errors: PropTypes.object,
-  isFavorite: PropTypes.bool.isRequired,
-  onToggleFavorite: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDuplicate: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  viewMode: PropTypes.oneOf(['grid', 'list'])
-};
 
 export default CharacterCard;

@@ -1,18 +1,53 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Search } from 'lucide-react';
 
 /**
+ * Props for CharacterEmptyState component
+ */
+export interface CharacterEmptyStateProps {
+  /** Current search query (if any) */
+  searchQuery?: string;
+  /** Callback when create character button is clicked */
+  onCreateCharacter: () => void;
+}
+
+/**
  * CharacterEmptyState - Empty state display for character gallery
+ *
+ * Displays contextual empty states based on whether users are searching or
+ * have no characters at all. Provides clear calls-to-action to guide users.
+ *
  * Inspired by Nintendo UX Guide: Engaging, guiding empty states (not just "No data")
  *
- * Two modes:
- * - No characters: Encouraging creation with clear CTA
- * - No search results: Helpful feedback with search query
+ * ## Two Modes
+ *
+ * ### No Characters
+ * - Encouraging creation message
+ * - Large "Create my first character" CTA button
+ * - Animated icon for visual interest
+ *
+ * ### No Search Results
+ * - Shows search query that returned no results
+ * - Helpful feedback message
+ * - No CTA (user can clear search or adjust filters)
+ *
+ * @example
+ * ```tsx
+ * // No characters mode
+ * <CharacterEmptyState onCreateCharacter={handleCreate} />
+ *
+ * // No search results mode
+ * <CharacterEmptyState
+ *   searchQuery="dragon"
+ *   onCreateCharacter={handleCreate}
+ * />
+ * ```
  */
-function CharacterEmptyState({ searchQuery, onCreateCharacter }) {
+export function CharacterEmptyState({
+  searchQuery,
+  onCreateCharacter
+}: CharacterEmptyStateProps) {
   // No search results
   if (searchQuery) {
     return (
@@ -50,10 +85,5 @@ function CharacterEmptyState({ searchQuery, onCreateCharacter }) {
     </Card>
   );
 }
-
-CharacterEmptyState.propTypes = {
-  searchQuery: PropTypes.string,
-  onCreateCharacter: PropTypes.func.isRequired
-};
 
 export default CharacterEmptyState;

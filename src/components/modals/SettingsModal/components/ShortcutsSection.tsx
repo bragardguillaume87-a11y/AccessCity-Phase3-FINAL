@@ -3,13 +3,34 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Keyboard } from 'lucide-react';
 
 /**
- * ShortcutsSection - Keyboard shortcuts reference
- * Display-only section showing available keyboard shortcuts
- * No props needed as this is a static reference list
+ * Keyboard shortcut configuration
  */
-export function ShortcutsSection() {
+interface Shortcut {
+  /** Unique identifier for the shortcut */
+  id: string;
+  /** Display label for the shortcut */
+  label: string;
+  /** Description of what the shortcut does */
+  description: string;
+  /** Keyboard key combination */
+  keys: string;
+}
+
+/**
+ * ShortcutsSection - Keyboard shortcuts reference
+ *
+ * Display-only section showing available keyboard shortcuts.
+ * No props needed as this is a static reference list.
+ * Shortcuts include save, new scene, and delete operations.
+ *
+ * @example
+ * ```tsx
+ * <ShortcutsSection />
+ * ```
+ */
+export function ShortcutsSection(): React.ReactElement {
   // Keyboard shortcuts configuration
-  const shortcuts = [
+  const shortcuts: Shortcut[] = [
     {
       id: 'save',
       label: 'Sauvegarder le projet',
@@ -69,5 +90,3 @@ export function ShortcutsSection() {
     </div>
   );
 }
-
-ShortcutsSection.propTypes = {};

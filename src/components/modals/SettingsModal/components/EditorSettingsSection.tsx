@@ -1,19 +1,42 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Palette } from 'lucide-react';
+import type { SettingsFormData } from '../hooks/useSettingsImportExport';
+
+/**
+ * Props for EditorSettingsSection component
+ */
+export interface EditorSettingsSectionProps {
+  /** Current form data */
+  formData: SettingsFormData;
+  /** Callback when a field changes (section, field, value) */
+  onFieldChange: (section: string, field: string, value: string | boolean | number) => void;
+}
 
 /**
  * EditorSettingsSection - Editor preferences configuration
- * Allows editing theme, autosave, grid settings, and other editor preferences
  *
- * @param {Object} props
- * @param {Object} props.formData - Current form data
- * @param {Function} props.onFieldChange - Callback when a field changes (section, field, value)
+ * Allows editing theme, autosave, grid settings, and other editor preferences.
+ * Includes theme selection, autosave toggle with interval, and grid configuration.
+ *
+ * @param props - Component props
+ * @param props.formData - Current form data
+ * @param props.onFieldChange - Callback when a field changes (section, field, value)
+ *
+ * @example
+ * ```tsx
+ * <EditorSettingsSection
+ *   formData={formData}
+ *   onFieldChange={handleFieldChange}
+ * />
+ * ```
  */
-export function EditorSettingsSection({ formData, onFieldChange }) {
+export function EditorSettingsSection({
+  formData,
+  onFieldChange
+}: EditorSettingsSectionProps): React.ReactElement {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Section Header */}
@@ -52,7 +75,7 @@ export function EditorSettingsSection({ formData, onFieldChange }) {
             <Checkbox
               id="autosave"
               checked={formData.editor.autosave}
-              onCheckedChange={(checked) => onFieldChange('editor', 'autosave', checked)}
+              onCheckedChange={(checked) => onFieldChange('editor', 'autosave', checked as boolean)}
               className="transition-transform duration-200 hover:scale-110"
             />
             <label htmlFor="autosave" className="text-sm font-semibold cursor-pointer">
@@ -102,7 +125,7 @@ export function EditorSettingsSection({ formData, onFieldChange }) {
             <Checkbox
               id="snapToGrid"
               checked={formData.editor.snapToGrid}
-              onCheckedChange={(checked) => onFieldChange('editor', 'snapToGrid', checked)}
+              onCheckedChange={(checked) => onFieldChange('editor', 'snapToGrid', checked as boolean)}
               className="transition-transform duration-200 hover:scale-110"
             />
             <label htmlFor="snapToGrid" className="text-sm font-semibold cursor-pointer">
@@ -114,7 +137,7 @@ export function EditorSettingsSection({ formData, onFieldChange }) {
             <Checkbox
               id="showGrid"
               checked={formData.editor.showGrid}
-              onCheckedChange={(checked) => onFieldChange('editor', 'showGrid', checked)}
+              onCheckedChange={(checked) => onFieldChange('editor', 'showGrid', checked as boolean)}
               className="transition-transform duration-200 hover:scale-110"
             />
             <label htmlFor="showGrid" className="text-sm font-semibold cursor-pointer">
@@ -126,17 +149,3 @@ export function EditorSettingsSection({ formData, onFieldChange }) {
     </div>
   );
 }
-
-EditorSettingsSection.propTypes = {
-  formData: PropTypes.shape({
-    editor: PropTypes.shape({
-      theme: PropTypes.string.isRequired,
-      autosave: PropTypes.bool.isRequired,
-      autosaveInterval: PropTypes.number.isRequired,
-      gridSize: PropTypes.number.isRequired,
-      snapToGrid: PropTypes.bool.isRequired,
-      showGrid: PropTypes.bool.isRequired
-    }).isRequired
-  }).isRequired,
-  onFieldChange: PropTypes.func.isRequired
-};

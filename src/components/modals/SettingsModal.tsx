@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import { useSettingsStore } from '../../stores/index.js';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,7 +11,8 @@ import {
 } from 'lucide-react';
 
 // Hooks
-import { useSettingsImportExport, useSettingsSearch } from './SettingsModal/hooks';
+import { useSettingsImportExport, type SettingsFormData } from './SettingsModal/hooks/useSettingsImportExport';
+import { useSettingsSearch, type SettingsSection } from './SettingsModal/hooks/useSettingsSearch';
 
 // Components
 import {
@@ -27,7 +27,18 @@ import {
 } from './SettingsModal/components';
 
 /**
+ * Props for SettingsModal component
+ */
+export interface SettingsModalProps {
+  /** Controls modal visibility */
+  isOpen: boolean;
+  /** Callback when modal is closed */
+  onClose: () => void;
+}
+
+/**
  * SettingsModal - AAA Project configuration modal (Phase 5)
+ *
  * VS Code-style sidebar navigation with sections:
  * - Project: Project metadata (title, author, description, version)
  * - Editor: Editor preferences (theme, autosave, grid settings)
@@ -35,23 +46,36 @@ import {
  * - Shortcuts: Keyboard shortcuts (Phase 5)
  * - A11Y: Accessibility settings (Phase 5)
  *
- * @component
- * @param {Object} props
- * @param {boolean} props.isOpen - Controls modal visibility
- * @param {Function} props.onClose - Callback when modal is closed
+ * Features:
+ * - Search functionality across all settings
+ * - Import/Export settings as JSON
+ * - Reset to defaults
+ * - Auto-sync with Zustand store
+ *
+ * @param props - Component props
+ * @param props.isOpen - Controls modal visibility
+ * @param props.onClose - Callback when modal is closed
+ *
+ * @example
+ * ```tsx
+ * <SettingsModal
+ *   isOpen={showSettings}
+ *   onClose={() => setShowSettings(false)}
+ * />
+ * ```
  */
-export default function SettingsModal({ isOpen, onClose }) {
+export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): React.ReactElement | null {
   // Zustand stores (granular selectors)
   const projectSettings = useSettingsStore(state => state.projectSettings);
   const updateProjectSettings = useSettingsStore(state => state.updateProjectSettings);
 
   // Local state
-  const [activeSection, setActiveSection] = useState('project');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState(projectSettings || {});
+  const [activeSection, setActiveSection] = useState<string>('project');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [formData, setFormData] = useState<SettingsFormData>(projectSettings || {} as SettingsFormData);
 
   // Sidebar sections configuration
-  const sections = [
+  const sections: SettingsSection[] = [
     {
       id: 'project',
       label: 'Projet',
@@ -96,17 +120,17 @@ export default function SettingsModal({ isOpen, onClose }) {
   }, [isOpen, projectSettings]);
 
   // Field change handlers
-  const handleFieldChange = (section, field, value) => {
+  const handleFieldChange = (section: string, field: string, value: string | boolean | number): void => {
     setFormData(prev => ({
       ...prev,
       [section]: {
-        ...prev[section],
+        ...prev[section as keyof SettingsFormData],
         [field]: value
       }
     }));
   };
 
-  const handleVariableChange = (varName, field, value) => {
+  const handleVariableChange = (varName: string, field: string, value: number): void => {
     setFormData(prev => ({
       ...prev,
       game: {
@@ -123,20 +147,20 @@ export default function SettingsModal({ isOpen, onClose }) {
   };
 
   // Modal actions
-  const handleSave = () => {
+  const handleSave = (): void => {
     updateProjectSettings(formData);
     onClose();
   };
 
-  const handleCancel = () => {
-    setFormData(projectSettings || {});
+  const handleCancel = (): void => {
+    setFormData(projectSettings || {} as SettingsFormData);
     setSearchQuery('');
     onClose();
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = (): void => {
     if (window.confirm('Réinitialiser tous les paramètres aux valeurs par défaut ?')) {
-      const defaults = {
+      const defaults: SettingsFormData = {
         project: {
           title: 'Projet sans titre',
           author: '',
@@ -231,8 +255,3 @@ export default function SettingsModal({ isOpen, onClose }) {
     </Dialog>
   );
 }
-
-SettingsModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired
-};

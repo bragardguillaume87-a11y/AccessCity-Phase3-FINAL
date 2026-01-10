@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
 import { useCharactersStore } from '../../stores/index.js';
 import { useValidation } from '../../hooks/useValidation.js';
 import ConfirmModal from '../ConfirmModal.jsx';
@@ -15,51 +14,106 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Users, Plus } from 'lucide-react';
+import type { Character } from '@/types';
 
 // Extracted components
 import CharacterStatsBar from './CharactersModal/components/CharacterStatsBar';
 import CharacterSearchToolbar from './CharactersModal/components/CharacterSearchToolbar';
 import CharacterCard from './CharactersModal/components/CharacterCard';
 import CharacterGallery from './CharactersModal/components/CharacterGallery';
+import type { ViewMode } from './CharactersModal/components/CharacterGallery';
 
 // Extracted hooks
 import { useCharacterFiltering } from './CharactersModal/hooks/useCharacterFiltering';
+import type { CharacterSortBy } from './CharactersModal/hooks/useCharacterFiltering';
 import { useCharacterStats } from './CharactersModal/hooks/useCharacterStats';
 import { useCharacterFavorites } from './CharactersModal/hooks/useCharacterFavorites';
 
 /**
- * CharactersModal - REFACTORED (Phase 6D)
- * AAA Gallery View for Character Management
+ * Props for CharactersModal component
+ */
+export interface CharactersModalProps {
+  /** Whether the modal is open */
+  isOpen: boolean;
+  /** Callback when modal should close */
+  onClose: () => void;
+  /** Optional character ID to edit immediately when modal opens */
+  initialCharacterId?: string;
+}
+
+/**
+ * CharactersModal - AAA Gallery View for Character Management
  *
- * IMPROVEMENTS:
+ * Professional character management modal with gallery view, search, filtering,
+ * and comprehensive character operations. Provides an intuitive interface for
+ * creating, editing, and organizing game characters.
+ *
+ * ## Phase 6D Refactoring
  * - Reduced from 564 to ~150 lines (-73%)
  * - Extracted 5 components + 3 hooks
  * - Dark theme uniformization (bg-green-50 → bg-green-500/10)
  * - Nintendo UX enhancements (hover animations, feedback)
  * - Better code organization and maintainability
  *
- * Features:
+ * ## Features
+ *
+ * ### Visual Gallery
  * - Large preview cards with avatar thumbnails
  * - Visual mood indicators
- * - Usage statistics per character
- * - Search and filter capabilities
+ * - Completeness percentage badges
+ * - Grid/List view toggle
+ *
+ * ### Search & Filter
+ * - Real-time search by name/description
+ * - Filter by mood
+ * - Sort by name (A-Z, Z-A) or completeness
+ * - Results count display
+ *
+ * ### Character Operations
+ * - Create new characters
+ * - Edit existing characters (inline editor modal)
+ * - Duplicate characters with smart naming
+ * - Delete with confirmation
+ * - Favorite characters (localStorage persistence)
+ *
+ * ### Statistics
+ * - Total character count
+ * - Complete characters (all moods have sprites)
+ * - Characters with sprites
+ *
+ * ### Animations & Feedback
  * - Smooth animations and micro-interactions
- * - Favorite characters with localStorage persistence
+ * - Creation animation feedback
+ * - Hover effects on cards and buttons
+ *
+ * @example
+ * ```tsx
+ * <CharactersModal
+ *   isOpen={showCharacters}
+ *   onClose={() => setShowCharacters(false)}
+ *   initialCharacterId={characterToEdit?.id}
+ * />
+ * ```
  */
-function CharactersModal({ isOpen, onClose, initialCharacterId }) {
+export function CharactersModal({
+  isOpen,
+  onClose,
+  initialCharacterId
+}: CharactersModalProps) {
   // Zustand stores (granular selectors)
   const characters = useCharactersStore(state => state.characters);
   const addCharacter = useCharactersStore(state => state.addCharacter);
+  const updateCharacter = useCharactersStore(state => state.updateCharacter);
   const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
 
   // State
   const validation = useValidation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [charToDelete, setCharToDelete] = useState(null);
-  const [editingCharacter, setEditingCharacter] = useState(null);
+  const [charToDelete, setCharToDelete] = useState<Character | null>(null);
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   const [showCreateAnimation, setShowCreateAnimation] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
-  const [sortBy, setSortBy] = useState('name'); // 'name' | 'name-desc' | 'completeness'
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [sortBy, setSortBy] = useState<CharacterSortBy>('name');
   const [filterMood, setFilterMood] = useState('all');
 
   // Custom hooks
@@ -90,27 +144,38 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
     }
   }, [isOpen]);
 
-  // Handlers
+  /**
+   * Handle creating a new character
+   * Creates a default character and opens the editor modal
+   */
   const handleCreateCharacter = () => {
-    const newChar = {
+    // Create character using store (returns new ID)
+    const newId = addCharacter();
+
+    // Update the character with our desired defaults
+    updateCharacter({
+      id: newId,
       name: 'Nouveau Personnage',
       description: '',
-      sprites: {},
       moods: ['neutral']
-    };
-
-    const newId = addCharacter(newChar);
+    });
 
     // Show creation animation
     setShowCreateAnimation(true);
     setTimeout(() => setShowCreateAnimation(false), TIMING.TOAST_DURATION_SHORT);
 
     // Open editor for new character
-    const createdChar = characters.find(c => c.id === newId) || { ...newChar, id: newId };
-    setEditingCharacter(createdChar);
+    const createdChar = characters.find(c => c.id === newId);
+    if (createdChar) {
+      setEditingCharacter(createdChar);
+    }
   };
 
-  const handleDuplicateCharacter = (characterId) => {
+  /**
+   * Handle duplicating a character
+   * Creates a copy with incremented name and opens for editing
+   */
+  const handleDuplicateCharacter = (characterId: string) => {
     const charToDuplicate = characters.find(c => c.id === characterId);
     if (!charToDuplicate) return;
 
@@ -123,13 +188,21 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
       existingCharacterNames
     );
 
-    addCharacter(duplicatedChar);
+    // Create new character and update it with duplicated data
+    const newId = addCharacter();
+    updateCharacter({
+      id: newId,
+      ...duplicatedChar
+    });
 
     // Show duplication feedback
     setShowCreateAnimation(true);
     setTimeout(() => setShowCreateAnimation(false), TIMING.ANIMATION_CREATE);
   };
 
+  /**
+   * Confirm and execute character deletion
+   */
   const confirmDelete = () => {
     if (charToDelete) {
       deleteCharacter(charToDelete.id);
@@ -219,28 +292,27 @@ function CharactersModal({ isOpen, onClose, initialCharacterId }) {
           isOpen={!!editingCharacter}
           onClose={() => setEditingCharacter(null)}
           character={editingCharacter}
+          characters={characters}
+          onSave={(savedCharacter) => {
+            // Character is already saved by useCharacterForm hook
+            setEditingCharacter(null);
+          }}
         />
       )}
 
       {charToDelete && (
         <ConfirmModal
           isOpen={!!charToDelete}
-          onClose={() => setCharToDelete(null)}
+          onCancel={() => setCharToDelete(null)}
           onConfirm={confirmDelete}
           title="Supprimer le personnage"
           message={`Êtes-vous sûr de vouloir supprimer "${charToDelete.name}" ? Cette action est irréversible.`}
-          confirmLabel="Supprimer"
-          variant="destructive"
+          confirmText="Supprimer"
+          variant="danger"
         />
       )}
     </>
   );
 }
-
-CharactersModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  initialCharacterId: PropTypes.string
-};
 
 export default CharactersModal;

@@ -1,28 +1,76 @@
-import PropTypes from 'prop-types';
+import React from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AnimatedProgressBar } from '@/components/ui/progress-bar';
 import { motion } from 'framer-motion';
 
 /**
+ * Moral impact data structure
+ */
+export interface MoralImpact {
+  /** Variable name (e.g., "Empathie", "Courage") */
+  variable: string;
+  /** Change amount (positive or negative) */
+  delta: number;
+}
+
+/**
+ * Color type for moral impact visualization
+ */
+export type MoralColor = 'blue' | 'green' | 'red';
+
+/**
+ * Props for OutcomeModal component
+ */
+export interface OutcomeModalProps {
+  /** Whether the modal is open */
+  isOpen: boolean;
+  /** Descriptive message of the outcome */
+  message: string;
+  /** Optional illustration URL */
+  illustration?: string;
+  /** Moral impact with variable and delta */
+  moral?: MoralImpact;
+  /** Callback when modal is closed */
+  onClose: () => void;
+}
+
+/**
  * OutcomeModal - AAA Outcome Display with Moral Impact
  *
- * Features:
+ * Professional outcome display modal inspired by AAA games with:
  * - Dark theme consistent with editor
  * - Smooth transitions for content reveal
  * - Animated progress bar for moral stats
  * - Image support with fade-in animation
  * - Keyboard navigation (Enter/Space to continue)
  *
- * @param {boolean} isOpen - Modal visible ou non
- * @param {string} message - Message descriptif de l'issue
- * @param {string} illustration - URL image optionnelle
- * @param {object} moral - {variable: 'Empathie', delta: +10}
- * @param {function} onClose - Callback fermeture
+ * Features:
+ * - Framer Motion animations for smooth transitions
+ * - Color-coded moral impact (green for positive, red for negative, blue for neutral)
+ * - Responsive layout with max-width 2xl
+ * - Accessible keyboard navigation
+ *
+ * @example
+ * ```tsx
+ * <OutcomeModal
+ *   isOpen={showOutcome}
+ *   message="Votre choix a eu un impact significatif sur la situation."
+ *   illustration="/assets/outcome.png"
+ *   moral={{ variable: 'Empathie', delta: 10 }}
+ *   onClose={() => setShowOutcome(false)}
+ * />
+ * ```
  */
-export default function OutcomeModal({ isOpen, message, illustration, moral, onClose }) {
+export default function OutcomeModal({ 
+  isOpen, 
+  message, 
+  illustration, 
+  moral, 
+  onClose 
+}: OutcomeModalProps) {
   // Keyboard handler for Enter/Space
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClose();
@@ -30,12 +78,12 @@ export default function OutcomeModal({ isOpen, message, illustration, moral, onC
   };
 
   // Determine moral color based on delta
-  const getMoralColor = () => {
+  const getMoralColor = (): MoralColor => {
     if (!moral || moral.delta === 0) return 'blue';
     return moral.delta > 0 ? 'green' : 'red';
   };
 
-  const getMoralBadgeColor = () => {
+  const getMoralBadgeColor = (): string => {
     if (!moral || moral.delta === 0) return 'bg-blue-600';
     return moral.delta > 0 ? 'bg-green-600' : 'bg-red-600';
   };
@@ -114,14 +162,3 @@ export default function OutcomeModal({ isOpen, message, illustration, moral, onC
     </Dialog>
   );
 }
-
-OutcomeModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  message: PropTypes.string.isRequired,
-  illustration: PropTypes.string,
-  moral: PropTypes.shape({
-    variable: PropTypes.string,
-    delta: PropTypes.number
-  }),
-  onClose: PropTypes.func.isRequired
-};

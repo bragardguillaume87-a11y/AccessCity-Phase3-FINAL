@@ -73,6 +73,7 @@ export interface SceneCharacter {
   position: Position;
   size: Size;
   scale?: number;
+  zIndex?: number;
   entranceAnimation: string;
   exitAnimation: string;
 }

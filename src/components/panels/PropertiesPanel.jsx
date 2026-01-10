@@ -1,11 +1,11 @@
 import PropTypes from 'prop-types';
 import { useScenesStore, useCharactersStore, useUIStore } from '../../stores/index.js';
 import { duplicateDialogue } from '../../utils/duplication.js';
-import { EmptySelectionState } from './PropertiesPanel/components/EmptySelectionState.jsx';
-import { ScenePropertiesForm } from './PropertiesPanel/components/ScenePropertiesForm.jsx';
-import { CharacterPropertiesForm } from './PropertiesPanel/components/CharacterPropertiesForm.jsx';
-import { SceneCharacterPlacementForm } from './PropertiesPanel/components/SceneCharacterPlacementForm.jsx';
-import { DialoguePropertiesForm } from './PropertiesPanel/components/DialoguePropertiesForm.jsx';
+import { EmptySelectionState } from './PropertiesPanel/components/EmptySelectionState';
+import { ScenePropertiesForm } from './PropertiesPanel/components/ScenePropertiesForm';
+import { CharacterPropertiesForm } from './PropertiesPanel/components/CharacterPropertiesForm';
+import { SceneCharacterPlacementForm } from './PropertiesPanel/components/SceneCharacterPlacementForm';
+import { DialoguePropertiesForm } from './PropertiesPanel/components/DialoguePropertiesForm';
 
 /**
  * PropertiesPanel - Right sidebar for editing selected element properties

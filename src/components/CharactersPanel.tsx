@@ -1,45 +1,68 @@
 import { useState, useMemo } from 'react';
-import { useCharactersStore } from '../stores/index.ts';
-import { useValidation } from '../hooks/useValidation.ts';
-import ConfirmModal from './ConfirmModal.jsx';
-import CharacterEditor from './CharacterEditor.jsx';
-import { duplicateCharacter } from '../utils/duplication.js';
+import { useCharactersStore } from '../stores/index';
+import { useValidation } from '../hooks/useValidation';
+import ConfirmModal from './ConfirmModal';
+// @ts-ignore - CharacterEditor is JSX without proper TS exports
+import CharacterEditor from './tabs/characters/panels/CharacterEditor.jsx';
+import { duplicateCharacter } from '../utils/duplication';
 import { TIMING } from '@/config/timing';
+import type { Character } from '@/types';
 
-function CharactersPanel({ onPrev, onNext }) {
+/**
+ * CharactersPanel component props
+ */
+export interface CharactersPanelProps {
+  /** Callback when navigating to previous step */
+  onPrev?: () => void;
+  /** Callback when navigating to next step */
+  onNext?: () => void;
+}
+
+/**
+ * CharactersPanel - Manage characters in the scenario
+ *
+ * Features:
+ * - Add/Edit/Delete/Duplicate characters
+ * - Real-time validation with error badges
+ * - Sorted alphabetically by name
+ * - Empty state with helpful prompts
+ */
+function CharactersPanel({ onPrev, onNext }: CharactersPanelProps): React.JSX.Element {
   const characters = useCharactersStore(state => state.characters);
   const addCharacter = useCharactersStore(state => state.addCharacter);
   const updateCharacter = useCharactersStore(state => state.updateCharacter);
   const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
   const validation = useValidation();
-  const [newCharacterName, setNewCharacterName] = useState('');
-  const [charToDelete, setCharToDelete] = useState(null);
-  const [editingCharacter, setEditingCharacter] = useState(null);
-  const [nameError, setNameError] = useState(false);
+  const [newCharacterName, setNewCharacterName] = useState<string>('');
+  const [charToDelete, setCharToDelete] = useState<Character | null>(null);
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+  const [nameError, setNameError] = useState<boolean>(false);
 
   const sortedCharacters = useMemo(() => {
     return [...characters].sort((a, b) => a.name.localeCompare(b.name));
   }, [characters]);
 
-  const handleAddCharacter = () => {
+  const handleAddCharacter = (): void => {
     const trimmed = newCharacterName.trim();
     if (!trimmed) {
       setNameError(true);
       setTimeout(() => setNameError(false), TIMING.SHAKE_ERROR_DURATION);
       return;
     }
-    addCharacter({ name: trimmed });
+    const charId = addCharacter();
+    // Update the newly created character's name
+    updateCharacter({ id: charId, name: trimmed });
     setNewCharacterName('');
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = (): void => {
     if (charToDelete) {
       deleteCharacter(charToDelete.id);
       setCharToDelete(null);
     }
   };
 
-  const handleDuplicateCharacter = (characterId) => {
+  const handleDuplicateCharacter = (characterId: string): void => {
     const charToDuplicate = characters.find(c => c.id === characterId);
     if (!charToDuplicate) return;
 
@@ -48,8 +71,20 @@ function CharactersPanel({ onPrev, onNext }) {
 
     const duplicatedChar = duplicateCharacter(charToDuplicate, existingCharacterIds, existingCharacterNames);
 
-    addCharacter(duplicatedChar);
-    setEditingCharacter(duplicatedChar);
+    const newCharId = addCharacter();
+    // Update the newly created character with duplicated data
+    updateCharacter({
+      id: newCharId,
+      name: duplicatedChar.name,
+      description: duplicatedChar.description,
+      sprites: duplicatedChar.sprites,
+      moods: duplicatedChar.moods
+    });
+
+    const newChar = characters.find(c => c.id === newCharId);
+    if (newChar) {
+      setEditingCharacter(newChar);
+    }
   };
 
   return (
@@ -72,11 +107,11 @@ function CharactersPanel({ onPrev, onNext }) {
             type="text"
             placeholder="Nom du personnage"
             value={newCharacterName}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               setNewCharacterName(e.target.value);
               if (nameError) setNameError(false);
             }}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddCharacter()}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleAddCharacter()}
             aria-label="Nom du nouveau personnage"
             className={`flex-1 px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 ${
               nameError
@@ -160,10 +195,12 @@ function CharactersPanel({ onPrev, onNext }) {
         {/* Delete Confirmation Modal */}
         {charToDelete && (
           <ConfirmModal
+            isOpen={true}
             title="Supprimer le personnage"
             message={`Etes-vous sur de vouloir supprimer "${charToDelete.name}" ?`}
             onConfirm={confirmDelete}
             onCancel={() => setCharToDelete(null)}
+            variant="danger"
           />
         )}
 
@@ -171,7 +208,7 @@ function CharactersPanel({ onPrev, onNext }) {
         {editingCharacter && (
           <CharacterEditor
             character={editingCharacter}
-            onSave={(updated) => { updateCharacter(updated); setEditingCharacter(null); }}
+            onSave={(updated: Character) => { updateCharacter(updated); setEditingCharacter(null); }}
             onClose={() => setEditingCharacter(null)}
           />
         )}

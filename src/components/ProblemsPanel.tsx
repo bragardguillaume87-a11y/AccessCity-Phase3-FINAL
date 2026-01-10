@@ -1,7 +1,66 @@
 import { useState, useMemo, useCallback } from 'react';
 import { shallow } from 'zustand/shallow';
-import { useValidation } from '../hooks/useValidation.ts';
-import { useScenesStore, useCharactersStore } from '../stores/index.ts';
+import { useValidation } from '../hooks/useValidation';
+import { useScenesStore, useCharactersStore } from '../stores/index';
+import type { Scene, Character } from '@/types';
+
+/**
+ * Problem severity type
+ */
+type ProblemSeverity = 'error' | 'warning';
+
+/**
+ * Problem type
+ */
+type ProblemType = 'scene' | 'dialogue' | 'choice' | 'character' | 'variable';
+
+/**
+ * Problem details
+ */
+interface Problem {
+  id: string;
+  severity: ProblemSeverity;
+  message: string;
+  location: string;
+  type: ProblemType;
+  sceneId?: string;
+  dialogueIdx?: number;
+  choiceIdx?: number;
+  charId?: string;
+  varName?: string;
+  field: string;
+}
+
+/**
+ * Navigation target for problems
+ */
+interface NavigationTarget {
+  sceneId?: string;
+  dialogueIdx?: number;
+  charId?: string;
+}
+
+/**
+ * Filter type for problems
+ */
+type FilterType = 'all' | 'errors' | 'warnings';
+
+/**
+ * ProblemsPanel component props
+ */
+export interface ProblemsPanelProps {
+  /** Callback for navigating to problem location */
+  onNavigateTo?: (target: string, data: NavigationTarget) => void;
+}
+
+/**
+ * Validation error from useValidation hook
+ */
+interface ValidationError {
+  field: string;
+  message: string;
+  severity: ProblemSeverity;
+}
 
 /**
  * Problems Panel - Inspiré de VS Code Issue Browser
@@ -9,30 +68,28 @@ import { useScenesStore, useCharactersStore } from '../stores/index.ts';
  *
  * PERFORMANCE: Uses Map selectors for O(1) lookups instead of array.find()
  */
-export default function ProblemsPanel({ onNavigateTo }) {
+export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): React.JSX.Element {
   const validation = useValidation();
 
   // OPTIMIZATION: Use Map selectors for O(1) lookups (instead of array.find)
   const sceneMap = useScenesStore(
-    useCallback((state) => new Map(state.scenes.map(s => [s.id, s])), []),
-    shallow
+    useCallback((state) => new Map<string, Scene>(state.scenes.map(s => [s.id, s])), [])
   );
 
   const characterMap = useCharactersStore(
-    useCallback((state) => new Map(state.characters.map(c => [c.id, c])), []),
-    shallow
+    useCallback((state) => new Map<string, Character>(state.characters.map(c => [c.id, c])), [])
   );
 
-  const [filter, setFilter] = useState('all'); // all | errors | warnings
+  const [filter, setFilter] = useState<FilterType>('all');
 
   // OPTIMIZATION: Memoize problem aggregation (only recomputes when validation changes)
   const allProblems = useMemo(() => {
-    const problems = [];
+    const problems: Problem[] = [];
 
     // Erreurs de scènes - O(1) lookup with Map
     Object.entries(validation.errors.scenes).forEach(([sceneId, errors]) => {
       const scene = sceneMap.get(sceneId);
-      errors.forEach(error => {
+      (errors as ValidationError[]).forEach(error => {
         problems.push({
           id: `scene-${sceneId}-${error.field}`,
           severity: error.severity,
@@ -49,7 +106,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     Object.entries(validation.errors.dialogues).forEach(([key, errors]) => {
       const [sceneId, dialogueIdx] = key.split('-');
       const scene = sceneMap.get(sceneId);
-      errors.forEach(error => {
+      (errors as ValidationError[]).forEach(error => {
         problems.push({
           id: `dialogue-${key}-${error.field}`,
           severity: error.severity,
@@ -67,7 +124,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     Object.entries(validation.errors.choices).forEach(([key, errors]) => {
       const [sceneId, dialogueIdx, choiceIdx] = key.split('-');
       const scene = sceneMap.get(sceneId);
-      errors.forEach(error => {
+      (errors as ValidationError[]).forEach(error => {
         problems.push({
           id: `choice-${key}-${error.field}`,
           severity: error.severity,
@@ -85,7 +142,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     // Character errors - O(1) lookup with Map
     Object.entries(validation.errors.characters).forEach(([charId, errors]) => {
       const character = characterMap.get(charId);
-      errors.forEach(error => {
+      (errors as ValidationError[]).forEach(error => {
         problems.push({
           id: `char-${charId}-${error.field}`,
           severity: error.severity,
@@ -100,7 +157,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
 
     // Variable errors
     Object.entries(validation.errors.variables).forEach(([varName, errors]) => {
-      errors.forEach(error => {
+      (errors as ValidationError[]).forEach(error => {
         problems.push({
           id: `var-${varName}-${error.field}`,
           severity: error.severity,
@@ -130,7 +187,7 @@ export default function ProblemsPanel({ onNavigateTo }) {
     return 0;
   });
 
-  const handleProblemClick = (problem) => {
+  const handleProblemClick = (problem: Problem): void => {
     if (onNavigateTo) {
       if (problem.type === 'scene') {
         onNavigateTo('scenes', { sceneId: problem.sceneId });

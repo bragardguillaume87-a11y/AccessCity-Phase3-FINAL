@@ -1,44 +1,70 @@
 import React from 'react';
+import type { Scene } from '@/types';
+
+/**
+ * Selected element type for canvas interaction
+ */
+type SelectedElement = {
+  type: string;
+  id: string;
+} | null;
+
+/**
+ * PropertiesPanel component props
+ */
+export interface PropertiesPanelProps {
+  /** Currently selected scene */
+  scene?: Scene;
+  /** Currently selected element in the canvas */
+  selectedElement: SelectedElement;
+  /** Callback to update scene properties */
+  onUpdateScene: (patch: Partial<Scene>) => void;
+}
+
+/**
+ * Tab type for the properties panel
+ */
+type TabType = 'properties' | 'library' | 'styles';
 
 /**
  * PropertiesPanel - Panneau latéral droit avec onglets
- * 
+ *
  * Onglets:
  * 1. Propriétés: Paramétrage de la scène ou de l'objet sélectionné
  * 2. Bibliothèque: Ressources (personnages, décors, sons)
  * 3. Styles: Apparence et thématique
- * 
+ *
  * Phase 1: Structure et onglets ✓
  * Phase 2: Connexion au state - EN COURS
  * Phase 3: Édition temps réel et prévisualisation
  */
-export default function PropertiesPanel({ scene, selectedElement, onUpdateScene }) {
-  const [activeTab, setActiveTab] = React.useState('properties');
+export default function PropertiesPanel({ scene, selectedElement, onUpdateScene }: PropertiesPanelProps): React.JSX.Element {
+  const [activeTab, setActiveTab] = React.useState<TabType>('properties');
 
   // Handlers pour les champs de la scène
-  const handleTitleChange = (e) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     onUpdateScene({ title: e.target.value });
   };
 
-  const handleDescriptionChange = (e) => {
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     onUpdateScene({ description: e.target.value });
   };
 
-  const handleBackgroundColorChange = (value) => {
-    onUpdateScene({ backgroundColor: value });
+  const handleBackgroundColorChange = (value: string): void => {
+    onUpdateScene({ backgroundColor: value } as Partial<Scene>);
   };
 
-  const handleReset = () => {
+  const handleReset = (): void => {
     if (!scene) return;
     // Réinitialiser aux valeurs par défaut
     onUpdateScene({
       title: scene.title,
       description: '',
       backgroundColor: '#1e293b'
-    });
+    } as Partial<Scene>);
   };
 
-  const handleApply = () => {
+  const handleApply = (): void => {
     // Auto-save via AppContext autosave
     // Visual feedback only
   };
@@ -71,7 +97,7 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
           >
             📄 Propriétés
           </button>
-          
+
           {/* Onglet Bibliothèque */}
           <button
             onClick={() => setActiveTab('library')}
@@ -85,7 +111,7 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
           >
             📚 Bibliothèque
           </button>
-          
+
           {/* Onglet Styles */}
           <button
             onClick={() => setActiveTab('styles')}
@@ -220,14 +246,14 @@ export default function PropertiesPanel({ scene, selectedElement, onUpdateScene 
                     <div className="flex gap-2">
                       <input
                         type="color"
-                        value={scene.backgroundColor || '#1e293b'}
-                        onChange={(e) => handleBackgroundColorChange(e.target.value)}
+                        value={(scene as any).backgroundColor || '#1e293b'}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBackgroundColorChange(e.target.value)}
                         className="w-12 h-8 rounded cursor-pointer"
                       />
                       <input
                         type="text"
-                        value={scene.backgroundColor || '#1e293b'}
-                        onChange={(e) => handleBackgroundColorChange(e.target.value)}
+                        value={(scene as any).backgroundColor || '#1e293b'}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBackgroundColorChange(e.target.value)}
                         className="flex-1 px-2 py-1 bg-slate-700 text-slate-100 text-xs rounded border border-slate-600 focus:border-purple-500 focus:outline-none"
                         placeholder="#1e293b"
                       />

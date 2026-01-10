@@ -1,20 +1,35 @@
-// src/components/BackgroundPanel.jsx
+// src/components/BackgroundPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { useScenesStore, useUIStore } from '../stores/index.ts';
-import { GALLERY_ASSETS } from '../constants/assets.js';
+import { useScenesStore, useUIStore } from '../stores/index';
+import { GALLERY_ASSETS } from '../constants/assets';
 import { TIMING } from '@/config/timing';
+import type { Scene } from '@/types';
 
-export default function BackgroundPanel() {
+/**
+ * BackgroundPanel component props
+ */
+export interface BackgroundPanelProps {}
+
+/**
+ * BackgroundPanel - Manages scene background configuration
+ *
+ * Features:
+ * - URL input with validation
+ * - Gallery of preset backgrounds
+ * - Recent backgrounds history
+ * - Live preview with error handling
+ */
+export default function BackgroundPanel(): React.JSX.Element {
   const scenes = useScenesStore(state => state.scenes);
   const selectedSceneId = useUIStore(state => state.selectedSceneId);
   const updateScene = useScenesStore(state => state.updateScene);
-  const [history, setHistory] = useState([]);
-  const [imageErrors, setImageErrors] = useState({});
-  const [pendingUrl, setPendingUrl] = useState('');
-  const [isSaved, setIsSaved] = useState(true);
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [pendingUrl, setPendingUrl] = useState<string>('');
+  const [isSaved, setIsSaved] = useState<boolean>(true);
+  const [showSaveSuccess, setShowSaveSuccess] = useState<boolean>(false);
 
-  const scene = scenes.find(s => s.id === selectedSceneId);
+  const scene: Scene | undefined = scenes.find(s => s.id === selectedSceneId);
 
   // Initialize pendingUrl when scene changes
   useEffect(() => {
@@ -46,12 +61,12 @@ export default function BackgroundPanel() {
     );
   }
 
-  function handleUrlChange(url) {
+  function handleUrlChange(url: string): void {
     setPendingUrl(url);
     setIsSaved(false);
   }
 
-  function saveBackground() {
+  function saveBackground(): void {
     const trimmed = pendingUrl.trim();
     updateScene(scene.id, { backgroundUrl: trimmed });
     setIsSaved(true);
@@ -67,12 +82,12 @@ export default function BackgroundPanel() {
     }
   }
 
-  function selectFromGallery(url) {
+  function selectFromGallery(url: string): void {
     setPendingUrl(url);
     setIsSaved(false);
   }
 
-  function handleImageError(key) {
+  function handleImageError(key: string): void {
     setImageErrors(prev => ({ ...prev, [key]: true }));
   }
 
@@ -92,8 +107,8 @@ export default function BackgroundPanel() {
             className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
             placeholder="/assets/backgrounds/city.jpg ou URL complete"
             value={pendingUrl}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !isSaved && saveBackground()}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUrlChange(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && !isSaved && saveBackground()}
             aria-label="URL du decor de la scene"
           />
           <button
@@ -188,11 +203,13 @@ export default function BackgroundPanel() {
           <div className="relative">
             <img
               src={pendingUrl}
-              alt={`Decor de la scene ${scene.name}`}
+              alt={`Decor de la scene ${scene.title}`}
               className="w-full max-h-64 object-contain rounded-lg shadow-md"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'flex';
+              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                e.currentTarget.style.display = 'none';
+                if (e.currentTarget.nextElementSibling) {
+                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                }
               }}
             />
             <div className="hidden w-full h-48 bg-gradient-to-br from-red-50 to-red-100 rounded-lg items-center justify-center flex-col text-red-600 border-2 border-red-200">

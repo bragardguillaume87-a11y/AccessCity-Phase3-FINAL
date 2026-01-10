@@ -1,21 +1,50 @@
 import { useState, useMemo } from 'react';
 import { useAssets } from '@/hooks/useAssets';
-import { useScenesStore, useCharactersStore } from '../stores/index.ts';
+import { useScenesStore, useCharactersStore } from '../stores/index';
 import AssetPicker from './AssetPicker.jsx';
+import type { Asset } from '@/types';
+
+/**
+ * Asset category configuration
+ */
+interface AssetCategory {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+/**
+ * Asset usage statistics
+ */
+interface UsageStats {
+  total: number;
+  used: number;
+  unused: number;
+}
+
+/**
+ * AssetsLibraryPanel component props
+ */
+export interface AssetsLibraryPanelProps {
+  /** Callback when navigating to previous step */
+  onPrev?: () => void;
+  /** Callback when navigating to next step */
+  onNext?: () => void;
+}
 
 /**
  * Bibliothèque d'Assets Centralisée
  * Vue d'ensemble professionnelle de tous les assets du projet
  */
-export default function AssetsLibraryPanel({ onPrev, onNext }) {
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [viewMode, setViewMode] = useState('grid'); // grid | list
+export default function AssetsLibraryPanel({ onPrev, onNext }: AssetsLibraryPanelProps): React.JSX.Element {
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { assets, loading, error } = useAssets();
   const scenes = useScenesStore(state => state.scenes);
   const characters = useCharactersStore(state => state.characters);
 
   // Catégories disponibles
-  const assetCategories = [
+  const assetCategories: AssetCategory[] = [
     { id: 'all', label: 'Tous les assets', icon: '📦' },
     { id: 'backgrounds', label: 'Arrière-plans', icon: '🏞️' },
     { id: 'characters', label: 'Sprites personnages', icon: '🧍' },
@@ -29,13 +58,13 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
   }, [assets, activeCategory]);
 
   // Calculer les stats d'utilisation
-  const usageStats = useMemo(() => {
-    const usedAssets = new Set();
+  const usageStats: UsageStats = useMemo(() => {
+    const usedAssets = new Set<string>();
 
     // Assets utilisés dans les scènes (backgrounds)
     scenes.forEach(scene => {
-      if (scene.background) {
-        usedAssets.add(scene.background);
+      if (scene.backgroundUrl) {
+        usedAssets.add(scene.backgroundUrl);
       }
     });
 
@@ -111,7 +140,7 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
 
         {error && (
           <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-center">
-            <p className="text-red-700 font-semibold">Erreur : {error.message}</p>
+            <p className="text-red-700 font-semibold">Erreur : {error}</p>
           </div>
         )}
 
@@ -125,9 +154,9 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
 
         {!loading && !error && filteredAssets.length > 0 && (
           <div className="grid grid-cols-4 gap-4">
-            {filteredAssets.map(asset => (
+            {filteredAssets.map((asset) => (
               <div
-                key={asset.id}
+                key={asset.id as string}
                 className="magnetic-lift shadow-depth-sm border-2 border-slate-200 rounded-lg p-3 hover:border-blue-400 transition-all cursor-pointer"
               >
                 {/* Thumbnail */}
@@ -161,7 +190,7 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
         <AssetPicker
           type={activeCategory === 'all' ? 'background' : activeCategory === 'characters' ? 'character' : 'background'}
           value=""
-          onChange={(url) => {
+          onChange={(url: string) => {
             // Note: Le manifest sera régénéré manuellement avec npm run generate-assets
           }}
           allowUpload={true}
@@ -177,18 +206,22 @@ export default function AssetsLibraryPanel({ onPrev, onNext }) {
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">
-        <button
-          onClick={onPrev}
-          className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors"
-        >
-          ← Étape précédente
-        </button>
-        <button
-          onClick={onNext}
-          className="btn-gradient-primary px-6 py-3 text-white font-semibold rounded-lg"
-        >
-          Étape suivante →
-        </button>
+        {onPrev && (
+          <button
+            onClick={onPrev}
+            className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors"
+          >
+            ← Étape précédente
+          </button>
+        )}
+        {onNext && (
+          <button
+            onClick={onNext}
+            className="btn-gradient-primary px-6 py-3 text-white font-semibold rounded-lg"
+          >
+            Étape suivante →
+          </button>
+        )}
       </div>
     </div>
   );

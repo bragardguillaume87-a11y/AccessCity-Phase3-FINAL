@@ -1,10 +1,32 @@
-// src/components/ExportPanel.jsx
+// src/components/ExportPanel.tsx
 import React from 'react';
-import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index.ts';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index';
 import { toast } from 'sonner';
 import { logger } from '../utils/logger';
+import type { Scene, Character } from '@/types';
 
-function downloadJson(filename, data) {
+/**
+ * Core system data structure for export
+ */
+interface CoreSystemData {
+  title: string;
+  location: string;
+  tone: string;
+  description: string;
+}
+
+/**
+ * ExportPanel component props
+ */
+export interface ExportPanelProps {
+  /** Callback when navigating to previous step */
+  onPrev?: () => void;
+}
+
+/**
+ * Downloads JSON data as a file
+ */
+function downloadJson(filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -16,12 +38,20 @@ function downloadJson(filename, data) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportPanel({ onPrev }) {
+/**
+ * ExportPanel - Export project data to JSON files
+ *
+ * Features:
+ * - Export scenes, characters, and core system data
+ * - Download as formatted JSON files
+ * - Toast notifications for success/error
+ */
+export default function ExportPanel({ onPrev }: ExportPanelProps): React.JSX.Element {
   const scenes = useScenesStore(state => state.scenes);
   const characters = useCharactersStore(state => state.characters);
   const context = useSettingsStore(state => state.projectData);
 
-  function handleExport(type, data, filename) {
+  function handleExport(type: string, data: Scene[] | Character[] | CoreSystemData, filename: string): void {
     try {
       downloadJson(filename, data);
       toast.success(`Fichier ${filename} exporte avec succes`);
@@ -31,8 +61,8 @@ export default function ExportPanel({ onPrev }) {
     }
   }
 
-  function exportCore() {
-    const core = {
+  function exportCore(): void {
+    const core: CoreSystemData = {
       title: context.title || '',
       location: context.location || '',
       tone: context.tone || '',

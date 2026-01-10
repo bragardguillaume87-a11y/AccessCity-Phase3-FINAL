@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import { CollapsibleSection } from '../ui/CollapsibleSection.tsx';
+import type { ModalType } from '@/types';
+import { CollapsibleSection } from '../ui/CollapsibleSection';
 import CharacterMoodPicker from './UnifiedPanel/CharacterMoodPicker';
 import CharacterPositioningTools from './UnifiedPanel/CharacterPositioningTools';
 import { Image, Type, Users, Box, BarChart3, Volume2, ImagePlus, Sparkles } from 'lucide-react';
-import { Button } from '../ui/button.jsx';
+import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
 import { useAssets } from '@/hooks/useAssets';
 import { cn } from '@/lib/utils';
@@ -22,13 +22,14 @@ import { logger } from '../../utils/logger.js';
  * - Mode Simple/Avancé toggle (PHASE 8)
  * - Drag-to-canvas pour tous types d'éléments
  * - Design tokens gaming + WCAG 2.2 AA
- *
- * @param {Object} props
- * @param {Function} props.onOpenModal - Callback to open modals (assets, characters, etc.)
  */
-export default function UnifiedPanel({ onOpenModal }) {
+export interface UnifiedPanelProps {
+  onOpenModal?: (modal: ModalType | string, context?: unknown) => void;
+}
+
+export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
   // PHASE 8: View mode state (simple | advanced)
-  const [viewMode, setViewMode] = useState('simple');
+  const [viewMode, setViewMode] = useState<'simple' | 'advanced'>('simple');
 
   // Get selected element from UI store
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
@@ -42,21 +43,21 @@ export default function UnifiedPanel({ onOpenModal }) {
   const simpleSections = ['Backgrounds', 'Text', 'Characters', 'Objets'];
 
   // Handler for background drag start
-  const handleBackgroundDragStart = (e, backgroundUrl) => {
+  const handleBackgroundDragStart = (e: React.DragEvent, backgroundUrl: string) => {
     const dragData = { type: 'background', backgroundUrl };
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   // Handler for prop (emoji object) drag start
-  const handlePropDragStart = (e, emoji) => {
+  const handlePropDragStart = (e: React.DragEvent, emoji: string) => {
     const dragData = { type: 'prop', emoji };
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   // Handler for text box drag start
-  const handleTextBoxDragStart = (e, textType) => {
+  const handleTextBoxDragStart = (e: React.DragEvent, textType: 'h1' | 'h2' | 'body') => {
     const textConfig = {
       h1: { defaultText: 'Heading', fontSize: 32, fontWeight: 'bold' },
       h2: { defaultText: 'Subheading', fontSize: 24, fontWeight: '600' },
@@ -70,7 +71,7 @@ export default function UnifiedPanel({ onOpenModal }) {
   };
 
   // PHASE 8: Helper to check if section should be shown
-  const shouldShowSection = (sectionTitle) => {
+  const shouldShowSection = (sectionTitle: string): boolean => {
     if (viewMode === 'advanced') return true;
     return simpleSections.includes(sectionTitle);
   };
@@ -152,13 +153,11 @@ export default function UnifiedPanel({ onOpenModal }) {
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {backgrounds.slice(0, 4).map((bg, idx) => (
-                    <motion.div
+                    <div
                       key={bg.path || idx}
                       draggable
                       onDragStart={(e) => handleBackgroundDragStart(e, bg.path)}
-                      className="relative aspect-video rounded-lg overflow-hidden border-2 border-[var(--color-border-base)] hover:border-[var(--color-primary)] cursor-grab active:cursor-grabbing transition-all"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      className="relative aspect-video rounded-lg overflow-hidden border-2 border-[var(--color-border-base)] hover:border-[var(--color-primary)] cursor-grab active:cursor-grabbing transition-all hover:scale-105"
                       tabIndex={0}
                       role="button"
                       aria-label={`Drag background ${bg.name} to canvas`}
@@ -180,7 +179,7 @@ export default function UnifiedPanel({ onOpenModal }) {
                           {bg.name}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -200,11 +199,10 @@ export default function UnifiedPanel({ onOpenModal }) {
           defaultOpen={false}
         >
           <div className="space-y-2">
-            <motion.div
+            <div
               draggable
               onDragStart={(e) => handleTextBoxDragStart(e, 'h1')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className="hover:scale-102 active:scale-98 transition-transform"
             >
               <Button
                 variant="outline"
@@ -215,12 +213,11 @@ export default function UnifiedPanel({ onOpenModal }) {
                 <span className="text-lg font-bold">H1</span>
                 <span className="ml-2 text-xs">Heading</span>
               </Button>
-            </motion.div>
-            <motion.div
+            </div>
+            <div
               draggable
               onDragStart={(e) => handleTextBoxDragStart(e, 'h2')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className="hover:scale-102 active:scale-98 transition-transform"
             >
               <Button
                 variant="outline"
@@ -231,12 +228,11 @@ export default function UnifiedPanel({ onOpenModal }) {
                 <span className="text-base font-semibold">H2</span>
                 <span className="ml-2 text-xs">Subheading</span>
               </Button>
-            </motion.div>
-            <motion.div
+            </div>
+            <div
               draggable
               onDragStart={(e) => handleTextBoxDragStart(e, 'body')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className="hover:scale-102 active:scale-98 transition-transform"
             >
               <Button
                 variant="outline"
@@ -247,7 +243,7 @@ export default function UnifiedPanel({ onOpenModal }) {
                 <span className="text-sm">Body</span>
                 <span className="ml-2 text-xs">Paragraph</span>
               </Button>
-            </motion.div>
+            </div>
             <p className="text-xs text-[var(--color-text-muted)] pt-2 border-t border-[var(--color-border-base)]">
               Drag text boxes to canvas
             </p>
@@ -263,7 +259,7 @@ export default function UnifiedPanel({ onOpenModal }) {
         >
           <div className="space-y-3">
             <CharacterMoodPicker
-              onDragStart={(characterId, mood) => {
+              onDragStart={(characterId: string, mood: string) => {
                 logger.debug('Dragging character:', characterId, 'with mood:', mood);
               }}
             />
@@ -275,7 +271,7 @@ export default function UnifiedPanel({ onOpenModal }) {
                   Positionnement Rapide
                 </p>
                 <CharacterPositioningTools
-                  characterId={null} // TODO: Get from selected element in MainCanvas
+                  characterId={null}
                   sceneId={selectedScene?.id}
                 />
               </div>
@@ -306,17 +302,15 @@ export default function UnifiedPanel({ onOpenModal }) {
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               {['📦', '🚗', '🏠', '🌳', '⭐', '💡'].map((emoji, idx) => (
-                <motion.button
+                <button
                   key={idx}
                   draggable
                   onDragStart={(e) => handlePropDragStart(e, emoji)}
-                  className="aspect-square flex items-center justify-center text-2xl bg-[var(--color-bg-base)] border-2 border-[var(--color-border-base)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg cursor-grab active:cursor-grabbing transition-all"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  className="aspect-square flex items-center justify-center text-2xl bg-[var(--color-bg-base)] border-2 border-[var(--color-border-base)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg cursor-grab active:cursor-grabbing transition-all hover:scale-110 active:scale-95"
                   aria-label={`Glisser l'objet ${emoji} vers le canvas`}
                 >
                   {emoji}
-                </motion.button>
+                </button>
               ))}
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
@@ -471,7 +465,3 @@ export default function UnifiedPanel({ onOpenModal }) {
     </div>
   );
 }
-
-UnifiedPanel.propTypes = {
-  onOpenModal: PropTypes.func
-};

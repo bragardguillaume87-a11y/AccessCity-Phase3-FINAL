@@ -1,20 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { Scene, GameStats } from '@/types';
 import { useScenesStore, useSettingsStore } from '../../stores/index.js';
 import { useGameState } from '../../hooks/useGameState';
-import { Button } from '../ui/button.jsx';
+import { Button } from '../ui/button';
 import { ChevronRight } from 'lucide-react';
 
-export default function PreviewPlayer({ initialSceneId, onClose }) {
+export interface PreviewPlayerProps {
+  initialSceneId?: string | null;
+  onClose: () => void;
+}
+
+export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayerProps) {
   // Zustand stores (granular selectors)
   const scenes = useScenesStore(state => state.scenes);
   const variables = useSettingsStore(state => state.variables);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const liveRegionRef = useRef(null);
+  const liveRegionRef = useRef<HTMLDivElement>(null);
 
   const { currentScene, currentDialogue, stats, history, isPaused, chooseOption, goToNextDialogue, goToScene, setIsPaused } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
-    initialStats: variables || {}
+    initialStats: (variables as GameStats) || {}
   });
 
   // Annonce accessibilité
@@ -70,7 +76,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }) {
                 onClick={() => chooseOption(choice)}
                 className="w-full text-left p-3 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors"
               >
-                {choice.text || choice.label || 'Continue'}
+                {choice.text || 'Continue'}
               </button>
             ))}
             {(!currentDialogue?.choices || currentDialogue.choices.length === 0) && (

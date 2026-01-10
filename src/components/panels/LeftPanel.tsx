@@ -1,8 +1,7 @@
 import React from 'react';
-import PropTypes from 'prop-types';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs.jsx';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
-import ScenesSidebar from './ScenesSidebar.tsx';
+import ScenesSidebar from './ScenesSidebar';
 import DialoguesPanel from './DialoguesPanel';
 import { useScenesStore, useUIStore } from '../../stores/index.js';
 
@@ -15,12 +14,12 @@ import { useScenesStore, useUIStore } from '../../stores/index.js';
  * - Radix-UI Tabs pour accessibilité WCAG 2.2 AA
  * - Gaming aesthetic avec border-bottom indicator
  * - Keyboard navigation (Arrow Left/Right, Home/End)
- *
- * @param {Object} props
- * @param {Function} props.onDialogueSelect - PHASE 3: Callback when dialogue is selected
- * @returns {JSX.Element}
  */
-export default function LeftPanel({ onDialogueSelect }) {
+export interface LeftPanelProps {
+  onDialogueSelect?: (sceneId: string, index: number, metadata?: unknown) => void;
+}
+
+export default function LeftPanel({ onDialogueSelect }: LeftPanelProps) {
   // Zustand stores
   const scenes = useScenesStore(state => state.scenes);
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
@@ -70,7 +69,3 @@ export default function LeftPanel({ onDialogueSelect }) {
     </Tabs>
   );
 }
-
-LeftPanel.propTypes = {
-  onDialogueSelect: PropTypes.func
-};

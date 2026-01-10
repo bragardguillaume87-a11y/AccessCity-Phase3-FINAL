@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
+import type { Scene, Character, SelectedElementType } from '@/types';
 import { useScenesStore, useCharactersStore } from '../../stores/index.js';
 
 /**
@@ -9,7 +9,17 @@ import { useScenesStore, useCharactersStore } from '../../stores/index.js';
  * - Characters
  * ASCII only, accessible navigation.
  */
-function ExplorerPanel({
+export interface ExplorerPanelProps {
+  scenes: Scene[];
+  characters: Character[];
+  selectedSceneId: string | null | undefined;
+  selectedElement: SelectedElementType;
+  onSceneSelect: (sceneId: string) => void;
+  onCharacterSelect: (characterId: string) => void;
+  onDialogueSelect: (sceneId: string, index: number) => void;
+}
+
+export default function ExplorerPanel({
   scenes,
   characters,
   selectedSceneId,
@@ -17,17 +27,17 @@ function ExplorerPanel({
   onSceneSelect,
   onCharacterSelect,
   onDialogueSelect
-}) {
+}: ExplorerPanelProps) {
   // Zustand actions (granular selectors)
   const addScene = useScenesStore(state => state.addScene);
   const deleteScene = useScenesStore(state => state.deleteScene);
   const addCharacter = useCharactersStore(state => state.addCharacter);
   const deleteCharacter = useCharactersStore(state => state.deleteCharacter);
 
-  const [expandedScenes, setExpandedScenes] = useState(new Set([selectedSceneId]));
-  const [activeSection, setActiveSection] = useState('scenes');
+  const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set([selectedSceneId || '']));
+  const [activeSection, setActiveSection] = useState<'scenes' | 'characters'>('scenes');
 
-  const toggleSceneExpanded = (sceneId) => {
+  const toggleSceneExpanded = (sceneId: string) => {
     setExpandedScenes(prev => {
       const next = new Set(prev);
       if (next.has(sceneId)) {
@@ -44,25 +54,25 @@ function ExplorerPanel({
     setExpandedScenes(prev => new Set([...prev, newId]));
   };
 
-  const handleDeleteScene = (sceneId, e) => {
+  const handleDeleteScene = (sceneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Delete this scene?')) {
       deleteScene(sceneId);
     }
   };
 
-  const handleDeleteCharacter = (charId, e) => {
+  const handleDeleteCharacter = (charId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Delete this character?')) {
       deleteCharacter(charId);
     }
   };
 
-  const isSceneSelected = (sceneId) => {
+  const isSceneSelected = (sceneId: string): boolean => {
     return selectedElement?.type === 'scene' && selectedElement?.id === sceneId;
   };
 
-  const isCharacterSelected = (charId) => {
+  const isCharacterSelected = (charId: string): boolean => {
     return selectedElement?.type === 'character' && selectedElement?.id === charId;
   };
 
@@ -281,29 +291,3 @@ function ExplorerPanel({
     </div>
   );
 }
-
-ExplorerPanel.propTypes = {
-  scenes: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    title: PropTypes.string,
-    description: PropTypes.string,
-    dialogues: PropTypes.array
-  })).isRequired,
-  characters: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string,
-    description: PropTypes.string
-  })).isRequired,
-  selectedSceneId: PropTypes.string,
-  selectedElement: PropTypes.shape({
-    type: PropTypes.string,
-    id: PropTypes.string,
-    sceneId: PropTypes.string,
-    index: PropTypes.number
-  }),
-  onSceneSelect: PropTypes.func.isRequired,
-  onCharacterSelect: PropTypes.func.isRequired,
-  onDialogueSelect: PropTypes.func.isRequired
-};
-
-export default ExplorerPanel;

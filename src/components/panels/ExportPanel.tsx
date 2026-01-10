@@ -2,11 +2,21 @@ import React, { useState } from 'react';
 import { useScenesStore, useCharactersStore, useSettingsStore } from '../../stores/index.js';
 import { validateScenario, downloadExport } from '../../utils/exporters';
 
-export default function ExportPanel({ onPrev, onNext }) {
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export interface ExportPanelProps {
+  onPrev?: () => void;
+  onNext?: () => void;
+}
+
+export default function ExportPanel({ onPrev, onNext }: ExportPanelProps) {
   const scenes = useScenesStore(state => state.scenes);
   const characters = useCharactersStore(state => state.characters);
   const context = useSettingsStore(state => state.projectData);
-  const [validationResult, setValidationResult] = useState(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const data = {
@@ -22,12 +32,12 @@ export default function ExportPanel({ onPrev, onNext }) {
     setValidationResult(result);
   };
 
-  const handleExport = async (format) => {
+  const handleExport = async (format: 'json' | 'html' | 'phaser') => {
     setIsExporting(true);
     try {
       downloadExport(data, format);
     } catch (error) {
-      alert(`Erreur lors de l'export: ${error.message}`);
+      alert(`Erreur lors de l'export: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExporting(false);
     }

@@ -1,4 +1,5 @@
-import PropTypes from 'prop-types';
+import React from 'react';
+import type { Scene, Character, Dialogue, SceneCharacter, SelectedElementType, ModalType } from '@/types';
 import { useScenesStore, useCharactersStore, useUIStore } from '../../stores/index.js';
 import { duplicateDialogue } from '../../utils/duplication.js';
 import { EmptySelectionState } from './PropertiesPanel/components/EmptySelectionState';
@@ -17,7 +18,19 @@ import { DialoguePropertiesForm } from './PropertiesPanel/components/DialoguePro
  * - Dialogue → DialoguePropertiesForm
  * - None → EmptySelectionState
  */
-function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenModal }) {
+export interface PropertiesPanelProps {
+  selectedElement: SelectedElementType;
+  selectedScene: Scene | undefined;
+  characters: Character[];
+  onOpenModal?: (modal: ModalType | string, context?: unknown) => void;
+}
+
+export default function PropertiesPanel({
+  selectedElement,
+  selectedScene,
+  characters,
+  onOpenModal
+}: PropertiesPanelProps) {
   // Zustand stores (granular selectors)
   const updateScene = useScenesStore(state => state.updateScene);
   const updateDialogue = useScenesStore(state => state.updateDialogue);
@@ -26,8 +39,11 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
   const scenes = useScenesStore(state => state.scenes);
   const updateCharacter = useCharactersStore(state => state.updateCharacter);
   const addCharacter = useCharactersStore(state => state.addCharacter);
-  const lastSaved = useUIStore(state => state.lastSaved);
+  const lastSavedStr = useUIStore(state => state.lastSaved);
   const isSaving = useUIStore(state => state.isSaving);
+
+  // Convert lastSaved from string to number (timestamp) for sub-components
+  const lastSaved = lastSavedStr ? new Date(lastSavedStr).getTime() : undefined;
 
   // No selection
   if (!selectedElement) {
@@ -59,14 +75,16 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
     }
 
     const handleDuplicate = () => {
-      const duplicate = {
-        ...character,
+      // Create a new character ID and add the duplicate
+      const newId = addCharacter();
+      const duplicate: Character = {
+        id: newId,
         name: `${character.name} (copy)`,
+        description: character.description,
         sprites: { ...character.sprites },
         moods: [...(character.moods || [])]
       };
-      delete duplicate.id;
-      addCharacter(duplicate);
+      updateCharacter(duplicate);
     };
 
     return (
@@ -145,25 +163,3 @@ function PropertiesPanel({ selectedElement, selectedScene, characters, onOpenMod
     </div>
   );
 }
-
-PropertiesPanel.propTypes = {
-  selectedElement: PropTypes.shape({
-    type: PropTypes.string,
-    id: PropTypes.string,
-    sceneId: PropTypes.string,
-    sceneCharacterId: PropTypes.string,
-    index: PropTypes.number
-  }),
-  selectedScene: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    title: PropTypes.string,
-    description: PropTypes.string,
-    backgroundUrl: PropTypes.string,
-    dialogues: PropTypes.array,
-    characters: PropTypes.array
-  }),
-  characters: PropTypes.array.isRequired,
-  onOpenModal: PropTypes.func
-};
-
-export default PropertiesPanel;

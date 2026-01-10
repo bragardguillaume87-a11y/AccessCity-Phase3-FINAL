@@ -17,10 +17,74 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Package, Upload as UploadIcon, Link as LinkIcon, Loader2, AlertCircle, Check, Image as ImageIcon } from "lucide-react";
 
 /**
- * AssetPicker - Composant de selection d'assets avec 3 modes
- * - Bibliotheque : grille d'assets du manifeste
- * - Upload : drag & drop + file picker
- * - URL : input manuel
+ * Asset from useAssets hook (local interface matching hook return)
+ */
+interface Asset {
+  name: string;
+  path: string;
+  category: string;
+  type?: string;
+  size?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Upload status states
+ */
+type UploadStatus = null | 'uploading' | 'success' | 'error';
+
+/**
+ * Server health status states
+ */
+type ServerStatus = null | 'checking' | 'online' | 'offline';
+
+/**
+ * Asset type for picker
+ */
+type AssetType = "background" | "character" | "illustration" | "prop";
+
+/**
+ * Props for AssetPicker component
+ */
+interface AssetPickerProps {
+  /** Type of asset to pick (backgrounds, characters, etc.) */
+  type?: AssetType;
+  /** Current asset value/path */
+  value?: string;
+  /** Callback when asset is selected */
+  onChange: (assetPath: string) => void;
+  /** Allow file upload functionality */
+  allowUpload?: boolean;
+  /** Allow URL input functionality */
+  allowUrl?: boolean;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+/**
+ * Props for AssetThumbnail component
+ */
+interface AssetThumbnailProps {
+  asset: Asset;
+  selected: boolean;
+  onSelect: () => void;
+  onHover: () => void;
+}
+
+/**
+ * Props for LazyImage component
+ */
+interface LazyImageProps {
+  src: string;
+  alt: string;
+  className: string;
+}
+
+/**
+ * AssetPicker - Component for selecting assets with 3 modes
+ * - Library: Grid of assets from manifest
+ * - Upload: Drag & drop + file picker
+ * - URL: Manual URL input
  */
 export default function AssetPicker({
   type = "background",
@@ -29,14 +93,14 @@ export default function AssetPicker({
   allowUpload = true,
   allowUrl = true,
   className = "",
-}) {
+}: AssetPickerProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState("library");
   const [dragActive, setDragActive] = useState(false);
-  const [previewAsset, setPreviewAsset] = useState(null);
-  const [uploadStatus, setUploadStatus] = useState(null); // null | 'uploading' | 'success' | 'error'
-  const [uploadError, setUploadError] = useState(null);
-  const [serverStatus, setServerStatus] = useState(null); // null | 'checking' | 'online' | 'offline'
-  const fileInputRef = useRef(null);
+  const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { assets, loading, error, reloadManifest } = useAssets({
     category: type + "s",
@@ -44,7 +108,7 @@ export default function AssetPicker({
   const recentAssets = getRecentAssets(type);
 
   const handleSelect = useCallback(
-    (assetPath) => {
+    (assetPath: string): void => {
       const absPath = toAbsoluteAssetPath(assetPath);
       onChange(absPath);
       addToRecentAssets(type, absPath);
@@ -53,7 +117,7 @@ export default function AssetPicker({
   );
 
   // Health check serveur backend
-  const checkServerHealth = useCallback(async () => {
+  const checkServerHealth = useCallback(async (): Promise<boolean> => {
     setServerStatus('checking');
     try {
       const response = await fetch(`${API.BASE_URL}/api/health`, {
@@ -84,7 +148,7 @@ export default function AssetPicker({
   }, [activeTab, serverStatus, checkServerHealth]);
 
   const handleFileUpload = useCallback(
-    async (file) => {
+    async (file: File): Promise<void> => {
       if (!file || !file.type.startsWith("image/")) {
         logger.warn("[AssetPicker] Invalid file type:", file?.type);
         setUploadError("Invalid file type. Only images allowed.");
@@ -141,7 +205,7 @@ export default function AssetPicker({
         setUploadStatus("success");
       } catch (error) {
         logger.error("[AssetPicker] Upload error:", error);
-        setUploadError(error.message);
+        setUploadError((error as Error).message);
         setUploadStatus("error");
       }
     },
@@ -149,7 +213,7 @@ export default function AssetPicker({
   );
 
   const handleDrop = useCallback(
-    (e) => {
+    (e: React.DragEvent<HTMLDivElement>): void => {
       e.preventDefault();
       e.stopPropagation();
       setDragActive(false);
@@ -162,18 +226,18 @@ export default function AssetPicker({
     [handleFileUpload]
   );
 
-  const handleDragOver = useCallback((e) => {
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
 
-  const handleDragEnter = useCallback((e) => {
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(true);
   }, []);
 
-  const handleDragLeave = useCallback((e) => {
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -246,9 +310,9 @@ export default function AssetPicker({
               {/* Grid - Taille réduite pour éviter débordement */}
               <ScrollArea className="max-h-[400px] pr-4">
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                  {assets.map((asset) => (
+                  {assets.map((asset, idx) => (
                     <AssetThumbnail
-                      key={asset.id}
+                      key={`${asset.path}-${idx}`}
                       asset={asset}
                       selected={value === asset.path}
                       onSelect={() => handleSelect(asset.path)}
@@ -276,7 +340,7 @@ export default function AssetPicker({
                         }`}
                         onClick={() => handleSelect(assetPath)}
                       >
-                        {assetPath.split("/").pop().slice(0, 20)}
+                        {assetPath.split("/").pop()?.slice(0, 20)}
                       </Badge>
                     ))}
                   </div>
@@ -406,7 +470,7 @@ export default function AssetPicker({
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   e.target.files?.[0] && handleFileUpload(e.target.files[0])
                 }
                 className="hidden"
@@ -429,7 +493,7 @@ export default function AssetPicker({
             className="w-full bg-slate-800 border-slate-700 text-slate-100"
             placeholder="https://example.com/image.jpg"
             defaultValue={value}
-            onBlur={(e) => handleSelect(e.target.value)}
+            onBlur={(e: React.FocusEvent<HTMLInputElement>) => handleSelect(e.target.value)}
           />
           <p className="text-xs text-slate-500 mt-2">
             Entrez l'URL complète d'une image hébergée en ligne
@@ -462,15 +526,17 @@ export default function AssetPicker({
                 <p>
                   <strong className="text-slate-300">Nom :</strong> {previewAsset.name}
                 </p>
-                <p>
-                  <strong className="text-slate-300">Type :</strong> {previewAsset.type.toUpperCase()}
-                </p>
-                {previewAsset.size && (
+                {previewAsset.type && (
                   <p>
-                    <strong className="text-slate-300">Taille :</strong>{" "}
-                    {(previewAsset.size / 1024).toFixed(1)} KB
+                    <strong className="text-slate-300">Type :</strong> {previewAsset.type.toUpperCase()}
                   </p>
                 )}
+                {previewAsset.size && (
+                    <p>
+                      <strong className="text-slate-300">Taille :</strong>{" "}
+                      {(previewAsset.size / 1024).toFixed(1)} KB
+                    </p>
+                  )}
               </div>
             )}
           </div>
@@ -483,7 +549,7 @@ export default function AssetPicker({
 /**
  * Thumbnail d'asset avec lazy loading
  */
-function AssetThumbnail({ asset, selected, onSelect, onHover }) {
+function AssetThumbnail({ asset, selected, onSelect, onHover }: AssetThumbnailProps): React.JSX.Element {
   return (
     <button
       onClick={onSelect}
@@ -515,7 +581,7 @@ function AssetThumbnail({ asset, selected, onSelect, onHover }) {
 /**
  * Image avec lazy loading et skeleton
  */
-function LazyImage({ src, alt, className }) {
+function LazyImage({ src, alt, className }: LazyImageProps): React.JSX.Element {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 

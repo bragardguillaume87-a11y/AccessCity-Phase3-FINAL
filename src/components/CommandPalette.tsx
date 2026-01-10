@@ -2,11 +2,41 @@ import { useState, useEffect, useRef } from 'react';
 import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.ts';
 
 /**
- * Command Palette - Inspiré de VS Code
- * Ctrl+P : Quick Open (scènes)
- * Ctrl+Shift+P : Toutes les commandes
+ * Command item in the palette
  */
-export default function CommandPalette({ isOpen, onClose, mode = 'commands', setActiveTab }) {
+interface CommandItem {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  action: () => void;
+}
+
+/**
+ * Props for CommandPalette component
+ */
+interface CommandPaletteProps {
+  /** Whether the palette is currently open */
+  isOpen: boolean;
+  /** Callback when the palette should close */
+  onClose: () => void;
+  /** Mode: 'commands' for all commands, 'quick-open' for scenes/characters */
+  mode?: 'commands' | 'quick-open';
+  /** Function to change the active tab in the editor */
+  setActiveTab: (tab: string) => void;
+}
+
+/**
+ * Command Palette - Inspired by VS Code
+ * Ctrl+P : Quick Open (scenes)
+ * Ctrl+Shift+P : All commands
+ */
+export default function CommandPalette({
+  isOpen,
+  onClose,
+  mode = 'commands',
+  setActiveTab
+}: CommandPaletteProps): React.JSX.Element | null {
   const scenes = useScenesStore(state => state.scenes);
   const addScene = useScenesStore(state => state.addScene);
   const characters = useCharactersStore(state => state.characters);
@@ -14,7 +44,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
   const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus automatique sur l'input à l'ouverture
   useEffect(() => {
@@ -34,7 +64,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
   if (!isOpen) return null;
 
   // Liste des commandes disponibles
-  const allCommands = [
+  const allCommands: CommandItem[] = [
     {
       id: 'new-scene',
       label: 'Nouvelle scène',
@@ -130,7 +160,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
   ];
 
   // Liste des scènes pour Quick Open
-  const sceneItems = scenes.map(scene => ({
+  const sceneItems: CommandItem[] = scenes.map(scene => ({
     id: `scene-${scene.id}`,
     label: scene.title || 'Sans titre',
     description: `Scene ID: ${scene.id} | ${(scene.dialogues || []).length} dialogue(s)`,
@@ -143,7 +173,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
   }));
 
   // Liste des personnages
-  const characterItems = characters.map(char => ({
+  const characterItems: CommandItem[] = characters.map(char => ({
     id: `char-${char.id}`,
     label: char.name || 'Sans nom',
     description: `Personnage | ID: ${char.id}`,
@@ -156,7 +186,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
   }));
 
   // Items à afficher selon le mode
-  const items = mode === 'quick-open'
+  const items: CommandItem[] = mode === 'quick-open'
     ? [...sceneItems, ...characterItems]
     : allCommands;
 
@@ -170,7 +200,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
   });
 
   // Navigation clavier
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex((prev) => (prev + 1) % filteredItems.length);
@@ -195,7 +225,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
     >
       <div
         className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         {/* Header avec search input */}
         <div className="p-4 border-b border-slate-200 bg-slate-50">
@@ -207,7 +237,7 @@ export default function CommandPalette({ isOpen, onClose, mode = 'commands', set
               ref={inputRef}
               type="text"
               value={search}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setSearch(e.target.value);
                 setSelectedIndex(0);
               }}

@@ -1,27 +1,38 @@
 import { useState, useEffect } from 'react';
 import { useScenesStore, useCharactersStore } from '../stores/index.ts';
+import type { Scene, Dialogue, DialogueChoice, Character, GameStats } from '@/types/index';
 import { IconByName } from './IconByName.jsx';
 import { logger } from '../utils/logger';
 // FIX: Utiliser StageDirector simplifie
+// @ts-expect-error - StageDirector.simple.js is a JS file without types
 import StageDirector from '../core/StageDirector.simple.js';
 // FIX: Utiliser systeme son simplifie
+// @ts-expect-error - simpleSound.js is a JS file without types
 import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '../utils/simpleSound.js';
 import { PartyPopper, BarChart3, Heart, Zap, Shield, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { TIMING } from '@/config/timing';
 
+/**
+ * Props for PlayMode component
+ */
+interface PlayModeProps {
+  /** Callback to exit play mode */
+  onExit: () => void;
+  /** Initial scene index to start from (default: 0) */
+  selectedSceneIndex?: number;
+}
 
-export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
+export default function PlayMode({ onExit, selectedSceneIndex = 0 }: PlayModeProps): React.JSX.Element {
   const scenes = useScenesStore(state => state.scenes);
   const characters = useCharactersStore(state => state.characters);
-  const [director, setDirector] = useState(null);
-  const [currentScene, setCurrentScene] = useState(null);
-  const [currentDialogue, setCurrentDialogue] = useState(null);
+  const [director, setDirector] = useState<StageDirector | null>(null);
+  const [currentScene, setCurrentScene] = useState<Scene | null>(null);
+  const [currentDialogue, setCurrentDialogue] = useState<Dialogue | null>(null);
   const [isEnded, setIsEnded] = useState(false);
-  const [variables, setVariables] = useState({ Empathie: 50, Autonomie: 50, Confiance: 50 });
+  const [variables, setVariables] = useState<GameStats>({ Empathie: 50, Autonomie: 50, Confiance: 50 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(isSoundMuted());
-
 
   // Creer le director et initialiser le jeu en UN SEUL useEffect
   useEffect(() => {
@@ -39,7 +50,7 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
       }
 
       // FIX: Passer selectedSceneIndex au constructeur
-      const gameState = { Empathie: 50, Autonomie: 50, Confiance: 50 };
+      const gameState: GameStats = { Empathie: 50, Autonomie: 50, Confiance: 50 };
       const newDirector = new StageDirector(scenes, allDialogues, gameState, selectedSceneIndex);
       setDirector(newDirector);
 
@@ -67,35 +78,32 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
     }
   }, [scenes, characters, selectedSceneIndex, onExit]);
 
-
-  function updateState() {
+  function updateState(): void {
     if (!director) return;
-    
+
     const scene = director.getCurrentScene();
     const dialogue = director.getCurrentDialogue();
-    
+
     setCurrentScene(scene);
     setCurrentDialogue(dialogue);
     setVariables({ ...director.gameState });
     setIsEnded(director.isGameOver());
   }
 
-
-  function handleChoice(choice) {
+  function handleChoice(choice: DialogueChoice): void {
     if (!director) return;
-    
+
     // FIX: Son simplifie
     playSound('/sounds/choice.mp3', 0.5);
     director.makeChoice(choice);
-    
+
     // Verifier effets (optionnel: jouer sons differents)
     if (choice.effects) {
-      Object.entries(choice.effects).forEach(([, value]) => {
-        if (value > 0) playSound('/sounds/stat-up.mp3', 0.4);
-        if (value < 0) playSound('/sounds/stat-down.mp3', 0.4);
+      choice.effects.forEach((effect) => {
+        if (effect.value > 0) playSound('/sounds/stat-up.mp3', 0.4);
+        if (effect.value < 0) playSound('/sounds/stat-down.mp3', 0.4);
       });
     }
-
 
     const ended = director.isGameOver();
     if (ended) {
@@ -111,17 +119,14 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
       playSound('/sounds/scene-change.mp3', 0.3);
     }
 
-
     updateState();
   }
 
-
   // FIX: Bouton Mute simplifie
-  function handleMuteToggle() {
+  function handleMuteToggle(): void {
     const newMuted = toggleSoundMute();
     setIsMuted(newMuted);
   }
-
 
   // Ecran de chargement ameliore
   if (isLoading) {
@@ -137,12 +142,10 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
     );
   }
 
-
   // Ecran de fin avec confettis et animations
   if (isEnded) {
     const avgScore = (variables.Empathie + variables.Autonomie + variables.Confiance) / 3;
     const isSuccess = avgScore >= 60;
-
 
     return (
       <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden">
@@ -166,10 +169,8 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
           </div>
         )}
 
-
         {/* Fond anime */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20 animate-gradient" />
-
 
         {/* Contenu principal */}
         <div className="relative z-10 max-w-2xl w-full mx-auto p-8 text-center">
@@ -177,8 +178,8 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
           <div className="mb-8 animate-scale-in">
             <div className={`
               inline-flex items-center justify-center w-32 h-32 rounded-full
-              ${isSuccess 
-                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 animate-bounce-slow' 
+              ${isSuccess
+                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 animate-bounce-slow'
                 : 'bg-gradient-to-br from-slate-600 to-slate-700'
               }
               shadow-2xl
@@ -187,23 +188,20 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             </div>
           </div>
 
-
           {/* Titre anime */}
           <h1 className={`
             text-5xl font-bold mb-4 animate-fade-in-up
-            ${isSuccess 
-              ? 'bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent' 
+            ${isSuccess
+              ? 'bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent'
               : 'text-slate-300'
             }
           `}>
             Fin du jeu !
           </h1>
 
-
           <p className="text-slate-400 mb-12 text-lg animate-fade-in-up animation-delay-200">
             Merci d'avoir joue a cette aventure
           </p>
-
 
           {/* Carte statistiques avec animations */}
           <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 border border-slate-700/50 mb-8 animate-fade-in-up animation-delay-400 shadow-xl">
@@ -211,7 +209,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
               <BarChart3 className="w-6 h-6 text-purple-400" />
               <h2 className="text-2xl font-bold text-white">Statistiques finales</h2>
             </div>
-
 
             <div className="space-y-6">
               {/* Empathie */}
@@ -226,13 +223,12 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
                   </span>
                 </div>
                 <div className="relative h-4 bg-slate-700/50 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="absolute left-0 top-0 h-full bg-gradient-to-r from-red-500 to-pink-500 rounded-full transition-all duration-1000 ease-out animate-progress-bar"
                     style={{ width: `${variables.Empathie}%` }}
                   />
                 </div>
               </div>
-
 
               {/* Autonomie */}
               <div className="animate-slide-in-right animation-delay-800">
@@ -246,13 +242,12 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
                   </span>
                 </div>
                 <div className="relative h-4 bg-slate-700/50 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-1000 ease-out animate-progress-bar"
                     style={{ width: `${variables.Autonomie}%`, animationDelay: '0.2s' }}
                   />
                 </div>
               </div>
-
 
               {/* Confiance */}
               <div className="animate-slide-in-right animation-delay-1000">
@@ -266,14 +261,13 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
                   </span>
                 </div>
                 <div className="relative h-4 bg-slate-700/50 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-1000 ease-out animate-progress-bar"
                     style={{ width: `${variables.Confiance}%`, animationDelay: '0.4s' }}
                   />
                 </div>
               </div>
             </div>
-
 
             {/* Message de succes */}
             {isSuccess && (
@@ -284,7 +278,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
               </div>
             )}
           </div>
-
 
           {/* Bouton retour */}
           <button
@@ -308,7 +301,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             }
           }
 
-
           .confetti {
             position: absolute;
             width: 10px;
@@ -316,7 +308,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             animation: confetti-fall linear infinite;
             top: -10px;
           }
-
 
           @keyframes gradient {
             0%, 100% { opacity: 0.3; }
@@ -326,7 +317,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             animation: gradient 3s ease-in-out infinite;
           }
 
-
           @keyframes scale-in {
             from { transform: scale(0); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
@@ -335,15 +325,14 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             animation: scale-in 0.5s ease-out;
           }
 
-
           @keyframes fade-in-up {
-            from { 
-              transform: translateY(20px); 
-              opacity: 0; 
+            from {
+              transform: translateY(20px);
+              opacity: 0;
             }
-            to { 
-              transform: translateY(0); 
-              opacity: 1; 
+            to {
+              transform: translateY(0);
+              opacity: 1;
             }
           }
           .animate-fade-in-up {
@@ -351,15 +340,14 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             opacity: 0;
           }
 
-
           @keyframes slide-in-right {
-            from { 
-              transform: translateX(-30px); 
-              opacity: 0; 
+            from {
+              transform: translateX(-30px);
+              opacity: 0;
             }
-            to { 
-              transform: translateX(0); 
-              opacity: 1; 
+            to {
+              transform: translateX(0);
+              opacity: 1;
             }
           }
           .animate-slide-in-right {
@@ -367,14 +355,12 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             opacity: 0;
           }
 
-
           @keyframes progress-bar {
             from { width: 0; }
           }
           .animate-progress-bar {
             animation: progress-bar 1.5s ease-out;
           }
-
 
           @keyframes bounce-slow {
             0%, 100% { transform: translateY(0) scale(1); }
@@ -384,7 +370,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             animation: bounce-slow 2s ease-in-out infinite;
           }
 
-
           @keyframes pulse-slow {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -392,7 +377,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
           .animate-pulse-slow {
             animation: pulse-slow 2s ease-in-out infinite;
           }
-
 
           .animation-delay-200 { animation-delay: 0.2s; }
           .animation-delay-400 { animation-delay: 0.4s; }
@@ -405,12 +389,10 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
     );
   }
 
-
-  // Interface de jeu
-  const character = currentDialogue?.characterId !== undefined 
-    ? characters[currentDialogue.characterId] 
-    : null;
-
+  // Interface de jeu - Find character by speaker ID
+  const character: Character | undefined = currentDialogue?.speaker
+    ? characters.find(c => c.id === currentDialogue.speaker)
+    : undefined;
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col overflow-auto pt-20">
@@ -430,8 +412,8 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             <button
               onClick={handleMuteToggle}
               className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-                isMuted 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                isMuted
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
               }`}
               title={isMuted ? 'Activer le son' : 'Couper le son'}
@@ -470,7 +452,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
         </div>
       </div>
 
-
       {/* Zone de jeu */}
       <div className="flex-1 flex items-center justify-center p-8 pt-24">
         <div className="max-w-4xl w-full">
@@ -479,14 +460,13 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
             {/* Personnage */}
             {character && (
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-700">
-                <div className="text-5xl">{character.avatarUrl || '👤'}</div>
+                <div className="text-5xl">{character.sprites?.neutral || '👤'}</div>
                 <div>
                   <h3 className="text-xl font-bold text-white">{character.name}</h3>
-                  <p className="text-slate-400 text-sm">{character.role}</p>
+                  <p className="text-slate-400 text-sm">{character.description}</p>
                 </div>
               </div>
             )}
-
 
             {/* Texte du dialogue */}
             <div className="mb-8">
@@ -494,7 +474,6 @@ export default function PlayMode({ onExit, selectedSceneIndex = 0 }) {
                 {currentDialogue?.text || 'Aucun dialogue disponible'}
               </p>
             </div>
-
 
             {/* Choix */}
             {currentDialogue?.choices && currentDialogue.choices.length > 0 && (

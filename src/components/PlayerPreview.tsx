@@ -1,41 +1,96 @@
-// src/components/PlayerPreview.jsx
+// src/components/PlayerPreview.tsx
 // ASCII only
 import React, { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../core/engine';
+import type { Scene, DialogueChoice, GameStats, GameEngine } from '@/types/index';
 import { useCharactersStore } from '../stores/index.ts';
 import HUDVariables from './HUDVariables.jsx';
 import DeltaBadges from './DeltaBadges.jsx';
 import DiceResultModal from './DiceResultModal.jsx';
 import OutcomeModal from './OutcomeModal.jsx';
 
-export default function PlayerPreview({ scene, onExit }) {
+/**
+ * Current dialogue state for display
+ */
+interface CurrentDialogue {
+  speaker: string;
+  speakerMood?: string;
+  text: string;
+  choices: DialogueChoice[];
+}
+
+/**
+ * Delta badge item for animated stats changes
+ */
+interface DeltaBadge {
+  id: string;
+  variable: string;
+  delta: number;
+}
+
+/**
+ * Dice roll result with outcome
+ */
+interface DiceRollResult {
+  roll: number;
+  difficulty: number;
+  success: boolean;
+}
+
+/**
+ * Outcome data after dice roll or choice
+ */
+interface OutcomeData {
+  message: string;
+  illustration: string;
+  moral: { variable: string; delta: number } | null;
+}
+
+/**
+ * Props for PlayerPreview component
+ */
+interface PlayerPreviewProps {
+  /** Scene to preview */
+  scene: Scene;
+  /** Callback to exit preview mode */
+  onExit: () => void;
+}
+
+export default function PlayerPreview({ scene, onExit }: PlayerPreviewProps): React.JSX.Element {
   const characters = useCharactersStore(state => state.characters);
-  const [current, setCurrent] = useState(null);
-  const [vars, setVars] = useState({ Physique: 100, Mentale: 100 });
+  const [current, setCurrent] = useState<CurrentDialogue | null>(null);
+  const [vars, setVars] = useState<GameStats>({ Physique: 100, Mentale: 100 });
   const [ended, setEnded] = useState(false);
-  const [deltas, setDeltas] = useState([]);
+  const [deltas, setDeltas] = useState<DeltaBadge[]>([]);
 
   // Etats pour les modales de des
   const [diceModalOpen, setDiceModalOpen] = useState(false);
-  const [diceResult, setDiceResult] = useState({ roll: 0, difficulty: 0, success: false });
+  const [diceResult, setDiceResult] = useState<DiceRollResult>({ roll: 0, difficulty: 0, success: false });
   const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
-  const [currentOutcome, setCurrentOutcome] = useState({ message: '', illustration: '', moral: null });
+  const [currentOutcome, setCurrentOutcome] = useState<OutcomeData>({ message: '', illustration: '', moral: null });
 
-  const engineRef = useRef(null);
-  const busRef = useRef(null);
+  const engineRef = useRef<GameEngine | null>(null);
+  const busRef = useRef<GameEngine['eventBus'] | null>(null);
 
   useEffect(() => {
     const { eventBus, variableManager, dialogueEngine } = createEngine(vars);
-    engineRef.current = { vm: variableManager, de: dialogueEngine };
+    engineRef.current = { eventBus, variableManager, dialogueEngine };
     busRef.current = eventBus;
 
-    function onShow(d) { setCurrent(d); }
-    function onVars(v) { setVars(v); }
-    function onEnd() {
+    function onShow(d: CurrentDialogue): void {
+      setCurrent(d);
+    }
+
+    function onVars(v: GameStats): void {
+      setVars(v);
+    }
+
+    function onEnd(): void {
       setEnded(true);
       setCurrent({ speaker: 'narrator', text: 'Scene terminee.', choices: [] });
     }
-    function onDelta(list) {
+
+    function onDelta(list: Array<{ variable: string; delta: number }>): void {
       if (!Array.isArray(list)) return;
       list.forEach(({ variable, delta }) => {
         const id = `${Date.now()}-${Math.random()}`;
@@ -62,13 +117,13 @@ export default function PlayerPreview({ scene, onExit }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene]);
 
-  function handleChoice(choice) {
+  function handleChoice(choice: DialogueChoice): void {
     if (!engineRef.current) return;
 
     // Si le choix a un lancer de de active
-    if (choice.diceRoll && choice.diceRoll.enabled) {
+    if (choice.diceCheck && choice.diceCheck.stat) {
       const roll = rollDice();
-      const difficulty = choice.diceRoll.difficulty || 12;
+      const difficulty = choice.diceCheck.difficulty || 12;
       const success = roll >= difficulty;
 
       // Afficher le resultat du de
@@ -76,36 +131,49 @@ export default function PlayerPreview({ scene, onExit }) {
       setDiceModalOpen(true);
 
       // Preparer l'issue correspondante
-      const outcome = success ? choice.diceRoll.successOutcome : choice.diceRoll.failureOutcome;
-      
+      const outcome = success ? choice.diceCheck.success : choice.diceCheck.failure;
+
       // Attendre 1.5s puis afficher l'issue
       setTimeout(() => {
         setDiceModalOpen(false);
-        showOutcomeMessage(outcome, choice.nextScene);
+        showOutcomeMessage(outcome, choice.nextSceneId);
       }, 1500);
     } else {
       // Choix classique sans de
-      engineRef.current.de.handleChoice(choice);
+      engineRef.current.dialogueEngine.handleChoice(choice);
     }
   }
 
-  function rollDice() {
+  function rollDice(): number {
     return Math.floor(Math.random() * 20) + 1;
   }
 
-  function showOutcomeMessage(outcome, nextScene) {
+  function showOutcomeMessage(
+    outcome: { nextSceneId?: string; nextDialogueId?: string } | undefined,
+    nextScene: string | undefined
+  ): void {
     if (!outcome) return;
 
+    // Type assertion for outcome with message/illustration (legacy format support)
+    const outcomeWithMessage = outcome as unknown as {
+      message?: string;
+      illustration?: string;
+      moral?: { variable: string; delta: number };
+    };
+
     setCurrentOutcome({
-      message: outcome.message || '',
-      illustration: outcome.illustration || '',
-      moral: outcome.moral || null
+      message: outcomeWithMessage.message || '',
+      illustration: outcomeWithMessage.illustration || '',
+      moral: outcomeWithMessage.moral || null
     });
     setOutcomeModalOpen(true);
 
     // Appliquer l'effet moral si present
-    if (outcome.moral && outcome.moral.variable && outcome.moral.delta) {
-      engineRef.current.vm.update(outcome.moral.variable, outcome.moral.delta);
+    if (outcomeWithMessage.moral && outcomeWithMessage.moral.variable && outcomeWithMessage.moral.delta) {
+      engineRef.current?.variableManager.modify(
+        outcomeWithMessage.moral.variable,
+        outcomeWithMessage.moral.delta
+      );
     }
 
     // Attendre 2s puis naviguer vers la scene suivante
@@ -113,18 +181,25 @@ export default function PlayerPreview({ scene, onExit }) {
       setOutcomeModalOpen(false);
       if (nextScene) {
         // Charger la scene suivante
-        const sceneData = { id: nextScene, backgroundUrl: '', dialogues: [] };
-        engineRef.current.de.loadScene(sceneData);
+        const sceneData: Scene = {
+          id: nextScene,
+          title: '',
+          description: '',
+          backgroundUrl: '',
+          dialogues: [],
+          characters: []
+        };
+        engineRef.current?.dialogueEngine.loadScene(sceneData);
       }
     }, 2000);
   }
 
-  function handleNext() {
+  function handleNext(): void {
     if (!engineRef.current) return;
-    engineRef.current.de.next();
+    engineRef.current.dialogueEngine.next();
   }
 
-  function nameOf(id) {
+  function nameOf(id: string): string {
     if (id === 'narrator') return 'Narrateur';
     return id || '';
   }
@@ -176,7 +251,7 @@ export default function PlayerPreview({ scene, onExit }) {
           const character = characters.find(c => c.id === current.speaker);
           if (!character || !character.sprites) return null;
 
-          const speakerMood = current.speakerMood || character.defaultMood || 'neutral';
+          const speakerMood = current.speakerMood || 'neutral';
           const spriteUrl = character.sprites[speakerMood] || character.sprites['neutral'] || character.sprites[Object.keys(character.sprites)[0]];
 
           if (!spriteUrl) return null;

@@ -4,6 +4,37 @@ import { Button } from '@/components/ui/button';
 import { Plus, Rocket, Trash2 } from 'lucide-react';
 import "../styles/home.css";
 
+/**
+ * Quest data structure
+ */
+interface Quest {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+/**
+ * Props for HomePage component
+ */
+interface HomePageProps {
+  /** List of available quests/stories */
+  quests?: Quest[];
+  /** Currently selected quest ID */
+  selectedQuestId?: string | null;
+  /** Name for the new quest being created */
+  newQuestName?: string;
+  /** Handler for new quest name input changes */
+  onNewQuestNameChange?: (name: string) => void;
+  /** Handler for creating a new quest */
+  onCreateQuest?: () => void;
+  /** Handler for selecting a quest */
+  onSelectQuest?: (questId: string) => void;
+  /** Handler for launching the editor with selected quest */
+  onLaunchEditor?: () => void;
+  /** Handler for deleting the selected quest */
+  onDeleteQuest?: () => void;
+}
+
 function HomePage({
   quests = [],
   selectedQuestId = null,
@@ -13,7 +44,7 @@ function HomePage({
   onSelectQuest = () => {},
   onLaunchEditor = () => {},
   onDeleteQuest = () => {},
-}) {
+}: HomePageProps): React.JSX.Element {
   const quotaMax = 5;
   const quotaUsed = quests.length;
   const quotaPercent = Math.min(100, (quotaUsed / quotaMax) * 100);
@@ -100,7 +131,7 @@ function HomePage({
               onClick={() => onSelectQuest(quest.id)}
               tabIndex={0}
               aria-label={`Sélectionner la quête ${quest.name}`}
-              onKeyDown={(e) => {
+              onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                 if (e.key === "Enter" || e.key === " ") onSelectQuest(quest.id);
               }}
             >
@@ -143,7 +174,7 @@ function HomePage({
               className="new-quest__input"
               placeholder="Ex: La visite à la mairie"
               value={newQuestName}
-              onChange={(e) => onNewQuestNameChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNewQuestNameChange(e.target.value)}
               maxLength={60}
               aria-label="Nom de la nouvelle quête"
             />

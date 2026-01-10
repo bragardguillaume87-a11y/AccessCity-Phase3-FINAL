@@ -1,10 +1,43 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+
+/**
+ * Character form data for identity section
+ */
+export interface CharacterIdentityFormData {
+  /** Character name (required) */
+  name: string;
+  /** Character description (optional) */
+  description?: string;
+  /** Character ID (read-only, only for existing characters) */
+  id?: string;
+}
+
+/**
+ * Validation errors for character identity fields
+ */
+export interface CharacterIdentityErrors {
+  /** Name field errors */
+  name?: string[];
+  /** Description field errors */
+  description?: string[];
+}
+
+/**
+ * Props for CharacterIdentitySection component
+ */
+export interface CharacterIdentitySectionProps {
+  /** Character form data */
+  formData: CharacterIdentityFormData;
+  /** Validation errors object */
+  errors: CharacterIdentityErrors;
+  /** Callback to update a field */
+  onUpdateField: (fieldName: string, value: string) => void;
+}
 
 /**
  * CharacterIdentitySection - Character Identity Form Fields
@@ -14,20 +47,22 @@ import { AlertCircle } from 'lucide-react';
  * - Description field (optional) with character counter
  * - Character ID display (read-only, only for existing characters)
  *
- * Includes professional form validation and error display
+ * Includes professional form validation and error display.
  *
- * @component
- * @param {Object} props
- * @param {Object} props.formData - Character form data
- * @param {string} props.formData.name - Character name
- * @param {string} [props.formData.description] - Character description
- * @param {string} [props.formData.id] - Character ID (only for existing characters)
- * @param {Object} props.errors - Validation errors object
- * @param {Array<string>} [props.errors.name] - Name field errors
- * @param {Array<string>} [props.errors.description] - Description field errors
- * @param {Function} props.onUpdateField - Callback to update a field (fieldName, value)
+ * @example
+ * ```tsx
+ * <CharacterIdentitySection
+ *   formData={{ name: 'Alice', description: 'Brave adventurer' }}
+ *   errors={{}}
+ *   onUpdateField={(field, value) => setFormData({ ...formData, [field]: value })}
+ * />
+ * ```
  */
-export default function CharacterIdentitySection({ formData, errors, onUpdateField }) {
+export default function CharacterIdentitySection({
+  formData,
+  errors,
+  onUpdateField
+}: CharacterIdentitySectionProps) {
   const { name, description, id } = formData;
   const descriptionLength = (description || '').length;
   const maxDescriptionLength = 500;
@@ -112,13 +147,3 @@ export default function CharacterIdentitySection({ formData, errors, onUpdateFie
     </div>
   );
 }
-
-CharacterIdentitySection.propTypes = {
-  formData: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    description: PropTypes.string,
-    id: PropTypes.string
-  }).isRequired,
-  errors: PropTypes.object.isRequired,
-  onUpdateField: PropTypes.func.isRequired
-};

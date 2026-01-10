@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +9,33 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
+import type { CompletenessResult } from '../hooks/useCharacterCompleteness';
+
+/**
+ * Character preview form data
+ */
+export interface CharacterPreviewFormData {
+  /** Character name */
+  name: string;
+  /** Sprite assignments by mood */
+  sprites?: Record<string, string>;
+  /** List of mood names */
+  moods: string[];
+}
+
+/**
+ * Props for CharacterPreviewPanel component
+ */
+export interface CharacterPreviewPanelProps {
+  /** Form data containing character information */
+  formData: CharacterPreviewFormData;
+  /** Currently previewed mood */
+  previewMood: string;
+  /** Callback to change preview mood */
+  onPreviewMoodChange: (mood: string) => void;
+  /** Completeness statistics */
+  completeness: CompletenessResult;
+}
 
 /**
  * CharacterPreviewPanel - Live Character Preview with Mood Carousel
@@ -20,33 +46,35 @@ import {
  * - Mood selector buttons showing which moods have sprites assigned
  * - Statistics cards showing mood count, sprite count, and missing sprites
  *
- * Inspired by Unity Animation Preview and Unreal Engine Character Preview
- * Includes smooth transitions and Nintendo-style hover effects
+ * Inspired by Unity Animation Preview and Unreal Engine Character Preview.
+ * Includes smooth transitions and Nintendo-style hover effects.
  *
- * @component
- * @param {Object} props
- * @param {Object} props.formData - Character form data
- * @param {string} props.formData.name - Character name
- * @param {Object} props.formData.sprites - Sprite assignments by mood
- * @param {Array<string>} props.formData.moods - List of mood names
- * @param {string} props.previewMood - Currently previewed mood
- * @param {Function} props.onPreviewMoodChange - Callback to change preview mood
- * @param {Object} props.completeness - Completeness statistics
- * @param {number} props.completeness.moodCount - Total mood count
- * @param {number} props.completeness.spriteCount - Total sprite count
+ * @example
+ * ```tsx
+ * <CharacterPreviewPanel
+ *   formData={{
+ *     name: 'Alice',
+ *     moods: ['neutral', 'happy', 'sad'],
+ *     sprites: { neutral: 'url1.png', happy: 'url2.png' }
+ *   }}
+ *   previewMood="neutral"
+ *   onPreviewMoodChange={setPreviewMood}
+ *   completeness={{ moodCount: 3, spriteCount: 2, percentage: 66 }}
+ * />
+ * ```
  */
 export default function CharacterPreviewPanel({
   formData,
   previewMood,
   onPreviewMoodChange,
   completeness
-}) {
+}: CharacterPreviewPanelProps) {
   const { name, sprites, moods } = formData;
   const currentPreviewSprite = sprites?.[previewMood];
   const { moodCount, spriteCount } = completeness;
   const missingCount = moodCount - spriteCount;
 
-  const navigateMood = (direction) => {
+  const navigateMood = (direction: 'prev' | 'next') => {
     const currentIndex = moods.indexOf(previewMood);
     if (direction === 'prev') {
       const prevIndex = currentIndex > 0 ? currentIndex - 1 : moods.length - 1;
@@ -169,17 +197,3 @@ export default function CharacterPreviewPanel({
     </div>
   );
 }
-
-CharacterPreviewPanel.propTypes = {
-  formData: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    sprites: PropTypes.object,
-    moods: PropTypes.array.isRequired
-  }).isRequired,
-  previewMood: PropTypes.string.isRequired,
-  onPreviewMoodChange: PropTypes.func.isRequired,
-  completeness: PropTypes.shape({
-    moodCount: PropTypes.number.isRequired,
-    spriteCount: PropTypes.number.isRequired
-  }).isRequired
-};

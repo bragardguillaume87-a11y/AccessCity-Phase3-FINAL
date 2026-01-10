@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -17,35 +16,65 @@ import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Search } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { Character, Position } from '@/types';
+
+/**
+ * Position data for character placement
+ */
+interface CharacterPosition {
+  x: number;
+  y: number;
+}
+
+/**
+ * Props for AddCharacterToSceneModal component
+ */
+export interface AddCharacterToSceneModalProps {
+  /** Whether the modal is open */
+  isOpen: boolean;
+  /** Callback when modal should close */
+  onClose: () => void;
+  /** Array of available characters */
+  characters: Character[];
+  /** Callback when character is added to scene */
+  onAddCharacter: (characterId: string, mood: string, position: Position | null) => void;
+}
 
 /**
  * AddCharacterToSceneModal - AAA Character Picker
  *
- * Features:
+ * Premium character selection modal with:
  * - Split-view: 40% character list | 60% live preview
  * - Search & filter (Tous/Favoris tabs)
  * - Large sprite preview with mood thumbnails
  * - Position sliders (X/Y) for pre-positioning
  * - Completeness badges
  * - Keyboard navigation (Arrow keys, Enter)
- * - Smooth animations
+ * - Smooth animations with Framer Motion
  *
  * @example
+ * ```tsx
  * <AddCharacterToSceneModal
  *   isOpen={showModal}
  *   onClose={() => setShowModal(false)}
  *   characters={allCharacters}
  *   onAddCharacter={(charId, mood, position) => addToScene(charId, mood, position)}
  * />
+ * ```
  */
-export default function AddCharacterToSceneModal({ isOpen, onClose, characters, onAddCharacter }) {
-  const [selectedCharacterId, setSelectedCharacterId] = useState(null);
-  const [mood, setMood] = useState('neutral');
+export default function AddCharacterToSceneModal({
+  isOpen,
+  onClose,
+  characters,
+  onAddCharacter
+}: AddCharacterToSceneModalProps) {
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+  const [mood, setMood] = useState<string>('neutral');
   // Position null par défaut = laisse MainCanvas appliquer la logique intelligente (player à gauche, etc.)
-  const [position, setPosition] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
-  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState<CharacterPosition | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all');
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   // Filtered characters
   const filteredCharacters = useMemo(() => {
@@ -61,7 +90,8 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
 
     // Favorites filter
     if (activeTab === 'favorites') {
-      filtered = filtered.filter(c => c.favorite);
+      // TODO: Add favorite field to Character interface in future phase
+      filtered = filtered.filter(c => (c as any).favorite);
     }
 
     return filtered;
@@ -84,7 +114,7 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
   };
 
   // Keyboard handler for Enter
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && selectedCharacterId) {
       handleAdd();
     }
@@ -109,11 +139,11 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
         </DialogHeader>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'favorites')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="all">Tous ({characters.length})</TabsTrigger>
             <TabsTrigger value="favorites">
-              Favoris ({characters.filter(c => c.favorite).length})
+              Favoris ({characters.filter(c => (c as any).favorite).length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -227,18 +257,20 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
                       transition={{ duration: 0.3 }}
                       draggable="true"
                       onDragStart={(e) => {
+                        // Type assertion for native DragEvent
+                        const dragEvent = e as unknown as React.DragEvent<HTMLImageElement>;
                         setIsDragging(true);
-                        e.dataTransfer.effectAllowed = 'copy';
-                        e.dataTransfer.setData('application/json', JSON.stringify({
+                        dragEvent.dataTransfer.effectAllowed = 'copy';
+                        dragEvent.dataTransfer.setData('application/json', JSON.stringify({
                           characterId: selectedCharacterId,
                           mood: mood,
                           type: 'character'
                         }));
                         // Optional: set drag image
-                        const img = e.target.cloneNode();
+                        const img = (dragEvent.target as HTMLImageElement).cloneNode() as HTMLImageElement;
                         img.style.opacity = '0.5';
                         document.body.appendChild(img);
-                        e.dataTransfer.setDragImage(img, e.target.width / 2, e.target.height / 2);
+                        dragEvent.dataTransfer.setDragImage(img, (dragEvent.target as HTMLImageElement).width / 2, (dragEvent.target as HTMLImageElement).height / 2);
                         setTimeout(() => document.body.removeChild(img), 0);
                       }}
                       onDragEnd={() => setIsDragging(false)}
@@ -326,7 +358,7 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
                         </label>
                         <Slider
                           value={[position.x]}
-                          onValueChange={([x]) => setPosition(prev => ({ ...prev, x }))}
+                          onValueChange={([x]) => setPosition(prev => prev ? { ...prev, x } : { x, y: 50 })}
                           max={100}
                           step={1}
                           className="w-full"
@@ -339,7 +371,7 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
                         </label>
                         <Slider
                           value={[position.y]}
-                          onValueChange={([y]) => setPosition(prev => ({ ...prev, y }))}
+                          onValueChange={([y]) => setPosition(prev => prev ? { ...prev, y } : { x: 50, y })}
                           max={100}
                           step={1}
                           className="w-full"
@@ -388,8 +420,22 @@ export default function AddCharacterToSceneModal({ isOpen, onClose, characters, 
 
 /**
  * Calculate character completeness percentage
+ *
+ * Calculates the percentage of moods that have associated sprites.
+ *
+ * @param character - Character to calculate completeness for
+ * @returns Completeness percentage (0-100)
+ *
+ * @example
+ * ```typescript
+ * const character = {
+ *   moods: ['neutral', 'happy', 'sad'],
+ *   sprites: { neutral: 'url1.png', happy: 'url2.png' }
+ * };
+ * calculateCompleteness(character); // Returns 66 (2/3 moods have sprites)
+ * ```
  */
-function calculateCompleteness(character) {
+function calculateCompleteness(character: Character): number {
   if (!character.moods || character.moods.length === 0) return 0;
   const totalMoods = character.moods.length;
   const moodsWithSprites = character.moods.filter(
@@ -397,10 +443,3 @@ function calculateCompleteness(character) {
   ).length;
   return Math.round((moodsWithSprites / totalMoods) * 100);
 }
-
-AddCharacterToSceneModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  characters: PropTypes.array.isRequired,
-  onAddCharacter: PropTypes.func.isRequired
-};

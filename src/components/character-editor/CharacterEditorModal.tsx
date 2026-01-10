@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import { useCharacterForm } from '../../hooks/useCharacterForm';
-import { useMoodPresets } from '../../hooks/useMoodPresets.js';
+import { useMoodPresets } from '../../hooks/useMoodPresets';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Character } from '@/types';
 
 // Extracted components
 import CompletenessHeader from './CharacterEditorModal/components/CompletenessHeader';
@@ -20,6 +20,22 @@ import EditorFooter from './CharacterEditorModal/components/EditorFooter';
 import { useCharacterPreview } from './CharacterEditorModal/hooks/useCharacterPreview';
 import { useCharacterCompleteness } from './CharacterEditorModal/hooks/useCharacterCompleteness';
 import { useMoodRename } from './CharacterEditorModal/hooks/useMoodRename';
+
+/**
+ * Props for CharacterEditorModal component
+ */
+export interface CharacterEditorModalProps {
+  /** Whether the modal is open */
+  isOpen: boolean;
+  /** Callback when modal should close */
+  onClose: () => void;
+  /** Character to edit (partial for new characters) */
+  character: Partial<Character>;
+  /** All characters (for duplicate name validation) */
+  characters: Character[];
+  /** Callback when character is saved */
+  onSave: (character: Character) => void;
+}
 
 /**
  * CharacterEditorModal - REFACTORED (Phase 6D-2)
@@ -44,8 +60,25 @@ import { useMoodRename } from './CharacterEditorModal/hooks/useMoodRename';
  * - Unreal Engine Character Editor
  * - Unity Animation Preview
  * - Nintendo UX Guide: Preview en temps réel
+ *
+ * @example
+ * ```tsx
+ * <CharacterEditorModal
+ *   isOpen={showEditor}
+ *   onClose={() => setShowEditor(false)}
+ *   character={selectedCharacter || {}}
+ *   characters={allCharacters}
+ *   onSave={handleSaveCharacter}
+ * />
+ * ```
  */
-export default function CharacterEditorModal({ isOpen, onClose, character, characters, onSave }) {
+export default function CharacterEditorModal({
+  isOpen,
+  onClose,
+  character,
+  characters,
+  onSave
+}: CharacterEditorModalProps) {
   // Form management (keep using existing hook)
   const {
     formData,
@@ -59,17 +92,17 @@ export default function CharacterEditorModal({ isOpen, onClose, character, chara
     renameMood,
     handleSave,
     resetForm
-  } = useCharacterForm(character, characters, onSave);
+  } = useCharacterForm(character as Character, characters, onSave);
 
-  const moodPresets = useMoodPresets();
+  const moodPresets = [...useMoodPresets()]; // Convert readonly to mutable
 
   // Local state for UI interactions
-  const [showSpritePickerFor, setShowSpritePickerFor] = useState(null);
-  const [newMoodInput, setNewMoodInput] = useState('');
-  const [showPresets, setShowPresets] = useState(false);
+  const [showSpritePickerFor, setShowSpritePickerFor] = useState<string | null>(null);
+  const [newMoodInput, setNewMoodInput] = useState<string>('');
+  const [showPresets, setShowPresets] = useState<boolean>(false);
 
   // Custom hooks
-  const { previewMood, setPreviewMood, navigateMood } = useCharacterPreview(formData.moods);
+  const { previewMood, setPreviewMood } = useCharacterPreview(formData.moods);
   const completeness = useCharacterCompleteness(formData.moods, formData.sprites);
   const {
     renamingMood,
@@ -82,7 +115,7 @@ export default function CharacterEditorModal({ isOpen, onClose, character, chara
 
   // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl+S to save
       if (e.ctrlKey && e.key === 's') {
         e.preventDefault();
@@ -104,7 +137,7 @@ export default function CharacterEditorModal({ isOpen, onClose, character, chara
   }, [isOpen, handleSave, onClose, renamingMood, showSpritePickerFor]);
 
   // Handlers
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const success = handleSave();
     if (success) {
@@ -124,14 +157,14 @@ export default function CharacterEditorModal({ isOpen, onClose, character, chara
   };
 
   // Check if form has errors
-  const hasFormErrors = Object.keys(errors).some(key => errors[key]);
+  const hasFormErrors = Object.keys(errors).some(key => errors[key as keyof typeof errors]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
       <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0 dark bg-slate-900 text-slate-100">
         {/* Header with Completeness - REFACTORED COMPONENT */}
         <CompletenessHeader
-          characterName={character.name}
+          characterName={character.name || 'Nouveau personnage'}
           isNew={!character.id}
           completeness={completeness}
         />
@@ -203,18 +236,13 @@ export default function CharacterEditorModal({ isOpen, onClose, character, chara
             hasFormErrors={hasFormErrors}
             isNew={!character.id}
             onCancel={handleCancel}
-            onSave={handleSubmit}
+            onSave={() => {
+              const success = handleSave();
+              if (success) onClose();
+            }}
           />
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-CharacterEditorModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  character: PropTypes.object.isRequired,
-  characters: PropTypes.array.isRequired,
-  onSave: PropTypes.func.isRequired
-};

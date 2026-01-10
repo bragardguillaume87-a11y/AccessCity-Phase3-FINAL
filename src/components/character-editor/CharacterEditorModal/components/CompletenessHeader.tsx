@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import {
   DialogHeader,
   DialogTitle,
@@ -11,6 +10,19 @@ import {
   AlertCircle,
   Sparkles
 } from 'lucide-react';
+import type { CompletenessResult } from '../hooks/useCharacterCompleteness';
+
+/**
+ * Props for CompletenessHeader component
+ */
+export interface CompletenessHeaderProps {
+  /** Name of the character being edited */
+  characterName: string;
+  /** Whether this is a new character (true) or editing existing (false) */
+  isNew: boolean;
+  /** Completeness statistics */
+  completeness: CompletenessResult;
+}
 
 /**
  * CompletenessHeader - Character Editor Header with Completeness Indicator
@@ -20,18 +32,22 @@ import {
  * - Completeness badge showing sprite assignment progress
  * - Progress bar with visual feedback
  *
- * Inspired by AAA game editors (Unreal, Unity) with professional polish
+ * Inspired by AAA game editors (Unreal, Unity) with professional polish.
  *
- * @component
- * @param {Object} props
- * @param {string} props.characterName - Name of the character being edited
- * @param {boolean} props.isNew - Whether this is a new character (true) or editing existing (false)
- * @param {Object} props.completeness - Completeness statistics
- * @param {number} props.completeness.moodCount - Total number of moods defined
- * @param {number} props.completeness.spriteCount - Number of sprites assigned
- * @param {number} props.completeness.percentage - Completion percentage (0-100)
+ * @example
+ * ```tsx
+ * <CompletenessHeader
+ *   characterName="Alice"
+ *   isNew={false}
+ *   completeness={{ moodCount: 3, spriteCount: 2, percentage: 66 }}
+ * />
+ * ```
  */
-export default function CompletenessHeader({ characterName, isNew, completeness }) {
+export default function CompletenessHeader({
+  characterName,
+  isNew,
+  completeness
+}: CompletenessHeaderProps) {
   const { moodCount, spriteCount, percentage } = completeness;
   const isComplete = percentage === 100;
 
@@ -85,13 +101,3 @@ export default function CompletenessHeader({ characterName, isNew, completeness 
     </DialogHeader>
   );
 }
-
-CompletenessHeader.propTypes = {
-  characterName: PropTypes.string.isRequired,
-  isNew: PropTypes.bool.isRequired,
-  completeness: PropTypes.shape({
-    moodCount: PropTypes.number.isRequired,
-    spriteCount: PropTypes.number.isRequired,
-    percentage: PropTypes.number.isRequired
-  }).isRequired
-};

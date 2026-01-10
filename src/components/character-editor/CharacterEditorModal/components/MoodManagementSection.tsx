@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker.jsx';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,83 @@ import {
   Smile,
   Package
 } from 'lucide-react';
+import type { MoodPreset } from '@/types';
+
+/**
+ * Mood management form data
+ */
+export interface MoodManagementFormData {
+  /** List of mood names */
+  moods: string[];
+  /** Sprite assignments by mood */
+  sprites?: Record<string, string>;
+}
+
+/**
+ * Validation errors for mood management
+ */
+export interface MoodManagementErrors {
+  /** Moods field errors */
+  moods?: string[];
+  /** Other field errors */
+  [key: string]: string[] | undefined;
+}
+
+/**
+ * Validation warnings for mood management
+ */
+export interface MoodManagementWarnings {
+  /** Sprites warning (e.g., missing sprites) */
+  sprites?: string[];
+  /** Other warnings */
+  [key: string]: string[] | undefined;
+}
+
+/**
+ * Props for MoodManagementSection component
+ */
+export interface MoodManagementSectionProps {
+  /** Form data containing moods and sprites */
+  formData: MoodManagementFormData;
+  /** Validation errors */
+  errors: MoodManagementErrors;
+  /** Validation warnings */
+  warnings?: MoodManagementWarnings;
+  /** Callback to add a mood */
+  onAddMood: (moodName: string) => boolean;
+  /** Callback to remove a mood */
+  onRemoveMood: (moodName: string) => void;
+  /** Callback to rename a mood */
+  onRenameMood: (oldMood: string, newMood: string) => void;
+  /** Callback to update sprite for a mood */
+  onUpdateSprite: (mood: string, spritePath: string) => void;
+  /** Mood currently being renamed (null if not renaming) */
+  renamingMood: string | null;
+  /** Rename input value */
+  renameInput: string;
+  /** Callback to update rename input */
+  setRenameInput: (value: string) => void;
+  /** Callback to start renaming a mood */
+  startRename: (moodName: string) => void;
+  /** Callback to confirm rename */
+  confirmRename: () => void;
+  /** Callback to cancel rename */
+  cancelRename: () => void;
+  /** Mood name for which sprite picker is shown (null if hidden) */
+  showSpritePickerFor: string | null;
+  /** Callback to show/hide sprite picker */
+  setShowSpritePickerFor: (mood: string | null) => void;
+  /** Array of preset moods */
+  moodPresets: MoodPreset[];
+  /** New mood input value */
+  newMoodInput: string;
+  /** Callback to update new mood input */
+  setNewMoodInput: (value: string) => void;
+  /** Whether preset popover is shown */
+  showPresets: boolean;
+  /** Callback to toggle preset popover */
+  setShowPresets: (show: boolean) => void;
+}
 
 /**
  * MoodManagementSection - Mood and Sprite Management Interface
@@ -28,32 +104,17 @@ import {
  * - Delete mood capability
  * - Visual feedback for sprite assignment status
  *
- * Includes Nintendo-style UX with smooth transitions and hover effects
+ * Includes Nintendo-style UX with smooth transitions and hover effects.
  *
- * @component
- * @param {Object} props
- * @param {Object} props.formData - Form data containing moods and sprites
- * @param {Array<string>} props.formData.moods - List of mood names
- * @param {Object} props.formData.sprites - Sprite assignments by mood
- * @param {Object} props.errors - Validation errors
- * @param {Object} props.warnings - Validation warnings
- * @param {Function} props.onAddMood - Callback to add a mood
- * @param {Function} props.onRemoveMood - Callback to remove a mood
- * @param {Function} props.onRenameMood - Callback to rename a mood
- * @param {Function} props.onUpdateSprite - Callback to update sprite for a mood
- * @param {string|null} props.renamingMood - Currently renaming mood name (null if not renaming)
- * @param {string} props.renameInput - Rename input value
- * @param {Function} props.setRenameInput - Callback to update rename input
- * @param {Function} props.startRename - Callback to start renaming a mood
- * @param {Function} props.confirmRename - Callback to confirm rename
- * @param {Function} props.cancelRename - Callback to cancel rename
- * @param {string|null} props.showSpritePickerFor - Mood name for which sprite picker is shown
- * @param {Function} props.setShowSpritePickerFor - Callback to show/hide sprite picker
- * @param {Array<Object>} props.moodPresets - Array of preset moods
- * @param {string} props.newMoodInput - New mood input value
- * @param {Function} props.setNewMoodInput - Callback to update new mood input
- * @param {boolean} props.showPresets - Whether preset popover is shown
- * @param {Function} props.setShowPresets - Callback to toggle preset popover
+ * @example
+ * ```tsx
+ * <MoodManagementSection
+ *   formData={{ moods: ['neutral', 'happy'], sprites: { neutral: 'url1.png' } }}
+ *   errors={{}}
+ *   onAddMood={(mood) => addMood(mood)}
+ *   // ... other props
+ * />
+ * ```
  */
 export default function MoodManagementSection({
   formData,
@@ -76,7 +137,7 @@ export default function MoodManagementSection({
   setNewMoodInput,
   showPresets,
   setShowPresets
-}) {
+}: MoodManagementSectionProps) {
   const { moods, sprites } = formData;
 
   const handleAddCustomMood = () => {
@@ -88,12 +149,12 @@ export default function MoodManagementSection({
     }
   };
 
-  const handleAddPresetMood = (presetId) => {
+  const handleAddPresetMood = (presetId: string) => {
     onAddMood(presetId);
     setShowPresets(false);
   };
 
-  const handleSpriteSelect = (mood, spritePath) => {
+  const handleSpriteSelect = (mood: string, spritePath: string) => {
     onUpdateSprite(mood, spritePath);
     setShowSpritePickerFor(null);
   };
@@ -341,29 +402,3 @@ export default function MoodManagementSection({
     </div>
   );
 }
-
-MoodManagementSection.propTypes = {
-  formData: PropTypes.shape({
-    moods: PropTypes.array.isRequired,
-    sprites: PropTypes.object
-  }).isRequired,
-  errors: PropTypes.object.isRequired,
-  warnings: PropTypes.object,
-  onAddMood: PropTypes.func.isRequired,
-  onRemoveMood: PropTypes.func.isRequired,
-  onRenameMood: PropTypes.func.isRequired,
-  onUpdateSprite: PropTypes.func.isRequired,
-  renamingMood: PropTypes.string,
-  renameInput: PropTypes.string.isRequired,
-  setRenameInput: PropTypes.func.isRequired,
-  startRename: PropTypes.func.isRequired,
-  confirmRename: PropTypes.func.isRequired,
-  cancelRename: PropTypes.func.isRequired,
-  showSpritePickerFor: PropTypes.string,
-  setShowSpritePickerFor: PropTypes.func.isRequired,
-  moodPresets: PropTypes.array.isRequired,
-  newMoodInput: PropTypes.string.isRequired,
-  setNewMoodInput: PropTypes.func.isRequired,
-  showPresets: PropTypes.bool.isRequired,
-  setShowPresets: PropTypes.func.isRequired
-};

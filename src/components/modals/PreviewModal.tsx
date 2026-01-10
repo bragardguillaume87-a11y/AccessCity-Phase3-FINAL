@@ -1,6 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
-import PreviewPlayer from '../panels/PreviewPlayer.jsx';
+import PreviewPlayer from '../panels/PreviewPlayer';
 import {
   Dialog,
   DialogContent,
@@ -12,11 +11,33 @@ import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
 /**
- * PreviewModal - Wrapper for PreviewPlayer in modal mode
- * Displays the game preview in a fullscreen modal overlay
- * Now using shadcn/ui Dialog for better accessibility and consistency
+ * Props for PreviewModal component
  */
-export default function PreviewModal({ isOpen, onClose, initialSceneId }) {
+export interface PreviewModalProps {
+  /** Whether the modal is open */
+  isOpen: boolean;
+  /** Callback when modal should close */
+  onClose: () => void;
+  /** Initial scene ID to load in preview (optional) */
+  initialSceneId?: string;
+}
+
+/**
+ * PreviewModal - Wrapper for PreviewPlayer in modal mode
+ *
+ * Displays the game preview in a fullscreen modal overlay
+ * using shadcn/ui Dialog for better accessibility and consistency.
+ *
+ * @example
+ * ```tsx
+ * <PreviewModal
+ *   isOpen={showPreview}
+ *   onClose={() => setShowPreview(false)}
+ *   initialSceneId="scene-123"
+ * />
+ * ```
+ */
+export default function PreviewModal({ isOpen, onClose, initialSceneId }: PreviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -49,9 +70,3 @@ export default function PreviewModal({ isOpen, onClose, initialSceneId }) {
     </Dialog>
   );
 }
-
-PreviewModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  initialSceneId: PropTypes.string
-};

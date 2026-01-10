@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +8,22 @@ import {
 } from 'lucide-react';
 
 /**
+ * Props for EditorFooter component
+ */
+export interface EditorFooterProps {
+  /** Whether there are unsaved changes */
+  hasChanges: boolean;
+  /** Whether the form has validation errors */
+  hasFormErrors: boolean;
+  /** Whether this is a new character (create) or editing existing (save) */
+  isNew: boolean;
+  /** Callback when cancel button is clicked */
+  onCancel: () => void;
+  /** Callback when save button is clicked */
+  onSave: () => void;
+}
+
+/**
  * EditorFooter - Character Editor Footer with Action Buttons
  *
  * Displays the footer section with:
@@ -16,17 +31,26 @@ import {
  * - Cancel button
  * - Save/Create button (disabled if form has errors)
  *
- * Includes Nintendo-style UX with hover and active animations
+ * Includes Nintendo-style UX with hover and active animations.
  *
- * @component
- * @param {Object} props
- * @param {boolean} props.hasChanges - Whether there are unsaved changes
- * @param {boolean} props.hasFormErrors - Whether the form has validation errors
- * @param {boolean} props.isNew - Whether this is a new character (create) or editing existing (save)
- * @param {Function} props.onCancel - Callback when cancel button is clicked
- * @param {Function} props.onSave - Callback when save button is clicked
+ * @example
+ * ```tsx
+ * <EditorFooter
+ *   hasChanges={true}
+ *   hasFormErrors={false}
+ *   isNew={false}
+ *   onCancel={handleCancel}
+ *   onSave={handleSave}
+ * />
+ * ```
  */
-export default function EditorFooter({ hasChanges, hasFormErrors, isNew, onCancel, onSave }) {
+export default function EditorFooter({
+  hasChanges,
+  hasFormErrors,
+  isNew,
+  onCancel,
+  onSave
+}: EditorFooterProps) {
   return (
     <DialogFooter className="px-8 py-4 border-t">
       <div className="flex items-center justify-between w-full">
@@ -65,11 +89,3 @@ export default function EditorFooter({ hasChanges, hasFormErrors, isNew, onCance
     </DialogFooter>
   );
 }
-
-EditorFooter.propTypes = {
-  hasChanges: PropTypes.bool.isRequired,
-  hasFormErrors: PropTypes.bool.isRequired,
-  isNew: PropTypes.bool.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  onSave: PropTypes.func.isRequired
-};

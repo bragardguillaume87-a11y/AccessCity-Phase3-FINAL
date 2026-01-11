@@ -77,7 +77,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[var(--color-bg-elevated)]" role="complementary" aria-label="Panneau Ajouter éléments">
+    <div className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]" role="complementary" aria-label="Panneau Ajouter éléments">
       {/* Header avec Mode Toggle (PHASE 8) */}
       <div className="flex-shrink-0 p-4 border-b-2 border-[var(--color-border-base)]">
         <div className="flex items-center justify-between mb-2">

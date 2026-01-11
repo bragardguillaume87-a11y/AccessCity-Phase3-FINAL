@@ -28,7 +28,7 @@ export default function LeftPanel({ onDialogueSelect }: LeftPanelProps) {
   return (
     <Tabs
       defaultValue="scenes"
-      className="h-full flex flex-col bg-[var(--color-bg-elevated)]"
+      className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
     >
       {/* Tabs Header avec indicateur gaming */}
       <TabsList className="w-full grid grid-cols-2 rounded-none border-b-2 border-[var(--color-border-base)] bg-transparent p-0 h-auto">

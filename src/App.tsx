@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import SkipToContent from "./components/SkipToContent.jsx";
-import HomePage from "./components/HomePage.jsx";
-import EditorShell from "./components/EditorShell.jsx";
+import SkipToContent from './components/SkipToContent';
+import HomePage from './components/HomePage';
+import EditorShell from './components/EditorShell';
 import TokensDemo from "./pages/TokensDemo.jsx";
 import { Toaster } from "sonner";
 

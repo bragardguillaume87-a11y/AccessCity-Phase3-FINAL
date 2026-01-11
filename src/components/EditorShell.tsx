@@ -3,15 +3,15 @@ import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.
 import { useUndoRedo } from '../hooks/useUndoRedo.ts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import KeyboardShortcuts from './KeyboardShortcuts.jsx';
-import ProblemsPanel from './ProblemsPanel.jsx';
-import CommandPalette from './CommandPalette.jsx';
+import KeyboardShortcuts from 'KeyboardShortcuts';
+import ProblemsPanel from 'ProblemsPanel';
+import CommandPalette from 'CommandPalette';
 import { useValidation } from '../hooks/useValidation.ts';
 import TopBar from './layout/TopBar';
 import Sidebar from './layout/Sidebar';
 import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
-import MainCanvas from './panels/MainCanvas.jsx';
+import MainCanvas from 'panels/MainCanvas';
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel.jsx'));
 const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel.jsx'));

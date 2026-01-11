@@ -44,37 +44,37 @@ export default function PlayMode({
     onExit
   });
 
-  // Loading state
-  if (engine.isLoading) {
-    return <GameLoadingScreen />;
-  }
-
-  // Game ended state
-  if (engine.isEnded) {
-    return (
-      <GameEndScreen
-        variables={engine.variables}
-        showConfetti={engine.showConfetti}
-        onExit={onExit}
-      />
-    );
-  }
-
-  // Active gameplay state
   // Find character by speaker ID
   const character: Character | undefined = engine.currentDialogue?.speaker
     ? characters.find(c => c.id === engine.currentDialogue?.speaker)
     : undefined;
 
   return (
-    <GamePlayScreen
-      currentDialogue={engine.currentDialogue}
-      character={character}
-      variables={engine.variables}
-      isMuted={engine.isMuted}
-      onChoice={engine.handleChoice}
-      onMuteToggle={engine.handleMuteToggle}
-      onExit={onExit}
-    />
+    <div className="w-screen h-screen">
+      {/* Loading state */}
+      {engine.isLoading && <GameLoadingScreen />}
+
+      {/* Game ended state */}
+      {engine.isEnded && (
+        <GameEndScreen
+          variables={engine.variables}
+          showConfetti={engine.showConfetti}
+          onExit={onExit}
+        />
+      )}
+
+      {/* Active gameplay state */}
+      {!engine.isLoading && !engine.isEnded && (
+        <GamePlayScreen
+          currentDialogue={engine.currentDialogue}
+          character={character}
+          variables={engine.variables}
+          isMuted={engine.isMuted}
+          onChoice={engine.handleChoice}
+          onMuteToggle={engine.handleMuteToggle}
+          onExit={onExit}
+        />
+      )}
+    </div>
   );
 }

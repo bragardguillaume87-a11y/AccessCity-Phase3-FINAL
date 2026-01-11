@@ -57,9 +57,9 @@ export function GamePlayScreen({
   onExit
 }: GamePlayScreenProps): React.JSX.Element {
   return (
-    <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col overflow-auto pt-20">
+    <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col">
       {/* Header avec variables - Fixed */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700 p-4">
+      <div className="fixed top-0 left-0 right-0 z-fixed-v2 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700 p-4">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
             <button
@@ -115,7 +115,7 @@ export function GamePlayScreen({
       </div>
 
       {/* Zone de jeu */}
-      <div className="flex-1 flex items-center justify-center p-8 pt-24">
+      <div className="flex-1 flex items-center justify-center p-8 pt-20 overflow-auto">
         <div className="max-w-4xl w-full">
           {/* Carte de dialogue */}
           <div className="bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 border border-slate-700 shadow-2xl">

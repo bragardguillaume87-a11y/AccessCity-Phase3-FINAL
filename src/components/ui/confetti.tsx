@@ -17,7 +17,7 @@ export function Confetti() {
   }))
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[9999]">
+    <div className="fixed inset-0 pointer-events-none z-tooltip-v2">
       {pieces.map((piece) => (
         <motion.div
           key={piece.id}

@@ -61,7 +61,7 @@ export default function SkipToContent({ targetId = 'main-content' }: SkipToConte
           key={link.id}
           href={`#${link.id}`}
           onClick={(e) => handleSkipClick(e, link.id)}
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-tooltip-v2 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200"
         >
           {link.label}
         </a>

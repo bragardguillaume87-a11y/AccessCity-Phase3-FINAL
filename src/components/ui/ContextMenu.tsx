@@ -125,7 +125,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
   return (
     <div
       ref={menuRef}
-      className="fixed z-[10000] bg-slate-800 border-2 border-slate-700 rounded-lg shadow-2xl py-1 min-w-[200px]"
+      className="fixed z-tooltip-v2 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-2xl py-1 min-w-[200px]"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
       role="menu"
       tabIndex={-1}

@@ -77,7 +77,7 @@ export function AssetLightbox({ asset, onClose, onNavigate, usage }: AssetLightb
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-8"
+      className="fixed inset-0 z-modal-v2 bg-black/95 backdrop-blur-sm flex items-center justify-center p-8"
       onClick={onClose}
     >
       {/* Close Button */}

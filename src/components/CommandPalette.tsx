@@ -220,7 +220,7 @@ export default function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-20 animate-fadeIn"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-modal-v2 flex items-start justify-center pt-20 animate-fadeIn"
       onClick={onClose}
     >
       <div

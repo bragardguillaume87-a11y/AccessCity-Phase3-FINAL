@@ -13,7 +13,7 @@ export interface CanvasFloatingControlsProps {
  */
 export function CanvasFloatingControls({ gridEnabled, onToggleGrid, onAddCharacter }: CanvasFloatingControlsProps) {
   return (
-    <div className="absolute top-4 right-4 flex items-center gap-3 z-50">
+    <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
       {/* Grid Toggle */}
       <label className="flex items-center gap-2 bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-hover)] border-2 border-[var(--color-border-base)] px-3 py-2 rounded-lg shadow-lg cursor-pointer transition-all">
         <input

@@ -14,13 +14,13 @@ import type {
 } from '@/types';
 import type { CanvasProp } from './MainCanvas/components/PropElement';
 import type { CanvasTextBox } from './MainCanvas/components/TextBoxElement';
-import { useScenesStore, useCharactersStore } from '../../stores/index.js';
+import { useScenesStore, useCharactersStore } from '../../stores/index';
 import ContextMenu from '../ui/ContextMenu';
-import AddCharacterToSceneModal from '../modals/AddCharacterToSceneModal.jsx';
+import AddCharacterToSceneModal from '../modals/AddCharacterToSceneModal';
 import TimelinePlayhead from './TimelinePlayhead';
 import { useCanvasKeyboard } from '@/hooks/useCanvasKeyboard';
-import { useCanvasDimensions } from './MainCanvas/hooks/useCanvasDimensions.js';
-import { useDialogueSync } from './MainCanvas/hooks/useDialogueSync.js';
+import { useCanvasDimensions } from './MainCanvas/hooks/useCanvasDimensions';
+import { useDialogueSync } from './MainCanvas/hooks/useDialogueSync';
 import { useCanvasViewState } from './MainCanvas/hooks/useCanvasViewState';
 import { useCanvasSelection } from './MainCanvas/hooks/useCanvasSelection';
 import { useCanvasDragDrop } from './MainCanvas/hooks/useCanvasDragDrop';
@@ -40,7 +40,7 @@ import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
 import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization';
 import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
 import { RightPanelToggle } from './MainCanvas/components/RightPanelToggle';
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../utils/logger';
 import { TIMING } from '@/config/timing';
 
 /**

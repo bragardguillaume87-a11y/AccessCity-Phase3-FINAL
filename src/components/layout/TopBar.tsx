@@ -74,7 +74,7 @@ export default function TopBar({
 }: TopBarProps) {
   return (
     <header
-      className="bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0"
+      className="sticky top-0 z-fixed-v2 bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0"
       role="banner"
       aria-label="Application header"
     >

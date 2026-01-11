@@ -1,22 +1,47 @@
 import { useEffect, useState } from 'react';
-import { logger } from '@/utils/logger.js';
+import { logger } from '@/utils/logger';
 import { TIMING } from '@/config/timing';
+import type { Scene } from '@/types';
+
+/**
+ * Selected element type (from UI store)
+ */
+export interface SelectedElement {
+  type: 'dialogue' | 'character' | 'scene' | 'sceneCharacter';
+  sceneId?: string;
+  index?: number;
+  id?: string;
+  sceneCharacterId?: string;
+}
+
+/**
+ * Return type for useDialogueSync hook
+ */
+export interface UseDialogueSyncReturn {
+  currentDialogueText: string;
+  setCurrentDialogueText: React.Dispatch<React.SetStateAction<string>>;
+  currentTime: number;
+  setCurrentTime: React.Dispatch<React.SetStateAction<number>>;
+}
 
 /**
  * useDialogueSync - Synchronize dialogue selection with typewriter, timeline and auto-scroll
  *
- * @param {Object} selectedElement - Currently selected element
- * @param {Object} selectedScene - Currently selected scene
- * @returns {{ currentDialogueText: string, setCurrentDialogueText: Function, currentTime: number, setCurrentTime: Function }}
+ * @param selectedElement - Currently selected element
+ * @param selectedScene - Currently selected scene
+ * @returns Dialogue sync state and setters
  */
-export function useDialogueSync(selectedElement, selectedScene) {
+export function useDialogueSync(
+  selectedElement: SelectedElement | null,
+  selectedScene: Scene | undefined
+): UseDialogueSyncReturn {
   const [currentDialogueText, setCurrentDialogueText] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
 
   // Update typewriter text when selected dialogue changes
   useEffect(() => {
     if (selectedElement?.type === 'dialogue' && selectedScene) {
-      const dialogue = selectedScene.dialogues?.[selectedElement.index];
+      const dialogue = selectedScene.dialogues?.[selectedElement.index ?? 0];
       setCurrentDialogueText(dialogue?.text || '');
     } else {
       setCurrentDialogueText('');
@@ -28,7 +53,7 @@ export function useDialogueSync(selectedElement, selectedScene) {
     if (selectedElement?.type === 'dialogue' && selectedScene && selectedScene.dialogues) {
       const duration = Math.max(60, selectedScene.dialogues.length * 5);
       const dialogueDuration = duration / Math.max(1, selectedScene.dialogues.length);
-      const dialogueTime = selectedElement.index * dialogueDuration;
+      const dialogueTime = (selectedElement.index ?? 0) * dialogueDuration;
       setCurrentTime(dialogueTime);
     }
   }, [selectedElement, selectedScene]);

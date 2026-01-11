@@ -1,6 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 /**
+ * Canvas dimensions interface
+ */
+export interface Dimensions {
+  width: number;
+  height: number;
+}
+
+/**
  * useCanvasDimensions - Track canvas dimensions using callback ref + ResizeObserver
  *
  * This hook uses the callback ref pattern to handle dimension tracking correctly
@@ -8,18 +16,18 @@ import { useState, useCallback, useEffect, useRef } from 'react';
  * executes synchronously when the element attaches to the DOM, eliminating timing
  * issues that occur with useRef + useEffect/useLayoutEffect.
  *
- * @returns {[function, {width: number, height: number}]} Tuple of [ref callback, dimensions]
+ * @returns Tuple of [ref callback, dimensions]
  *
  * @example
  * const [canvasRef, canvasDimensions] = useCanvasDimensions();
  * return <div ref={canvasRef}>...</div>
  */
-export function useCanvasDimensions() {
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const observerRef = useRef(null);
+export function useCanvasDimensions(): [(node: HTMLElement | null) => void, Dimensions] {
+  const [dimensions, setDimensions] = useState<Dimensions>({ width: 0, height: 0 });
+  const observerRef = useRef<ResizeObserver | null>(null);
 
   // Callback ref - executes synchronously when element attaches
-  const measureRef = useCallback((node) => {
+  const measureRef = useCallback((node: HTMLElement | null) => {
     // Cleanup previous observer if it exists
     if (observerRef.current) {
       observerRef.current.disconnect();

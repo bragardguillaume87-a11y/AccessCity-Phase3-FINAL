@@ -7,7 +7,53 @@
  * <motion.div variants={CHARACTER_ANIMATION_VARIANTS.fadeIn} ... />
  */
 
-export const CHARACTER_ANIMATION_VARIANTS = {
+/**
+ * Animation variant type for Framer Motion
+ */
+interface AnimationVariant {
+  initial: {
+    opacity?: number;
+    scale?: number;
+    x?: number;
+    y?: number;
+  };
+  animate: {
+    opacity?: number;
+    scale?: number;
+    x?: number;
+    y?: number;
+    transition?: {
+      duration?: number;
+      ease?: string;
+      type?: string;
+      bounce?: number;
+    };
+  };
+  exit: {
+    opacity?: number;
+    scale?: number;
+    x?: number;
+    y?: number;
+    transition?: {
+      duration?: number;
+    };
+  };
+}
+
+/**
+ * Available character animation variants
+ */
+export type CharacterAnimationVariantName =
+  | 'none'
+  | 'fadeIn'
+  | 'slideInLeft'
+  | 'slideInRight'
+  | 'slideInUp'
+  | 'slideInDown'
+  | 'pop'
+  | 'bounce';
+
+export const CHARACTER_ANIMATION_VARIANTS: Record<CharacterAnimationVariantName, AnimationVariant> = {
   // No animation
   none: {
     initial: { opacity: 1, scale: 1, x: 0, y: 0 },
@@ -53,4 +99,4 @@ export const CHARACTER_ANIMATION_VARIANTS = {
     animate: { y: 0, opacity: 1, transition: { duration: 0.6, type: 'spring', bounce: 0.6 } },
     exit: { y: 50, opacity: 0, transition: { duration: 0.3 } }
   }
-};
+} as const;

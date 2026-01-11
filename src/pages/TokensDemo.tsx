@@ -1,6 +1,11 @@
+import React from 'react';
 import { Button } from '@/components/ui/button';
 
-export default function TokensDemo() {
+/**
+ * TokensDemo - Design Tokens Demo Page
+ * Demonstrates WCAG 2.2 AA compliant design tokens and gaming UI variants
+ */
+export default function TokensDemo(): React.ReactElement {
   return (
     <div className="min-h-screen bg-[var(--color-bg-base)] p-8">
       <div className="max-w-6xl mx-auto space-y-12">

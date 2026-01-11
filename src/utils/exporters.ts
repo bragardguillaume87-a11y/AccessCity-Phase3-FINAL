@@ -2,44 +2,12 @@
  * Utilities for exporting scenarios in various formats
  */
 
+import type { Scene, Character } from '@/types';
+
 // Types for scenario validation
 interface ValidationResult {
   valid: boolean;
   errors: string[];
-}
-
-// Types for scenario structure (based on existing usage)
-interface Character {
-  id: string;
-  name: string;
-  sprites?: Record<string, string>;
-}
-
-interface StatsDelta {
-  physique?: number;
-  mentale?: number;
-  sociale?: number;
-}
-
-interface Choice {
-  label: string;
-  nextSceneId?: string;
-  nextDialogueId?: string;
-  statsDelta?: StatsDelta;
-}
-
-interface Dialogue {
-  id?: string;
-  speaker?: string;
-  text?: string;
-  choices?: Choice[];
-}
-
-interface Scene {
-  id: string;
-  title: string;
-  background?: string;
-  dialogues: Dialogue[];
 }
 
 interface ScenarioContext {

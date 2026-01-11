@@ -16,16 +16,16 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
 
-    // Type Checking - Start lenient, will tighten progressively
-    "strict": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    // Type Checking - Ready for STRICT MODE (activate in next phase)
+    "strict": false, // TODO Phase 7: Activate strict mode + fix 100 type errors
+    "noUnusedLocals": false, // TODO Phase 7: Enable after strict mode
+    "noUnusedParameters": false, // TODO Phase 7: Enable after strict mode
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": false,
+    "noUncheckedIndexedAccess": false, // TODO Phase 7: Enable with strict mode
     "exactOptionalPropertyTypes": false,
 
-    // Allow JS during migration
-    "allowJs": true,
+    // JS migration complete - TypeScript only
+    "allowJs": false,
     "checkJs": false,
 
     // Performance optimizations

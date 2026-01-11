@@ -1,32 +1,69 @@
-// core/StageDirector.js
+// core/StageDirector.ts
 // Moteur de jeu pour AccessCity Studio (React)
 
 import { logger } from '../utils/logger';
+import type { Scene, Dialogue, Character, DialogueChoice } from '@/types';
 
+/**
+ * Game variables tracking player progress
+ */
+export interface GameVariables {
+  Empathie: number;
+  Autonomie: number;
+  Confiance: number;
+}
+
+/**
+ * Ending message structure
+ */
+export interface EndingMessage {
+  title: string;
+  message: string;
+  grade: string;
+}
+
+/**
+ * StageDirector class - Game engine for AccessCity Studio
+ * Manages game flow, dialogue progression, and player variables
+ */
 export default class StageDirector {
-  constructor(scenes, dialogues, characters, initialSceneIndex = 0) {
+  private scenes: Scene[];
+  private characters: Character[];
+
+  private currentSceneIndex: number;
+  private currentDialogueIndex: number;
+  private gameEnded: boolean;
+  private variables: GameVariables;
+
+  constructor(
+    scenes: Scene[],
+    dialogues: Dialogue[], // Kept for backward compatibility but not used
+    characters: Character[],
+    initialSceneIndex: number = 0
+  ) {
     this.scenes = scenes || [];
-    this.dialogues = dialogues || [];
     this.characters = characters || [];
-    
+
     // État du jeu
     this.currentSceneIndex = initialSceneIndex; // ✅ Support scène initiale
     this.currentDialogueIndex = 0;
     this.gameEnded = false;
-    
+
     // Variables du jeu
     this.variables = {
       Empathie: 50,
       Autonomie: 50,
       Confiance: 50
     };
-    
+
     // Initialisation
     this.initialize();
   }
 
-
-  initialize() {
+  /**
+   * Initialize or reset game state
+   */
+  private initialize(): void {
     // S'assurer que l'index de scène est valide
     if (this.currentSceneIndex < 0 || this.currentSceneIndex >= this.scenes.length) {
       logger.warn(`[StageDirector] Scene index ${this.currentSceneIndex} invalide, reset à 0`);
@@ -39,8 +76,11 @@ export default class StageDirector {
     logger.debug(`[StageDirector] Initialisation: scène ${this.currentSceneIndex}/${this.scenes.length}`);
   }
 
-
-  getCurrentScene() {
+  /**
+   * Get the current scene
+   * @returns Current scene or null if invalid index
+   */
+  getCurrentScene(): Scene | null {
     if (this.currentSceneIndex >= 0 && this.currentSceneIndex < this.scenes.length) {
       const scene = this.scenes[this.currentSceneIndex];
       logger.debug(`[StageDirector] getCurrentScene(): scène ${scene?.id || 'undefined'}`);
@@ -50,18 +90,18 @@ export default class StageDirector {
     return null;
   }
 
-
-  getCurrentDialogue() {
+  /**
+   * Get the current dialogue in the current scene
+   * @returns Current dialogue or null
+   */
+  getCurrentDialogue(): Dialogue | null {
     const currentScene = this.getCurrentScene();
     if (!currentScene) {
       logger.warn('[StageDirector] getCurrentDialogue(): aucune scène actuelle');
       return null;
     }
 
-    // ✅ FIX: Filtrer par scene.id au lieu de l'index
-    const dialoguesInScene = this.dialogues.filter(
-      d => d.sceneId === currentScene.id
-    );
+    const dialoguesInScene = currentScene.dialogues || [];
 
     logger.debug(`[StageDirector] Scène "${currentScene.id}": ${dialoguesInScene.length} dialogues trouvés`);
 
@@ -75,31 +115,35 @@ export default class StageDirector {
     return null;
   }
 
-
-  makeChoice(choice) {
+  /**
+   * Process a player choice
+   * @param choice - The dialogue choice selected by the player
+   * @returns Effects applied or null
+   */
+  makeChoice(choice: DialogueChoice): Record<string, unknown> | null {
     logger.debug('[StageDirector] Choice made:', choice);
 
     // Appliquer les effets sur les variables
     if (choice.effects) {
-      Object.entries(choice.effects).forEach(([key, value]) => {
-        if (this.variables.hasOwnProperty(key)) {
-          this.variables[key] = Math.max(0, Math.min(100, this.variables[key] + value));
+      choice.effects.forEach(effect => {
+        const key = effect.variable as keyof GameVariables;
+        if (key in this.variables) {
+          this.variables[key] = Math.max(0, Math.min(100, this.variables[key] + effect.value));
           logger.debug(`[StageDirector] Variable ${key}: ${this.variables[key]}`);
         }
       });
     }
 
-
-    // Gérer le risque (lancer de dé)
-    if (choice.riskLevel && choice.riskLevel > 0) {
+    // Gérer le risque (lancer de dé) via diceCheck
+    if (choice.diceCheck) {
       const diceRoll = Math.floor(Math.random() * 6) + 1;
-      const threshold = 7 - choice.riskLevel; // riskLevel 1 = seuil 6, riskLevel 2 = seuil 5, etc.
+      const threshold = choice.diceCheck.difficulty || 4;
 
       logger.debug(`[StageDirector] Dice roll: ${diceRoll}, threshold: ${threshold}`);
 
       if (diceRoll < threshold) {
         // Échec : pénalité sur les variables
-        Object.keys(this.variables).forEach(key => {
+        (Object.keys(this.variables) as Array<keyof GameVariables>).forEach(key => {
           this.variables[key] = Math.max(0, this.variables[key] - 5);
         });
         logger.debug('[StageDirector] Risk failed! Variables reduced.');
@@ -108,10 +152,8 @@ export default class StageDirector {
       }
     }
 
-
     // Déterminer la prochaine scène
     if (choice.nextSceneId !== null && choice.nextSceneId !== undefined) {
-      // ✅ FIX: Chercher l'index de la scène par son ID
       const nextSceneIndex = this.scenes.findIndex(s => s.id === choice.nextSceneId);
 
       if (nextSceneIndex !== -1) {
@@ -131,36 +173,42 @@ export default class StageDirector {
       }
     }
 
-
-    return choice.effects || null;
+    return choice.effects ? choice.effects.reduce((acc, eff) => ({...acc, [eff.variable]: eff.value}), {}) : null;
   }
 
-
-  isGameEnded() {
-    // ✅ FIX: Vérifier aussi s'il reste des dialogues
+  /**
+   * Check if the game has ended
+   * @returns True if game is over
+   */
+  isGameEnded(): boolean {
     if (this.gameEnded) return true;
-    
+
     const currentScene = this.getCurrentScene();
     if (!currentScene) return true;
-    
-    const dialoguesInScene = this.dialogues.filter(d => d.sceneId === currentScene.id);
-    
+
+    const dialoguesInScene = currentScene.dialogues || [];
+
     // Si aucun dialogue dans la scène actuelle, le jeu est terminé
     if (dialoguesInScene.length === 0) {
       logger.warn(`[StageDirector] Aucun dialogue pour la scène ${currentScene.id}, jeu terminé`);
       return true;
     }
-    
+
     return false;
   }
 
-
-  getVariables() {
+  /**
+   * Get current game variables (immutable copy)
+   * @returns Copy of game variables
+   */
+  getVariables(): GameVariables {
     return { ...this.variables };
   }
 
-
-  resetGame() {
+  /**
+   * Reset game to initial state
+   */
+  resetGame(): void {
     this.currentSceneIndex = 0;
     this.currentDialogueIndex = 0;
     this.gameEnded = false;
@@ -172,16 +220,16 @@ export default class StageDirector {
     logger.debug('[StageDirector] Game reset');
   }
 
-
-  // Méthode pour avancer au dialogue suivant (si multiple dialogues par scène)
-  nextDialogue() {
+  /**
+   * Advance to next dialogue in current scene
+   * @returns True if advanced, false if no more dialogues
+   */
+  nextDialogue(): boolean {
     const currentScene = this.getCurrentScene();
     if (!currentScene) return false;
-    
-    const dialoguesInScene = this.dialogues.filter(
-      d => d.sceneId === currentScene.id
-    );
-    
+
+    const dialoguesInScene = currentScene.dialogues || [];
+
     if (this.currentDialogueIndex < dialoguesInScene.length - 1) {
       this.currentDialogueIndex++;
       logger.debug(`[StageDirector] Avancé au dialogue ${this.currentDialogueIndex}`);
@@ -192,33 +240,41 @@ export default class StageDirector {
     return false; // Pas de dialogue suivant
   }
 
-
-  // Méthode pour obtenir tous les dialogues d'une scène
-  getDialoguesForScene(sceneId) {
-    return this.dialogues.filter(d => d.sceneId === sceneId);
+  /**
+   * Get all dialogues for a specific scene
+   * @param sceneId - Scene ID
+   * @returns Array of dialogues
+   */
+  getDialoguesForScene(sceneId: string): Dialogue[] {
+    const scene = this.scenes.find(s => s.id === sceneId);
+    return scene?.dialogues || [];
   }
 
-
-  // Méthode pour obtenir un personnage par ID
-  getCharacterById(characterId) {
-    if (characterId >= 0 && characterId < this.characters.length) {
-      return this.characters[characterId];
-    }
-    return null;
+  /**
+   * Get character by ID
+   * @param characterId - Character ID
+   * @returns Character or null
+   */
+  getCharacterById(characterId: string): Character | null {
+    return this.characters.find(c => c.id === characterId) || null;
   }
 
-
-  // Méthode pour calculer le score final
-  getFinalScore() {
+  /**
+   * Calculate final score (average of all variables)
+   * @returns Final score (0-100)
+   */
+  getFinalScore(): number {
     const avg = (this.variables.Empathie + this.variables.Autonomie + this.variables.Confiance) / 3;
     return Math.round(avg);
   }
 
-
-  // Méthode pour obtenir un message de fin basé sur le score
-  getEndingMessage() {
+  /**
+   * Get ending message based on final score
+   * @returns Ending message with title, message and grade
+   */
+  getEndingMessage(): EndingMessage {
     const score = this.getFinalScore();
-    
+
     if (score >= 80) {
       return {
         title: "Parcours exceptionnel !",

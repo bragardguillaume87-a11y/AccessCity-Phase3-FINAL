@@ -23,12 +23,12 @@ interface ModalContext {
   sceneId?: string;
 }
 
-const LeftPanel = React.lazy(() => import('./panels/LeftPanel.jsx'));
-const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel.jsx'));
-const CharactersModal = React.lazy(() => import('./modals/CharactersModal.jsx'));
-const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal.jsx'));
-const SettingsModal = React.lazy(() => import('./modals/SettingsModal.jsx'));
-const PreviewModal = React.lazy(() => import('./modals/PreviewModal.jsx'));
+const LeftPanel = React.lazy(() => import('./panels/LeftPanel'));
+const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel'));
+const CharactersModal = React.lazy(() => import('./modals/CharactersModal'));
+const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal'));
+const SettingsModal = React.lazy(() => import('./modals/SettingsModal'));
+const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
 
 /**
  * EditorShell - New 3-pane editor layout (GDevelop-like)

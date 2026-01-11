@@ -175,7 +175,7 @@ export default function EditorShell({ onBack = null }) {
           <Group className="h-full">
             {/* Left panel: Explorer/Sidebar - Resizable 15-40% (PHASE 6: Hidden in fullscreen) */}
             <Panel
-              defaultSize={20}
+              defaultSize={25}
               minSize={15}
               maxSize={40}
               collapsible={true}
@@ -200,6 +200,7 @@ export default function EditorShell({ onBack = null }) {
             <Panel
               defaultSize={50}
               minSize={30}
+              maxSize={70}
               className="bg-slate-900 overflow-auto"
               id="canvas-panel"
               role="main"
@@ -229,8 +230,8 @@ export default function EditorShell({ onBack = null }) {
 
             {/* Right panel: Inspector/Properties - Resizable 20-40% (PHASE 4: Collapsible, PHASE 6: Hidden in fullscreen) */}
             <Panel
-              defaultSize={30}
-              minSize={20}
+              defaultSize={25}
+              minSize={15}
               maxSize={40}
               collapsible={true}
               collapsedSize={!isRightPanelOpen || fullscreenMode ? 0 : undefined}

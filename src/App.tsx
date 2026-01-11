@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import SkipToContent from './components/SkipToContent';
 import HomePage from './components/HomePage';
 import EditorShell from './components/EditorShell';
-import TokensDemo from "./pages/TokensDemo.jsx";
+import TokensDemo from "./pages/TokensDemo";
 import { Toaster } from "sonner";
 
 // État initial des quêtes (données de démo)

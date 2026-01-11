@@ -1,5 +1,5 @@
 import React from 'react';
-import { CharacterCard } from '../components/CharacterCard.jsx';
+import { CharacterCard } from '../components/CharacterCard';
 
 /**
  * Panneau gauche : Liste/explorateur de personnages

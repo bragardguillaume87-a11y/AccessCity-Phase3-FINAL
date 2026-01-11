@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AvatarPicker } from '../components/AvatarPicker.jsx';
+import { AvatarPicker } from '../components/AvatarPicker';
 import { useCharacterValidation } from '@/hooks/useCharacterValidation';
 
 /**

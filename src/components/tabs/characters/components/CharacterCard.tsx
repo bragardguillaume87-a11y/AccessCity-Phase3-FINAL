@@ -1,10 +1,29 @@
 import React from 'react';
+import type { Character } from '@/types';
 
 /**
- * Carte de personnage pour la liste
+ * Props for CharacterCard component
+ */
+export interface CharacterCardProps {
+  /** Character data */
+  character: Character;
+  /** Whether this character is selected */
+  isSelected: boolean;
+  /** Callback when character is selected */
+  onSelect: () => void;
+  /** Callback to duplicate character */
+  onDuplicate: () => void;
+  /** Callback to delete character */
+  onDelete: () => void;
+  /** Labels for i18n */
+  labels?: Record<string, string>;
+}
+
+/**
+ * CharacterCard - Character display card
  * Affiche le nom, un aperçu et les actions (dupliquer, supprimer)
  */
-export const CharacterCard = ({
+export const CharacterCard: React.FC<CharacterCardProps> = ({
   character,
   isSelected,
   onSelect,
@@ -24,14 +43,14 @@ export const CharacterCard = ({
     boxShadow: isSelected ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none'
   };
 
-  const handleMouseEnter = (e) => {
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isSelected) {
       e.currentTarget.style.borderColor = '#cbd5e1';
       e.currentTarget.style.boxShadow = '0 2px 4px -1px rgba(0,0,0,0.05)';
     }
   };
 
-  const handleMouseLeave = (e) => {
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isSelected) {
       e.currentTarget.style.borderColor = '#e2e8f0';
       e.currentTarget.style.boxShadow = 'none';
@@ -103,7 +122,7 @@ export const CharacterCard = ({
                   backgroundColor: '#f1f5f9'
                 }}
                 onError={(e) => {
-                  e.target.style.display = 'none';
+                  (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             )
@@ -134,8 +153,8 @@ export const CharacterCard = ({
             fontWeight: '500',
             transition: 'background-color 0.2s'
           }}
-          onMouseOver={(e) => e.target.style.backgroundColor = '#7c3aed'}
-          onMouseOut={(e) => e.target.style.backgroundColor = '#8b5cf6'}
+          onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#7c3aed'}
+          onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#8b5cf6'}
           title="Dupliquer ce personnage"
         >
           📋
@@ -167,12 +186,12 @@ export const CharacterCard = ({
           }}
           onMouseOver={(e) => {
             if (!isSystemCharacter) {
-              e.target.style.backgroundColor = '#dc2626';
+              (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626';
             }
           }}
           onMouseOut={(e) => {
             if (!isSystemCharacter) {
-              e.target.style.backgroundColor = '#ef4444';
+              (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444';
             }
           }}
           title={isSystemCharacter ? 'Personnage système protégé' : 'Supprimer ce personnage'}

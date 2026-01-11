@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
 import { AvatarPicker } from '../components/AvatarPicker';
 import { useCharacterValidation } from '@/hooks/useCharacterValidation';
+import type { Character } from '@/types';
+import type { CharactersTabLabels } from '../CharactersTab';
 
 /**
- * Éditeur de personnage (Modal)
+ * Props for CharacterEditor component
+ */
+export interface CharacterEditorProps {
+  character: Character;
+  characters: Character[];
+  onSave: (character: Character) => void;
+  onClose: () => void;
+  labels?: CharactersTabLabels;
+}
+
+/**
+ * CharacterEditor - Character editing modal
  * Permet d'éditer le nom, la description et les avatars d'un personnage
  */
-const modalStyles = {
+const modalStyles: { [key: string]: React.CSSProperties } = {
   overlay: {
-    position: 'fixed',
+    position: 'fixed' as const,
     top: 0,
     left: 0,
     right: 0,
@@ -26,7 +39,7 @@ const modalStyles = {
     minWidth: '600px',
     maxWidth: '90%',
     maxHeight: '90vh',
-    overflowY: 'auto',
+    overflowY: 'auto' as const,
     boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
   },
   header: {
@@ -53,7 +66,7 @@ const modalStyles = {
     borderRadius: '6px',
     fontSize: '1rem',
     transition: 'border-color 0.2s',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box' as const
   },
   textarea: {
     width: '100%',
@@ -62,9 +75,9 @@ const modalStyles = {
     borderRadius: '6px',
     fontSize: '1rem',
     minHeight: '100px',
-    resize: 'vertical',
+    resize: 'vertical' as const,
     fontFamily: 'inherit',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box' as const
   },
   error: {
     color: '#dc2626',
@@ -81,17 +94,17 @@ const modalStyles = {
   }
 };
 
-export const CharacterEditor = ({ character, characters, onSave, onClose, labels = {} }) => {
+export const CharacterEditor: React.FC<CharacterEditorProps> = ({ character, characters, onSave, onClose, labels = {} as CharactersTabLabels }) => {
   const [formData, setFormData] = useState({
     ...character,
     moods: character.moods || ['neutral'],
     sprites: character.sprites || {}
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [activeMood, setActiveMood] = useState(formData.moods[0] || 'neutral');
   const { validateAll } = useCharacterValidation(characters, character);
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => {
@@ -102,7 +115,7 @@ export const CharacterEditor = ({ character, characters, onSave, onClose, labels
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const validation = validateAll(formData);
     if (!validation.isValid) {
@@ -112,7 +125,7 @@ export const CharacterEditor = ({ character, characters, onSave, onClose, labels
     onSave(formData);
   };
 
-  const handleSpriteSelect = (mood, url) => {
+  const handleSpriteSelect = (mood: string, url: string) => {
     setFormData(prev => ({
       ...prev,
       sprites: { ...prev.sprites, [mood]: url }

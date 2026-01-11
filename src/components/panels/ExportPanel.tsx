@@ -20,11 +20,12 @@ export default function ExportPanel({ onPrev, onNext }: ExportPanelProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const data = {
-    context,
     scenes,
     characters,
-    version: '1.0.0',
-    exportedAt: new Date().toISOString()
+    context: {
+      title: context?.title,
+      description: context?.description
+    }
   };
 
   const handleValidate = () => {

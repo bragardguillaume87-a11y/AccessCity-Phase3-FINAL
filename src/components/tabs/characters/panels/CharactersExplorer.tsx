@@ -1,18 +1,33 @@
 import React from 'react';
 import { CharacterCard } from '../components/CharacterCard';
+import type { Character } from '@/types';
+import type { CharactersTabLabels } from '../CharactersTab';
 
 /**
- * Panneau gauche : Liste/explorateur de personnages
+ * Props for CharactersExplorer component
+ */
+export interface CharactersExplorerProps {
+  characters?: Character[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onCreate: () => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+  labels?: CharactersTabLabels;
+}
+
+/**
+ * CharactersExplorer - Left panel character list
  * Affiche tous les personnages sous forme de cartes avec actions CRUD
  */
-export const CharactersExplorer = ({
+export const CharactersExplorer: React.FC<CharactersExplorerProps> = ({
   characters = [],
   selectedId,
   onSelect,
   onCreate,
   onDuplicate,
   onDelete,
-  labels = {}
+  labels = {} as CharactersTabLabels
 }) => {
   const sortedCharacters = [...characters].sort((a, b) =>
     a.name.localeCompare(b.name)
@@ -43,8 +58,8 @@ export const CharactersExplorer = ({
             cursor: 'pointer',
             transition: 'background-color 0.2s'
           }}
-          onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
-          onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
         >
           + {labels.new || 'Nouveau'}
         </button>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { CharactersExplorer } from './panels/CharactersExplorer';
 import { CharacterEditor } from './panels/CharacterEditor';
 import { CharacterProperties } from './panels/CharacterProperties';
@@ -8,7 +7,8 @@ import styles from './CharactersTab.module.css';
 import type { Character, Scene } from '@/types';
 
 /**
- * Labels for internationalization
+ * Labels for internationalization - Shared across all character components
+ * Exported for use in CharacterEditor, CharacterProperties, CharactersExplorer
  */
 export interface CharactersTabLabels {
   characters?: string;
@@ -47,7 +47,6 @@ export interface CharactersTabProps {
  * \`\`\`
  */
 export const CharactersTab: React.FC<CharactersTabProps> = ({ scenes = [] }) => {
-  const { t } = useTranslation('characters');
   const {
     characters,
     createCharacter,
@@ -99,17 +98,17 @@ export const CharactersTab: React.FC<CharactersTabProps> = ({ scenes = [] }) => 
   };
 
   const labels: CharactersTabLabels = {
-    characters: t('characters', 'Personnages'),
-    new: t('new', 'Nouveau'),
-    noCharacters: t('noCharacters', 'Aucun personnage'),
-    editCharacter: t('editCharacter', 'Éditer le personnage'),
-    save: t('save', 'Enregistrer'),
-    cancel: t('cancel', 'Annuler'),
-    name: t('name', 'Nom'),
-    description: t('description', 'Description'),
-    properties: t('properties', 'Propriétés'),
-    selectCharacter: t('selectCharacter', 'Sélectionnez un personnage'),
-    edit: t('edit', 'Éditer')
+    characters: 'Personnages',
+    new: 'Nouveau',
+    noCharacters: 'Aucun personnage',
+    editCharacter: 'Éditer le personnage',
+    save: 'Enregistrer',
+    cancel: 'Annuler',
+    name: 'Nom',
+    description: 'Description',
+    properties: 'Propriétés',
+    selectCharacter: 'Sélectionnez un personnage',
+    edit: 'Éditer'
   };
 
   return (

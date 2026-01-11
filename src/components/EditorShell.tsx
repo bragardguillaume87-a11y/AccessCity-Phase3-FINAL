@@ -3,15 +3,25 @@ import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.
 import { useUndoRedo } from '../hooks/useUndoRedo.ts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import KeyboardShortcuts from 'KeyboardShortcuts';
-import ProblemsPanel from 'ProblemsPanel';
-import CommandPalette from 'CommandPalette';
+import KeyboardShortcuts from './KeyboardShortcuts';
+import ProblemsPanel from './ProblemsPanel';
+import CommandPalette from './CommandPalette';
 import { useValidation } from '../hooks/useValidation.ts';
 import TopBar from './layout/TopBar';
 import Sidebar from './layout/Sidebar';
 import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
-import MainCanvas from 'panels/MainCanvas';
+import MainCanvas from './panels/MainCanvas';
+
+/**
+ * Modal context type - Stores context data for various modals
+ */
+interface ModalContext {
+  characterId?: string;
+  category?: string;
+  targetSceneId?: string;
+  sceneId?: string;
+}
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel.jsx'));
 const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel.jsx'));
@@ -52,8 +62,8 @@ export default function EditorShell({ onBack = null }) {
   const [fullscreenMode, setFullscreenMode] = useState(null);
 
   // Modal state management
-  const [activeModal, setActiveModal] = useState(null); // 'characters' | 'assets' | 'export' | 'preview' | null
-  const [modalContext, setModalContext] = useState({}); // { characterId, category, sceneId, ... }
+  const [activeModal, setActiveModal] = useState<string | null>(null); // 'characters' | 'assets' | 'export' | 'preview' | null
+  const [modalContext, setModalContext] = useState<ModalContext>({}); // { characterId, category, sceneId, ... }
 
   // KEYBOARD SHORTCUTS: Register global keyboard shortcuts (Ctrl+Z, Ctrl+Y, etc.)
   useKeyboardShortcuts({
@@ -113,10 +123,9 @@ export default function EditorShell({ onBack = null }) {
       <KeyboardShortcuts
         activeTab="editor"
         setActiveTab={() => {}}
-        onOpenCommandPalette={(mode) => setCommandPaletteOpen(mode || true)}
-        onOpenModal={(modal, context) => {
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+        onOpenModal={(modal) => {
           setActiveModal(modal);
-          if (context) setModalContext(context);
         }}
       />
 
@@ -151,7 +160,7 @@ export default function EditorShell({ onBack = null }) {
       )}
 
       {/* Main 3-pane layout - Resizable with react-resizable-panels */}
-      <main className="flex-1 overflow-hidden" id="main-content" tabIndex="-1">
+      <main className="flex-1 overflow-hidden" id="main-content" tabIndex={-1}>
         {/* Main content heading - Screen reader only */}
         <h2 className="sr-only">Zone d'édition principale</h2>
 
@@ -163,14 +172,14 @@ export default function EditorShell({ onBack = null }) {
             </div>
           </div>
         }>
-          <Group direction="horizontal" className="h-full">
+          <Group className="h-full">
             {/* Left panel: Explorer/Sidebar - Resizable 15-40% (PHASE 6: Hidden in fullscreen) */}
             <Panel
-              defaultSize="20%"
-              minSize="15%"
-              maxSize="40%"
+              defaultSize={20}
+              minSize={15}
+              maxSize={40}
               collapsible={true}
-              collapsed={!!fullscreenMode}
+              collapsedSize={fullscreenMode ? 0 : undefined}
               className="bg-slate-800 border-r border-slate-700 overflow-y-auto"
               id="explorer-panel"
               role="complementary"
@@ -189,8 +198,8 @@ export default function EditorShell({ onBack = null }) {
 
             {/* Center panel: Main Canvas - Flexible */}
             <Panel
-              defaultSize="50%"
-              minSize="30%"
+              defaultSize={50}
+              minSize={30}
               className="bg-slate-900 overflow-auto"
               id="canvas-panel"
               role="main"
@@ -220,13 +229,11 @@ export default function EditorShell({ onBack = null }) {
 
             {/* Right panel: Inspector/Properties - Resizable 20-40% (PHASE 4: Collapsible, PHASE 6: Hidden in fullscreen) */}
             <Panel
-              defaultSize="30%"
-              minSize="20%"
-              maxSize="40%"
+              defaultSize={30}
+              minSize={20}
+              maxSize={40}
               collapsible={true}
-              collapsed={!isRightPanelOpen || !!fullscreenMode}
-              onCollapse={() => setIsRightPanelOpen(false)}
-              onExpand={() => setIsRightPanelOpen(true)}
+              collapsedSize={!isRightPanelOpen || fullscreenMode ? 0 : undefined}
               className="bg-slate-800 border-l border-slate-700 overflow-y-auto"
               id="properties-panel"
               role="complementary"

@@ -1,10 +1,21 @@
 import React from 'react';
+import type { Character, Scene } from '@/types';
+import type { CharactersTabLabels } from '../CharactersTab';
 
 /**
- * Panneau droit : Propriétés techniques du personnage sélectionné
+ * Props for CharacterProperties component
+ */
+export interface CharacterPropertiesProps {
+  character?: Character | null;
+  scenes?: Scene[];
+  labels?: CharactersTabLabels;
+}
+
+/**
+ * CharacterProperties - Right panel technical properties
  * Affiche les informations techniques et métadonnées
  */
-export const CharacterProperties = ({ character, scenes = [], labels = {} }) => {
+export const CharacterProperties: React.FC<CharacterPropertiesProps> = ({ character, scenes = [], labels = {} as CharactersTabLabels }) => {
   if (!character) {
     return (
       <aside style={{
@@ -132,9 +143,19 @@ export const CharacterProperties = ({ character, scenes = [], labels = {} }) => 
 };
 
 /**
- * Composant utilitaire pour afficher une propriété
+ * Props for PropertyItem
  */
-const PropertyItem = ({ label, value, mono = false, multiline = false }) => (
+interface PropertyItemProps {
+  label: string;
+  value?: string;
+  mono?: boolean;
+  multiline?: boolean;
+}
+
+/**
+ * PropertyItem - Utility component
+ */
+const PropertyItem: React.FC<PropertyItemProps> = ({ label, value, mono = false, multiline = false }) => (
   <div>
     <div style={{
       fontSize: '0.75rem',

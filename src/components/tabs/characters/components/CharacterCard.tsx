@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Character } from '@/types';
+import type { CharactersTabLabels } from '../CharactersTab';
 
 /**
  * Props for CharacterCard component
@@ -16,7 +17,7 @@ export interface CharacterCardProps {
   /** Callback to delete character */
   onDelete: () => void;
   /** Labels for i18n */
-  labels?: Record<string, string>;
+  labels?: CharactersTabLabels;
 }
 
 /**

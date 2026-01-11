@@ -99,6 +99,7 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
               <AssetThumbnail
                 key={idx}
                 path={assetPath}
+                name={assetPath.split('/').pop() || assetPath}
                 isSelected={assetPath === currentSprite}
                 onClick={() => handleSelect(assetPath)}
               />
@@ -151,7 +152,7 @@ const AssetThumbnail = ({ path, name, isSelected, onClick }) => (
       alt={name || path}
       className="w-full h-full object-contain p-1"
       onError={(e) => {
-        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2394a3b8">?</text></svg>';
+        (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2394a3b8">?</text></svg>';
       }}
     />
     {isSelected && (

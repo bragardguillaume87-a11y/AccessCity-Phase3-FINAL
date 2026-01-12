@@ -152,8 +152,26 @@ export default class StageDirector {
       }
     }
 
-    // Déterminer la prochaine scène
-    if (choice.nextSceneId !== null && choice.nextSceneId !== undefined) {
+    // Déterminer la prochaine destination (priorité: nextDialogueId > nextSceneId > auto)
+    if (choice.nextDialogueId) {
+      // Priorité 1: Sauter à un dialogue spécifique dans la scène courante
+      const currentScene = this.getCurrentScene();
+      if (currentScene) {
+        const dialoguesInScene = currentScene.dialogues || [];
+        const targetIndex = dialoguesInScene.findIndex(d => d.id === choice.nextDialogueId);
+
+        if (targetIndex !== -1) {
+          this.currentDialogueIndex = targetIndex;
+          logger.debug(`[StageDirector] Jumping to dialogue ${choice.nextDialogueId} at index ${targetIndex}`);
+        } else {
+          logger.warn(`[StageDirector] Dialogue ${choice.nextDialogueId} not found in current scene, advancing to next`);
+          if (!this.nextDialogue()) {
+            this.gameEnded = true;
+          }
+        }
+      }
+    } else if (choice.nextSceneId !== null && choice.nextSceneId !== undefined) {
+      // Priorité 2: Changer de scène
       const nextSceneIndex = this.scenes.findIndex(s => s.id === choice.nextSceneId);
 
       if (nextSceneIndex !== -1) {
@@ -165,9 +183,8 @@ export default class StageDirector {
         this.gameEnded = true;
       }
     } else {
-      // Pas de scène suivante: avancer au dialogue suivant ou terminer
+      // Priorité 3: Avancer au dialogue suivant (comportement par défaut)
       if (!this.nextDialogue()) {
-        // Fin du jeu
         this.gameEnded = true;
         logger.debug('[StageDirector] Game ended.');
       }

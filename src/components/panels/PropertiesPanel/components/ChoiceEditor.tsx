@@ -118,6 +118,23 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete }: Choice
         />
       </div>
 
+      {/* Next dialogue ID (intra-scene navigation) */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+          Next Dialogue ID <span className="text-xs text-purple-400">(same scene)</span>
+        </label>
+        <input
+          type="text"
+          value={choice.nextDialogueId || ''}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ nextDialogueId: e.target.value })}
+          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          placeholder="e.g., dialogue-5 (optional)"
+        />
+        <p className="text-xs text-slate-500 mt-1">
+          💡 Jump to specific dialogue in current scene. Leave empty to advance naturally.
+        </p>
+      </div>
+
       {/* Dice roll toggle */}
       <div className="pt-3 border-t border-slate-700">
         <label className="flex items-center gap-2 cursor-pointer">

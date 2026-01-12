@@ -107,16 +107,18 @@ export default function MainCanvas({
 
   // Auto-select first dialogue when scene loads (if no dialogue is selected)
   useEffect(() => {
+    logger.debug(`[MainCanvas] Auto-select check - Scene: ${selectedScene?.name}, Dialogues: ${selectedScene?.dialogues?.length || 0}, SelectedElement: ${selectedElement?.type}`);
+
     if (
       selectedScene &&
       selectedScene.dialogues?.length > 0 &&
       selectedElement?.type !== 'dialogue' &&
       onSelectDialogue
     ) {
-      // Auto-select first dialogue
+      logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.name} (${selectedScene.id})`);
       onSelectDialogue(selectedScene.id, 0);
     }
-  }, [selectedScene?.id, selectedElement?.type, onSelectDialogue]);
+  }, [selectedScene?.id, selectedScene?.name, selectedScene?.dialogues?.length, selectedElement?.type, onSelectDialogue]);
 
   // Drag & Drop hook (drag over, drop handling)
   const dragDrop = useCanvasDragDrop({

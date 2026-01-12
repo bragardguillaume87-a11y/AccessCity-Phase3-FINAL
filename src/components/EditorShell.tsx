@@ -24,7 +24,7 @@ interface ModalContext {
 }
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel'));
-const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel'));
+const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
 const CharactersModal = React.lazy(() => import('./modals/CharactersModal'));
 const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal'));
 const SettingsModal = React.lazy(() => import('./modals/SettingsModal'));
@@ -242,7 +242,10 @@ export default function EditorShell({ onBack = null }) {
             >
               <h3 className="sr-only">Propriétés</h3>
               <Inspector>
-                <UnifiedPanel
+                <PropertiesPanel
+                  selectedElement={selectedElement}
+                  selectedScene={selectedScene}
+                  characters={characters}
                   onOpenModal={(modal, context) => {
                     setActiveModal(modal);
                     setModalContext(context);

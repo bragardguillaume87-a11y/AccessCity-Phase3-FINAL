@@ -1,20 +1,23 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Network, Maximize2, Eye, Minimize2 } from 'lucide-react';
+import { Network, Maximize2, Eye, Minimize2, PanelRightClose } from 'lucide-react';
 import type { Scene, FullscreenMode } from '@/types';
+import { cn } from '@/lib/utils';
 
 export interface SceneHeaderProps {
   scene: Scene;
   dialoguesCount: number;
   fullscreenMode: FullscreenMode;
   onFullscreenChange?: (mode: FullscreenMode) => void;
+  isRightPanelOpen: boolean;
+  onToggleRightPanel: () => void;
 }
 
 /**
  * SceneHeader - Scene title, description and fullscreen controls
  */
-export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscreenChange }: SceneHeaderProps) {
+export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscreenChange, isRightPanelOpen, onToggleRightPanel }: SceneHeaderProps) {
   return (
     <div className="flex-shrink-0 bg-slate-800 border-b border-slate-700 px-6 py-4">
       <div className="flex items-start justify-between">
@@ -43,82 +46,116 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
 
           {/* Fullscreen Mode Buttons */}
           <div className="flex items-center gap-1 ml-2 border-l border-slate-600 pl-2">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{ display: 'inline-block', pointerEvents: 'auto' }}
+            {/* Toggle Right Panel */}
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-8 px-2 rounded-lg transition-colors',
+                isRightPanelOpen ? 'bg-violet-500/20 text-violet-400' : 'text-slate-400 hover:text-violet-400'
+              )}
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`h-8 px-2 transition-all duration-200 ${fullscreenMode === 'graph' ? 'bg-[var(--color-primary)] text-white shadow-[0_0_12px_var(--color-primary)]' : ''}`}
-                aria-label="Mode Graph fullscreen"
-                title="Graph fullscreen (Escape pour quitter)"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onToggleRightPanel}
+                type="button"
+                title={isRightPanelOpen ? "Masquer panneau éléments" : "Afficher panneau éléments"}
+              >
+                <PanelRightClose className={cn("w-4 h-4 transition-transform", !isRightPanelOpen && "rotate-180")} aria-hidden="true" />
+                <span className="sr-only">{isRightPanelOpen ? "Masquer" : "Afficher"} panneau</span>
+              </motion.button>
+            </Button>
+
+            {/* Separator */}
+            <div className="w-px h-6 bg-slate-700 mx-1" />
+
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-8 px-2 rounded-lg transition-colors',
+                fullscreenMode === 'graph' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-cyan-400'
+              )}
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onFullscreenChange?.(fullscreenMode === 'graph' ? null : 'graph')}
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                type="button"
+                title="Vue Arbre (Graph)"
               >
                 <Network className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{ display: 'inline-block', pointerEvents: 'auto' }}
+                <span className="sr-only">Vue Arbre</span>
+              </motion.button>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-8 px-2 rounded-lg transition-colors',
+                fullscreenMode === 'canvas' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-cyan-400'
+              )}
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`h-8 px-2 transition-all duration-200 ${fullscreenMode === 'canvas' ? 'bg-[var(--color-primary)] text-white shadow-[0_0_12px_var(--color-primary)]' : ''}`}
-                aria-label="Mode Canvas fullscreen"
-                title="Canvas fullscreen (Escape pour quitter)"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onFullscreenChange?.(fullscreenMode === 'canvas' ? null : 'canvas')}
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                type="button"
+                title="Éditeur Plein Écran"
               >
                 <Maximize2 className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{ display: 'inline-block', pointerEvents: 'auto' }}
+                <span className="sr-only">Plein Écran Canvas</span>
+              </motion.button>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-8 px-2 rounded-lg transition-colors',
+                fullscreenMode === 'preview' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-cyan-400'
+              )}
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`h-8 px-2 transition-all duration-200 ${fullscreenMode === 'preview' ? 'bg-[var(--color-primary)] text-white shadow-[0_0_12px_var(--color-primary)]' : ''}`}
-                aria-label="Mode Preview fullscreen"
-                title="Preview fullscreen (Escape pour quitter)"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onFullscreenChange?.(fullscreenMode === 'preview' ? null : 'preview')}
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                type="button"
+                title="Aperçu Plein Écran"
               >
                 <Eye className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            </motion.div>
+                <span className="sr-only">Aperçu</span>
+              </motion.button>
+            </Button>
 
             {/* Exit fullscreen button (visible only when in fullscreen) */}
             <AnimatePresence>
               {fullscreenMode && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, x: -10 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, x: -10 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{ display: 'inline-block', pointerEvents: 'auto' }}
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors"
                 >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 transition-all duration-200"
-                    aria-label="Quitter le mode fullscreen"
-                    title="Quitter fullscreen (Escape)"
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8, x: -10 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, x: -10 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => onFullscreenChange?.(null)}
-                    style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                    type="button"
+                    title="Quitter Plein Écran"
                   >
                     <Minimize2 className="w-4 h-4" aria-hidden="true" />
-                  </Button>
-                </motion.div>
+                    <span className="sr-only">Quitter Plein Écran</span>
+                  </motion.button>
+                </Button>
               )}
             </AnimatePresence>
           </div>

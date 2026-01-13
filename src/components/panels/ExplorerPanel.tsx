@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Scene, Character, SelectedElementType } from '@/types';
-import { useScenesStore, useCharactersStore } from '../../stores/index.js';
+import { useScenesStore, useCharactersStore } from '../../stores/index';
 
 /**
  * ExplorerPanel - Left sidebar for project navigation

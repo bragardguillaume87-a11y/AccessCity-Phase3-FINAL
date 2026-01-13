@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Z_INDEX } from '@/utils/zIndexLayers.js';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 export interface NoBackgroundPlaceholderProps {
   onSetBackground: () => void;

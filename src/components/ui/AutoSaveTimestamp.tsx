@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useState, useEffect } from 'react'
-import { useUIStore } from '../../stores/index.js'
+import { useUIStore } from '../../stores/index'
 import { TIMING } from '@/config/timing'
 
 /**

@@ -1,5 +1,5 @@
 import { useScenesStore, useCharactersStore } from '@/stores';
-import type { Scene, SceneCharacter, Dialogue, Position, TextBox, Prop, ModalType } from '@/types';
+import type { Scene, SceneCharacter, Dialogue, Position, TextBox, Prop, ModalType, Character } from '@/types';
 
 /**
  * Props for useCanvasActions hook
@@ -41,7 +41,7 @@ export interface UseCanvasActionsReturn {
   updateProp: (sceneId: string, propId: string, updates: Partial<Prop>) => void;
 
   // Characters from store
-  characters: any[];
+  characters: Character[];
 }
 
 /**

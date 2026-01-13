@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSettingsStore } from '../../stores/index.js';
+import { useSettingsStore } from '../../stores/index';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {

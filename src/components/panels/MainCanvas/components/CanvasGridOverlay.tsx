@@ -1,5 +1,5 @@
 import React from 'react';
-import { Z_INDEX } from '@/utils/zIndexLayers.js';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 export interface CanvasGridOverlayProps {
   enabled: boolean;

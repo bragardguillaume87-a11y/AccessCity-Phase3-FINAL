@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Scene, Character, Dialogue, SceneCharacter, SelectedElementType, ModalType } from '@/types';
-import { useScenesStore, useCharactersStore, useUIStore } from '../../stores/index.js';
-import { duplicateDialogue } from '../../utils/duplication.js';
+import { useScenesStore, useCharactersStore, useUIStore } from '../../stores/index';
+import { duplicateDialogue } from '../../utils/duplication';
 import { EmptySelectionState } from './PropertiesPanel/components/EmptySelectionState';
 import { ScenePropertiesForm } from './PropertiesPanel/components/ScenePropertiesForm';
 import { CharacterPropertiesForm } from './PropertiesPanel/components/CharacterPropertiesForm';
@@ -45,8 +45,12 @@ export default function PropertiesPanel({
   // Convert lastSaved from string to number (timestamp) for sub-components
   const lastSaved = lastSavedStr ? new Date(lastSavedStr).getTime() : undefined;
 
+  console.log('[PropertiesPanel] Rendering with selectedElement:', selectedElement);
+  console.log('[PropertiesPanel] selectedScene:', selectedScene?.title || 'none');
+
   // No selection
   if (!selectedElement) {
+    console.log('[PropertiesPanel] No selectedElement - showing EmptySelectionState');
     return <EmptySelectionState />;
   }
 

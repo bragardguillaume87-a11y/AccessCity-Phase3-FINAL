@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Scene, GameStats } from '@/types';
-import { useScenesStore, useSettingsStore } from '../../stores/index.js';
+import { useScenesStore, useSettingsStore } from '../../stores/index';
 import { useGameState } from '../../hooks/useGameState';
 import { Button } from '../ui/button';
 import { ChevronRight } from 'lucide-react';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useScenesStore, useCharactersStore, useSettingsStore } from '../../stores/index.js';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../../stores/index';
 import { validateScenario, downloadExport } from '../../utils/exporters';
 
 interface ValidationResult {

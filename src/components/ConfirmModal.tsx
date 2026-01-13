@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getZIndexClass } from '../utils/zIndexLayers.js';
+import { getZIndexClass } from '../utils/zIndexLayers';
 import { AlertTriangle, Info, CheckCircle, type LucideIcon } from 'lucide-react';
 
 /**

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAssets } from '@/hooks/useAssets';
-import { useScenesStore, useCharactersStore } from '../../stores/index.js';
+import { useScenesStore, useCharactersStore } from '../../stores/index';
 import { UploadZone } from './AssetsLibraryModal/components/UploadZone';
 import { EmptyAssetState } from './AssetsLibraryModal/components/EmptyAssetState';
 import { AssetStatsCards } from './AssetsLibraryModal/components/AssetStatsCards';

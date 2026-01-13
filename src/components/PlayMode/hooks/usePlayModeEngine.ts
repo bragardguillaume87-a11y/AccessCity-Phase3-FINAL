@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Scene, Dialogue, DialogueChoice, GameStats } from '@/types';
 import { logger } from '@/utils/logger';
 // @ts-expect-error - StageDirector.simple.js is a JS file without types
-import StageDirector from '@/core/StageDirector.simple.js';
+import StageDirector from '@/core/StageDirector.simple';
 // @ts-expect-error - simpleSound.js is a JS file without types
-import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '@/utils/simpleSound.js';
+import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '@/utils/simpleSound';
 import { TIMING } from '@/config/timing';
 
 /**

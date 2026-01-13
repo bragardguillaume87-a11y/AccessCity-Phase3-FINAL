@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { logger } from '@/utils/logger';
 import type { FullscreenMode } from '@/types';
 
@@ -53,20 +53,27 @@ export function useCanvasViewState({
   const [viewMode, setViewMode] = useState<ViewMode>('visual');
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // Stabilize onFullscreenChange with useRef to avoid re-creating event listener
+  const onFullscreenChangeRef = useRef(onFullscreenChange);
+  useEffect(() => {
+    onFullscreenChangeRef.current = onFullscreenChange;
+  }, [onFullscreenChange]);
+
   // Escape key handler to exit fullscreen mode
   useEffect(() => {
-    if (!fullscreenMode || !onFullscreenChange) return;
+    if (!fullscreenMode) return;
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onFullscreenChange(null);
+        // Use ref to always get the latest callback
+        onFullscreenChangeRef.current?.(null);
         logger.debug('[MainCanvas] Exiting fullscreen mode via Escape');
       }
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [fullscreenMode, onFullscreenChange]);
+  }, [fullscreenMode]); // Only re-run when fullscreenMode changes
 
   return {
     gridEnabled,

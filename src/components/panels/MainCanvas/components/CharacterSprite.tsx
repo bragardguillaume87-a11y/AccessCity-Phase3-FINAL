@@ -2,7 +2,7 @@ import React from 'react';
 import { Rnd } from 'react-rnd';
 import { motion } from 'framer-motion';
 import { percentToPixels, pixelsToPercent, RESIZING_CONFIG } from '@/utils/canvasPositioning';
-import { Z_INDEX } from '@/utils/zIndexLayers.js';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
 import type { SceneCharacter, Character, Size } from '@/types';
 

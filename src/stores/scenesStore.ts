@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
-import { toAbsoluteAssetPath } from '../utils/pathUtils.js';
+import { toAbsoluteAssetPath } from '../utils/pathUtils';
 import type { Scene, Dialogue, SceneCharacter, TextBox, Prop, Position } from '../types';
 
 /**

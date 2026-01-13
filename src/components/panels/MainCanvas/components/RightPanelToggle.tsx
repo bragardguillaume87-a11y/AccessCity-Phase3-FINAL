@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
-import { Z_INDEX } from '@/utils/zIndexLayers.js';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 export interface RightPanelToggleProps {
   isOpen: boolean;

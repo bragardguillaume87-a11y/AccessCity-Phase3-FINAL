@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useCharactersStore } from '../../stores/index.js';
-import { useValidation } from '../../hooks/useValidation.js';
+import { useCharactersStore } from '../../stores/index';
+import { useValidation } from '../../hooks/useValidation';
 import ConfirmModal from '../ConfirmModal.jsx';
 import CharacterEditorModal from '../character-editor/CharacterEditorModal.jsx';
-import { duplicateCharacter } from '../../utils/duplication.js';
+import { duplicateCharacter } from '../../utils/duplication';
 import { TIMING } from '@/config/timing';
 import {
   Dialog,

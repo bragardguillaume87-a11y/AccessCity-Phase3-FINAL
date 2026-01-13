@@ -62,6 +62,7 @@ export interface MainCanvasProps {
   onToggleRightPanel: () => void;
   fullscreenMode: FullscreenMode;
   onFullscreenChange: (mode: FullscreenMode) => void;
+  leftPanelActiveTab?: 'scenes' | 'dialogues';
 }
 
 export default function MainCanvas({
@@ -74,7 +75,8 @@ export default function MainCanvas({
   isRightPanelOpen,
   onToggleRightPanel,
   fullscreenMode,
-  onFullscreenChange
+  onFullscreenChange,
+  leftPanelActiveTab = 'dialogues'
 }: MainCanvasProps) {
   // Local state (minimal)
   const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
@@ -106,11 +108,24 @@ export default function MainCanvas({
   });
 
   // Auto-select first dialogue when scene loads (if no dialogue is selected)
+  // BUT ONLY if we're on the "Dialogues" tab - don't auto-select when on "Scenes" tab
   useEffect(() => {
-    logger.debug(`[MainCanvas] Auto-select check - Scene: ${selectedScene?.name}, Dialogues: ${selectedScene?.dialogues?.length || 0}, SelectedElement: ${selectedElement?.type}`);
+    // Guard clause: exit early if no scene selected
+    if (!selectedScene) {
+      logger.debug('[MainCanvas] Auto-select skipped - no scene selected');
+      return;
+    }
 
+    logger.debug(`[MainCanvas] Auto-select check - Scene: ${selectedScene.name}, Dialogues: ${selectedScene.dialogues?.length || 0}, SelectedElement: ${selectedElement?.type}, ActiveTab: ${leftPanelActiveTab}`);
+
+    // Don't auto-select if we're on the "Scenes" tab
+    if (leftPanelActiveTab === 'scenes') {
+      logger.debug('[MainCanvas] Skipping auto-select - user is on Scenes tab');
+      return;
+    }
+
+    // selectedScene is guaranteed non-undefined here
     if (
-      selectedScene &&
       selectedScene.dialogues?.length > 0 &&
       selectedElement?.type !== 'dialogue' &&
       onSelectDialogue
@@ -118,7 +133,7 @@ export default function MainCanvas({
       logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.name} (${selectedScene.id})`);
       onSelectDialogue(selectedScene.id, 0);
     }
-  }, [selectedScene?.id, selectedScene?.name, selectedScene?.dialogues?.length, selectedElement?.type, onSelectDialogue]);
+  }, [selectedScene, selectedElement?.type, onSelectDialogue, leftPanelActiveTab]);
 
   // Drag & Drop hook (drag over, drop handling)
   const dragDrop = useCanvasDragDrop({

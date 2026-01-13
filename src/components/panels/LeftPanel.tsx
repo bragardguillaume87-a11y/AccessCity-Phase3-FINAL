@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
 import DialoguesPanel from './DialoguesPanel';
-import { useScenesStore, useUIStore } from '../../stores/index.js';
+import { useScenesStore, useUIStore } from '../../stores/index';
 
 /**
  * LeftPanel - Système d'onglets Scènes/Dialogues (PHASE 2)
@@ -16,14 +16,13 @@ import { useScenesStore, useUIStore } from '../../stores/index.js';
  * - Keyboard navigation (Arrow Left/Right, Home/End)
  */
 export interface LeftPanelProps {
+  activeTab: 'scenes' | 'dialogues';
+  onTabChange: (tab: 'scenes' | 'dialogues') => void;
   onDialogueSelect?: (sceneId: string, index: number, metadata?: unknown) => void;
-  onTabChange?: (tab: 'scenes' | 'dialogues') => void;
+  onSceneSelect?: (sceneId: string) => void;
 }
 
-export default function LeftPanel({ onDialogueSelect, onTabChange }: LeftPanelProps) {
-  // État local pour l'onglet actif
-  const [activeTab, setActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
-
+export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, onSceneSelect }: LeftPanelProps) {
   // Zustand stores
   const scenes = useScenesStore(state => state.scenes);
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
@@ -32,8 +31,7 @@ export default function LeftPanel({ onDialogueSelect, onTabChange }: LeftPanelPr
   // Gestionnaire de changement d'onglet
   const handleTabChange = (newTab: string) => {
     const tab = newTab as 'scenes' | 'dialogues';
-    setActiveTab(tab);
-    onTabChange?.(tab);
+    onTabChange(tab);
   };
 
   return (
@@ -68,7 +66,7 @@ export default function LeftPanel({ onDialogueSelect, onTabChange }: LeftPanelPr
         <ScenesSidebar
           scenes={scenes}
           selectedSceneId={selectedSceneForEdit}
-          onSceneSelect={setSelectedSceneForEdit}
+          onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
         />
       </TabsContent>
 

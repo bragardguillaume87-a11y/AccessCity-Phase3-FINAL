@@ -8,8 +8,8 @@ import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
 import { useAssets } from '@/hooks/useAssets';
 import { cn } from '@/lib/utils';
-import { useScenesStore, useUIStore } from '../../stores/index.js';
-import { logger } from '../../utils/logger.js';
+import { useScenesStore, useUIStore } from '../../stores/index';
+import { logger } from '../../utils/logger';
 
 /**
  * UnifiedPanel - Unified menu "Add Objects" style Powtoon (PHASE 8 ENHANCED)
@@ -24,7 +24,7 @@ import { logger } from '../../utils/logger.js';
  * - Design tokens gaming + WCAG 2.2 AA
  */
 export interface UnifiedPanelProps {
-  onOpenModal?: (modal: ModalType | string, context?: unknown) => void;
+  onOpenModal: (modal: ModalType | string, context?: unknown) => void;
 }
 
 export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
@@ -137,7 +137,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
             <Button
               variant="token-primary"
               size="sm"
-              onClick={() => onOpenModal?.('assets', { category: 'backgrounds' })}
+              onClick={() =>  onOpenModal('assets', { category: 'backgrounds' })}
               className="w-full justify-start"
               aria-label="Browse backgrounds library"
             >
@@ -281,7 +281,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
               <Button
                 variant="token-accent"
                 size="sm"
-                onClick={() => onOpenModal?.('characters')}
+                onClick={() =>  onOpenModal('characters')}
                 className="w-full justify-start"
                 aria-label="Manage characters library"
               >
@@ -403,7 +403,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
             <Button
               variant="token-primary"
               size="sm"
-              onClick={() => onOpenModal?.('assets', { category: 'illustrations' })}
+              onClick={() =>  onOpenModal('assets', { category: 'illustrations' })}
               className="w-full justify-start"
               aria-label="Browse images library"
             >

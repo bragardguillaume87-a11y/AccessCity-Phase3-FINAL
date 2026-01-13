@@ -26,6 +26,7 @@ interface ModalContext {
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
+const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel'));
 const CharactersModal = React.lazy(() => import('./modals/CharactersModal'));
 const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal'));
 const SettingsModal = React.lazy(() => import('./modals/SettingsModal'));
@@ -55,6 +56,9 @@ export default function EditorShell({ onBack = null }) {
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
+
+  // Track active tab in LeftPanel ('scenes' or 'dialogues')
+  const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
 
   // PHASE 4: Toggle panneau droit masquable
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
@@ -125,8 +129,12 @@ export default function EditorShell({ onBack = null }) {
 
   // Handler for tab change in LeftPanel
   const handleTabChange = (tab: 'scenes' | 'dialogues') => {
+    logger.debug('[EditorShell] Tab changed to:', tab);
+    setLeftPanelActiveTab(tab);
+
     if (tab === 'scenes') {
       // Deselect dialogue to show the "Add Elements" panel
+      logger.debug('[EditorShell] Setting selectedElement to null (should show EmptySelectionState)');
       setSelectedElement(null);
     }
   };
@@ -216,8 +224,10 @@ export default function EditorShell({ onBack = null }) {
               <h3 className="sr-only">Explorateur de scènes</h3>
               <Sidebar>
                 <LeftPanel
-                  onDialogueSelect={handleDialogueSelect}
+                  activeTab={leftPanelActiveTab}
                   onTabChange={handleTabChange}
+                  onDialogueSelect={handleDialogueSelect}
+                  onSceneSelect={handleSceneSelect}
                 />
               </Sidebar>
             </Panel>
@@ -255,6 +265,7 @@ export default function EditorShell({ onBack = null }) {
                 onToggleRightPanel={() => setIsRightPanelOpen(!isRightPanelOpen)}
                 fullscreenMode={fullscreenMode}
                 onFullscreenChange={setFullscreenMode}
+                leftPanelActiveTab={leftPanelActiveTab}
               />
             </Panel>
 
@@ -281,15 +292,24 @@ export default function EditorShell({ onBack = null }) {
             >
               <h3 className="sr-only">Propriétés</h3>
               <Inspector>
-                <PropertiesPanel
-                  selectedElement={selectedElement}
-                  selectedScene={selectedScene}
-                  characters={characters}
-                  onOpenModal={(modal, context) => {
-                    setActiveModal(modal);
-                    setModalContext(context);
-                  }}
-                />
+                {selectedElement?.type === 'scene' ? (
+                  <UnifiedPanel
+                    onOpenModal={(modal, context) => {
+                      setActiveModal(modal);
+                      setModalContext(context);
+                    }}
+                  />
+                ) : (
+                  <PropertiesPanel
+                    selectedElement={selectedElement}
+                    selectedScene={selectedScene}
+                    characters={characters}
+                    onOpenModal={(modal, context) => {
+                      setActiveModal(modal);
+                      setModalContext(context);
+                    }}
+                  />
+                )}
               </Inspector>
             </Panel>
           </Group>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Rnd } from 'react-rnd';
 import { percentToPixels, pixelsToPercent, RESIZING_CONFIG } from '@/utils/canvasPositioning';
-import { Z_INDEX } from '@/utils/zIndexLayers.js';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 import type { Position, Size } from '@/types';
 
 // Extended Prop interface for emoji props used in MainCanvas

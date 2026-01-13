@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useScenesStore } from '../../stores/index.js'
+import { useScenesStore } from '../../stores/index'
 import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2, GripVertical, Film } from 'lucide-react'
 import type { Scene } from '@/types'

@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTypewriter } from '@/hooks/useTypewriter';
-import { Z_INDEX } from '@/utils/zIndexLayers.js';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 import type { Dialogue, DialogueChoice } from '@/types';
 
 export interface DialoguePreviewOverlayProps {

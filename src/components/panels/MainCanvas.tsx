@@ -39,7 +39,6 @@ import { DialoguePreviewOverlay } from './MainCanvas/components/DialoguePreviewO
 import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
 import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization';
 import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
-import { RightPanelToggle } from './MainCanvas/components/RightPanelToggle';
 import { logger } from '../../utils/logger';
 import { TIMING } from '@/config/timing';
 
@@ -107,8 +106,9 @@ export default function MainCanvas({
     onSelectDialogue
   });
 
-  // Auto-select first dialogue when scene loads (if no dialogue is selected)
-  // BUT ONLY if we're on the "Dialogues" tab - don't auto-select when on "Scenes" tab
+  // Auto-select first dialogue when scene loads
+  // Only auto-select when a scene is selected (not a dialogue)
+  // This prevents aggressive re-selection when editing dialogues
   useEffect(() => {
     // Guard clause: exit early if no scene selected
     if (!selectedScene) {
@@ -116,24 +116,22 @@ export default function MainCanvas({
       return;
     }
 
-    logger.debug(`[MainCanvas] Auto-select check - Scene: ${selectedScene.name}, Dialogues: ${selectedScene.dialogues?.length || 0}, SelectedElement: ${selectedElement?.type}, ActiveTab: ${leftPanelActiveTab}`);
-
-    // Don't auto-select if we're on the "Scenes" tab
-    if (leftPanelActiveTab === 'scenes') {
-      logger.debug('[MainCanvas] Skipping auto-select - user is on Scenes tab');
+    // Only auto-select when a scene is selected (not a dialogue)
+    // This prevents aggressive re-selection when editing dialogues
+    if (selectedElement?.type !== 'scene') {
+      logger.debug('[MainCanvas] Skipping auto-select - element already selected:', selectedElement?.type);
       return;
     }
 
     // selectedScene is guaranteed non-undefined here
     if (
       selectedScene.dialogues?.length > 0 &&
-      selectedElement?.type !== 'dialogue' &&
       onSelectDialogue
     ) {
       logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.name} (${selectedScene.id})`);
       onSelectDialogue(selectedScene.id, 0);
     }
-  }, [selectedScene, selectedElement?.type, onSelectDialogue, leftPanelActiveTab]);
+  }, [selectedElement?.type, onSelectDialogue]);
 
   // Drag & Drop hook (drag over, drop handling)
   const dragDrop = useCanvasDragDrop({
@@ -188,6 +186,8 @@ export default function MainCanvas({
         dialoguesCount={dialoguesCount}
         fullscreenMode={fullscreenMode}
         onFullscreenChange={onFullscreenChange}
+        isRightPanelOpen={isRightPanelOpen}
+        onToggleRightPanel={onToggleRightPanel}
       />
 
       {/* Canvas area */}
@@ -289,11 +289,10 @@ export default function MainCanvas({
               );
             })}
 
-            {/* Grid Toggle & Add Character Buttons */}
+            {/* Grid Toggle */}
             <CanvasFloatingControls
               gridEnabled={viewState.gridEnabled}
               onToggleGrid={viewState.setGridEnabled}
-              onAddCharacter={actions.handleAddCharacterToScene}
             />
 
             {/* Dialogue Preview Overlay */}
@@ -350,11 +349,6 @@ export default function MainCanvas({
         onAddDialogue={actions.handleAddDialogue}
         onSetBackground={actions.handleSetBackground}
       />
-
-      {/* Right Panel Toggle Button */}
-      {onToggleRightPanel && (
-        <RightPanelToggle isOpen={isRightPanelOpen} onToggle={onToggleRightPanel} />
-      )}
 
       {/* Context Menu */}
       {contextMenu.contextMenuData && (

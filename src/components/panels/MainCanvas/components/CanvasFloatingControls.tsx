@@ -1,17 +1,15 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { UserPlus, Grid3x3 } from 'lucide-react';
+import { Grid3x3 } from 'lucide-react';
 
 export interface CanvasFloatingControlsProps {
   gridEnabled: boolean;
   onToggleGrid: (enabled: boolean) => void;
-  onAddCharacter: () => void;
 }
 
 /**
- * CanvasFloatingControls - Floating controls for grid toggle and add character
+ * CanvasFloatingControls - Floating controls for grid toggle
  */
-export function CanvasFloatingControls({ gridEnabled, onToggleGrid, onAddCharacter }: CanvasFloatingControlsProps) {
+export function CanvasFloatingControls({ gridEnabled, onToggleGrid }: CanvasFloatingControlsProps) {
   return (
     <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
       {/* Grid Toggle */}
@@ -26,19 +24,6 @@ export function CanvasFloatingControls({ gridEnabled, onToggleGrid, onAddCharact
         <Grid3x3 className="w-4 h-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
         <span className="text-sm font-medium text-[var(--color-text-primary)]">Grid</span>
       </label>
-
-      {/* Add Character Button */}
-      <Button
-        variant="gaming-accent"
-        size="sm"
-        onClick={onAddCharacter}
-        className="shadow-2xl"
-        title="Ajouter un personnage à la scène"
-        aria-label="Ajouter un personnage à la scène"
-      >
-        <UserPlus className="w-4 h-4" />
-        Ajouter personnage
-      </Button>
     </div>
   );
 }

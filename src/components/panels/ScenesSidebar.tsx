@@ -101,7 +101,7 @@ function SceneCard({ scene, isSelected, onSelect, onDuplicate, onDelete }: Scene
       className={`
         group relative rounded-lg border-2 transition-all
         ${isSelected
-          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 shadow-[var(--shadow-game-glow)]'
+          ? 'border-t-4 border-t-cyan-500 border-x-cyan-500/50 border-b-cyan-500/50 bg-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
           : 'border-[var(--color-border-base)] bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-border-hover)]'
         }
         ${isDragging ? 'shadow-lg cursor-grabbing' : 'cursor-pointer'}

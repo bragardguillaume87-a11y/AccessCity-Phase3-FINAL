@@ -11,6 +11,7 @@ export interface DialoguePropertiesFormProps {
   dialogueIndex: number;
   scene: Scene;
   characters: Character[];
+  scenes: Scene[];  // NEW: All scenes for dropdown navigation
   onUpdate: (sceneId: string, dialogueIndex: number, updates: Partial<Dialogue>) => void;
   onDuplicate: () => void;
   lastSaved?: number;
@@ -34,6 +35,7 @@ export function DialoguePropertiesForm({
   dialogueIndex,
   scene,
   characters,
+  scenes,
   onUpdate,
   onDuplicate,
   lastSaved,
@@ -190,6 +192,8 @@ export function DialoguePropertiesForm({
                 choiceIndex={choiceIdx}
                 onUpdate={handleUpdateChoice}
                 onDelete={handleDeleteChoice}
+                scenes={scenes}
+                currentSceneId={scene.id}
               />
             ))
           ) : (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
@@ -17,17 +17,29 @@ import { useScenesStore, useUIStore } from '../../stores/index.js';
  */
 export interface LeftPanelProps {
   onDialogueSelect?: (sceneId: string, index: number, metadata?: unknown) => void;
+  onTabChange?: (tab: 'scenes' | 'dialogues') => void;
 }
 
-export default function LeftPanel({ onDialogueSelect }: LeftPanelProps) {
+export default function LeftPanel({ onDialogueSelect, onTabChange }: LeftPanelProps) {
+  // État local pour l'onglet actif
+  const [activeTab, setActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
+
   // Zustand stores
   const scenes = useScenesStore(state => state.scenes);
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
 
+  // Gestionnaire de changement d'onglet
+  const handleTabChange = (newTab: string) => {
+    const tab = newTab as 'scenes' | 'dialogues';
+    setActiveTab(tab);
+    onTabChange?.(tab);
+  };
+
   return (
     <Tabs
-      defaultValue="scenes"
+      value={activeTab}
+      onValueChange={handleTabChange}
       className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
     >
       {/* Tabs Header avec indicateur gaming */}

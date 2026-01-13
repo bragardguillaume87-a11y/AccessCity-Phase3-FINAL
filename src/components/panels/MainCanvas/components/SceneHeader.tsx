@@ -43,38 +43,53 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
 
           {/* Fullscreen Mode Buttons */}
           <div className="flex items-center gap-1 ml-2 border-l border-slate-600 pl-2">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ display: 'inline-block', pointerEvents: 'auto' }}
+            >
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onFullscreenChange?.(fullscreenMode === 'graph' ? null : 'graph')}
                 className={`h-8 px-2 transition-all duration-200 ${fullscreenMode === 'graph' ? 'bg-[var(--color-primary)] text-white shadow-[0_0_12px_var(--color-primary)]' : ''}`}
                 aria-label="Mode Graph fullscreen"
                 title="Graph fullscreen (Escape pour quitter)"
+                onClick={() => onFullscreenChange?.(fullscreenMode === 'graph' ? null : 'graph')}
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
               >
                 <Network className="w-4 h-4" aria-hidden="true" />
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ display: 'inline-block', pointerEvents: 'auto' }}
+            >
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onFullscreenChange?.(fullscreenMode === 'canvas' ? null : 'canvas')}
                 className={`h-8 px-2 transition-all duration-200 ${fullscreenMode === 'canvas' ? 'bg-[var(--color-primary)] text-white shadow-[0_0_12px_var(--color-primary)]' : ''}`}
                 aria-label="Mode Canvas fullscreen"
                 title="Canvas fullscreen (Escape pour quitter)"
+                onClick={() => onFullscreenChange?.(fullscreenMode === 'canvas' ? null : 'canvas')}
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
               >
                 <Maximize2 className="w-4 h-4" aria-hidden="true" />
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ display: 'inline-block', pointerEvents: 'auto' }}
+            >
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onFullscreenChange?.(fullscreenMode === 'preview' ? null : 'preview')}
                 className={`h-8 px-2 transition-all duration-200 ${fullscreenMode === 'preview' ? 'bg-[var(--color-primary)] text-white shadow-[0_0_12px_var(--color-primary)]' : ''}`}
                 aria-label="Mode Preview fullscreen"
                 title="Preview fullscreen (Escape pour quitter)"
+                onClick={() => onFullscreenChange?.(fullscreenMode === 'preview' ? null : 'preview')}
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
               >
                 <Eye className="w-4 h-4" aria-hidden="true" />
               </Button>
@@ -90,14 +105,16 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  style={{ display: 'inline-block', pointerEvents: 'auto' }}
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onFullscreenChange?.(null)}
                     className="h-8 px-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 transition-all duration-200"
                     aria-label="Quitter le mode fullscreen"
                     title="Quitter fullscreen (Escape)"
+                    onClick={() => onFullscreenChange?.(null)}
+                    style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                   >
                     <Minimize2 className="w-4 h-4" aria-hidden="true" />
                   </Button>

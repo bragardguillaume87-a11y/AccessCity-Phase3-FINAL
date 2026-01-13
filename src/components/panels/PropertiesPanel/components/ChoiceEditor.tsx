@@ -1,7 +1,8 @@
 import * as React from 'react';
-import type { DialogueChoice, Effect } from '@/types';
+import type { DialogueChoice, Effect, Scene, Dialogue } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Extended DialogueChoice with diceRoll support (game mechanic)
 interface DiceRollOutcome {
@@ -27,6 +28,9 @@ export interface ChoiceEditorProps {
   choiceIndex: number;
   onUpdate: (choiceIndex: number, updatedChoice: DialogueChoiceWithDiceRoll) => void;
   onDelete: (choiceIndex: number) => void;
+  // NEW: Data for dropdowns
+  scenes: Scene[];
+  currentSceneId: string;
 }
 
 /**
@@ -39,10 +43,25 @@ export interface ChoiceEditorProps {
  * - Success/failure outcomes (message, moral impact, illustration)
  * - Legacy effects (readonly)
  */
-export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete }: ChoiceEditorProps) {
+export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, currentSceneId }: ChoiceEditorProps) {
   const updateChoice = (updates: Partial<DialogueChoiceWithDiceRoll>) => {
     onUpdate(choiceIndex, { ...choice, ...updates });
   };
+
+  // NEW: Memoize dialogues from current scene for performance
+  const currentSceneDialogues = React.useMemo(() => {
+    return scenes.find(s => s.id === currentSceneId)?.dialogues || [];
+  }, [scenes, currentSceneId]);
+
+  // NEW: Helper function to format dialogue preview
+  const getDialoguePreview = React.useCallback((dialogue: Dialogue, index: number) => {
+    if (!dialogue.text || dialogue.text.trim() === '') {
+      return `Dialogue ${index + 1} (vide)`;
+    }
+    return dialogue.text.length > 50
+      ? `${dialogue.text.substring(0, 50)}...`
+      : dialogue.text;
+  }, []);
 
   const updateDiceRoll = (diceRollUpdates: Partial<DiceRoll>) => {
     const currentDiceRoll: DiceRoll = choice.diceRoll || {
@@ -104,34 +123,71 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete }: Choice
         />
       </div>
 
-      {/* Next scene */}
+      {/* Next scene - Radix UI Select for child-friendly UX */}
       <div>
-        <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-          Next Scene ID
+        <label
+          htmlFor={`choice-${choiceIndex}-scene`}
+          className="block text-xs font-semibold text-slate-400 mb-1.5"
+        >
+          🎬 Scène suivante
         </label>
-        <input
-          type="text"
-          value={choice.nextScene || ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ nextScene: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="e.g., scene-2 (optional)"
-        />
+        <Select
+          value={choice.nextScene || undefined}
+          onValueChange={(value) => updateChoice({ nextScene: value })}
+        >
+          <SelectTrigger
+            id={`choice-${choiceIndex}-scene`}
+            className="w-full bg-slate-800 border-slate-600"
+          >
+            <SelectValue placeholder="-- Continuer dans cette scène --" />
+          </SelectTrigger>
+          <SelectContent>
+            {scenes.map(scene => (
+              <SelectItem key={scene.id} value={scene.id}>
+                🎬 {scene.title || `Scène ${scene.id}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-slate-500 mt-1">
+          💡 Change de lieu/scène. Laissez vide pour rester dans la scène actuelle.
+        </p>
       </div>
 
-      {/* Next dialogue ID (intra-scene navigation) */}
+      {/* Next dialogue ID (intra-scene navigation) - Radix UI Select */}
       <div>
-        <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-          Next Dialogue ID <span className="text-xs text-purple-400">(same scene)</span>
+        <label
+          htmlFor={`choice-${choiceIndex}-dialogue`}
+          className="block text-xs font-semibold text-slate-400 mb-1.5"
+        >
+          💬 Dialogue suivant <span className="text-xs text-purple-400">(même scène)</span>
         </label>
-        <input
-          type="text"
-          value={choice.nextDialogueId || ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ nextDialogueId: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          placeholder="e.g., dialogue-5 (optional)"
-        />
+        <Select
+          value={choice.nextDialogueId || undefined}
+          onValueChange={(value) => updateChoice({ nextDialogueId: value || undefined })}
+        >
+          <SelectTrigger
+            id={`choice-${choiceIndex}-dialogue`}
+            className="w-full bg-slate-800 border-slate-600"
+          >
+            <SelectValue placeholder="-- Passer au dialogue suivant --" />
+          </SelectTrigger>
+          <SelectContent>
+            {currentSceneDialogues.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-slate-500">
+                ⚠ Aucun dialogue dans cette scène
+              </div>
+            ) : (
+              currentSceneDialogues.map((dialogue, idx) => (
+                <SelectItem key={dialogue.id} value={dialogue.id}>
+                  💬 Dialogue {idx + 1}: {getDialoguePreview(dialogue, idx)}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
         <p className="text-xs text-slate-500 mt-1">
-          💡 Jump to specific dialogue in current scene. Leave empty to advance naturally.
+          💡 Sauter à un dialogue spécifique dans cette scène. Laissez vide pour avancer naturellement.
         </p>
       </div>
 

@@ -12,6 +12,7 @@ import Sidebar from './layout/Sidebar';
 import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas';
+import { logger } from '../utils/logger';
 
 /**
  * Modal context type - Stores context data for various modals
@@ -40,12 +41,12 @@ const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
  */
 export default function EditorShell({ onBack = null }) {
   // Zustand stores (granular selectors for better performance)
-  const scenes = useScenesStore(state => state.scenes);
-  const characters = useCharactersStore(state => state.characters);
-  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
-  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
-  const lastSaved = useUIStore(state => state.lastSaved);
-  const isSaving = useUIStore(state => state.isSaving);
+  const scenes = useScenesStore((state) => state.scenes);
+  const characters = useCharactersStore((state) => state.characters);
+  const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
+  const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
+  const lastSaved = useUIStore((state) => state.lastSaved);
+  const isSaving = useUIStore((state) => state.isSaving);
 
   // Undo/Redo functionality from zundo
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
@@ -72,6 +73,20 @@ export default function EditorShell({ onBack = null }) {
     onPreview: () => setActiveModal('preview'),
     onCommandPalette: () => setCommandPaletteOpen(true),
   });
+
+  // Detect old localStorage cache that might block panel resizing
+  useEffect(() => {
+    const oldKeys = [
+      'react-resizable-panels:layout',
+      'react-resizable-panels:editor-main-group'
+    ];
+
+    const hasOldKeys = oldKeys.some(key => localStorage.getItem(key) !== null);
+
+    if (hasOldKeys) {
+      logger.warn('[EditorShell] Ancien layout détecté. Si redimensionnement ne fonctionne pas, vider localStorage.');
+    }
+  }, []);
 
   // Handler for ProblemsPanel navigation
   const handleNavigateTo = (tab, params) => {
@@ -101,14 +116,22 @@ export default function EditorShell({ onBack = null }) {
       setSelectedElement({
         type: 'sceneCharacter',
         sceneId,
-        sceneCharacterId: metadata.sceneCharacterId
+        sceneCharacterId: metadata.sceneCharacterId,
       });
     } else {
       setSelectedElement({ type: 'dialogue', sceneId, index: dialogueIndex });
     }
   };
 
-  const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
+  // Handler for tab change in LeftPanel
+  const handleTabChange = (tab: 'scenes' | 'dialogues') => {
+    if (tab === 'scenes') {
+      // Deselect dialogue to show the "Add Elements" panel
+      setSelectedElement(null);
+    }
+  };
+
+  const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
@@ -164,15 +187,20 @@ export default function EditorShell({ onBack = null }) {
         {/* Main content heading - Screen reader only */}
         <h2 className="sr-only">Zone d'édition principale</h2>
 
-        <React.Suspense fallback={
-          <div className="flex-1 flex items-center justify-center bg-slate-900">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-4 text-slate-400">Loading editor...</p>
+        <React.Suspense
+          fallback={
+            <div className="flex-1 flex items-center justify-center bg-slate-900">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-4 text-slate-400">Loading editor...</p>
+              </div>
             </div>
-          </div>
-        }>
-          <Group className="h-full">
+          }
+        >
+          <Group
+            id="editor-layout-v2"
+            className="h-full"
+          >
             {/* Left panel: Explorer/Sidebar - Resizable 15-40% (PHASE 6: Hidden in fullscreen) */}
             <Panel
               defaultSize={25}
@@ -187,13 +215,20 @@ export default function EditorShell({ onBack = null }) {
             >
               <h3 className="sr-only">Explorateur de scènes</h3>
               <Sidebar>
-                <LeftPanel onDialogueSelect={handleDialogueSelect} />
+                <LeftPanel
+                  onDialogueSelect={handleDialogueSelect}
+                  onTabChange={handleTabChange}
+                />
               </Sidebar>
             </Panel>
 
             {/* Resize handle (drag border) - Hidden in fullscreen */}
             {!fullscreenMode && (
-              <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+              <Separator
+                id="left-center-separator"
+                className="w-1 bg-slate-700 hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
+                aria-label="Redimensionner panneaux gauche et centre"
+              />
             )}
 
             {/* Center panel: Main Canvas - Flexible */}
@@ -208,24 +243,28 @@ export default function EditorShell({ onBack = null }) {
             >
               <h3 className="sr-only">Canvas de scène</h3>
               <MainCanvas
-                  selectedScene={selectedScene}
-                  scenes={scenes}
-                  selectedElement={selectedElement}
-                  onSelectDialogue={handleDialogueSelect}
-                  onOpenModal={(modal, context = {}) => {
-                    setActiveModal(modal);
-                    setModalContext(context);
-                  }}
-                  isRightPanelOpen={isRightPanelOpen}
-                  onToggleRightPanel={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                  fullscreenMode={fullscreenMode}
-                  onFullscreenChange={setFullscreenMode}
-                />
+                selectedScene={selectedScene}
+                scenes={scenes}
+                selectedElement={selectedElement}
+                onSelectDialogue={handleDialogueSelect}
+                onOpenModal={(modal, context = {}) => {
+                  setActiveModal(modal);
+                  setModalContext(context);
+                }}
+                isRightPanelOpen={isRightPanelOpen}
+                onToggleRightPanel={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                fullscreenMode={fullscreenMode}
+                onFullscreenChange={setFullscreenMode}
+              />
             </Panel>
 
             {/* Resize handle - Hidden in fullscreen */}
             {!fullscreenMode && (
-              <Separator className="w-1 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize" />
+              <Separator
+                id="center-right-separator"
+                className="w-1 bg-slate-700 hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
+                aria-label="Redimensionner panneaux centre et droite"
+              />
             )}
 
             {/* Right panel: Inspector/Properties - Resizable 20-40% (PHASE 4: Collapsible, PHASE 6: Hidden in fullscreen) */}
@@ -267,10 +306,7 @@ export default function EditorShell({ onBack = null }) {
       {/* Modals */}
       <React.Suspense fallback={null}>
         {activeModal === 'project' && (
-          <SettingsModal
-            isOpen={true}
-            onClose={() => setActiveModal(null)}
-          />
+          <SettingsModal isOpen={true} onClose={() => setActiveModal(null)} />
         )}
         {activeModal === 'characters' && (
           <CharactersModal

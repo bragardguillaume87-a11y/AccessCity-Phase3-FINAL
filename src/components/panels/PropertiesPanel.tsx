@@ -148,6 +148,7 @@ export default function PropertiesPanel({
         dialogueIndex={selectedElement.index}
         scene={selectedScene}
         characters={characters}
+        scenes={scenes}
         onUpdate={updateDialogue}
         onDuplicate={handleDuplicateDialogue}
         lastSaved={lastSaved}

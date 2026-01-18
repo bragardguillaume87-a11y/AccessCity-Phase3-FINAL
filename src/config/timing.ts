@@ -24,7 +24,10 @@ type TailwindDuration =
 interface TimingConstants {
   readonly ANIMATION_DELAY: number;
   readonly ANIMATION_FAST: number;
+  readonly ANIMATION_VERY_FAST: number;
+  readonly ANIMATION_MEDIUM: number;
   readonly ANIMATION_SLOW: number;
+  readonly ANIMATION_BOUNCE: number;
   readonly ANIMATION_CREATE: number;
   readonly SHAKE_ERROR_DURATION: number;
   readonly TOOLTIP_DELAY: number;
@@ -44,6 +47,7 @@ interface TimingConstants {
   readonly SOUND_TEST_INTERVAL: number;
   readonly LOADING_MIN_DISPLAY: number;
   readonly LOADING_TIMEOUT: number;
+  readonly ARIA_ANNOUNCEMENT_CLEAR: number;
 }
 
 // ============================================================================
@@ -52,9 +56,12 @@ interface TimingConstants {
 
 export const TIMING: TimingConstants = {
   // Animation & Transitions
-  ANIMATION_DELAY: 300,        // Standard animation delay (CSS transitions)
+  ANIMATION_DELAY: 300,         // Standard animation delay (CSS transitions)
   ANIMATION_FAST: 150,          // Fast animations
-  ANIMATION_SLOW: 500,          // Slow animations
+  ANIMATION_VERY_FAST: 200,     // Very fast animations (quick exits)
+  ANIMATION_MEDIUM: 400,        // Medium animations (pop effects)
+  ANIMATION_SLOW: 500,          // Slow animations (fade in/out)
+  ANIMATION_BOUNCE: 600,        // Bounce/spring animations
   ANIMATION_CREATE: 1500,       // Element creation animation duration
   SHAKE_ERROR_DURATION: 400,    // Error shake animation duration
 
@@ -86,6 +93,9 @@ export const TIMING: TimingConstants = {
   // Loading States
   LOADING_MIN_DISPLAY: 500,     // Minimum time to show loading spinner (prevent flashing)
   LOADING_TIMEOUT: 10000,       // Maximum loading time before timeout error
+
+  // Accessibility
+  ARIA_ANNOUNCEMENT_CLEAR: 1500, // Delay before clearing ARIA live region announcements
 } as const;
 
 // ============================================================================

@@ -2,6 +2,7 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { MessageSquare, GitBranch, ExternalLink, AlertCircle, AlertTriangle } from 'lucide-react';
 import { getNodeColorTheme } from '../../hooks/useDialogueGraph';
+import { COLORS, SHADOWS, NODE_COLORS } from '@/config/colors';
 import type { DialogueNodeData, TerminalNodeData, ValidationProblem } from '@/types';
 
 /**
@@ -14,6 +15,7 @@ interface DialogueNodeProps {
 
 /**
  * DialogueNode - Standard dialogue node
+ * Memoized to prevent unnecessary re-renders in ReactFlow.
  *
  * Features:
  * - Shows speaker name with mood icon
@@ -22,7 +24,7 @@ interface DialogueNodeProps {
  * - Error/warning badges
  * - Handles for connections (top + bottom)
  */
-export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.Element {
+export const DialogueNode = React.memo(function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.Element {
   const { index, speaker, text, speakerMood, issues = [] } = data;
   const colors = getNodeColorTheme('dialogueNode', issues);
 
@@ -37,14 +39,14 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
       className="dialogue-node"
       style={{
         backgroundColor: colors.bg,
-        borderColor: selected ? '#06b6d4' : colors.border,
+        borderColor: selected ? COLORS.SELECTED : colors.border,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'solid',
         borderRadius: '12px',
         padding: '12px',
         width: '320px',
         minHeight: '140px',
-        boxShadow: selected ? '0 8px 16px rgba(0, 0, 0, 0.4)' : '0 4px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: selected ? SHADOWS.SELECTED : SHADOWS.DEFAULT,
         transition: 'all 0.2s ease',
         position: 'relative'
       }}
@@ -69,7 +71,7 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
             {speaker || 'Narrator'}
           </span>
           {speakerMood && (
-            <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+            <span style={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY, fontStyle: 'italic' }}>
               ({speakerMood})
             </span>
           )}
@@ -80,7 +82,7 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
           style={{
             fontSize: '12px',
             fontWeight: '700',
-            color: '#1e293b',
+            color: COLORS.TEXT_DARK,
             backgroundColor: colors.text,
             padding: '2px 8px',
             borderRadius: '12px'
@@ -95,7 +97,7 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
         style={{
           fontSize: '13px',
           lineHeight: '1.5',
-          color: '#e2e8f0',
+          color: COLORS.TEXT_PRIMARY,
           margin: '0',
           wordWrap: 'break-word'
         }}
@@ -109,7 +111,7 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
           {hasErrors && (
             <div
               style={{
-                backgroundColor: '#dc2626',
+                backgroundColor: COLORS.ERROR,
                 borderRadius: '50%',
                 width: '24px',
                 height: '24px',
@@ -119,13 +121,13 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
               }}
               title={issues.filter((i: ValidationProblem) => i.type === 'error').map((i: ValidationProblem) => i.message).join(', ')}
             >
-              <AlertCircle size={14} color="#fff" />
+              <AlertCircle size={14} color={COLORS.TEXT_WHITE} />
             </div>
           )}
           {hasWarnings && (
             <div
               style={{
-                backgroundColor: '#f59e0b',
+                backgroundColor: COLORS.WARNING,
                 borderRadius: '50%',
                 width: '24px',
                 height: '24px',
@@ -135,7 +137,7 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
               }}
               title={issues.filter((i: ValidationProblem) => i.type === 'warning').map((i: ValidationProblem) => i.message).join(', ')}
             >
-              <AlertTriangle size={14} color="#fff" />
+              <AlertTriangle size={14} color={COLORS.TEXT_WHITE} />
             </div>
           )}
         </div>
@@ -154,7 +156,7 @@ export function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.E
       />
     </div>
   );
-}
+});
 
 /**
  * Props for ChoiceNode component
@@ -166,6 +168,7 @@ interface ChoiceNodeProps {
 
 /**
  * ChoiceNode - Dialogue node with branching choices
+ * Memoized to prevent unnecessary re-renders in ReactFlow.
  *
  * Features:
  * - Shows speaker and text like DialogueNode
@@ -173,7 +176,7 @@ interface ChoiceNodeProps {
  * - Different color scheme (purple)
  * - GitBranch icon
  */
-export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Element {
+export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Element {
   const { index, speaker, text, speakerMood, choices = [], issues = [] } = data;
   const colors = getNodeColorTheme('choiceNode', issues);
 
@@ -189,14 +192,14 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
       className="choice-node"
       style={{
         backgroundColor: colors.bg,
-        borderColor: selected ? '#06b6d4' : colors.border,
+        borderColor: selected ? COLORS.SELECTED : colors.border,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'solid',
         borderRadius: '12px',
         padding: '12px',
         width: '320px',
         minHeight: '140px',
-        boxShadow: selected ? '0 8px 16px rgba(0, 0, 0, 0.4)' : '0 4px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: selected ? SHADOWS.SELECTED : SHADOWS.DEFAULT,
         transition: 'all 0.2s ease',
         position: 'relative'
       }}
@@ -221,7 +224,7 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
             {speaker || 'Narrator'}
           </span>
           {speakerMood && (
-            <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+            <span style={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY, fontStyle: 'italic' }}>
               ({speakerMood})
             </span>
           )}
@@ -232,7 +235,7 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
           style={{
             fontSize: '12px',
             fontWeight: '700',
-            color: '#1e293b',
+            color: COLORS.TEXT_DARK,
             backgroundColor: colors.text,
             padding: '2px 8px',
             borderRadius: '12px'
@@ -247,7 +250,7 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
         style={{
           fontSize: '13px',
           lineHeight: '1.5',
-          color: '#e2e8f0',
+          color: COLORS.TEXT_PRIMARY,
           margin: '0 0 8px 0',
           wordWrap: 'break-word'
         }}
@@ -261,13 +264,13 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
           display: 'inline-flex',
           alignItems: 'center',
           gap: '6px',
-          backgroundColor: 'rgba(139, 92, 246, 0.2)',
-          border: '1px solid #8b5cf6',
+          backgroundColor: NODE_COLORS.choiceNode.bg,
+          border: `1px solid ${NODE_COLORS.choiceNode.border}`,
           borderRadius: '16px',
           padding: '4px 10px',
           fontSize: '12px',
           fontWeight: '600',
-          color: '#c4b5fd'
+          color: NODE_COLORS.choiceNode.text
         }}
       >
         <GitBranch size={12} />
@@ -280,7 +283,7 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
           {hasErrors && (
             <div
               style={{
-                backgroundColor: '#dc2626',
+                backgroundColor: COLORS.ERROR,
                 borderRadius: '50%',
                 width: '24px',
                 height: '24px',
@@ -290,13 +293,13 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
               }}
               title={issues.filter((i: ValidationProblem) => i.type === 'error').map((i: ValidationProblem) => i.message).join(', ')}
             >
-              <AlertCircle size={14} color="#fff" />
+              <AlertCircle size={14} color={COLORS.TEXT_WHITE} />
             </div>
           )}
           {hasWarnings && (
             <div
               style={{
-                backgroundColor: '#f59e0b',
+                backgroundColor: COLORS.WARNING,
                 borderRadius: '50%',
                 width: '24px',
                 height: '24px',
@@ -306,7 +309,7 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
               }}
               title={issues.filter((i: ValidationProblem) => i.type === 'warning').map((i: ValidationProblem) => i.message).join(', ')}
             >
-              <AlertTriangle size={14} color="#fff" />
+              <AlertTriangle size={14} color={COLORS.TEXT_WHITE} />
             </div>
           )}
         </div>
@@ -325,7 +328,7 @@ export function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Eleme
       />
     </div>
   );
-}
+});
 
 /**
  * Props for TerminalNode component
@@ -337,6 +340,7 @@ interface TerminalNodeProps {
 
 /**
  * TerminalNode - Node representing a scene jump
+ * Memoized to prevent unnecessary re-renders in ReactFlow.
  *
  * Features:
  * - Smaller node (200x60)
@@ -345,7 +349,7 @@ interface TerminalNodeProps {
  * - External link icon
  * - Only has input handle (no output)
  */
-export function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.Element {
+export const TerminalNode = React.memo(function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.Element {
   const { sceneId, label, choiceText } = data;
   const colors = getNodeColorTheme('terminalNode', []);
 
@@ -354,14 +358,14 @@ export function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.E
       className="terminal-node"
       style={{
         backgroundColor: colors.bg,
-        borderColor: selected ? '#06b6d4' : colors.border,
+        borderColor: selected ? COLORS.SELECTED : colors.border,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'dashed',
         borderRadius: '12px',
         padding: '12px',
         width: '200px',
         minHeight: '60px',
-        boxShadow: selected ? '0 8px 16px rgba(0, 0, 0, 0.4)' : '0 4px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: selected ? SHADOWS.SELECTED : SHADOWS.DEFAULT,
         transition: 'all 0.2s ease',
         display: 'flex',
         alignItems: 'center',
@@ -397,7 +401,7 @@ export function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.E
           <p
             style={{
               fontSize: '11px',
-              color: '#94a3b8',
+              color: COLORS.TEXT_SECONDARY,
               margin: '4px 0 0 0',
               fontStyle: 'italic'
             }}
@@ -408,7 +412,7 @@ export function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.E
       </div>
     </div>
   );
-}
+});
 
 /**
  * Node types configuration for ReactFlow

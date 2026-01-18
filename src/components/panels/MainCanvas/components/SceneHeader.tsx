@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Network, Maximize2, Eye, Minimize2, PanelRightClose } from 'lucide-react';
+import { Network, Maximize2, Eye, Minimize2 } from 'lucide-react';
 import type { Scene, FullscreenMode } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -10,14 +10,12 @@ export interface SceneHeaderProps {
   dialoguesCount: number;
   fullscreenMode: FullscreenMode;
   onFullscreenChange?: (mode: FullscreenMode) => void;
-  isRightPanelOpen: boolean;
-  onToggleRightPanel: () => void;
 }
 
 /**
  * SceneHeader - Scene title, description and fullscreen controls
  */
-export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscreenChange, isRightPanelOpen, onToggleRightPanel }: SceneHeaderProps) {
+export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscreenChange }: SceneHeaderProps) {
   return (
     <div className="flex-shrink-0 bg-slate-800 border-b border-slate-700 px-6 py-4">
       <div className="flex items-start justify-between">
@@ -46,31 +44,6 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
 
           {/* Fullscreen Mode Buttons */}
           <div className="flex items-center gap-1 ml-2 border-l border-slate-600 pl-2">
-            {/* Toggle Right Panel */}
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-8 px-2 rounded-lg transition-colors',
-                isRightPanelOpen ? 'bg-violet-500/20 text-violet-400' : 'text-slate-400 hover:text-violet-400'
-              )}
-            >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onToggleRightPanel}
-                type="button"
-                title={isRightPanelOpen ? "Masquer panneau éléments" : "Afficher panneau éléments"}
-              >
-                <PanelRightClose className={cn("w-4 h-4 transition-transform", !isRightPanelOpen && "rotate-180")} aria-hidden="true" />
-                <span className="sr-only">{isRightPanelOpen ? "Masquer" : "Afficher"} panneau</span>
-              </motion.button>
-            </Button>
-
-            {/* Separator */}
-            <div className="w-px h-6 bg-slate-700 mx-1" />
-
             <Button
               asChild
               variant="ghost"

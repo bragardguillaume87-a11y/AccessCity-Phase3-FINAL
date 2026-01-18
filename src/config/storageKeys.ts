@@ -15,6 +15,7 @@ import { logger } from '../utils/logger';
 interface StorageKeys {
   readonly BACKGROUNDS_HISTORY: string;
   readonly FAVORITES_ASSETS: string;
+  readonly FAVORITES_CHARACTERS: string;
   readonly ONBOARDING_COMPLETED: string;
   readonly HAS_UPLOADED_ASSET: string;
   readonly STORIES: string;
@@ -31,6 +32,7 @@ export const STORAGE_KEYS: StorageKeys = {
   // Asset management
   BACKGROUNDS_HISTORY: 'ac_backgrounds_history',
   FAVORITES_ASSETS: 'accesscity-favorite-assets',
+  FAVORITES_CHARACTERS: 'accesscity-favorite-characters',
 
   // User preferences
   ONBOARDING_COMPLETED: 'ac_onboarding_completed',

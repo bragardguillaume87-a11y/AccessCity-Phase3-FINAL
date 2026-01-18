@@ -19,6 +19,11 @@ interface CharacterFormData {
 }
 
 /**
+ * Union type for all possible field values in CharacterFormData
+ */
+type CharacterFormFieldValue = string | string[] | Record<string, string>;
+
+/**
  * Validation result structure
  */
 interface ValidationResult {
@@ -47,7 +52,7 @@ interface UseCharacterFormReturn {
   /** Whether the form has unsaved changes */
   hasChanges: boolean;
   /** Update a single form field */
-  updateField: (field: string, value: any) => void;
+  updateField: (field: keyof CharacterFormData, value: CharacterFormFieldValue) => void;
   /** Add a new mood to the character */
   addMood: (moodId: string) => boolean;
   /** Remove a mood from the character */
@@ -107,7 +112,7 @@ export function useCharacterForm(
   /**
    * Update a form field
    */
-  const updateField = useCallback((field: string, value: any): void => {
+  const updateField = useCallback((field: keyof CharacterFormData, value: CharacterFormFieldValue): void => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
 

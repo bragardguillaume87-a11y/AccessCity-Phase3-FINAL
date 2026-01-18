@@ -3,7 +3,7 @@ import type { Character, Scene } from '@/types';
 import type { SelectedElementType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
-import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker.jsx';
+import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker';
 import { useMoodManagement } from '@/hooks/useMoodManagement';
 import { Copy, Plus } from 'lucide-react';
 

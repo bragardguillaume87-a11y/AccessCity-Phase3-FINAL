@@ -1,5 +1,5 @@
 import React from 'react';
-import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker.jsx';
+import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

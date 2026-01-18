@@ -159,6 +159,13 @@ export const API: ApiConfig = {
 export const SYSTEM_CHARACTERS = ['player', 'narrator', 'counsellor'] as const;
 export type SystemCharacter = typeof SYSTEM_CHARACTERS[number];
 
+// HUD Display Thresholds (for color-coded progress bars)
+export const HUD_THRESHOLDS = {
+  HIGH: 66,    // Green zone (value > 66)
+  MEDIUM: 33,  // Yellow zone (value > 33)
+  // Below MEDIUM is Red zone
+} as const;
+
 // Asset Categories
 export const ASSET_CATEGORIES: AssetCategories = {
   BACKGROUND: 'background',

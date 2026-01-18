@@ -52,30 +52,20 @@ import { TIMING } from '@/config/timing';
  */
 export interface MainCanvasProps {
   selectedScene: Scene | undefined;
-  scenes: Scene[];
   selectedElement: SelectedElementType;
   onSelectDialogue?: (sceneId: string, index: number | null, metadata?: unknown) => void;
   onOpenModal?: (modal: ModalType | string, context?: unknown) => void;
-  onDialogueClick?: (sceneId: string, dialogueIndex: number) => void;
-  isRightPanelOpen: boolean;
-  onToggleRightPanel: () => void;
   fullscreenMode: FullscreenMode;
   onFullscreenChange: (mode: FullscreenMode) => void;
-  leftPanelActiveTab?: 'scenes' | 'dialogues';
 }
 
 export default function MainCanvas({
   selectedScene,
-  scenes,
   selectedElement,
   onSelectDialogue,
   onOpenModal,
-  onDialogueClick,
-  isRightPanelOpen,
-  onToggleRightPanel,
   fullscreenMode,
-  onFullscreenChange,
-  leftPanelActiveTab = 'dialogues'
+  onFullscreenChange
 }: MainCanvasProps) {
   // Local state (minimal)
   const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
@@ -106,32 +96,53 @@ export default function MainCanvas({
     onSelectDialogue
   });
 
-  // Auto-select first dialogue when scene loads
-  // Only auto-select when a scene is selected (not a dialogue)
-  // This prevents aggressive re-selection when editing dialogues
+  // Helper to get sceneId from selectedElement (only dialogue/sceneCharacter have it)
+  const selectedElementSceneId = selectedElement?.type === 'dialogue' || selectedElement?.type === 'sceneCharacter'
+    ? selectedElement.sceneId
+    : null;
+
+  // Auto-select first dialogue when:
+  // 1. Scene changes (new scene selected)
+  // 2. Scene gains its first dialogue
+  //
+  // Skip auto-select when:
+  // - No scene or no dialogues
+  // - User explicitly selected scene (type='scene') - show UnifiedPanel instead
+  // - A dialogue is already selected FOR THIS SCENE (preserve user selection)
   useEffect(() => {
-    // Guard clause: exit early if no scene selected
-    if (!selectedScene) {
-      logger.debug('[MainCanvas] Auto-select skipped - no scene selected');
+    // Guard: need a scene with dialogues
+    if (!selectedScene?.id || !selectedScene.dialogues?.length) {
+      logger.debug('[MainCanvas] Auto-select skipped - no scene or no dialogues');
       return;
     }
 
-    // Only auto-select when a scene is selected (not a dialogue)
-    // This prevents aggressive re-selection when editing dialogues
-    if (selectedElement?.type !== 'scene') {
-      logger.debug('[MainCanvas] Skipping auto-select - element already selected:', selectedElement?.type);
+    // Guard: user explicitly selected scene view (for UnifiedPanel/Add Elements)
+    if (selectedElement?.type === 'scene') {
+      logger.debug('[MainCanvas] Skipping auto-select - scene type selected (UnifiedPanel mode)');
       return;
     }
 
-    // selectedScene is guaranteed non-undefined here
+    // Guard: don't override existing dialogue selection FOR THIS SCENE
     if (
-      selectedScene.dialogues?.length > 0 &&
-      onSelectDialogue
+      selectedElement?.type === 'dialogue' &&
+      selectedElementSceneId === selectedScene.id
     ) {
-      logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.name} (${selectedScene.id})`);
+      logger.debug('[MainCanvas] Skipping auto-select - dialogue already selected for this scene');
+      return;
+    }
+
+    // Auto-select first dialogue
+    if (onSelectDialogue) {
+      logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.id}`);
       onSelectDialogue(selectedScene.id, 0);
     }
-  }, [selectedElement?.type, onSelectDialogue]);
+  }, [
+    selectedScene?.id,                    // Trigger when scene changes
+    selectedScene?.dialogues?.length,     // Trigger when dialogues added/removed
+    selectedElement?.type,                // Check current selection type
+    selectedElementSceneId,               // Check if selection is for current scene
+    onSelectDialogue
+  ]);
 
   // Drag & Drop hook (drag over, drop handling)
   const dragDrop = useCanvasDragDrop({
@@ -174,6 +185,67 @@ export default function MainCanvas({
     setSelectedCharacterId: selection.setSelectedCharacterId
   });
 
+  // Memoized callbacks for child components (prevents re-renders)
+  const handleUpdateCharacterPosition = useCallback(
+    (sceneCharId: string, updates: Partial<SceneCharacter>) => {
+      if (selectedScene?.id) {
+        actions.updateSceneCharacter(selectedScene.id, sceneCharId, updates);
+      }
+    },
+    [selectedScene?.id, actions.updateSceneCharacter]
+  );
+
+  const handleUpdateProp = useCallback(
+    (propId: string, updates: Partial<Prop>) => {
+      if (selectedScene?.id) {
+        actions.updateProp(selectedScene.id, propId, updates);
+      }
+    },
+    [selectedScene?.id, actions.updateProp]
+  );
+
+  const handleRemoveProp = useCallback(
+    (propId: string) => {
+      if (selectedScene?.id) {
+        actions.removePropFromScene(selectedScene.id, propId);
+      }
+    },
+    [selectedScene?.id, actions.removePropFromScene]
+  );
+
+  const handleUpdateTextBox = useCallback(
+    (textBoxId: string, updates: Partial<TextBox>) => {
+      if (selectedScene?.id) {
+        actions.updateTextBox(selectedScene.id, textBoxId, updates);
+      }
+    },
+    [selectedScene?.id, actions.updateTextBox]
+  );
+
+  const handleRemoveTextBox = useCallback(
+    (textBoxId: string) => {
+      if (selectedScene?.id) {
+        actions.removeTextBoxFromScene(selectedScene.id, textBoxId);
+      }
+    },
+    [selectedScene?.id, actions.removeTextBoxFromScene]
+  );
+
+  const handleSeek = useCallback(
+    (time: number) => setCurrentTime(time),
+    [setCurrentTime]
+  );
+
+  const handlePlayPause = useCallback(
+    () => viewState.setIsPlaying(!viewState.isPlaying),
+    [viewState.isPlaying, viewState.setIsPlaying]
+  );
+
+  const handleCloseAddCharacterModal = useCallback(
+    () => setShowAddCharacterModal(false),
+    []
+  );
+
   if (!selectedScene) {
     return <EmptySceneState />;
   }
@@ -186,8 +258,6 @@ export default function MainCanvas({
         dialoguesCount={dialoguesCount}
         fullscreenMode={fullscreenMode}
         onFullscreenChange={onFullscreenChange}
-        isRightPanelOpen={isRightPanelOpen}
-        onToggleRightPanel={onToggleRightPanel}
       />
 
       {/* Canvas area */}
@@ -236,9 +306,7 @@ export default function MainCanvas({
                   selectedCharacterId={selection.selectedCharacterId}
                   onCharacterClick={selection.handleCharacterClick}
                   onContextMenu={contextMenu.handleCharacterRightClick}
-                  onUpdatePosition={(sceneCharId, updates) =>
-                    actions.updateSceneCharacter(selectedScene.id, sceneCharId, updates)
-                  }
+                  onUpdatePosition={handleUpdateCharacterPosition}
                 />
               );
             })}
@@ -258,8 +326,8 @@ export default function MainCanvas({
                   prop={canvasProp}
                   canvasDimensions={canvasDimensions}
                   gridEnabled={viewState.gridEnabled}
-                  onUpdateProp={(propId, updates) => actions.updateProp(selectedScene.id, propId, updates)}
-                  onRemoveProp={(propId) => actions.removePropFromScene(selectedScene.id, propId)}
+                  onUpdateProp={handleUpdateProp}
+                  onRemoveProp={handleRemoveProp}
                 />
               );
             })}
@@ -283,8 +351,8 @@ export default function MainCanvas({
                   textBox={canvasTextBox}
                   canvasDimensions={canvasDimensions}
                   gridEnabled={viewState.gridEnabled}
-                  onUpdateTextBox={(textBoxId, updates) => actions.updateTextBox(selectedScene.id, textBoxId, updates)}
-                  onRemoveTextBox={(textBoxId) => actions.removeTextBoxFromScene(selectedScene.id, textBoxId)}
+                  onUpdateTextBox={handleUpdateTextBox}
+                  onRemoveTextBox={handleRemoveTextBox}
                 />
               );
             })}
@@ -338,8 +406,8 @@ export default function MainCanvas({
         currentTime={currentTime}
         duration={Math.max(60, dialoguesCount * 5)}
         dialogues={selectedScene?.dialogues || []}
-        onSeek={(time) => setCurrentTime(time)}
-        onPlayPause={() => viewState.setIsPlaying(!viewState.isPlaying)}
+        onSeek={handleSeek}
+        onPlayPause={handlePlayPause}
         isPlaying={viewState.isPlaying}
       />
 
@@ -363,7 +431,7 @@ export default function MainCanvas({
       {/* Add Character Modal */}
       <AddCharacterToSceneModal
         isOpen={showAddCharacterModal}
-        onClose={() => setShowAddCharacterModal(false)}
+        onClose={handleCloseAddCharacterModal}
         characters={actions.characters}
         onAddCharacter={actions.handleAddCharacterConfirm}
       />

@@ -24,8 +24,9 @@ export interface CharacterSpriteProps {
 
 /**
  * CharacterSprite - Draggable/resizable character sprite on canvas
+ * Memoized to prevent re-renders when other characters on the scene change.
  */
-export function CharacterSprite({
+export const CharacterSprite = React.memo(function CharacterSprite({
   sceneChar,
   character,
   canvasDimensions,
@@ -145,4 +146,20 @@ export function CharacterSprite({
       </motion.div>
     </Rnd>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if relevant props changed
+  return (
+    prevProps.sceneChar.id === nextProps.sceneChar.id &&
+    prevProps.sceneChar.mood === nextProps.sceneChar.mood &&
+    prevProps.sceneChar.position?.x === nextProps.sceneChar.position?.x &&
+    prevProps.sceneChar.position?.y === nextProps.sceneChar.position?.y &&
+    prevProps.sceneChar.scale === nextProps.sceneChar.scale &&
+    prevProps.sceneChar.entranceAnimation === nextProps.sceneChar.entranceAnimation &&
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.sprites === nextProps.character.sprites &&
+    prevProps.canvasDimensions.width === nextProps.canvasDimensions.width &&
+    prevProps.canvasDimensions.height === nextProps.canvasDimensions.height &&
+    prevProps.gridEnabled === nextProps.gridEnabled &&
+    prevProps.selectedCharacterId === nextProps.selectedCharacterId
+  );
+});

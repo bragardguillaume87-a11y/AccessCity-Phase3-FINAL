@@ -38,33 +38,44 @@ export function useDialogueSync(
   const [currentDialogueText, setCurrentDialogueText] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
 
+  // Extract specific properties for stable dependencies
+  const selectedElementType = selectedElement?.type;
+  const selectedElementIndex = selectedElement?.index;
+  const selectedElementSceneId = selectedElement?.sceneId;
+  const selectedSceneId = selectedScene?.id;
+  const dialoguesLength = selectedScene?.dialogues?.length ?? 0;
+  // Get the specific dialogue text for dependency (only when type is dialogue)
+  const currentDialogue = selectedElementType === 'dialogue' && selectedScene?.dialogues
+    ? selectedScene.dialogues[selectedElementIndex ?? 0]
+    : null;
+  const dialogueText = currentDialogue?.text ?? '';
+
   // Update typewriter text when selected dialogue changes
   useEffect(() => {
-    if (selectedElement?.type === 'dialogue' && selectedScene) {
-      const dialogue = selectedScene.dialogues?.[selectedElement.index ?? 0];
-      setCurrentDialogueText(dialogue?.text || '');
+    if (selectedElementType === 'dialogue' && selectedSceneId) {
+      setCurrentDialogueText(dialogueText);
     } else {
       setCurrentDialogueText('');
     }
-  }, [selectedElement, selectedScene]);
+  }, [selectedElementType, selectedSceneId, dialogueText]);
 
   // Update timeline playhead when dialogue selection changes
   useEffect(() => {
-    if (selectedElement?.type === 'dialogue' && selectedScene && selectedScene.dialogues) {
-      const duration = Math.max(60, selectedScene.dialogues.length * 5);
-      const dialogueDuration = duration / Math.max(1, selectedScene.dialogues.length);
-      const dialogueTime = (selectedElement.index ?? 0) * dialogueDuration;
+    if (selectedElementType === 'dialogue' && selectedSceneId && dialoguesLength > 0) {
+      const duration = Math.max(60, dialoguesLength * 5);
+      const dialogueDuration = duration / Math.max(1, dialoguesLength);
+      const dialogueTime = (selectedElementIndex ?? 0) * dialogueDuration;
       setCurrentTime(dialogueTime);
     }
-  }, [selectedElement, selectedScene]);
+  }, [selectedElementType, selectedElementIndex, selectedSceneId, dialoguesLength]);
 
   // Auto-scroll to dialogue in DialoguesPanel when selected
   useEffect(() => {
-    if (selectedElement?.type === 'dialogue' && selectedElement?.sceneId && selectedElement?.index !== undefined) {
+    if (selectedElementType === 'dialogue' && selectedElementSceneId && selectedElementIndex !== undefined) {
       // Small delay to ensure DOM is updated
       const timeoutId = setTimeout(() => {
         const dialogueElement = document.querySelector(
-          `[data-dialogue-id="${selectedElement.sceneId}-${selectedElement.index}"]`
+          `[data-dialogue-id="${selectedElementSceneId}-${selectedElementIndex}"]`
         );
         if (dialogueElement) {
           dialogueElement.scrollIntoView({
@@ -72,13 +83,13 @@ export function useDialogueSync(
             block: 'center',
             inline: 'nearest'
           });
-          logger.debug(`[useDialogueSync] Auto-scroll to dialogue ${selectedElement.index}`);
+          logger.debug(`[useDialogueSync] Auto-scroll to dialogue ${selectedElementIndex}`);
         }
       }, TIMING.ANIMATION_FAST);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [selectedElement]);
+  }, [selectedElementType, selectedElementSceneId, selectedElementIndex]);
 
   return {
     currentDialogueText,

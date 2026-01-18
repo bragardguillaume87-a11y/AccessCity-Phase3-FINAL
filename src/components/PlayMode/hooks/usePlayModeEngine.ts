@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Scene, Dialogue, DialogueChoice, GameStats } from '@/types';
 import { logger } from '@/utils/logger';
-// @ts-expect-error - StageDirector.simple.js is a JS file without types
-import StageDirector from '@/core/StageDirector.simple';
-// @ts-expect-error - simpleSound.js is a JS file without types
+import { GAME_STATS } from '@/i18n';
+import StageDirector from '@/core/StageDirector';
 import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '@/utils/simpleSound';
 import { TIMING } from '@/config/timing';
 
@@ -21,7 +20,7 @@ export interface UsePlayModeEngineProps {
  */
 export interface UsePlayModeEngineReturn {
   // State
-  director: typeof StageDirector | null;
+  director: StageDirector | null;
   currentScene: Scene | null;
   currentDialogue: Dialogue | null;
   isEnded: boolean;
@@ -66,18 +65,24 @@ export function usePlayModeEngine({
   selectedSceneIndex,
   onExit
 }: UsePlayModeEngineProps): UsePlayModeEngineReturn {
-  const [director, setDirector] = useState<typeof StageDirector | null>(null);
+  const [director, setDirector] = useState<StageDirector | null>(null);
   const [currentScene, setCurrentScene] = useState<Scene | null>(null);
   const [currentDialogue, setCurrentDialogue] = useState<Dialogue | null>(null);
   const [isEnded, setIsEnded] = useState(false);
   const [variables, setVariables] = useState<GameStats>({
-    Empathie: 50,
-    Autonomie: 50,
-    Confiance: 50
+    [GAME_STATS.EMPATHY]: 50,
+    [GAME_STATS.AUTONOMY]: 50,
+    [GAME_STATS.CONFIDENCE]: 50,
   });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(isSoundMuted());
+
+  // Create stable key for scenes to avoid unnecessary re-initialization
+  // Only changes when scene IDs or dialogue counts actually change
+  const scenesKey = useMemo(() => {
+    return scenes.map(s => `${s.id}:${s.dialogues?.length ?? 0}`).join(',');
+  }, [scenes]);
 
   /**
    * Update current game state from director
@@ -96,6 +101,7 @@ export function usePlayModeEngine({
 
   /**
    * Initialize StageDirector and game state
+   * Uses scenesKey for stable dependency (only re-runs when scenes content actually changes)
    */
   useEffect(() => {
     if (scenes.length === 0) return;
@@ -112,9 +118,10 @@ export function usePlayModeEngine({
       return;
     }
 
-    // Initialize game state and director
-    const gameState: GameStats = { Empathie: 50, Autonomie: 50, Confiance: 50 };
-    const newDirector = new StageDirector(scenes, allDialogues, gameState, selectedSceneIndex);
+    // Initialize StageDirector
+    // Constructor: (scenes, dialogues, characters, initialSceneIndex)
+    // Note: dialogues param is kept for backward compatibility but not used
+    const newDirector = new StageDirector(scenes, allDialogues, [], selectedSceneIndex);
     setDirector(newDirector);
 
     // Initialize current state immediately
@@ -138,7 +145,8 @@ export function usePlayModeEngine({
 
     // Play scene change sound
     playSound('/sounds/scene-change.mp3', 0.3);
-  }, [scenes, selectedSceneIndex, onExit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scenesKey is a stable derivative of scenes
+  }, [scenesKey, selectedSceneIndex, onExit]);
 
   /**
    * Handle dialogue choice selection
@@ -171,9 +179,9 @@ export function usePlayModeEngine({
       const ended = director.isGameOver();
       if (ended) {
         const avgScore =
-          (director.gameState.Empathie +
-            director.gameState.Autonomie +
-            director.gameState.Confiance) /
+          (director.gameState[GAME_STATS.EMPATHY] +
+            director.gameState[GAME_STATS.AUTONOMY] +
+            director.gameState[GAME_STATS.CONFIDENCE]) /
           3;
 
         if (avgScore >= 60) {

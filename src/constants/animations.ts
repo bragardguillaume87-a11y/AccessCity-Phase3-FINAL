@@ -7,6 +7,11 @@
  * <motion.div variants={CHARACTER_ANIMATION_VARIANTS.fadeIn} ... />
  */
 
+import { TIMING } from '@/config/timing';
+
+// Convert milliseconds to seconds for Framer Motion
+const toSeconds = (ms: number): number => ms / 1000;
+
 /**
  * Animation variant type for Framer Motion
  */
@@ -63,40 +68,40 @@ export const CHARACTER_ANIMATION_VARIANTS: Record<CharacterAnimationVariantName,
   // Fade animations
   fadeIn: {
     initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: 0.5 } },
-    exit: { opacity: 0, transition: { duration: 0.3 } }
+    animate: { opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW) } },
+    exit: { opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   },
   // Slide animations
   slideInLeft: {
     initial: { x: -100, opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { x: -100, opacity: 0, transition: { duration: 0.3 } }
+    animate: { x: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
+    exit: { x: -100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   },
   slideInRight: {
     initial: { x: 100, opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { x: 100, opacity: 0, transition: { duration: 0.3 } }
+    animate: { x: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
+    exit: { x: 100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   },
   slideInUp: {
     initial: { y: 100, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { y: 100, opacity: 0, transition: { duration: 0.3 } }
+    animate: { y: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
+    exit: { y: 100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   },
   slideInDown: {
     initial: { y: -100, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } },
-    exit: { y: -100, opacity: 0, transition: { duration: 0.3 } }
+    animate: { y: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
+    exit: { y: -100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   },
   // Pop animations
   pop: {
     initial: { scale: 0, opacity: 0 },
-    animate: { scale: 1, opacity: 1, transition: { duration: 0.4, type: 'spring', bounce: 0.5 } },
-    exit: { scale: 0, opacity: 0, transition: { duration: 0.2 } }
+    animate: { scale: 1, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_MEDIUM), type: 'spring', bounce: 0.5 } },
+    exit: { scale: 0, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_VERY_FAST) } }
   },
   // Bounce animation
   bounce: {
     initial: { y: -50, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: 0.6, type: 'spring', bounce: 0.6 } },
-    exit: { y: 50, opacity: 0, transition: { duration: 0.3 } }
+    animate: { y: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_BOUNCE), type: 'spring', bounce: 0.6 } },
+    exit: { y: 50, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   }
 } as const;

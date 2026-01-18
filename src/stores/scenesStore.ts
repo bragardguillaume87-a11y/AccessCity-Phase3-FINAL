@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
+import { setupAutoSave } from '../utils/storeSubscribers';
 import type { Scene, Dialogue, SceneCharacter, TextBox, Prop, Position } from '../types';
 
 /**
@@ -654,26 +655,5 @@ export const useScenesStore = create<ScenesState>()(
   )
 );
 
-// Subscribe to scenes store changes to update autosave timestamp
-// Debounced to avoid updating on every keystroke
-let scenesSaveTimeout: ReturnType<typeof setTimeout>;
-const unsubscribeScenes = useScenesStore.subscribe(
-  (state) => state.scenes,
-  () => {
-    clearTimeout(scenesSaveTimeout);
-    scenesSaveTimeout = setTimeout(() => {
-      // Dynamically import UIStore to avoid circular dependency
-      import('./uiStore').then(({ useUIStore }) => {
-        useUIStore.getState().setLastSaved(new Date().toISOString());
-      });
-    }, 1000); // 1 second debounce
-  }
-);
-
-// Cleanup on HMR (Hot Module Replacement) to prevent memory leaks
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    clearTimeout(scenesSaveTimeout);
-    unsubscribeScenes();
-  });
-}
+// Auto-save subscriber with HMR cleanup (centralized in storeSubscribers.ts)
+setupAutoSave(useScenesStore, (state) => state.scenes, 'scenes');

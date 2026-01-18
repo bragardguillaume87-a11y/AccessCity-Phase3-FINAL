@@ -5,7 +5,7 @@
  * ASCII only - No fragments
  */
 
-import type { Scene, Dialogue, Character } from '@/types';
+import type { Scene, Dialogue, Character, DialogueChoice } from '@/types';
 
 /**
  * Generate a unique copy name
@@ -95,9 +95,9 @@ export function duplicateDialogue(dialogue: Dialogue): Dialogue {
 /**
  * Duplicate a choice
  * @param choice - Choice to duplicate
- * @returns Duplicated choice
+ * @returns Duplicated choice without diceCheck
  */
-export function duplicateChoice(choice: any): any {
+export function duplicateChoice(choice: DialogueChoice): Omit<DialogueChoice, 'diceCheck'> {
   const cloned = structuredClone(choice);
   delete cloned.diceCheck;
   return cloned;

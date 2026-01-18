@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { TIMING } from '@/config/timing';
+import { HUD_THRESHOLDS } from '@/config/constants';
 
 /**
  * Props for HUDVariables component
@@ -64,7 +66,7 @@ export default function HUDVariables({ variables }: HUDVariablesProps) {
       // Clear text after short delay to avoid pollution
       const timeoutId = window.setTimeout(() => {
         if (liveRef.current) liveRef.current.textContent = '';
-      }, 1500);
+      }, TIMING.ARIA_ANNOUNCEMENT_CLEAR);
 
       return () => window.clearTimeout(timeoutId);
     }
@@ -105,8 +107,8 @@ export default function HUDVariables({ variables }: HUDVariablesProps) {
             {entries.map(([key, value]) => {
               const icon = key === 'Physique' ? '💪' : key === 'Mentale' ? '🧠' : '📊';
               const color =
-                value > 66 ? 'from-green-500 to-green-600' :
-                value > 33 ? 'from-yellow-500 to-yellow-600' :
+                value > HUD_THRESHOLDS.HIGH ? 'from-green-500 to-green-600' :
+                value > HUD_THRESHOLDS.MEDIUM ? 'from-yellow-500 to-yellow-600' :
                 'from-red-500 to-red-600';
 
               return (

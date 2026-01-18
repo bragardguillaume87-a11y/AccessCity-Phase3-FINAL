@@ -1,7 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import { logger } from '../../../../utils/logger';
+/**
+ * Asset favorites hook
+ *
+ * Thin wrapper around useLocalStorageFavorites for backward compatibility.
+ * Use useLocalStorageFavorites directly for new code.
+ *
+ * @module components/modals/AssetsLibraryModal/hooks/useFavorites
+ */
 
-const FAVORITES_STORAGE_KEY = 'accesscity-favorite-assets';
+import { useMemo } from 'react';
+import { useLocalStorageFavorites } from '@/hooks/useLocalStorageFavorites';
+import { STORAGE_KEYS } from '@/config/storageKeys';
 
 /**
  * Return value of useFavorites hook
@@ -18,65 +26,26 @@ export interface UseFavoritesReturn {
 /**
  * Hook for managing favorite assets with localStorage persistence
  *
- * Provides functionality to:
- * - Load favorites from localStorage
- * - Toggle favorite status
- * - Check if asset is favorited
- * - Auto-persist changes to localStorage
+ * @deprecated Use useLocalStorageFavorites from '@/hooks/useLocalStorageFavorites' directly
  *
  * @returns Favorites state and management functions
  *
  * @example
  * ```tsx
  * const { favorites, toggleFavorite, isFavorite } = useFavorites();
- *
- * // Check if asset is favorite
- * if (isFavorite('/assets/bg1.png')) {
- *   // Show filled star
- * }
- *
- * // Toggle favorite
- * toggleFavorite('/assets/bg1.png');
  * ```
  */
 export function useFavorites(): UseFavoritesReturn {
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      logger.error('Failed to load favorites:', error);
-      return [];
-    }
-  });
+  const { favorites: favoritesSet, toggle, isFavorite } = useLocalStorageFavorites<string>(
+    STORAGE_KEYS.FAVORITES_ASSETS
+  );
 
-  // Persist to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
-    } catch (error) {
-      logger.error('Failed to save favorites:', error);
-    }
-  }, [favorites]);
-
-  const toggleFavorite = useCallback((assetUrl: string) => {
-    setFavorites((prev) => {
-      const isFav = prev.includes(assetUrl);
-      if (isFav) {
-        return prev.filter((url) => url !== assetUrl);
-      } else {
-        return [...prev, assetUrl];
-      }
-    });
-  }, []);
-
-  const isFavorite = useCallback((assetUrl: string): boolean => {
-    return favorites.includes(assetUrl);
-  }, [favorites]);
+  // Convert Set to Array for backward compatibility
+  const favorites = useMemo(() => [...favoritesSet], [favoritesSet]);
 
   return {
     favorites,
-    toggleFavorite,
+    toggleFavorite: toggle,
     isFavorite,
   };
 }

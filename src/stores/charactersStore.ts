@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { setupAutoSave } from '../utils/storeSubscribers';
 import type { Character } from '../types';
 
 /**
@@ -123,26 +124,5 @@ export const useCharactersStore = create<CharactersState>()(
   )
 );
 
-// Subscribe to characters store changes to update autosave timestamp
-// Debounced to avoid updating on every keystroke
-let charactersSaveTimeout: ReturnType<typeof setTimeout>;
-const unsubscribeCharacters = useCharactersStore.subscribe(
-  (state) => state.characters,
-  () => {
-    clearTimeout(charactersSaveTimeout);
-    charactersSaveTimeout = setTimeout(() => {
-      // Dynamically import UIStore to avoid circular dependency
-      import('./uiStore').then(({ useUIStore }) => {
-        useUIStore.getState().setLastSaved(new Date().toISOString());
-      });
-    }, 1000); // 1 second debounce
-  }
-);
-
-// Cleanup on HMR (Hot Module Replacement) to prevent memory leaks
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    clearTimeout(charactersSaveTimeout);
-    unsubscribeCharacters();
-  });
-}
+// Auto-save subscriber with HMR cleanup (centralized in storeSubscribers.ts)
+setupAutoSave(useCharactersStore, (state) => state.characters, 'characters');

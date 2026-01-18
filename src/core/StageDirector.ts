@@ -2,16 +2,14 @@
 // Moteur de jeu pour AccessCity Studio (React)
 
 import { logger } from '../utils/logger';
+import { GAME_STATS, type GameStatKey } from '../i18n';
 import type { Scene, Dialogue, Character, DialogueChoice } from '@/types';
 
 /**
  * Game variables tracking player progress
+ * Uses GameStatKey for type-safe keys
  */
-export interface GameVariables {
-  Empathie: number;
-  Autonomie: number;
-  Confiance: number;
-}
+export type GameVariables = Record<GameStatKey, number>;
 
 /**
  * Ending message structure
@@ -49,11 +47,11 @@ export default class StageDirector {
     this.currentDialogueIndex = 0;
     this.gameEnded = false;
 
-    // Variables du jeu
+    // Variables du jeu (using GAME_STATS constants)
     this.variables = {
-      Empathie: 50,
-      Autonomie: 50,
-      Confiance: 50
+      [GAME_STATS.EMPATHY]: 50,
+      [GAME_STATS.AUTONOMY]: 50,
+      [GAME_STATS.CONFIDENCE]: 50,
     };
 
     // Initialisation
@@ -126,7 +124,7 @@ export default class StageDirector {
     // Appliquer les effets sur les variables
     if (choice.effects) {
       choice.effects.forEach(effect => {
-        const key = effect.variable as keyof GameVariables;
+        const key = effect.variable as GameStatKey;
         if (key in this.variables) {
           this.variables[key] = Math.max(0, Math.min(100, this.variables[key] + effect.value));
           logger.debug(`[StageDirector] Variable ${key}: ${this.variables[key]}`);
@@ -143,7 +141,7 @@ export default class StageDirector {
 
       if (diceRoll < threshold) {
         // Échec : pénalité sur les variables
-        (Object.keys(this.variables) as Array<keyof GameVariables>).forEach(key => {
+        (Object.keys(this.variables) as GameStatKey[]).forEach(key => {
           this.variables[key] = Math.max(0, this.variables[key] - 5);
         });
         logger.debug('[StageDirector] Risk failed! Variables reduced.');
@@ -223,6 +221,21 @@ export default class StageDirector {
   }
 
   /**
+   * Alias for isGameEnded() for backward compatibility
+   * @returns True if game is over
+   */
+  isGameOver(): boolean {
+    return this.isGameEnded();
+  }
+
+  /**
+   * Get current game state (alias for getVariables, for backward compatibility)
+   */
+  get gameState(): GameVariables {
+    return this.variables;
+  }
+
+  /**
    * Reset game to initial state
    */
   resetGame(): void {
@@ -230,9 +243,9 @@ export default class StageDirector {
     this.currentDialogueIndex = 0;
     this.gameEnded = false;
     this.variables = {
-      Empathie: 50,
-      Autonomie: 50,
-      Confiance: 50
+      [GAME_STATS.EMPATHY]: 50,
+      [GAME_STATS.AUTONOMY]: 50,
+      [GAME_STATS.CONFIDENCE]: 50,
     };
     logger.debug('[StageDirector] Game reset');
   }
@@ -281,7 +294,11 @@ export default class StageDirector {
    * @returns Final score (0-100)
    */
   getFinalScore(): number {
-    const avg = (this.variables.Empathie + this.variables.Autonomie + this.variables.Confiance) / 3;
+    const avg = (
+      this.variables[GAME_STATS.EMPATHY] +
+      this.variables[GAME_STATS.AUTONOMY] +
+      this.variables[GAME_STATS.CONFIDENCE]
+    ) / 3;
     return Math.round(avg);
   }
 

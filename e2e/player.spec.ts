@@ -17,7 +17,7 @@ test.describe('Player/HUD/Modals', () => {
     const modal = page.locator('[role="dialog"]');
     // Si pas visible (déjà onboarded), simuler ouverture via localStorage reset
     if (!(await modal.isVisible())) {
-      await page.evaluate(() => localStorage.removeItem('ac_onboarded'));
+      await page.evaluate(() => localStorage.removeItem('ac_onboarding_completed'));
       await page.reload();
     }
     await expect(page.locator('[role="dialog"]')).toBeVisible();

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
+import { GAME_STATS, type SupportedLocale } from '../i18n';
 
 /**
  * Settings Store
@@ -50,6 +51,7 @@ interface SettingsState {
   projectData: ProjectData;
   projectSettings: ProjectSettings;
   variables: GameVariables;
+  language: SupportedLocale;
 
   // Actions
   setContextField: (key: keyof ProjectData, value: string) => void;
@@ -57,6 +59,7 @@ interface SettingsState {
   updateProjectSettings: (updates: Partial<ProjectSettings>) => void;
   setVariable: (name: string, value: number) => void;
   modifyVariable: (name: string, delta: number) => void;
+  setLanguage: (lang: SupportedLocale) => void;
 }
 
 // ============================================================================
@@ -87,9 +90,9 @@ const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   },
   game: {
     variables: {
-      Empathie: { initial: 0, min: 0, max: 100 },
-      Autonomie: { initial: 0, min: 0, max: 100 },
-      Confiance: { initial: 0, min: 0, max: 100 },
+      [GAME_STATS.EMPATHY]: { initial: 50, min: 0, max: 100 },
+      [GAME_STATS.AUTONOMY]: { initial: 50, min: 0, max: 100 },
+      [GAME_STATS.CONFIDENCE]: { initial: 50, min: 0, max: 100 },
     },
   },
 };
@@ -111,6 +114,7 @@ export const useSettingsStore = create<SettingsState>()(
         projectData: DEFAULT_PROJECT_DATA,
         projectSettings: DEFAULT_PROJECT_SETTINGS,
         variables: DEFAULT_VARIABLES,
+        language: 'fr' as SupportedLocale,
 
         // Actions: Project Data (context)
         setContextField: (key, value) => {
@@ -165,12 +169,18 @@ export const useSettingsStore = create<SettingsState>()(
             };
           }, false, 'settings/modifyVariable');
         },
+
+        // Actions: Language
+        setLanguage: (lang) => {
+          set({ language: lang }, false, 'settings/setLanguage');
+        },
       })),
       {
         name: 'accesscity-settings',
         partialize: (state) => ({
           projectData: state.projectData,
           projectSettings: state.projectSettings,
+          language: state.language,
         }),
       }
     ),

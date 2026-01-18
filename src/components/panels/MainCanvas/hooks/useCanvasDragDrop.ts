@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { logger } from '@/utils/logger';
 import { TIMING } from '@/config/timing';
+import { safeJsonParse, validateDragDropData, isValidAssetUrl } from '@/utils/validation';
+import { ELEMENT_SIZES, ELEMENT_DEFAULTS } from '@/config/canvas';
 import type { Scene, Position, TextBox, Prop } from '@/types';
 
 /**
@@ -100,77 +102,103 @@ export function useCanvasDragDrop({
 
   /**
    * Handle drop - Parse data and execute appropriate action
+   * Uses safe JSON parsing with validation to prevent XSS/injection attacks
    */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
 
-    try {
-      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    // Safe JSON parsing with type validation
+    const rawJson = e.dataTransfer.getData('application/json');
+    const data = safeJsonParse(rawJson, validateDragDropData);
 
-      if (!selectedScene || !canvasNode) return;
+    if (!data) {
+      logger.warn('Invalid or missing drag-drop data');
+      return;
+    }
 
-      // Calculate drop position relative to canvas (in percentage)
-      const rect = canvasNode.getBoundingClientRect();
+    if (!selectedScene || !canvasNode) return;
 
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
+    // Calculate drop position relative to canvas (in percentage)
+    const rect = canvasNode.getBoundingClientRect();
 
-      const position: Position = {
-        x: Math.max(0, Math.min(100, x)),
-        y: Math.max(0, Math.min(100, y))
-      };
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-      // Handle different drop types
-      switch (data.type) {
-        case 'background':
-          actions.setSceneBackground(selectedScene.id, data.backgroundUrl);
-          setDropFeedback('background');
-          setTimeout(() => setDropFeedback(null), TIMING.LOADING_MIN_DISPLAY);
-          break;
+    const position: Position = {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
+    };
 
-        case 'character':
+    // Handle different drop types
+    switch (data.type) {
+      case 'background': {
+        // Validate URL before setting background
+        const bgUrl = data.url || data.assetPath || '';
+        if (!isValidAssetUrl(bgUrl)) {
+          logger.warn('Invalid background URL blocked:', bgUrl);
+          return;
+        }
+        actions.setSceneBackground(selectedScene.id, bgUrl);
+        setDropFeedback('background');
+        setTimeout(() => setDropFeedback(null), TIMING.LOADING_MIN_DISPLAY);
+        break;
+      }
+
+      case 'character':
+        if (data.characterId) {
           actions.addCharacterToScene(
             selectedScene.id,
             data.characterId,
-            data.mood,
+            'neutral',
             position,
             'none'
           );
           actions.setShowAddCharacterModal?.(false);
-          break;
-
-        case 'textbox': {
-          const textBox: TextBox = {
-            id: `textbox-${Date.now()}`,
-            content: data.defaultText || 'Double-click to edit',
-            position,
-            size: { width: 300, height: 100 },
-            style: {
-              fontSize: data.fontSize || 16,
-              fontWeight: data.fontWeight || 'normal'
-            }
-          };
-          actions.addTextBoxToScene(selectedScene.id, textBox);
-          break;
         }
+        break;
 
-        case 'prop': {
-          const prop: Prop = {
-            id: `prop-${Date.now()}`,
-            assetUrl: data.emoji,
-            position,
-            size: { width: 80, height: 80 }
-          };
-          actions.addPropToScene(selectedScene.id, prop);
-          break;
-        }
-
-        default:
-          logger.warn('Unknown drag type:', data.type);
+      case 'textbox': {
+        const textBox: TextBox = {
+          id: `textbox-${Date.now()}`,
+          content: 'Double-click to edit',
+          position,
+          size: { ...ELEMENT_SIZES.TEXTBOX },
+          style: {
+            fontSize: ELEMENT_DEFAULTS.FONT_SIZE,
+            fontWeight: 'normal'
+          }
+        };
+        actions.addTextBoxToScene(selectedScene.id, textBox);
+        break;
       }
-    } catch (error) {
-      logger.error('Failed to parse drop data:', error);
+
+      case 'prop': {
+        const propUrl = data.emoji || data.url || '';
+        const prop: Prop = {
+          id: `prop-${Date.now()}`,
+          assetUrl: propUrl,
+          position,
+          size: { ...ELEMENT_SIZES.PROP }
+        };
+        actions.addPropToScene(selectedScene.id, prop);
+        break;
+      }
+
+      case 'emoji': {
+        // Emoji is a special case of prop
+        const emojiProp: Prop = {
+          id: `prop-${Date.now()}`,
+          assetUrl: data.emoji || '',
+          position,
+          size: { ...ELEMENT_SIZES.PROP }
+        };
+        actions.addPropToScene(selectedScene.id, emojiProp);
+        break;
+      }
+
+      default:
+        logger.warn('Unknown drag type:', data.type);
     }
   };
 

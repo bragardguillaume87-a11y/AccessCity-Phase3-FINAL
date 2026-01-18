@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.ts';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useUIStore, useScenes, useCharacters } from '../stores/index.ts';
 import { useUndoRedo } from '../hooks/useUndoRedo.ts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { Panel, Group, Separator } from 'react-resizable-panels';
@@ -12,17 +12,9 @@ import Sidebar from './layout/Sidebar';
 import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas';
+import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
-
-/**
- * Modal context type - Stores context data for various modals
- */
-interface ModalContext {
-  characterId?: string;
-  category?: string;
-  targetSceneId?: string;
-  sceneId?: string;
-}
+import type { ModalContext } from '../types';
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
@@ -41,9 +33,9 @@ const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
  * ASCII only, no hardcoded French strings.
  */
 export default function EditorShell({ onBack = null }) {
-  // Zustand stores (granular selectors for better performance)
-  const scenes = useScenesStore((state) => state.scenes);
-  const characters = useCharactersStore((state) => state.characters);
+  // Zustand stores (memoized selectors for better performance)
+  const scenes = useScenes();
+  const characters = useCharacters();
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const lastSaved = useUIStore((state) => state.lastSaved);
@@ -59,9 +51,6 @@ export default function EditorShell({ onBack = null }) {
 
   // Track active tab in LeftPanel ('scenes' or 'dialogues')
   const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
-
-  // PHASE 4: Toggle panneau droit masquable
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
   // PHASE 6: Fullscreen mode state (null | 'graph' | 'canvas' | 'preview')
   const [fullscreenMode, setFullscreenMode] = useState(null);
@@ -128,13 +117,22 @@ export default function EditorShell({ onBack = null }) {
   };
 
   // Handler for tab change in LeftPanel
+  // - 'scenes' tab: show UnifiedPanel (Add Elements) by setting selectedElement to scene
+  // - 'dialogues' tab: clear scene selection to trigger auto-select in MainCanvas
   const handleTabChange = (tab: 'scenes' | 'dialogues') => {
     logger.debug('[EditorShell] Tab changed to:', tab);
     setLeftPanelActiveTab(tab);
 
     if (tab === 'scenes') {
-      // Deselect dialogue to show the "Add Elements" panel
-      logger.debug('[EditorShell] Setting selectedElement to null (should show EmptySelectionState)');
+      // Always set to scene type to show UnifiedPanel
+      // If no scene selected, select first one (if exists)
+      const sceneId = selectedSceneForEdit || scenes[0]?.id;
+      if (sceneId) {
+        setSelectedSceneForEdit(sceneId);
+        setSelectedElement({ type: 'scene', id: sceneId });
+      }
+    } else if (tab === 'dialogues') {
+      // Clear to null - auto-select in MainCanvas will pick up first dialogue
       setSelectedElement(null);
     }
   };
@@ -223,12 +221,14 @@ export default function EditorShell({ onBack = null }) {
             >
               <h3 className="sr-only">Explorateur de scènes</h3>
               <Sidebar>
-                <LeftPanel
-                  activeTab={leftPanelActiveTab}
-                  onTabChange={handleTabChange}
-                  onDialogueSelect={handleDialogueSelect}
-                  onSceneSelect={handleSceneSelect}
-                />
+                <ErrorBoundary name="LeftPanel">
+                  <LeftPanel
+                    activeTab={leftPanelActiveTab}
+                    onTabChange={handleTabChange}
+                    onDialogueSelect={handleDialogueSelect}
+                    onSceneSelect={handleSceneSelect}
+                  />
+                </ErrorBoundary>
               </Sidebar>
             </Panel>
 
@@ -252,21 +252,19 @@ export default function EditorShell({ onBack = null }) {
               aria-label="Canvas de scène"
             >
               <h3 className="sr-only">Canvas de scène</h3>
-              <MainCanvas
-                selectedScene={selectedScene}
-                scenes={scenes}
-                selectedElement={selectedElement}
-                onSelectDialogue={handleDialogueSelect}
-                onOpenModal={(modal, context = {}) => {
-                  setActiveModal(modal);
-                  setModalContext(context);
-                }}
-                isRightPanelOpen={isRightPanelOpen}
-                onToggleRightPanel={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                fullscreenMode={fullscreenMode}
-                onFullscreenChange={setFullscreenMode}
-                leftPanelActiveTab={leftPanelActiveTab}
-              />
+              <ErrorBoundary name="MainCanvas">
+                <MainCanvas
+                  selectedScene={selectedScene}
+                  selectedElement={selectedElement}
+                  onSelectDialogue={handleDialogueSelect}
+                  onOpenModal={(modal, context = {}) => {
+                    setActiveModal(modal);
+                    setModalContext(context);
+                  }}
+                  fullscreenMode={fullscreenMode}
+                  onFullscreenChange={setFullscreenMode}
+                />
+              </ErrorBoundary>
             </Panel>
 
             {/* Resize handle - Hidden in fullscreen */}
@@ -278,13 +276,13 @@ export default function EditorShell({ onBack = null }) {
               />
             )}
 
-            {/* Right panel: Inspector/Properties - Resizable 20-40% (PHASE 4: Collapsible, PHASE 6: Hidden in fullscreen) */}
+            {/* Right panel: Inspector/Properties - Resizable 20-40% (PHASE 6: Hidden in fullscreen) */}
             <Panel
               defaultSize={25}
               minSize={15}
               maxSize={40}
               collapsible={true}
-              collapsedSize={!isRightPanelOpen || fullscreenMode ? 0 : undefined}
+              collapsedSize={fullscreenMode ? 0 : undefined}
               className="bg-slate-800 border-l border-slate-700 overflow-y-auto"
               id="properties-panel"
               role="complementary"
@@ -292,24 +290,26 @@ export default function EditorShell({ onBack = null }) {
             >
               <h3 className="sr-only">Propriétés</h3>
               <Inspector>
-                {selectedElement?.type === 'scene' ? (
-                  <UnifiedPanel
-                    onOpenModal={(modal, context) => {
-                      setActiveModal(modal);
-                      setModalContext(context);
-                    }}
-                  />
-                ) : (
-                  <PropertiesPanel
-                    selectedElement={selectedElement}
-                    selectedScene={selectedScene}
-                    characters={characters}
-                    onOpenModal={(modal, context) => {
-                      setActiveModal(modal);
-                      setModalContext(context);
-                    }}
-                  />
-                )}
+                <ErrorBoundary name="PropertiesPanel">
+                  {selectedElement?.type === 'scene' ? (
+                    <UnifiedPanel
+                      onOpenModal={(modal, context) => {
+                        setActiveModal(modal);
+                        setModalContext(context);
+                      }}
+                    />
+                  ) : (
+                    <PropertiesPanel
+                      selectedElement={selectedElement}
+                      selectedScene={selectedScene}
+                      characters={characters}
+                      onOpenModal={(modal, context) => {
+                        setActiveModal(modal);
+                        setModalContext(context);
+                      }}
+                    />
+                  )}
+                </ErrorBoundary>
               </Inspector>
             </Panel>
           </Group>
@@ -323,32 +323,40 @@ export default function EditorShell({ onBack = null }) {
         </div>
       </footer>
 
-      {/* Modals */}
+      {/* Modals - Each wrapped in ErrorBoundary for isolation */}
       <React.Suspense fallback={null}>
         {activeModal === 'project' && (
-          <SettingsModal isOpen={true} onClose={() => setActiveModal(null)} />
+          <ErrorBoundary name="SettingsModal">
+            <SettingsModal isOpen={true} onClose={() => setActiveModal(null)} />
+          </ErrorBoundary>
         )}
         {activeModal === 'characters' && (
-          <CharactersModal
-            isOpen={true}
-            onClose={() => setActiveModal(null)}
-            initialCharacterId={modalContext.characterId}
-          />
+          <ErrorBoundary name="CharactersModal">
+            <CharactersModal
+              isOpen={true}
+              onClose={() => setActiveModal(null)}
+              initialCharacterId={modalContext.characterId}
+            />
+          </ErrorBoundary>
         )}
         {activeModal === 'assets' && (
-          <AssetsLibraryModal
-            isOpen={true}
-            onClose={() => setActiveModal(null)}
-            initialCategory={modalContext.category}
-            targetSceneId={modalContext.targetSceneId}
-          />
+          <ErrorBoundary name="AssetsLibraryModal">
+            <AssetsLibraryModal
+              isOpen={true}
+              onClose={() => setActiveModal(null)}
+              initialCategory={modalContext.category}
+              targetSceneId={modalContext.targetSceneId}
+            />
+          </ErrorBoundary>
         )}
         {activeModal === 'preview' && (
-          <PreviewModal
-            isOpen={true}
-            onClose={() => setActiveModal(null)}
-            initialSceneId={modalContext.sceneId || selectedScene?.id}
-          />
+          <ErrorBoundary name="PreviewModal">
+            <PreviewModal
+              isOpen={true}
+              onClose={() => setActiveModal(null)}
+              initialSceneId={modalContext.sceneId || selectedScene?.id}
+            />
+          </ErrorBoundary>
         )}
       </React.Suspense>
     </div>

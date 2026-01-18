@@ -1,7 +1,7 @@
 import React from 'react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { List, Network } from 'lucide-react';
-import DialogueGraph from '../../../features/DialogueGraph.tsx';
+import DialogueGraph from '../../../features/DialogueGraph';
 import type { Scene, SelectedElementType } from '@/types';
 
 export interface DialogueFlowVisualizationProps {

@@ -72,17 +72,24 @@ export function useMoodManagement({
   const [activeMood, setActiveMood] = useState<string>('neutral');
   const [moodError, setMoodError] = useState<string>('');
 
+  // Extract specific properties for stable dependencies
+  // Note: 'id' only exists on 'character' and 'scene' types, not 'dialogue' or 'sceneCharacter'
+  const selectedElementType = selectedElement?.type;
+  const selectedElementId = selectedElement?.type === 'character' || selectedElement?.type === 'scene'
+    ? selectedElement.id
+    : null;
+  // Find the selected character's first mood (stable primitive dependency)
+  const selectedChar = selectedElementType === 'character' && selectedElementId
+    ? characters.find(c => c.id === selectedElementId)
+    : null;
+  const firstMood = selectedChar?.moods?.[0] ?? 'neutral';
+
   // Sync activeMood when character changes
   useEffect(() => {
-    if (selectedElement?.type === 'character') {
-      const char = characters.find(c => c.id === selectedElement.id);
-      if (char && char.moods && char.moods.length > 0) {
-        setActiveMood(char.moods[0]);
-      } else {
-        setActiveMood('neutral');
-      }
+    if (selectedElementType === 'character' && selectedElementId) {
+      setActiveMood(firstMood);
     }
-  }, [selectedElement, characters]);
+  }, [selectedElementType, selectedElementId, firstMood]);
 
   const handleAddMood = useCallback((): void => {
     const trimmed = newMood.trim();

@@ -11,6 +11,19 @@
 
 /**
  * Game statistics as key-value pairs
+ *
+ * Standard stats (use GAME_STATS constants from @/i18n):
+ * - empathy: Empathie / Empathy
+ * - autonomy: Autonomie / Autonomy
+ * - confidence: Confiance / Confidence
+ *
+ * @example
+ * import { GAME_STATS } from '@/i18n';
+ * const stats: GameStats = {
+ *   [GAME_STATS.EMPATHY]: 50,
+ *   [GAME_STATS.AUTONOMY]: 50,
+ *   [GAME_STATS.CONFIDENCE]: 50,
+ * };
  */
 export interface GameStats {
   [key: string]: number;
@@ -140,7 +153,32 @@ export type SelectedElementType =
 
 export type FullscreenMode = 'graph' | 'canvas' | 'preview' | null;
 
-export type ModalType = 'characters' | 'assets' | 'export' | 'preview' | 'settings' | null;
+export type ModalType = 'characters' | 'assets' | 'export' | 'preview' | 'settings' | 'project' | 'addCharacter' | null;
+
+/**
+ * Base props for all modal components
+ * Provides consistent interface for modal visibility and close handling
+ */
+export interface ModalBaseProps {
+  /** Controls modal visibility */
+  isOpen: boolean;
+  /** Callback when modal is closed */
+  onClose: () => void;
+}
+
+/**
+ * Context data passed to modals from EditorShell
+ */
+export interface ModalContext {
+  /** Character ID for CharactersModal */
+  characterId?: string;
+  /** Asset category for AssetsLibraryModal */
+  category?: string;
+  /** Target scene ID for asset operations */
+  targetSceneId?: string;
+  /** Scene ID for PreviewModal */
+  sceneId?: string;
+}
 
 // ============================================================================
 // VALIDATION

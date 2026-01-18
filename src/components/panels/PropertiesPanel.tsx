@@ -1,7 +1,14 @@
-import type React from 'react';
-import type { Scene, Character, Dialogue, SceneCharacter, SelectedElementType, ModalType } from '@/types';
-import { useScenesStore, useCharactersStore, useUIStore } from '../../stores/index';
-import { duplicateDialogue } from '../../utils/duplication';
+import { useCallback } from 'react';
+import type { Scene, Character, SelectedElementType, ModalType } from '@/types';
+import {
+  useUIStore,
+  useScenes,
+  useCharacterActions,
+  useSceneActions,
+  useDialogueActions,
+  useSceneCharacterActions
+} from '../../stores/index';
+import { duplicateDialogue, duplicateCharacter } from '../../utils/duplication';
 import { EmptySelectionState } from './PropertiesPanel/components/EmptySelectionState';
 import { ScenePropertiesForm } from './PropertiesPanel/components/ScenePropertiesForm';
 import { CharacterPropertiesForm } from './PropertiesPanel/components/CharacterPropertiesForm';
@@ -31,14 +38,12 @@ export default function PropertiesPanel({
   characters,
   onOpenModal
 }: PropertiesPanelProps) {
-  // Zustand stores (granular selectors)
-  const updateScene = useScenesStore(state => state.updateScene);
-  const updateDialogue = useScenesStore(state => state.updateDialogue);
-  const addDialogue = useScenesStore(state => state.addDialogue);
-  const updateSceneCharacter = useScenesStore(state => state.updateSceneCharacter);
-  const scenes = useScenesStore(state => state.scenes);
-  const updateCharacter = useCharactersStore(state => state.updateCharacter);
-  const addCharacter = useCharactersStore(state => state.addCharacter);
+  // Zustand stores (memoized selectors)
+  const scenes = useScenes();
+  const { updateScene } = useSceneActions();
+  const { addDialogue, updateDialogue } = useDialogueActions();
+  const { updateSceneCharacter } = useSceneCharacterActions();
+  const { addCharacter, updateCharacter } = useCharacterActions();
   const lastSavedStr = useUIStore(state => state.lastSaved);
   const isSaving = useUIStore(state => state.isSaving);
 
@@ -63,6 +68,15 @@ export default function PropertiesPanel({
     );
   }
 
+  // Memoized character duplication handler
+  const handleDuplicateCharacter = useCallback((character: Character) => {
+    const existingIds = characters.map(c => c.id);
+    const existingNames = characters.map(c => c.name);
+    const duplicate = duplicateCharacter(character, existingIds, existingNames);
+    addCharacter();
+    updateCharacter(duplicate);
+  }, [characters, addCharacter, updateCharacter]);
+
   // Character properties
   if (selectedElement.type === 'character') {
     const character = characters.find(c => c.id === selectedElement.id);
@@ -74,19 +88,6 @@ export default function PropertiesPanel({
       );
     }
 
-    const handleDuplicate = () => {
-      // Create a new character ID and add the duplicate
-      const newId = addCharacter();
-      const duplicate: Character = {
-        id: newId,
-        name: `${character.name} (copy)`,
-        description: character.description,
-        sprites: { ...character.sprites },
-        moods: [...(character.moods || [])]
-      };
-      updateCharacter(duplicate);
-    };
-
     return (
       <CharacterPropertiesForm
         character={character}
@@ -94,7 +95,7 @@ export default function PropertiesPanel({
         selectedElement={selectedElement}
         scenes={scenes}
         onUpdate={updateCharacter}
-        onDuplicate={handleDuplicate}
+        onDuplicate={() => handleDuplicateCharacter(character)}
         lastSaved={lastSaved}
         isSaving={isSaving}
       />
@@ -126,6 +127,16 @@ export default function PropertiesPanel({
     );
   }
 
+  // Memoized dialogue duplication handler
+  const handleDuplicateDialogue = useCallback((sceneId: string, dialogueIndex: number) => {
+    const scene = scenes.find(s => s.id === sceneId);
+    const dialogue = scene?.dialogues?.[dialogueIndex];
+    if (dialogue) {
+      const duplicated = duplicateDialogue(dialogue);
+      addDialogue(sceneId, duplicated);
+    }
+  }, [scenes, addDialogue]);
+
   // Dialogue properties
   if (selectedElement.type === 'dialogue' && selectedScene) {
     const dialogue = selectedScene.dialogues?.[selectedElement.index];
@@ -137,11 +148,6 @@ export default function PropertiesPanel({
       );
     }
 
-    const handleDuplicateDialogue = () => {
-      const duplicated = duplicateDialogue(dialogue);
-      addDialogue(selectedScene.id, duplicated);
-    };
-
     return (
       <DialoguePropertiesForm
         dialogue={dialogue}
@@ -150,7 +156,7 @@ export default function PropertiesPanel({
         characters={characters}
         scenes={scenes}
         onUpdate={updateDialogue}
-        onDuplicate={handleDuplicateDialogue}
+        onDuplicate={() => handleDuplicateDialogue(selectedScene.id, selectedElement.index)}
         lastSaved={lastSaved}
         isSaving={isSaving}
       />

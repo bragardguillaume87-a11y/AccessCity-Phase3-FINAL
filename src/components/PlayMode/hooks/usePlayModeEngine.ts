@@ -5,6 +5,7 @@ import { GAME_STATS } from '@/i18n';
 import StageDirector from '@/core/StageDirector';
 import { playSound, toggleMute as toggleSoundMute, isSoundMuted } from '@/utils/simpleSound';
 import { TIMING } from '@/config/timing';
+import { GAME_THRESHOLDS } from '@/config/constants';
 
 /**
  * Props for usePlayModeEngine hook
@@ -70,9 +71,9 @@ export function usePlayModeEngine({
   const [currentDialogue, setCurrentDialogue] = useState<Dialogue | null>(null);
   const [isEnded, setIsEnded] = useState(false);
   const [variables, setVariables] = useState<GameStats>({
-    [GAME_STATS.EMPATHY]: 50,
-    [GAME_STATS.AUTONOMY]: 50,
-    [GAME_STATS.CONFIDENCE]: 50,
+    [GAME_STATS.EMPATHY]: GAME_THRESHOLDS.INITIAL_STAT_VALUE,
+    [GAME_STATS.AUTONOMY]: GAME_THRESHOLDS.INITIAL_STAT_VALUE,
+    [GAME_STATS.CONFIDENCE]: GAME_THRESHOLDS.INITIAL_STAT_VALUE,
   });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -184,7 +185,7 @@ export function usePlayModeEngine({
             director.gameState[GAME_STATS.CONFIDENCE]) /
           3;
 
-        if (avgScore >= 60) {
+        if (avgScore >= GAME_THRESHOLDS.VICTORY_SCORE) {
           playSound('/sounds/victory.mp3', 0.6);
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), TIMING.CONFETTI_DURATION);

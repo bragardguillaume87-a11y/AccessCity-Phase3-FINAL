@@ -166,6 +166,12 @@ export const HUD_THRESHOLDS = {
   // Below MEDIUM is Red zone
 } as const;
 
+// Game Engine Thresholds
+export const GAME_THRESHOLDS = {
+  VICTORY_SCORE: 60,        // Average score needed for victory (confetti)
+  INITIAL_STAT_VALUE: 50,   // Default starting value for game stats
+} as const;
+
 // Asset Categories
 export const ASSET_CATEGORIES: AssetCategories = {
   BACKGROUND: 'background',

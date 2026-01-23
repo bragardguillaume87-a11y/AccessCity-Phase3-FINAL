@@ -138,6 +138,80 @@
   --z-modal: 1400;
   --z-popover: 1500;
   --z-tooltip: 1600;
+
+  /* ========== ACCENT COLORS - Editor Buttons ========== */
+  /* Migrated from theme.css for single source of truth */
+
+  /* Purple (Settings) */
+  --accent-purple: #8b5cf6;
+  --accent-purple-hover: #a78bfa;
+  --accent-purple-dark: #7c3aed;
+
+  /* Blue (Characters) */
+  --accent-blue: #3b82f6;
+  --accent-blue-hover: #60a5fa;
+  --accent-blue-dark: #2563eb;
+
+  /* Pink (Assets) */
+  --accent-pink: #ec4899;
+  --accent-pink-hover: #f472b6;
+  --accent-pink-dark: #db2777;
+
+  /* Green (Export) */
+  --accent-green: #10b981;
+  --accent-green-hover: #34d399;
+  --accent-green-dark: #059669;
+
+  /* Orange (Preview) */
+  --accent-orange: #f97316;
+  --accent-orange-hover: #fb923c;
+  --accent-orange-dark: #ea580c;
+
+  /* Cyan & Yellow */
+  --accent-cyan: #06b6d4;
+  --accent-yellow: #eab308;
+
+  /* ========== LEGACY ALIASES ========== */
+  /* For backwards compatibility with theme.css consumers */
+
+  --bg-primary: var(--color-bg-base);
+  --bg-secondary: #13151f;
+  --bg-tertiary: #0d0f16;
+  --bg-hover: var(--color-bg-hover);
+  --bg-elevated: var(--color-bg-elevated);
+
+  --border-subtle: var(--color-border-base);
+  --border-medium: #3a3d4a;
+  --border-focus: var(--color-border-focus);
+
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-tertiary: var(--color-text-muted);
+  --text-disabled: var(--color-text-disabled);
+
+  --success: var(--color-success);
+  --success-light: #d1fae5;
+  --warning: var(--color-warning);
+  --warning-light: #fef3c7;
+  --error: var(--color-danger);
+  --error-light: #fee2e2;
+  --info: var(--accent-blue);
+  --info-light: #dbeafe;
+}
+
+/* ========== UTILITY CLASSES ========== */
+/* Gradient utilities migrated from theme.css */
+
+.gradient-primary {
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-hover) 100%);
+}
+
+.gradient-purple {
+  background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
 }
 
 /* ========== WCAG 2.2 AA COMPLIANCE NOTES ========== */

@@ -42,14 +42,14 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
   }
 
   return (
-    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-slate-900' : 'bg-slate-900 text-white'}`}>
+    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'bg-background text-white'}`}>
       <div ref={liveRegionRef} className="sr-only" aria-live="polite" />
 
       {/* Header */}
-      <header className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
+      <header className="flex justify-between items-center p-4 border-b border-border bg-card">
         <h2 className="font-bold">Preview: {currentScene.title}</h2>
         <div className="flex gap-2">
-          <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-3 py-1 bg-slate-700 rounded text-sm">
+          <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-3 py-1 bg-muted rounded text-sm">
             {isFullscreen ? 'Quitter Plein écran' : 'Plein écran'}
           </button>
           <button onClick={onClose} className="px-3 py-1 bg-red-600 rounded text-sm">
@@ -61,7 +61,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
       {/* Main Content */}
       <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden">
         {/* Scène & Dialogue */}
-        <section className="col-span-8 bg-slate-800 rounded-lg p-6 flex flex-col justify-between">
+        <section className="col-span-8 bg-card rounded-lg p-6 flex flex-col justify-between">
           <div className="text-lg leading-relaxed mb-6">
             {currentDialogue?.speaker && (
               <div className="text-cyan-400 text-sm font-bold uppercase mb-2">{currentDialogue.speaker}</div>
@@ -74,7 +74,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
               <button
                 key={choice.id || idx}
                 onClick={() => chooseOption(choice)}
-                className="w-full text-left p-3 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors"
+                className="w-full text-left p-3 rounded bg-muted hover:bg-muted border border-border transition-colors"
               >
                 {choice.text || 'Continue'}
               </button>
@@ -90,7 +90,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
                   Suivant
                   <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                 </Button>
-                <p className="text-slate-500 text-xs animate-bounce">
+                <p className="text-muted-foreground text-xs animate-bounce">
                   Cliquez pour continuer ▼
                 </p>
               </div>
@@ -100,8 +100,8 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
 
         {/* Sidebar Stats */}
         <aside className="col-span-4 space-y-4">
-          <div className="bg-slate-800 p-4 rounded-lg">
-            <h3 className="font-bold text-slate-400 mb-2 uppercase text-xs">Statistiques</h3>
+          <div className="bg-card p-4 rounded-lg">
+            <h3 className="font-bold text-muted-foreground mb-2 uppercase text-xs">Statistiques</h3>
             <div className="grid grid-cols-1 gap-2 text-sm">
               {Object.entries(stats).map(([key, value], idx) => {
                 const colors = ['text-cyan-300', 'text-purple-300', 'text-yellow-300', 'text-green-300', 'text-pink-300'];
@@ -115,9 +115,9 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
             </div>
           </div>
 
-          <div className="bg-slate-800 p-4 rounded-lg flex-1 overflow-y-auto max-h-60">
-            <h3 className="font-bold text-slate-400 mb-2 uppercase text-xs">Historique</h3>
-            <ol className="text-xs space-y-1 text-slate-300">
+          <div className="bg-card p-4 rounded-lg flex-1 overflow-y-auto max-h-60">
+            <h3 className="font-bold text-muted-foreground mb-2 uppercase text-xs">Historique</h3>
+            <ol className="text-xs space-y-1 text-foreground">
               {history.map((h, i) => (
                 <li key={i}>
                   {i + 1}. Choix {h.choiceId}

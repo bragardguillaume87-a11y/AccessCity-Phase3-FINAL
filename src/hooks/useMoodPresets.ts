@@ -16,21 +16,24 @@
 
 import type { MoodPreset } from '@/types';
 
+// Mood presets constant (used by both hook and utility functions)
+const MOOD_PRESETS: readonly MoodPreset[] = [
+  { id: 'neutral', label: 'Neutral', emoji: '😐', description: 'Default, calm expression' },
+  { id: 'happy', label: 'Happy', emoji: '😊', description: 'Positive, cheerful mood' },
+  { id: 'sad', label: 'Sad', emoji: '😢', description: 'Sorrowful, downcast expression' },
+  { id: 'angry', label: 'Angry', emoji: '😠', description: 'Frustrated, upset mood' },
+  { id: 'surprised', label: 'Surprised', emoji: '😲', description: 'Shocked, astonished expression' },
+  { id: 'confused', label: 'Confused', emoji: '😕', description: 'Puzzled, uncertain mood' },
+  { id: 'scared', label: 'Scared', emoji: '😨', description: 'Fearful, frightened expression' },
+  { id: 'excited', label: 'Excited', emoji: '🤩', description: 'Energetic, enthusiastic mood' },
+  { id: 'professional', label: 'Professional', emoji: '👔', description: 'Formal, business-like demeanor' },
+  { id: 'helpful', label: 'Helpful', emoji: '🤝', description: 'Supportive, friendly attitude' },
+  { id: 'tired', label: 'Tired', emoji: '😴', description: 'Exhausted, weary expression' },
+  { id: 'thoughtful', label: 'Thoughtful', emoji: '🤔', description: 'Contemplative, pensive mood' }
+] as const;
+
 export function useMoodPresets(): readonly MoodPreset[] {
-  return [
-    { id: 'neutral', label: 'Neutral', emoji: '😐', description: 'Default, calm expression' },
-    { id: 'happy', label: 'Happy', emoji: '😊', description: 'Positive, cheerful mood' },
-    { id: 'sad', label: 'Sad', emoji: '😢', description: 'Sorrowful, downcast expression' },
-    { id: 'angry', label: 'Angry', emoji: '😠', description: 'Frustrated, upset mood' },
-    { id: 'surprised', label: 'Surprised', emoji: '😲', description: 'Shocked, astonished expression' },
-    { id: 'confused', label: 'Confused', emoji: '😕', description: 'Puzzled, uncertain mood' },
-    { id: 'scared', label: 'Scared', emoji: '😨', description: 'Fearful, frightened expression' },
-    { id: 'excited', label: 'Excited', emoji: '🤩', description: 'Energetic, enthusiastic mood' },
-    { id: 'professional', label: 'Professional', emoji: '👔', description: 'Formal, business-like demeanor' },
-    { id: 'helpful', label: 'Helpful', emoji: '🤝', description: 'Supportive, friendly attitude' },
-    { id: 'tired', label: 'Tired', emoji: '😴', description: 'Exhausted, weary expression' },
-    { id: 'thoughtful', label: 'Thoughtful', emoji: '🤔', description: 'Contemplative, pensive mood' }
-  ] as const;
+  return MOOD_PRESETS;
 }
 
 /**
@@ -52,8 +55,7 @@ export function useMoodPresets(): readonly MoodPreset[] {
  * ```
  */
 export function getMoodPreset(id: string): MoodPreset | undefined {
-  const presets = useMoodPresets();
-  return presets.find((preset) => preset.id === id);
+  return MOOD_PRESETS.find((preset) => preset.id === id);
 }
 
 /**
@@ -73,6 +75,5 @@ export function getMoodPreset(id: string): MoodPreset | undefined {
  * ```
  */
 export function isPresetMood(id: string): boolean {
-  const presets = useMoodPresets();
-  return presets.some((preset) => preset.id === id);
+  return MOOD_PRESETS.some((preset) => preset.id === id);
 }

@@ -100,7 +100,7 @@ export function AssetLibraryGrid({
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">Chargement des assets...</p>
+            <p className="text-sm text-muted-foreground">Chargement des assets...</p>
           </div>
         </div>
       )}
@@ -112,7 +112,7 @@ export function AssetLibraryGrid({
           <AlertDescription className="text-red-200">
             <p className="font-semibold mb-1">Erreur de chargement</p>
             <p className="text-sm">{error}</p>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Le manifeste n'a pas pu être chargé. Vérifiez que le script de génération est lancé.
             </p>
           </AlertDescription>
@@ -122,11 +122,11 @@ export function AssetLibraryGrid({
       {/* Empty State */}
       {!loading && !error && assets.length === 0 && (
         <div className="text-center py-12">
-          <ImageIcon className="w-16 h-16 mx-auto mb-3 text-slate-600" />
-          <p className="text-slate-400 font-medium mb-2">Aucun asset disponible</p>
-          <p className="text-sm text-slate-500">
+          <ImageIcon className="w-16 h-16 mx-auto mb-3 text-muted-foreground" />
+          <p className="text-muted-foreground font-medium mb-2">Aucun asset disponible</p>
+          <p className="text-sm text-muted-foreground">
             Ajoutez des images dans{' '}
-            <code className="bg-slate-800 px-2 py-1 rounded text-xs text-slate-300 border border-slate-700">
+            <code className="bg-card px-2 py-1 rounded text-xs text-foreground border border-border">
               /public/assets/{assetType}s/
             </code>
           </p>
@@ -152,8 +152,8 @@ export function AssetLibraryGrid({
 
           {/* Recent Assets Section */}
           {recentAssets.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-700">
-              <p className="text-xs font-semibold text-slate-400 mb-2">Récemment utilisés</p>
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Récemment utilisés</p>
               <div className="flex gap-2 flex-wrap">
                 {recentAssets.map((assetPath, idx) => (
                   <Badge
@@ -162,7 +162,7 @@ export function AssetLibraryGrid({
                     className={`cursor-pointer text-xs px-3 py-1.5 ${
                       selectedValue === assetPath
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300'
+                        : 'bg-card hover:bg-muted border-border text-foreground'
                     }`}
                     onClick={() => onSelect(assetPath)}
                   >
@@ -194,7 +194,7 @@ function AssetThumbnail({
       className={`relative rounded-lg overflow-hidden border-2 transition-all group ${
         selected
           ? 'border-blue-500 shadow-md ring-2 ring-blue-500/50'
-          : 'border-slate-700 hover:border-blue-500 hover:shadow-md'
+          : 'border-border hover:border-blue-500 hover:shadow-md'
       }`}
     >
       <LazyImage
@@ -206,7 +206,7 @@ function AssetThumbnail({
         className={`text-[10px] px-2 py-1 text-center font-medium transition-colors truncate ${
           selected
             ? 'bg-blue-600 text-white'
-            : 'bg-slate-800 text-slate-300 group-hover:bg-blue-600/20'
+            : 'bg-card text-foreground group-hover:bg-blue-600/20'
         }`}
       >
         {asset.name}
@@ -224,10 +224,10 @@ function LazyImage({ src, alt, className }: LazyImageProps): React.JSX.Element {
 
   return (
     <div className="relative">
-      {!loaded && !failed && <div className={`${className} bg-slate-700 animate-pulse`} />}
+      {!loaded && !failed && <div className={`${className} bg-muted animate-pulse`} />}
       {failed && (
         <div
-          className={`${className} bg-slate-800 flex items-center justify-center text-xs text-slate-500 border border-slate-700`}
+          className={`${className} bg-card flex items-center justify-center text-xs text-muted-foreground border border-border`}
         >
           Image non disponible
         </div>

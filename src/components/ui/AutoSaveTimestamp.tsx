@@ -47,7 +47,7 @@ export const AutoSaveTimestamp = React.memo(() => {
   }
 
   return (
-    <span className="text-slate-400 text-xs">
+    <span className="text-muted-foreground text-xs">
       {timeSince}
     </span>
   )

@@ -113,7 +113,7 @@ export default function DiceResultModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-md bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2"
+        className="max-w-md bg-gradient-to-br from-background via-card to-background border-2"
         onKeyDown={handleKeyDown}
       >
         <div className="py-8 space-y-6">

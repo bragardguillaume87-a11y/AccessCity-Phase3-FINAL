@@ -4,9 +4,21 @@ import { useAssets, getRecentAssets, addToRecentAssets } from '@/hooks/useAssets
 /**
  * Sélecteur d'avatar pour un personnage
  * Permet de parcourir les assets disponibles et de sélectionner un sprite
+ *
+ * REFACTORED (Phase 7):
+ * - Fallback to all assets when 'characters' category is empty
+ * - Harmonized with Midnight Bloom theme (slate → semantic classes)
  */
 export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} }) => {
-  const { assets, loading, error } = useAssets({ category: 'characters' });
+  // Try characters first, fallback to all assets if empty
+  const { assets: characterAssets, loading: loadingChars } = useAssets({ category: 'characters' });
+  const { assets: allAssets, loading: loadingAll, error } = useAssets({});
+
+  // Use character assets if available, otherwise show all assets
+  const hasCharacterAssets = characterAssets.length > 0;
+  const assets = hasCharacterAssets ? characterAssets : allAssets;
+  const loading = loadingChars || loadingAll;
+
   const [recentAssets, setRecentAssets] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -33,7 +45,7 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
 
   if (loading) {
     return (
-      <div className="p-5 text-center text-slate-500">
+      <div className="p-5 text-center text-muted-foreground">
         Chargement des avatars...
       </div>
     );
@@ -41,35 +53,43 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
 
   if (error) {
     return (
-      <div className="p-5 text-center text-red-600 bg-red-100 rounded-lg">
+      <div className="p-5 text-center text-destructive bg-destructive/10 rounded-lg">
         Erreur: {error}
       </div>
     );
   }
 
   return (
-    <div className="border border-slate-700 rounded-lg p-4 bg-slate-800">
+    <div className="border border-border rounded-lg p-4 bg-card">
+      {/* Info si fallback sur tous les assets */}
+      {!hasCharacterAssets && assets.length > 0 && (
+        <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm text-muted-foreground">
+          <strong className="text-foreground">Info:</strong> Aucun sprite de personnage trouvé.
+          Affichage de tous les assets disponibles.
+        </div>
+      )}
+
       {/* Avatar actuel */}
       {currentSprite && (
         <div className="mb-4">
-          <div className="text-xs font-semibold text-slate-400 mb-2 uppercase">
+          <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
             Avatar actuel ({mood})
           </div>
-          <div className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg border-2 border-blue-500">
+          <div className="flex items-center gap-3 p-3 bg-background rounded-lg border-2 border-primary">
             <img
               src={currentSprite}
               alt={mood}
-              className="w-16 h-16 object-contain bg-slate-800 rounded"
+              className="w-16 h-16 object-contain bg-card rounded"
             />
             <div className="flex-1 overflow-hidden">
-              <div className="text-xs text-slate-400 truncate">
+              <div className="text-xs text-muted-foreground truncate">
                 {currentSprite}
               </div>
             </div>
             <button
               type="button"
               onClick={() => onSelect(mood, '')}
-              className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+              className="px-3 py-1.5 text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded transition-colors"
             >
               Retirer
             </button>
@@ -84,14 +104,14 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
           placeholder="Rechercher un avatar..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
         />
       </div>
 
       {/* Assets récents */}
       {!searchTerm && recentAssets.length > 0 && (
         <div className="mb-4">
-          <div className="text-xs font-semibold text-slate-400 mb-2 uppercase">
+          <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
             Récents
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
@@ -109,13 +129,13 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
       )}
 
       {/* Grille d'avatars disponibles */}
-      <div className="text-xs font-semibold text-slate-400 mb-2 uppercase">
+      <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
         {searchTerm ? `Résultats (${filteredAssets.length})` : 'Tous les avatars'}
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2 max-h-80 overflow-y-auto p-1">
         {filteredAssets.length === 0 && (
-          <div className="col-span-full p-5 text-center text-slate-500 text-sm">
+          <div className="col-span-full p-5 text-center text-muted-foreground text-sm">
             Aucun avatar disponible
           </div>
         )}
@@ -136,14 +156,15 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
 
 /**
  * Composant miniature d'asset
+ * Harmonized with Midnight Bloom theme
  */
 const AssetThumbnail = ({ path, name, isSelected, onClick }) => (
   <div
     onClick={onClick}
-    className={`relative aspect-square border-2 rounded-lg overflow-hidden cursor-pointer bg-slate-900 transition-all ${
+    className={`relative aspect-square border-2 rounded-lg overflow-hidden cursor-pointer bg-background transition-all ${
       isSelected
-        ? 'border-blue-500 ring-2 ring-blue-500/30'
-        : 'border-slate-700 hover:border-slate-500 hover:scale-105'
+        ? 'border-primary ring-2 ring-primary/30'
+        : 'border-border hover:border-muted-foreground hover:scale-105'
     }`}
     title={name || path}
   >
@@ -152,11 +173,11 @@ const AssetThumbnail = ({ path, name, isSelected, onClick }) => (
       alt={name || path}
       className="w-full h-full object-contain p-1"
       onError={(e) => {
-        (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2394a3b8">?</text></svg>';
+        (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%232f3436" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23a3a3a3">?</text></svg>';
       }}
     />
     {isSelected && (
-      <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white">
+      <div className="absolute top-1 right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center text-[10px] text-primary-foreground">
         ✓
       </div>
     )}

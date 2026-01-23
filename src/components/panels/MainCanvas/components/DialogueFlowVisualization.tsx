@@ -55,7 +55,7 @@ export function DialogueFlowVisualization({
       {/* Conditional rendering: Visual list or Graph view */}
       {viewMode === 'graph' ? (
         // Graph view with ReactFlow
-        <div className="rounded-xl overflow-hidden border-2 border-slate-700 shadow-xl bg-slate-950" style={{ height: '600px' }}>
+        <div className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background" style={{ height: '600px' }}>
           <DialogueGraph
             selectedScene={selectedScene}
             selectedElement={selectedElement}
@@ -78,29 +78,29 @@ export function DialogueFlowVisualization({
                 className={`rounded-lg border-2 p-4 transition-all cursor-pointer ${
                   isSelected
                     ? 'border-blue-500 bg-blue-900/20 shadow-lg shadow-blue-500/20'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                    : 'border-border bg-card/50 hover:border-border'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold text-slate-300">
+                  <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-bold text-foreground">
                     {idx + 1}
                   </div>
                   <div className="flex-1">
                     <div className="text-xs font-semibold text-blue-400 mb-1">
                       {dialogue.speaker || 'Unknown'}
                     </div>
-                    <p className="text-sm text-slate-300">
+                    <p className="text-sm text-foreground">
                       {dialogue.text || '(empty dialogue)'}
                     </p>
                     {dialogue.choices && dialogue.choices.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        <div className="text-xs font-semibold text-slate-500 uppercase">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase">
                           Choices:
                         </div>
                         {dialogue.choices.map((choice, cIdx) => (
                           <div
                             key={cIdx}
-                            className="text-sm text-slate-400 pl-4 border-l-2 border-slate-600 hover:border-blue-500 transition-colors"
+                            className="text-sm text-muted-foreground pl-4 border-l-2 border-border hover:border-blue-500 transition-colors"
                           >
                             {choice.text}
                             {choice.effects && choice.effects.length > 0 && (

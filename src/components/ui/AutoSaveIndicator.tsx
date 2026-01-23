@@ -79,8 +79,8 @@ export function AutoSaveIndicator({
     idle: {
       icon: '⚪',
       text: 'No changes',
-      color: 'text-slate-600',
-      bgColor: 'bg-slate-800/50',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-card/50',
     },
     saving: {
       icon: '💾',

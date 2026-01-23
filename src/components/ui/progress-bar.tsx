@@ -30,7 +30,7 @@ export function AnimatedProgressBar({
         <span>{label}</span>
         <span>{value}/{max}</span>
       </div>
-      <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
         <motion.div
           className={`h-full bg-gradient-to-r ${colorClasses[color]}`}
           initial={{ width: 0 }}

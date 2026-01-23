@@ -17,7 +17,7 @@ export interface SceneHeaderProps {
  */
 export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscreenChange }: SceneHeaderProps) {
   return (
-    <div className="flex-shrink-0 bg-slate-800 border-b border-slate-700 px-6 py-4">
+    <div className="flex-shrink-0 bg-card border-b border-border px-6 py-4">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
@@ -29,7 +29,7 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
                 {scene.title || 'Untitled scene'}
               </h2>
               {scene.description && (
-                <p className="text-sm text-slate-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {scene.description}
                 </p>
               )}
@@ -38,19 +38,19 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 bg-slate-700 px-3 py-1 rounded-full">
+          <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
             {dialoguesCount} dialogue{dialoguesCount !== 1 ? 's' : ''}
           </span>
 
           {/* Fullscreen Mode Buttons */}
-          <div className="flex items-center gap-1 ml-2 border-l border-slate-600 pl-2">
+          <div className="flex items-center gap-1 ml-2 border-l border-border pl-2">
             <Button
               asChild
               variant="ghost"
               size="sm"
               className={cn(
                 'h-8 px-2 rounded-lg transition-colors',
-                fullscreenMode === 'graph' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-cyan-400'
+                fullscreenMode === 'graph' ? 'bg-cyan-500/20 text-cyan-400' : 'text-muted-foreground hover:text-cyan-400'
               )}
             >
               <motion.button
@@ -70,7 +70,7 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
               size="sm"
               className={cn(
                 'h-8 px-2 rounded-lg transition-colors',
-                fullscreenMode === 'canvas' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-cyan-400'
+                fullscreenMode === 'canvas' ? 'bg-cyan-500/20 text-cyan-400' : 'text-muted-foreground hover:text-cyan-400'
               )}
             >
               <motion.button
@@ -90,7 +90,7 @@ export function SceneHeader({ scene, dialoguesCount, fullscreenMode, onFullscree
               size="sm"
               className={cn(
                 'h-8 px-2 rounded-lg transition-colors',
-                fullscreenMode === 'preview' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-cyan-400'
+                fullscreenMode === 'preview' ? 'bg-cyan-500/20 text-cyan-400' : 'text-muted-foreground hover:text-cyan-400'
               )}
             >
               <motion.button

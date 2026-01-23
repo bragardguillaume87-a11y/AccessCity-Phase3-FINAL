@@ -12,7 +12,7 @@ export interface NoBackgroundPlaceholderProps {
 export function NoBackgroundPlaceholder({ onSetBackground }: NoBackgroundPlaceholderProps) {
   return (
     <div
-      className="absolute inset-0 flex items-center justify-center text-center text-slate-700 pointer-events-none"
+      className="absolute inset-0 flex items-center justify-center text-center text-foreground pointer-events-none"
       style={{ zIndex: Z_INDEX.CANVAS_BACKGROUND }}
     >
       <div className="pointer-events-auto">

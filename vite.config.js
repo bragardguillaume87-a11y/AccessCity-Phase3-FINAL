@@ -1,55 +1,94 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import istanbul from 'vite-plugin-istanbul';
+import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      jsxRuntime: 'automatic',
-      fastRefresh: true, // Force l'activation de Fast Refresh pour HMR
-    }),
-    // Instrumentation Istanbul - TEMPORAIREMENT DÉSACTIVÉE pour debug HMR
-    // istanbul({
-    //   include: ['src/**/*.{js,jsx}', 'core/**/*.js', 'ui/**/*.js'],
-    //   exclude: ['node_modules', 'test', 'e2e', 'tools'],
-    //   extension: ['.js', '.jsx'],
-    //   requireEnv: false,
-    //   forceBuildInstrument: process.env.VITE_COVERAGE === 'true',
-    // }),
+    react(), // SWC: ~30% faster builds than Babel
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Pre-bundle heavy dependencies for faster dev startup
   optimizeDeps: {
-    include: ['react-resizable-panels'],
+    include: [
+      'react',
+      'react-dom',
+      'zustand',
+      '@xyflow/react',
+      'framer-motion',
+      'react-resizable-panels',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tooltip',
+    ],
   },
   server: {
     port: 5173,
-    open: true, // Ouvre automatiquement le navigateur
-    // Configuration HMR explicite (critique pour Windows + React 19)
+    open: true,
     hmr: {
       protocol: 'ws',
       host: 'localhost',
       port: 5173,
     },
-    // File watching avec polling (CRITIQUE pour Windows)
     watch: {
-      usePolling: true, // Force le polling des fichiers sur Windows
-      interval: 100, // Vérifie les changements toutes les 100ms
+      usePolling: true, // Required for Windows
+      interval: 100,
     },
   },
   build: {
     outDir: 'dist',
     sourcemap: true,
-    // Configuration multi-pages pour le build
+    target: 'esnext',
+    minify: 'esbuild',
+    // Code splitting for better caching
     rollupOptions: {
       input: {
-        main: './index.html', // Point d'entree principal
+        main: './index.html',
+      },
+      output: {
+        manualChunks: {
+          // Core React
+          'vendor-react': ['react', 'react-dom'],
+          // State management
+          'vendor-state': ['zustand', 'zundo', 'immer'],
+          // UI components (Radix)
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-slider',
+            '@radix-ui/react-scroll-area',
+          ],
+          // Flow/Graph
+          'vendor-flow': ['@xyflow/react', 'dagre'],
+          // Animation
+          'vendor-motion': ['framer-motion'],
+          // Forms
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          // Drag & Drop
+          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+        },
+        // Naming convention for chunks
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
+    // Warn if chunks exceed 500KB
+    chunkSizeWarningLimit: 500,
+  },
+  preview: {
+    port: 4173,
+    open: true,
   },
 });

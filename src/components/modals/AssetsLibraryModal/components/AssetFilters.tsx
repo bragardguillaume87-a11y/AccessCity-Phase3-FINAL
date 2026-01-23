@@ -97,17 +97,17 @@ export function AssetFilters({
   isSelectionMode
 }: AssetFiltersProps) {
   return (
-    <div className="px-8 py-4 border-b bg-slate-800/50">
+    <div className="px-8 py-4 border-b bg-card/50">
       <div className="flex items-center gap-4">
         {/* Search Bar */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={isSelectionMode ? "Rechercher un arrière-plan..." : "Rechercher un asset..."}
-            className="pl-10 pr-10 bg-slate-900 border-slate-700 text-slate-100"
+            className="pl-10 pr-10 bg-background border-border text-foreground"
           />
           {searchQuery && (
             <Button

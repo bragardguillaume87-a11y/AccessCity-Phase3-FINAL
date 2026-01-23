@@ -34,7 +34,7 @@ export function ProgressStepper({ currentStep, totalSteps }: ProgressStepperProp
               ? "w-8 bg-game-purple"
               : i < currentStep
               ? "w-2 bg-game-purple/60"
-              : "w-2 bg-slate-300"
+              : "w-2 bg-muted"
           )}
           aria-hidden="true"
         />

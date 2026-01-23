@@ -56,12 +56,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       // Default error UI
       return (
-        <div className="flex flex-col items-center justify-center min-h-[200px] p-6 bg-slate-800/50 rounded-lg border border-red-500/30">
+        <div className="flex flex-col items-center justify-center min-h-[200px] p-6 bg-card/50 rounded-lg border border-red-500/30">
           <AlertTriangle className="w-12 h-12 text-red-400 mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">
             {this.props.name ? `Erreur dans ${this.props.name}` : 'Une erreur est survenue'}
           </h3>
-          <p className="text-slate-400 text-sm text-center mb-4 max-w-md">
+          <p className="text-muted-foreground text-sm text-center mb-4 max-w-md">
             {this.state.error?.message || 'Le composant a rencontré un problème.'}
           </p>
           <Button

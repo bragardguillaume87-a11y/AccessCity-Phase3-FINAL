@@ -91,7 +91,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
   };
 
   return (
-    <div className="p-4 bg-slate-900 border-2 border-slate-700 rounded-lg space-y-3">
+    <div className="p-4 bg-background border-2 border-border rounded-lg space-y-3">
       {/* Choice header */}
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold text-blue-400">Choice {choiceIndex + 1}</div>
@@ -111,14 +111,14 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
 
       {/* Choice text */}
       <div>
-        <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+        <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
           Choice Text
         </label>
         <input
           type="text"
           value={choice.text || ''}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ text: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="e.g., Accept the mission"
         />
       </div>
@@ -127,7 +127,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
       <div>
         <label
           htmlFor={`choice-${choiceIndex}-scene`}
-          className="block text-xs font-semibold text-slate-400 mb-1.5"
+          className="block text-xs font-semibold text-muted-foreground mb-1.5"
         >
           🎬 Scène suivante
         </label>
@@ -137,7 +137,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
         >
           <SelectTrigger
             id={`choice-${choiceIndex}-scene`}
-            className="w-full bg-slate-800 border-slate-600"
+            className="w-full bg-card border-border"
           >
             <SelectValue placeholder="-- Continuer dans cette scène --" />
           </SelectTrigger>
@@ -149,7 +149,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           💡 Change de lieu/scène. Laissez vide pour rester dans la scène actuelle.
         </p>
       </div>
@@ -158,7 +158,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
       <div>
         <label
           htmlFor={`choice-${choiceIndex}-dialogue`}
-          className="block text-xs font-semibold text-slate-400 mb-1.5"
+          className="block text-xs font-semibold text-muted-foreground mb-1.5"
         >
           💬 Dialogue suivant <span className="text-xs text-purple-400">(même scène)</span>
         </label>
@@ -168,13 +168,13 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
         >
           <SelectTrigger
             id={`choice-${choiceIndex}-dialogue`}
-            className="w-full bg-slate-800 border-slate-600"
+            className="w-full bg-card border-border"
           >
             <SelectValue placeholder="-- Passer au dialogue suivant --" />
           </SelectTrigger>
           <SelectContent>
             {currentSceneDialogues.length === 0 ? (
-              <div className="px-2 py-1.5 text-xs text-slate-500">
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 ⚠ Aucun dialogue dans cette scène
               </div>
             ) : (
@@ -186,19 +186,19 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
             )}
           </SelectContent>
         </Select>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           💡 Sauter à un dialogue spécifique dans cette scène. Laissez vide pour avancer naturellement.
         </p>
       </div>
 
       {/* Dice roll toggle */}
-      <div className="pt-3 border-t border-slate-700">
+      <div className="pt-3 border-t border-border">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={choice.diceRoll?.enabled || false}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDiceRoll({ enabled: e.target.checked })}
-            className="w-4 h-4 text-purple-600 border-slate-600 rounded focus:ring-2 focus:ring-purple-500 bg-slate-800"
+            className="w-4 h-4 text-purple-600 border-border rounded focus:ring-2 focus:ring-purple-500 bg-card"
           />
           <span className="text-xs font-semibold text-purple-400">
             🎲 Enable dice roll
@@ -220,7 +220,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
               max="20"
               value={choice.diceRoll?.difficulty || 12}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDiceRoll({ difficulty: parseInt(e.target.value) || 12 })}
-              className="w-full px-3 py-2 bg-slate-800 border border-purple-500/50 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 bg-card border border-purple-500/50 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <p className="text-xs text-purple-400 mt-1">Player must roll this score or higher (d20)</p>
           </div>
@@ -235,7 +235,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   type="text"
                   value={choice.diceRoll?.successOutcome?.message || ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('successOutcome', { message: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-2 py-1.5 bg-card border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
                   placeholder="e.g., Found a spot!"
                 />
               </div>
@@ -245,7 +245,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   type="number"
                   value={choice.diceRoll?.successOutcome?.moral || 0}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('successOutcome', { moral: parseInt(e.target.value) || 0 })}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-2 py-1.5 bg-card border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
                   placeholder="5"
                 />
               </div>
@@ -255,7 +255,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   type="text"
                   value={choice.diceRoll?.successOutcome?.illustration || ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('successOutcome', { illustration: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-2 py-1.5 bg-card border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
                   placeholder="parking-success.png"
                 />
               </div>
@@ -272,7 +272,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   type="text"
                   value={choice.diceRoll?.failureOutcome?.message || ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('failureOutcome', { message: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full px-2 py-1.5 bg-card border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
                   placeholder="e.g., No spots..."
                 />
               </div>
@@ -282,7 +282,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   type="number"
                   value={choice.diceRoll?.failureOutcome?.moral || 0}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('failureOutcome', { moral: parseInt(e.target.value) || 0 })}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full px-2 py-1.5 bg-card border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
                   placeholder="-3"
                 />
               </div>
@@ -292,7 +292,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   type="text"
                   value={choice.diceRoll?.failureOutcome?.illustration || ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('failureOutcome', { illustration: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full px-2 py-1.5 bg-card border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
                   placeholder="parking-fail.png"
                 />
               </div>
@@ -303,7 +303,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
 
       {/* Effects (legacy support - read-only for now) */}
       {choice.effects && choice.effects.length > 0 && (
-        <div className="pt-3 border-t border-slate-700">
+        <div className="pt-3 border-t border-border">
           <div className="text-xs font-semibold text-amber-400 mb-2">Effects (legacy):</div>
           {choice.effects.map((effect: Effect, eIdx: number) => (
             <div key={eIdx} className="text-xs text-amber-500 ml-2">

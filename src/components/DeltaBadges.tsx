@@ -55,7 +55,7 @@ export default function DeltaBadges({ deltas }: DeltaBadgesProps) {
               ? 'bg-emerald-600/90 text-white border border-emerald-400/60'
               : d.delta < 0
               ? 'bg-rose-600/90 text-white border border-rose-400/60'
-              : 'bg-slate-600/90 text-white border border-slate-400/60'
+              : 'bg-muted/90 text-white border border-border/60'
           }`}
           style={{ animation: 'riseFade 1.5s ease forwards' }}
         >

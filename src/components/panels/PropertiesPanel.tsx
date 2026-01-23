@@ -50,6 +50,26 @@ export default function PropertiesPanel({
   // Convert lastSaved from string to number (timestamp) for sub-components
   const lastSaved = lastSavedStr ? new Date(lastSavedStr).getTime() : undefined;
 
+  // IMPORTANT: All hooks must be called BEFORE any conditional returns (React rules)
+  // Memoized character duplication handler
+  const handleDuplicateCharacter = useCallback((character: Character) => {
+    const existingIds = characters.map(c => c.id);
+    const existingNames = characters.map(c => c.name);
+    const duplicate = duplicateCharacter(character, existingIds, existingNames);
+    addCharacter();
+    updateCharacter(duplicate);
+  }, [characters, addCharacter, updateCharacter]);
+
+  // Memoized dialogue duplication handler
+  const handleDuplicateDialogue = useCallback((sceneId: string, dialogueIndex: number) => {
+    const scene = scenes.find(s => s.id === sceneId);
+    const dialogue = scene?.dialogues?.[dialogueIndex];
+    if (dialogue) {
+      const duplicated = duplicateDialogue(dialogue);
+      addDialogue(sceneId, duplicated);
+    }
+  }, [scenes, addDialogue]);
+
   // No selection
   if (!selectedElement) {
     return <EmptySelectionState />;
@@ -68,22 +88,13 @@ export default function PropertiesPanel({
     );
   }
 
-  // Memoized character duplication handler
-  const handleDuplicateCharacter = useCallback((character: Character) => {
-    const existingIds = characters.map(c => c.id);
-    const existingNames = characters.map(c => c.name);
-    const duplicate = duplicateCharacter(character, existingIds, existingNames);
-    addCharacter();
-    updateCharacter(duplicate);
-  }, [characters, addCharacter, updateCharacter]);
-
   // Character properties
   if (selectedElement.type === 'character') {
     const character = characters.find(c => c.id === selectedElement.id);
     if (!character) {
       return (
         <div className="h-full flex items-center justify-center p-6">
-          <p className="text-sm text-slate-500">Character not found</p>
+          <p className="text-sm text-muted-foreground">Character not found</p>
         </div>
       );
     }
@@ -110,7 +121,7 @@ export default function PropertiesPanel({
     if (!sceneChar || !character) {
       return (
         <div className="h-full flex items-center justify-center p-6">
-          <p className="text-sm text-slate-500">Character not found in scene</p>
+          <p className="text-sm text-muted-foreground">Character not found in scene</p>
         </div>
       );
     }
@@ -127,23 +138,13 @@ export default function PropertiesPanel({
     );
   }
 
-  // Memoized dialogue duplication handler
-  const handleDuplicateDialogue = useCallback((sceneId: string, dialogueIndex: number) => {
-    const scene = scenes.find(s => s.id === sceneId);
-    const dialogue = scene?.dialogues?.[dialogueIndex];
-    if (dialogue) {
-      const duplicated = duplicateDialogue(dialogue);
-      addDialogue(sceneId, duplicated);
-    }
-  }, [scenes, addDialogue]);
-
   // Dialogue properties
   if (selectedElement.type === 'dialogue' && selectedScene) {
     const dialogue = selectedScene.dialogues?.[selectedElement.index];
     if (!dialogue) {
       return (
         <div className="h-full flex items-center justify-center p-6">
-          <p className="text-sm text-slate-500">Dialogue not found</p>
+          <p className="text-sm text-muted-foreground">Dialogue not found</p>
         </div>
       );
     }
@@ -166,7 +167,7 @@ export default function PropertiesPanel({
   // Unknown element type
   return (
     <div className="h-full flex items-center justify-center p-6">
-      <p className="text-sm text-slate-500">Unknown element type</p>
+      <p className="text-sm text-muted-foreground">Unknown element type</p>
     </div>
   );
 }

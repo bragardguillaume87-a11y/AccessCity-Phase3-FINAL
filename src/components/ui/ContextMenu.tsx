@@ -125,7 +125,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
   return (
     <div
       ref={menuRef}
-      className="fixed z-tooltip-v2 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-2xl py-1 min-w-[200px]"
+      className="fixed z-tooltip-v2 bg-card border-2 border-border rounded-lg shadow-2xl py-1 min-w-[200px]"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
       role="menu"
       tabIndex={-1}
@@ -145,9 +145,9 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           className={`w-full px-4 py-2 text-left text-sm font-medium transition-colors flex items-center gap-3 ${
             item.danger
               ? 'text-red-400 hover:bg-red-900/30 disabled:text-red-900 disabled:bg-transparent'
-              : 'text-slate-200 hover:bg-slate-700 disabled:text-slate-600 disabled:bg-transparent'
+              : 'text-foreground hover:bg-muted disabled:text-muted-foreground disabled:bg-transparent'
           } ${
-            selectedIndex === idx && !item.disabled ? 'bg-slate-700' : ''
+            selectedIndex === idx && !item.disabled ? 'bg-muted' : ''
           } disabled:cursor-not-allowed`}
           role="menuitem"
           aria-disabled={item.disabled}
@@ -162,7 +162,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
 
           {/* Shortcut */}
           {item.shortcut && (
-            <span className="text-xs text-slate-500 font-mono">{item.shortcut}</span>
+            <span className="text-xs text-muted-foreground font-mono">{item.shortcut}</span>
           )}
         </button>
       ))}

@@ -7,53 +7,52 @@
  */
 
 :root {
-  /* ========== COLORS - GAMING BRAND (WCAG AA Compliant) ========== */
-  /* Darkened for 4.5:1 contrast ratio with white text */
+  /* ========== MIDNIGHT BLOOM THEME - WCAG AA Compliant ========== */
+  /* Theme source: tweakcn.com - Midnight Bloom */
 
-  --color-primary: #7C3AED;           /* purple-600 - 4.5:1 contrast ✓ */
-  --color-primary-hover: #6D28D9;     /* purple-700 */
-  --color-primary-glow: rgba(124, 58, 237, 0.5);
+  --color-primary: #6c5ce7;           /* Purple - Brand color */
+  --color-primary-hover: #5b4cdb;     /* Darker purple */
+  --color-primary-glow: rgba(108, 92, 231, 0.5);
 
-  --color-accent: #0891B2;            /* cyan-600 - 4.5:1 contrast ✓ */
-  --color-accent-hover: #0E7490;      /* cyan-700 */
-  --color-accent-glow: rgba(8, 145, 178, 0.5);
+  --color-accent: #6495ed;            /* Cornflower blue */
+  --color-accent-hover: #5284dc;      /* Darker accent */
+  --color-accent-glow: rgba(100, 149, 237, 0.5);
 
-  --color-secondary: #3B82F6;         /* game-blue */
-  --color-secondary-hover: #2563EB;   /* game-blue-hover */
+  --color-secondary: #4b0082;         /* Indigo */
+  --color-secondary-hover: #3d006b;   /* Darker indigo */
 
-  --color-pink: #EC4899;              /* game-pink */
+  --color-pink: #EC4899;              /* game-pink (conservé) */
   --color-pink-hover: #DB2777;
 
   /* Semantic colors - WCAG AA compliant */
-  --color-success: #10B981;           /* Tailwind green-500, contrast 3.2:1 sur bg-base */
+  --color-success: #10B981;           /* Green */
   --color-success-hover: #059669;
-  --color-warning: #F59E0B;           /* Tailwind amber-500 */
+  --color-warning: #F59E0B;           /* Amber */
   --color-warning-hover: #D97706;
-  --color-danger: #EF4444;            /* Tailwind red-500 */
+  --color-danger: #ef4444;            /* Red */
   --color-danger-hover: #DC2626;
 
-  /* ========== BACKGROUNDS - DARK THEME (WCAG AA) ========== */
-  /* Mappées sur body background actuel */
+  /* ========== BACKGROUNDS - MIDNIGHT BLOOM DARK ========== */
 
-  --color-bg-base: #0F172A;           /* Slate 900 - Base canvas (existing) */
-  --color-bg-elevated: #1E293B;       /* Slate 800 - Cards, panels */
-  --color-bg-hover: #334155;          /* Slate 700 - Hover states */
-  --color-bg-active: #475569;         /* Slate 600 - Active/selected */
-  --color-bg-overlay: rgba(15, 23, 42, 0.95);
+  --color-bg-base: #1a1d23;           /* Deep blue-gray - Base canvas */
+  --color-bg-elevated: #2f3436;       /* Cards, panels, modals */
+  --color-bg-hover: #444444;          /* Hover states */
+  --color-bg-active: #555555;         /* Active/selected */
+  --color-bg-overlay: rgba(26, 29, 35, 0.95);
 
   /* ========== TEXT - WCAG AA CONTRAST RATIOS ========== */
 
-  --color-text-primary: #F1F5F9;      /* Slate 100 - 14:1 ratio ✓ */
-  --color-text-secondary: #CBD5E1;    /* Slate 300 - 7:1 ratio ✓ */
-  --color-text-muted: #94A3B8;        /* Slate 400 - 4.5:1 ratio ✓ */
-  --color-text-disabled: #64748B;     /* Slate 500 - 3:1 ratio */
+  --color-text-primary: #e5e5e5;      /* Light gray - Primary text */
+  --color-text-secondary: #c0c0c0;    /* Secondary text */
+  --color-text-muted: #a3a3a3;        /* Muted text */
+  --color-text-disabled: #6e6e6e;     /* Disabled text */
 
   /* ========== BORDERS ========== */
 
-  --color-border-base: #334155;       /* Slate 700 */
-  --color-border-hover: #475569;      /* Slate 600 */
-  --color-border-focus: #3B82F6;      /* Blue 500 (WCAG AA focus) */
-  --color-border-error: #EF4444;
+  --color-border-base: #444444;       /* Standard border */
+  --color-border-hover: #555555;      /* Hover border */
+  --color-border-focus: #6c5ce7;      /* Focus - matches primary */
+  --color-border-error: #ef4444;
 
   /* ========== TYPOGRAPHY ========== */
   /* Réutilise Poppins déjà chargée dans index.css */

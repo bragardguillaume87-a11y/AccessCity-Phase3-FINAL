@@ -138,7 +138,7 @@ export function AssetCard({
           className={`absolute top-2 right-2 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
             isFavorite
               ? 'bg-amber-500 text-white scale-110'
-              : 'bg-slate-800/80 text-slate-300 hover:bg-amber-500 hover:text-white opacity-0 group-hover:opacity-100'
+              : 'bg-card/80 text-muted-foreground hover:bg-amber-500 hover:text-white opacity-0 group-hover:opacity-100'
           }`}
           title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
           aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}

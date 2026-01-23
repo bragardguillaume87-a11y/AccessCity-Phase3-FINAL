@@ -110,7 +110,7 @@ export default function OutcomeModal({
 
           {/* Message */}
           <motion.div
-            className="bg-slate-800 rounded-lg p-6 text-lg"
+            className="bg-card rounded-lg p-6 text-lg"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -135,7 +135,7 @@ export default function OutcomeModal({
                 </div>
 
                 {/* Animated progress bar */}
-                <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-card to-background rounded-lg p-4">
                   <AnimatedProgressBar
                     label={moral.variable}
                     value={Math.abs(moral.delta)}

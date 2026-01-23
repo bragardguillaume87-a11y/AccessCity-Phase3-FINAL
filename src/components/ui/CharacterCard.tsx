@@ -22,7 +22,7 @@ import type { Character } from '@/types'
  */
 
 const MOOD_COLORS: Record<string, string> = {
-  neutral: 'border-slate-400',
+  neutral: 'border-border',
   happy: 'border-yellow-400',
   sad: 'border-blue-400',
   angry: 'border-red-400',
@@ -89,7 +89,7 @@ export function CharacterCard({
         "border-2",
         selected
           ? "border-blue-500 shadow-lg shadow-blue-200"
-          : "border-slate-200 shadow-md",
+          : "border-border shadow-md",
         !isDragging && "hover:scale-105 hover:shadow-xl",
         "active:scale-95",
         isDragging && "opacity-50 scale-95 cursor-grabbing",
@@ -125,18 +125,18 @@ export function CharacterCard({
               draggable={false}
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-3xl">
+            <div className="w-full h-full bg-gradient-to-br from-muted to-muted flex items-center justify-center text-3xl">
               👤
             </div>
           )}
 
           {/* Badge mood */}
-          <div className="absolute bottom-0 right-0 w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm shadow-md border-2 border-slate-200">
+          <div className="absolute bottom-0 right-0 w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm shadow-md border-2 border-border">
             {MOOD_ICONS[character.currentMood || 'neutral']}
           </div>
         </div>
 
-        <h4 className="font-bold text-slate-900 text-center text-sm">
+        <h4 className="font-bold text-foreground text-center text-sm">
           {character.name || 'Sans nom'}
         </h4>
       </div>
@@ -147,14 +147,14 @@ export function CharacterCard({
           {character.moods.slice(0, 4).map((mood) => (
             <span
               key={mood}
-              className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full font-medium"
+              className="px-2 py-0.5 bg-muted text-foreground text-xs rounded-full font-medium"
               title={mood}
             >
               {MOOD_ICONS[mood] || '😐'}
             </span>
           ))}
           {character.moods.length > 4 && (
-            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full font-medium">
+            <span className="px-2 py-0.5 bg-muted text-foreground text-xs rounded-full font-medium">
               +{character.moods.length - 4}
             </span>
           )}
@@ -196,7 +196,7 @@ export function CharacterCard({
 
       {/* Badge drag */}
       {onDrag && !isDragging && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-900/80 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-background/80 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
           ✋ Glisser vers la scene
         </div>
       )}
@@ -240,14 +240,14 @@ export interface EmptyCharacterStateProps {
 
 export function EmptyCharacterState({ onCreateNew }: EmptyCharacterStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-center">
-      <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center text-5xl mb-4">
+    <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-border rounded-xl bg-card text-center">
+      <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center text-5xl mb-4">
         👤
       </div>
-      <h3 className="text-lg font-bold text-slate-700 mb-2">
+      <h3 className="text-lg font-bold text-foreground mb-2">
         Aucun personnage
       </h3>
-      <p className="text-sm text-slate-600 mb-4 max-w-sm">
+      <p className="text-sm text-muted-foreground mb-4 max-w-sm">
         Creez votre premier personnage pour commencer a construire votre histoire
       </p>
       {onCreateNew && (

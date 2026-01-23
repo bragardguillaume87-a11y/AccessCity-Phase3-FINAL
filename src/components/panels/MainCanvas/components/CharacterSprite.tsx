@@ -124,18 +124,18 @@ export const CharacterSprite = React.memo(function CharacterSprite({
             }}
           />
         ) : (
-          <div className="w-full h-full bg-slate-700 rounded-full flex items-center justify-center border-2 border-slate-600">
+          <div className="w-full h-full bg-muted rounded-full flex items-center justify-center border-2 border-border">
             <span className="text-2xl">👤</span>
           </div>
         )}
 
         {/* Fallback for broken images */}
-        <div className="hidden w-full h-full bg-slate-700 rounded-full items-center justify-center border-2 border-slate-600">
+        <div className="hidden w-full h-full bg-muted rounded-full items-center justify-center border-2 border-border">
           <span className="text-2xl">👤</span>
         </div>
 
         {/* Character Label (on hover) */}
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-800 text-white text-xs font-semibold rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-card text-white text-xs font-semibold rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
           {character.name}
         </div>
 

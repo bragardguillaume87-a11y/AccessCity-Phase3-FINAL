@@ -79,7 +79,7 @@ export function EmptyAssetState({ category = 'all', onUploadClick, onLoadSamples
       <h3 className="text-2xl font-bold text-white mb-2">
         {config.title}
       </h3>
-      <p className="text-slate-400 max-w-md mb-8">
+      <p className="text-muted-foreground max-w-md mb-8">
         {config.description}
       </p>
 
@@ -119,7 +119,7 @@ export function EmptyAssetState({ category = 'all', onUploadClick, onLoadSamples
       </div>
 
       {/* Hints */}
-      <div className="mt-12 text-xs text-slate-500 space-y-1">
+      <div className="mt-12 text-xs text-muted-foreground space-y-1">
         <p>💡 Formats supportés: PNG, JPG, SVG, GIF, WebP</p>
         <p>💡 Taille max: 10MB par fichier</p>
         <p>💡 Vous pouvez glisser-déposer plusieurs fichiers à la fois</p>

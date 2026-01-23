@@ -74,22 +74,22 @@ export function CharacterStatsBar({ totalStats }: CharacterStatsBarProps) {
       label: 'Complets',
       value: totalStats.complete,
       icon: Sparkles,
-      bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/20',
-      iconBgColor: 'bg-green-500/10',
-      iconColor: 'text-green-500',
-      valueColor: 'text-green-400'
+      bgColor: 'bg-accent/10',
+      borderColor: 'border-accent/20',
+      iconBgColor: 'bg-accent/10',
+      iconColor: 'text-accent',
+      valueColor: 'text-accent'
     },
     {
       id: 'withSprites',
       label: 'Avec sprites',
       value: totalStats.withSprites,
       icon: Eye,
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20',
-      iconBgColor: 'bg-blue-500/10',
-      iconColor: 'text-blue-500',
-      valueColor: 'text-blue-400'
+      bgColor: 'bg-primary/10',
+      borderColor: 'border-primary/30',
+      iconBgColor: 'bg-primary/15',
+      iconColor: 'text-primary',
+      valueColor: 'text-primary'
     }
   ];
 

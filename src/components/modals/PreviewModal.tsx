@@ -41,7 +41,7 @@ export default function PreviewModal({ isOpen, onClose, initialSceneId }: Previe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 dark bg-slate-900 border-slate-700"
+        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 dark bg-background border-border"
         onEscapeKeyDown={onClose}
       >
         <DialogHeader className="sr-only">
@@ -58,7 +58,7 @@ export default function PreviewModal({ isOpen, onClose, initialSceneId }: Previe
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-4 right-4 z-10 bg-slate-900/80 hover:bg-slate-800 text-slate-100 border border-slate-700"
+              className="absolute top-4 right-4 z-10 bg-background/80 hover:bg-card text-foreground border border-border"
               onClick={onClose}
             >
               <X className="h-5 w-5" />

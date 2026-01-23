@@ -76,7 +76,7 @@ export function TextBoxElement({ textBox, canvasDimensions, gridEnabled, onUpdat
       className="group"
       enableResizing={RESIZING_CONFIG}
     >
-      <div className="w-full h-full cursor-move relative bg-white/90 backdrop-blur-sm border-2 border-slate-400 rounded-lg p-3 shadow-lg hover:border-blue-500 transition-all">
+      <div className="w-full h-full cursor-move relative bg-white/90 backdrop-blur-sm border-2 border-border rounded-lg p-3 shadow-lg hover:border-blue-500 transition-all">
         {/* ContentEditable Text */}
         <div
           contentEditable

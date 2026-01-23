@@ -262,11 +262,11 @@ export default function MainCanvas({
 
       {/* Canvas area */}
       <div className="flex-1 overflow-auto p-6">
-        <div className="rounded-xl overflow-hidden border-2 border-slate-700 shadow-xl bg-slate-900 mb-6">
+        <div className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background mb-6">
           {/* Scene Canvas Container */}
           <div
             ref={composedCanvasRef}
-            className={`relative aspect-video bg-slate-950 transition-all ${
+            className={`relative aspect-video bg-background transition-all ${
               dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
             } ${
               dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''

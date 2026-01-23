@@ -200,11 +200,11 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border-2 border-slate-200">
+    <div className="bg-white rounded-xl shadow-lg border-2 border-border">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
@@ -227,7 +227,7 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
             className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
               filter === 'all'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-muted text-foreground hover:bg-muted'
             }`}
           >
             All ({allProblems.length})
@@ -237,7 +237,7 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
             className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
               filter === 'errors'
                 ? 'bg-red-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-muted text-foreground hover:bg-muted'
             }`}
           >
             Errors ({validation.totalErrors})
@@ -247,7 +247,7 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
             className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
               filter === 'warnings'
                 ? 'bg-amber-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-muted text-foreground hover:bg-muted'
             }`}
           >
             Warnings ({validation.totalWarnings})
@@ -263,15 +263,15 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <p className="text-lg font-semibold text-green-700">Aucun problème détecté !</p>
-            <p className="text-sm text-slate-600 mt-1">Votre scénario est valide</p>
+            <p className="text-sm text-muted-foreground mt-1">Votre scénario est valide</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-200">
+          <div className="divide-y divide-border">
             {filteredProblems.map((problem) => (
               <button
                 key={problem.id}
                 onClick={() => handleProblemClick(problem)}
-                className="w-full p-3 hover:bg-slate-50 transition-colors text-left flex items-start gap-3 group"
+                className="w-full p-3 hover:bg-card transition-colors text-left flex items-start gap-3 group"
               >
                 {/* Icône de sévérité */}
                 <div className="mt-0.5">
@@ -293,13 +293,13 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
                   }`}>
                     {problem.message}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1 font-mono truncate">
+                  <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
                     {problem.location}
                   </p>
                 </div>
 
                 {/* Icône de navigation */}
-                <svg className="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-muted-foreground group-hover:text-blue-600 transition-colors flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>

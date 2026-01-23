@@ -71,11 +71,11 @@ export function UploadDropZone({
       className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
         dragActive
           ? 'border-blue-500 bg-blue-50 scale-[1.02]'
-          : 'border-slate-300 bg-slate-50 hover:border-slate-400'
+          : 'border-border bg-card hover:border-border'
       } ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}
     >
       <svg
-        className="w-16 h-16 mx-auto mb-4 text-slate-400"
+        className="w-16 h-16 mx-auto mb-4 text-muted-foreground"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -87,8 +87,8 @@ export function UploadDropZone({
           d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
         />
       </svg>
-      <p className="font-semibold text-slate-700 mb-2">Glissez une image ici</p>
-      <p className="text-sm text-slate-500 mb-4">ou cliquez pour parcourir</p>
+      <p className="font-semibold text-foreground mb-2">Glissez une image ici</p>
+      <p className="text-sm text-muted-foreground mb-4">ou cliquez pour parcourir</p>
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isDisabled}
@@ -105,7 +105,7 @@ export function UploadDropZone({
         }
         className="hidden"
       />
-      <p className="text-xs text-slate-500 mt-4">Formats supportes : JPG, PNG, SVG, GIF, WebP</p>
+      <p className="text-xs text-muted-foreground mt-4">Formats supportes : JPG, PNG, SVG, GIF, WebP</p>
       <p className="text-xs text-green-600 mt-1 font-medium">
         ✨ Uploaded to /public/assets - Max 10MB
       </p>

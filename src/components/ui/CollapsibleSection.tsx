@@ -60,7 +60,7 @@ export function CollapsibleSection({
   return (
     <div
       className={cn(
-        "border border-slate-700 rounded-lg overflow-hidden bg-slate-800/50",
+        "border border-border rounded-lg overflow-hidden bg-card/50",
         className
       )}
       {...props}
@@ -71,7 +71,7 @@ export function CollapsibleSection({
         onKeyDown={handleKeyDown}
         className={cn(
           "w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors",
-          "hover:bg-slate-700/50 active:bg-slate-700",
+          "hover:bg-muted/50 active:bg-muted",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset",
           headerClassName
         )}
@@ -81,7 +81,7 @@ export function CollapsibleSection({
         {/* Expand/Collapse indicator */}
         <span
           className={cn(
-            "flex-shrink-0 w-4 h-4 flex items-center justify-center text-slate-400 transition-transform duration-200",
+            "flex-shrink-0 w-4 h-4 flex items-center justify-center text-muted-foreground transition-transform duration-200",
             isOpen && "rotate-90"
           )}
           aria-hidden="true"
@@ -91,7 +91,7 @@ export function CollapsibleSection({
 
         {/* Icon (optional) */}
         {icon && (
-          <span className="flex-shrink-0 text-slate-400" aria-hidden="true">
+          <span className="flex-shrink-0 text-muted-foreground" aria-hidden="true">
             {icon}
           </span>
         )}
@@ -103,7 +103,7 @@ export function CollapsibleSection({
 
         {/* Preview text when collapsed */}
         {!isOpen && preview && (
-          <span className="flex-shrink-0 text-xs text-slate-500 truncate max-w-[150px]">
+          <span className="flex-shrink-0 text-xs text-muted-foreground truncate max-w-[150px]">
             {preview}
           </span>
         )}
@@ -118,7 +118,7 @@ export function CollapsibleSection({
         )}
       >
         <div className="overflow-hidden">
-          <div className={cn("p-3 space-y-3 border-t border-slate-700", contentClassName)}>
+          <div className={cn("p-3 space-y-3 border-t border-border", contentClassName)}>
             {children}
           </div>
         </div>
@@ -163,7 +163,7 @@ export function CollapsibleGroup({ children, className, showExpandAll = true }: 
         <div className="flex justify-end">
           <button
             onClick={() => setExpandAll(!expandAll)}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors"
           >
             {expandAll ? '⏶ Collapse All' : '⏷ Expand All'}
           </button>
@@ -204,7 +204,7 @@ export function FormField({
       {label && (
         <label
           htmlFor={htmlFor}
-          className="block text-xs font-semibold text-slate-400"
+          className="block text-xs font-semibold text-muted-foreground"
         >
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
@@ -223,7 +223,7 @@ export function FormField({
           {error}
         </p>
       ) : description ? (
-        <p className="text-xs text-slate-500">{description}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       ) : null}
     </div>
   )

@@ -68,9 +68,9 @@ export function CharacterPropertiesForm({
   });
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-card">
       {/* Header with duplicate button */}
-      <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
+      <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-white uppercase tracking-wide">Character Properties</h3>
         <Button
           variant="outline"
@@ -98,7 +98,7 @@ export function CharacterPropertiesForm({
 
         {/* Name */}
         <div>
-          <label htmlFor="char-name" className="block text-xs font-semibold text-slate-400 mb-1.5">
+          <label htmlFor="char-name" className="block text-xs font-semibold text-muted-foreground mb-1.5">
             Name
           </label>
           <input
@@ -106,14 +106,14 @@ export function CharacterPropertiesForm({
             type="text"
             value={character.name || ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate({ ...character, name: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Character name"
           />
         </div>
 
         {/* Description */}
         <div>
-          <label htmlFor="char-description" className="block text-xs font-semibold text-slate-400 mb-1.5">
+          <label htmlFor="char-description" className="block text-xs font-semibold text-muted-foreground mb-1.5">
             Description
           </label>
           <textarea
@@ -121,14 +121,14 @@ export function CharacterPropertiesForm({
             value={character.description || ''}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onUpdate({ ...character, description: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             placeholder="Describe the character"
           />
         </div>
 
         {/* Moods (editable) */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+          <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
             Moods
           </label>
           <div className="space-y-2">
@@ -139,7 +139,7 @@ export function CharacterPropertiesForm({
                   className={`group flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-all ${
                     activeMood === mood
                       ? 'bg-blue-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-muted text-foreground hover:bg-muted'
                   }`}
                   onClick={() => setActiveMood(mood)}
                 >
@@ -172,10 +172,10 @@ export function CharacterPropertiesForm({
                   }}
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleAddMood()}
                   placeholder="Add mood (e.g., happy, angry)"
-                  className={`flex-1 px-2 py-1 bg-slate-900 border rounded text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 transition-colors ${
+                  className={`flex-1 px-2 py-1 bg-background border rounded text-xs text-white placeholder-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
                     moodError
                       ? 'border-red-500 focus:ring-red-500'
-                      : 'border-slate-700 focus:ring-blue-500'
+                      : 'border-border focus:ring-blue-500'
                   }`}
                   aria-invalid={!!moodError}
                   aria-describedby={moodError ? "mood-error" : undefined}
@@ -203,7 +203,7 @@ export function CharacterPropertiesForm({
 
         {/* Sprites (with AvatarPicker) */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+          <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
             Avatar for "{activeMood}"
           </label>
           <AvatarPicker
@@ -220,24 +220,24 @@ export function CharacterPropertiesForm({
         </div>
 
         {/* Usage Statistics */}
-        <div className="pt-4 border-t border-slate-700">
-          <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase">Usage Statistics</h4>
+        <div className="pt-4 border-t border-border">
+          <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Usage Statistics</h4>
           <div className="space-y-2 text-xs">
-            <div className="flex justify-between text-slate-500">
+            <div className="flex justify-between text-muted-foreground">
               <span>Appears in scenes:</span>
-              <span className="text-slate-300 font-semibold">{appearancesCount}</span>
+              <span className="text-foreground font-semibold">{appearancesCount}</span>
             </div>
-            <div className="flex justify-between text-slate-500">
+            <div className="flex justify-between text-muted-foreground">
               <span>Total lines:</span>
-              <span className="text-slate-300 font-semibold">{linesCount}</span>
+              <span className="text-foreground font-semibold">{linesCount}</span>
             </div>
-            <div className="flex justify-between text-slate-500">
+            <div className="flex justify-between text-muted-foreground">
               <span>Moods defined:</span>
-              <span className="text-slate-300 font-semibold">{(character.moods || []).length}</span>
+              <span className="text-foreground font-semibold">{(character.moods || []).length}</span>
             </div>
-            <div className="flex justify-between text-slate-500">
+            <div className="flex justify-between text-muted-foreground">
               <span>Sprites assigned:</span>
-              <span className="text-slate-300 font-semibold">
+              <span className="text-foreground font-semibold">
                 {Object.values(character.sprites || {}).filter(Boolean).length} / {(character.moods || []).length}
               </span>
             </div>
@@ -245,19 +245,19 @@ export function CharacterPropertiesForm({
         </div>
 
         {/* Info */}
-        <div className="pt-4 border-t border-slate-700">
-          <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase">Info</h4>
-          <div className="space-y-2 text-xs text-slate-500">
+        <div className="pt-4 border-t border-border">
+          <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Info</h4>
+          <div className="space-y-2 text-xs text-muted-foreground">
             <div className="flex justify-between">
               <span>Character ID:</span>
-              <span className="text-slate-300 font-mono text-[10px]">{character.id}</span>
+              <span className="text-foreground font-mono text-[10px]">{character.id}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Auto-save indicator */}
-      <div className="flex-shrink-0 border-t border-slate-700 p-3">
+      <div className="flex-shrink-0 border-t border-border p-3">
         <AutoSaveIndicator lastSaved={lastSaved ? new Date(lastSaved) : null} isSaving={isSaving} />
       </div>
     </div>

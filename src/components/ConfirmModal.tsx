@@ -120,20 +120,20 @@ export default function ConfirmModal({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <AlertDialogContent className={`dark bg-slate-900 text-slate-100 border-slate-700 ${getZIndexClass('ALERT_DIALOG')}`}>
-        <AlertDialogHeader className="border-b border-slate-700 bg-gradient-to-b from-background to-muted/20 px-8 pt-8 pb-6">
+      <AlertDialogContent className={`dark bg-background text-foreground border-border ${getZIndexClass('ALERT_DIALOG')}`}>
+        <AlertDialogHeader className="border-b border-border bg-gradient-to-b from-background to-muted/20 px-8 pt-8 pb-6">
           <AlertDialogTitle className="flex items-center gap-3 text-2xl font-bold">
             <div className={`p-2 rounded-lg ${config.iconBg} ${config.iconColor}`}>
               <Icon className="h-6 w-6" />
             </div>
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-slate-400 text-base mt-2 ml-12">
+          <AlertDialogDescription className="text-muted-foreground text-base mt-2 ml-12">
             {message}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="px-8 py-6">
-          <AlertDialogCancel onClick={onCancel} className="bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600">
+          <AlertDialogCancel onClick={onCancel} className="bg-card hover:bg-muted text-foreground border-border">
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction

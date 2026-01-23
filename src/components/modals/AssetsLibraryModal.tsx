@@ -298,7 +298,7 @@ export default function AssetsLibraryModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] h-[95vh] p-0 gap-0 dark bg-slate-900 text-slate-100">
+        <DialogContent className="max-w-[95vw] h-[95vh] p-0 gap-0 dark bg-background text-foreground">
           {/* Header */}
           <DialogHeader className="px-8 pt-8 pb-6 border-b bg-gradient-to-b from-background to-muted/20">
             <div className="flex items-center justify-between mb-4">
@@ -309,7 +309,7 @@ export default function AssetsLibraryModal({
                   </div>
                   {isSelectionMode ? `Sélectionner un arrière-plan` : 'Bibliothèque d\'Assets'}
                 </DialogTitle>
-                <DialogDescription className="text-sm text-slate-400">
+                <DialogDescription className="text-sm text-muted-foreground">
                   {isSelectionMode
                     ? `Pour la scène : "${targetScene?.title || targetScene?.id}"`
                     : 'Gestionnaire visuel professionnel'

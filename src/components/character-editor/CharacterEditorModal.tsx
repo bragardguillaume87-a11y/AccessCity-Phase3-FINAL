@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useCharacterForm } from '../../hooks/useCharacterForm';
 import { useMoodPresets } from '../../hooks/useMoodPresets';
 import {
@@ -19,7 +19,6 @@ import EditorFooter from './CharacterEditorModal/components/EditorFooter';
 // Extracted hooks
 import { useCharacterPreview } from './CharacterEditorModal/hooks/useCharacterPreview';
 import { useCharacterCompleteness } from './CharacterEditorModal/hooks/useCharacterCompleteness';
-import { useMoodRename } from './CharacterEditorModal/hooks/useMoodRename';
 
 /**
  * Props for CharacterEditorModal component
@@ -96,22 +95,9 @@ export default function CharacterEditorModal({
 
   const moodPresets = [...useMoodPresets()]; // Convert readonly to mutable
 
-  // Local state for UI interactions
-  const [showSpritePickerFor, setShowSpritePickerFor] = useState<string | null>(null);
-  const [newMoodInput, setNewMoodInput] = useState<string>('');
-  const [showPresets, setShowPresets] = useState<boolean>(false);
-
   // Custom hooks
   const { previewMood, setPreviewMood } = useCharacterPreview(formData.moods);
   const completeness = useCharacterCompleteness(formData.moods, formData.sprites);
-  const {
-    renamingMood,
-    renameInput,
-    setRenameInput,
-    startRename,
-    confirmRename,
-    cancelRename
-  } = useMoodRename(renameMood);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -124,17 +110,13 @@ export default function CharacterEditorModal({
           onClose();
         }
       }
-      // Escape to cancel
-      if (e.key === 'Escape' && !renamingMood && !showSpritePickerFor) {
-        handleCancel();
-      }
     };
 
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, handleSave, onClose, renamingMood, showSpritePickerFor]);
+  }, [isOpen, handleSave, onClose]);
 
   // Handlers
   const handleSubmit = (e: React.FormEvent) => {
@@ -161,7 +143,7 @@ export default function CharacterEditorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0 dark bg-slate-900 text-slate-100">
+      <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0 dark bg-background text-foreground">
         {/* Header with Completeness - REFACTORED COMPONENT */}
         <CompletenessHeader
           characterName={character.name || 'Nouveau personnage'}
@@ -186,7 +168,7 @@ export default function CharacterEditorModal({
                   onUpdateField={updateField}
                 />
 
-                {/* Mood Management Section - REFACTORED COMPONENT */}
+                {/* Mood Management Section - REFACTORED (Phase 7: 27 props → 8 props) */}
                 <MoodManagementSection
                   formData={{
                     moods: formData.moods,
@@ -198,18 +180,6 @@ export default function CharacterEditorModal({
                   onRemoveMood={removeMood}
                   onRenameMood={renameMood}
                   onUpdateSprite={updateSprite}
-                  renamingMood={renamingMood}
-                  renameInput={renameInput}
-                  setRenameInput={setRenameInput}
-                  startRename={startRename}
-                  confirmRename={confirmRename}
-                  cancelRename={cancelRename}
-                  showSpritePickerFor={showSpritePickerFor}
-                  setShowSpritePickerFor={setShowSpritePickerFor}
-                  newMoodInput={newMoodInput}
-                  setNewMoodInput={setNewMoodInput}
-                  showPresets={showPresets}
-                  setShowPresets={setShowPresets}
                   moodPresets={moodPresets}
                 />
               </div>

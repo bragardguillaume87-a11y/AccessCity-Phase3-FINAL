@@ -81,6 +81,30 @@ export default function EditorShell({ onBack = null }) {
     }
   }, []);
 
+  // Auto-select first dialogue on initial load or when scene changes
+  // Visual novel behavior: always show first dialogue when scene is selected
+  useEffect(() => {
+    // Find the current scene
+    const currentScene = scenes.find(s => s.id === selectedSceneForEdit);
+
+    // Guard: need a scene with dialogues
+    if (!currentScene?.dialogues?.length) {
+      return;
+    }
+
+    // Guard: don't override existing dialogue selection for this scene
+    if (
+      selectedElement?.type === 'dialogue' &&
+      selectedElement?.sceneId === currentScene.id
+    ) {
+      return;
+    }
+
+    // Auto-select first dialogue
+    logger.info(`[EditorShell] Auto-selecting first dialogue for scene: ${currentScene.id}`);
+    setSelectedElement({ type: 'dialogue', sceneId: currentScene.id, index: 0 });
+  }, [scenes, selectedSceneForEdit]);
+
   // Handler for ProblemsPanel navigation
   const handleNavigateTo = (tab, params) => {
     if (params?.sceneId) {
@@ -90,9 +114,11 @@ export default function EditorShell({ onBack = null }) {
   };
 
   // Handler for scene selection from Explorer
+  // Always select first dialogue when scene is chosen (visual novel behavior)
   const handleSceneSelect = (sceneId) => {
     setSelectedSceneForEdit(sceneId);
-    setSelectedElement({ type: 'scene', id: sceneId });
+    // Set to null - the auto-select effect will pick up the first dialogue
+    setSelectedElement(null);
   };
 
   // Handler for character selection from Explorer
@@ -140,7 +166,7 @@ export default function EditorShell({ onBack = null }) {
   const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Main page title - Screen reader only */}
       <h1 className="sr-only">AccessCity Studio - Éditeur de Visual Novels</h1>
 
@@ -183,7 +209,7 @@ export default function EditorShell({ onBack = null }) {
 
       {/* Problems Panel (displayed at top when activated) */}
       {showProblemsPanel && (
-        <div className="bg-slate-800 border-b border-slate-700 animate-fadeIn flex-shrink-0">
+        <div className="bg-card border-b border-border animate-fadeIn flex-shrink-0">
           <ProblemsPanel onNavigateTo={handleNavigateTo} />
         </div>
       )}
@@ -195,10 +221,10 @@ export default function EditorShell({ onBack = null }) {
 
         <React.Suspense
           fallback={
-            <div className="flex-1 flex items-center justify-center bg-slate-900">
+            <div className="flex-1 flex items-center justify-center bg-background">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-4 text-slate-400">Loading editor...</p>
+                <p className="mt-4 text-muted-foreground">Loading editor...</p>
               </div>
             </div>
           }
@@ -214,7 +240,7 @@ export default function EditorShell({ onBack = null }) {
               maxSize={40}
               collapsible={true}
               collapsedSize={fullscreenMode ? 0 : undefined}
-              className="bg-slate-800 border-r border-slate-700 overflow-y-auto"
+              className="bg-card border-r border-border overflow-y-auto"
               id="explorer-panel"
               role="complementary"
               aria-label="Explorateur de scènes et personnages"
@@ -236,7 +262,7 @@ export default function EditorShell({ onBack = null }) {
             {!fullscreenMode && (
               <Separator
                 id="left-center-separator"
-                className="w-1 bg-slate-700 hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
+                className="w-1 bg-muted hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
                 aria-label="Redimensionner panneaux gauche et centre"
               />
             )}
@@ -246,7 +272,7 @@ export default function EditorShell({ onBack = null }) {
               defaultSize={50}
               minSize={30}
               maxSize={70}
-              className="bg-slate-900 overflow-auto"
+              className="bg-background overflow-auto"
               id="canvas-panel"
               role="main"
               aria-label="Canvas de scène"
@@ -271,7 +297,7 @@ export default function EditorShell({ onBack = null }) {
             {!fullscreenMode && (
               <Separator
                 id="center-right-separator"
-                className="w-1 bg-slate-700 hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
+                className="w-1 bg-muted hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
                 aria-label="Redimensionner panneaux centre et droite"
               />
             )}
@@ -283,7 +309,7 @@ export default function EditorShell({ onBack = null }) {
               maxSize={40}
               collapsible={true}
               collapsedSize={fullscreenMode ? 0 : undefined}
-              className="bg-slate-800 border-l border-slate-700 overflow-y-auto"
+              className="bg-card border-l border-border overflow-y-auto"
               id="properties-panel"
               role="complementary"
               aria-label="Propriétés et outils"
@@ -317,8 +343,8 @@ export default function EditorShell({ onBack = null }) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-800 border-t border-slate-700 flex-shrink-0">
-        <div className="px-6 py-2 text-center text-xs text-slate-500">
+      <footer className="bg-card border-t border-border flex-shrink-0">
+        <div className="px-6 py-2 text-center text-xs text-muted-foreground">
           AccessCity Studio - Accessible scenario editor
         </div>
       </footer>

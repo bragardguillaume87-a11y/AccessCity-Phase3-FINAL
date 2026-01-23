@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  # ===========================================
+  # Frontend Application (Production)
+  # ===========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - accesscity-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # ===========================================
+  # Backend Server (Assets Upload)
+  # ===========================================
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    networks:
+      - accesscity-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================
+  # Development Mode (Hot Reload)
+  # ===========================================
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3001
+    profiles:
+      - dev
+    networks:
+      - accesscity-network
+    depends_on:
+      - server
+
+volumes:
+  uploads:
+    driver: local
+
+networks:
+  accesscity-network:
+    driver: bridge

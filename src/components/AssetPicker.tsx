@@ -94,10 +94,10 @@ export default function AssetPicker({
   const { previewAsset, setPreviewAsset } = useAssetPreview();
 
   return (
-    <div className={`bg-slate-900 rounded-lg border border-slate-700 ${className}`}>
+    <div className={`bg-background rounded-lg border border-border ${className}`}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* Tabs Header */}
-        <TabsList className="w-full bg-slate-800 border-b border-slate-700 rounded-none justify-start p-2">
+        <TabsList className="w-full bg-card border-b border-border rounded-none justify-start p-2">
           <TabsTrigger
             value="library"
             className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -168,23 +168,23 @@ export default function AssetPicker({
 
         {/* URL Tab */}
         <TabsContent value="url" className="p-4 m-0 min-h-[300px]">
-          <label className="block text-sm font-semibold text-slate-300 mb-2">
+          <label className="block text-sm font-semibold text-foreground mb-2">
             URL de l'image
           </label>
           <Input
             type="url"
-            className="w-full bg-slate-800 border-slate-700 text-slate-100"
+            className="w-full bg-card border-border text-foreground"
             placeholder="https://example.com/image.jpg"
             defaultValue={value}
             onBlur={(e: React.FocusEvent<HTMLInputElement>) => handleSelect(e.target.value)}
           />
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             Entrez l'URL complète d'une image hébergée en ligne
           </p>
           <Alert className="mt-4 bg-blue-900/20 border-blue-800">
             <AlertDescription className="text-sm text-blue-200">
               💡 <strong>Astuce :</strong> Vous pouvez aussi utiliser des chemins relatifs comme
-              <code className="bg-slate-800 px-2 py-1 rounded ml-1 text-slate-300 border border-slate-700">
+              <code className="bg-card px-2 py-1 rounded ml-1 text-foreground border border-border">
                 /assets/backgrounds/custom.jpg
               </code>
             </AlertDescription>

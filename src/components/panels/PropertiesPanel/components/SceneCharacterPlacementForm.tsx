@@ -47,11 +47,11 @@ export function SceneCharacterPlacementForm({
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-card">
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3">
+      <div className="flex-shrink-0 border-b border-border px-4 py-3">
         <h3 className="text-sm font-bold text-white uppercase tracking-wide">Scene Character Placement</h3>
-        <p className="text-xs text-slate-400 mt-1">{character.name} in this scene</p>
+        <p className="text-xs text-muted-foreground mt-1">{character.name} in this scene</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -63,7 +63,7 @@ export function SceneCharacterPlacementForm({
                 type="text"
                 value={character.name}
                 disabled
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-400 cursor-not-allowed"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm text-muted-foreground cursor-not-allowed"
               />
             </FormField>
             <FormField label="Description">
@@ -71,7 +71,7 @@ export function SceneCharacterPlacementForm({
                 value={character.description || 'No description'}
                 disabled
                 rows={2}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-400 cursor-not-allowed resize-none"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm text-muted-foreground cursor-not-allowed resize-none"
               />
             </FormField>
           </div>
@@ -122,7 +122,7 @@ export function SceneCharacterPlacementForm({
                       position: { ...currentPosition, x }
                     });
                   }}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </FormField>
               <FormField label="Position Y (%)">
@@ -138,7 +138,7 @@ export function SceneCharacterPlacementForm({
                       position: { ...currentPosition, y }
                     });
                   }}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </FormField>
             </div>
@@ -158,7 +158,7 @@ export function SceneCharacterPlacementForm({
                 }}
                 className="w-full accent-purple-600"
               />
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>50%</span>
                 <span>200%</span>
               </div>
@@ -173,7 +173,7 @@ export function SceneCharacterPlacementForm({
                     mood: e.target.value
                   });
                 }}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 {(character.moods || ['neutral']).map(mood => (
                   <option key={mood} value={mood}>{mood}</option>
@@ -196,7 +196,7 @@ export function SceneCharacterPlacementForm({
                 }}
                 className="w-full accent-purple-600"
               />
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>Back (1)</span>
                 <span>Front (10)</span>
               </div>
@@ -216,7 +216,7 @@ export function SceneCharacterPlacementForm({
       </div>
 
       {/* Auto-save indicator */}
-      <div className="flex-shrink-0 border-t border-slate-700 p-3">
+      <div className="flex-shrink-0 border-t border-border p-3">
         <AutoSaveIndicator lastSaved={lastSaved ? new Date(lastSaved) : null} isSaving={isSaving} />
       </div>
     </div>

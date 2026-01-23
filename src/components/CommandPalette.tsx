@@ -228,9 +228,9 @@ export default function CommandPalette({
         onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         {/* Header avec search input */}
-        <div className="p-4 border-b border-slate-200 bg-slate-50">
+        <div className="p-4 border-b border-border bg-card">
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -246,12 +246,12 @@ export default function CommandPalette({
               className="w-full pl-10 pr-4 py-3 text-lg border-0 focus:outline-none focus:ring-0 bg-transparent"
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
+          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
             <span>{filteredItems.length} résultat{filteredItems.length > 1 ? 's' : ''}</span>
             <div className="flex gap-4">
-              <span className="bg-slate-200 px-2 py-0.5 rounded">↑↓ Naviguer</span>
-              <span className="bg-slate-200 px-2 py-0.5 rounded">Enter Sélectionner</span>
-              <span className="bg-slate-200 px-2 py-0.5 rounded">Esc Fermer</span>
+              <span className="bg-muted px-2 py-0.5 rounded">↑↓ Naviguer</span>
+              <span className="bg-muted px-2 py-0.5 rounded">Enter Sélectionner</span>
+              <span className="bg-muted px-2 py-0.5 rounded">Esc Fermer</span>
             </div>
           </div>
         </div>
@@ -259,8 +259,8 @@ export default function CommandPalette({
         {/* Liste des résultats */}
         <div className="max-h-96 overflow-y-auto">
           {filteredItems.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
-              <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-8 text-center text-muted-foreground">
+              <svg className="w-12 h-12 mx-auto mb-3 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-sm font-medium">Aucun résultat trouvé</p>
@@ -274,7 +274,7 @@ export default function CommandPalette({
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                   index === selectedIndex
                     ? 'bg-blue-600 text-white'
-                    : 'hover:bg-slate-50'
+                    : 'hover:bg-card'
                 }`}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
@@ -284,12 +284,12 @@ export default function CommandPalette({
                 {/* Texte */}
                 <div className="flex-1 min-w-0">
                   <div className={`font-semibold text-sm ${
-                    index === selectedIndex ? 'text-white' : 'text-slate-900'
+                    index === selectedIndex ? 'text-white' : 'text-foreground'
                   }`}>
                     {item.label}
                   </div>
                   <div className={`text-xs truncate ${
-                    index === selectedIndex ? 'text-blue-100' : 'text-slate-500'
+                    index === selectedIndex ? 'text-blue-100' : 'text-muted-foreground'
                   }`}>
                     {item.description}
                   </div>

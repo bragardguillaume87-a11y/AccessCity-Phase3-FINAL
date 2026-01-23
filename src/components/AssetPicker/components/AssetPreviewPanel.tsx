@@ -55,28 +55,28 @@ export function AssetPreviewPanel({
   if (!previewAsset && !selectedValue) return null;
 
   return (
-    <div className="px-4 pb-4 pt-0 border-t border-slate-700">
-      <p className="text-xs font-semibold text-slate-400 mb-2 mt-3">Aperçu</p>
-      <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+    <div className="px-4 pb-4 pt-0 border-t border-border">
+      <p className="text-xs font-semibold text-muted-foreground mb-2 mt-3">Aperçu</p>
+      <div className="bg-card rounded-lg p-3 border border-border">
         <LazyImage
           src={previewAsset?.path || selectedValue}
           alt="Preview"
           className="w-full h-40 object-contain rounded"
         />
         {previewAsset && (
-          <div className="mt-2 text-xs text-slate-400 space-y-1">
+          <div className="mt-2 text-xs text-muted-foreground space-y-1">
             <p>
-              <strong className="text-slate-300">Nom :</strong> {previewAsset.name}
+              <strong className="text-foreground">Nom :</strong> {previewAsset.name}
             </p>
             {previewAsset.type && (
               <p>
-                <strong className="text-slate-300">Type :</strong>{' '}
+                <strong className="text-foreground">Type :</strong>{' '}
                 {previewAsset.type.toUpperCase()}
               </p>
             )}
             {previewAsset.size && (
               <p>
-                <strong className="text-slate-300">Taille :</strong>{' '}
+                <strong className="text-foreground">Taille :</strong>{' '}
                 {(previewAsset.size / 1024).toFixed(1)} KB
               </p>
             )}
@@ -96,10 +96,10 @@ function LazyImage({ src, alt, className }: LazyImageProps): React.JSX.Element {
 
   return (
     <div className="relative">
-      {!loaded && !failed && <div className={`${className} bg-slate-700 animate-pulse`} />}
+      {!loaded && !failed && <div className={`${className} bg-muted animate-pulse`} />}
       {failed && (
         <div
-          className={`${className} bg-slate-800 flex items-center justify-center text-xs text-slate-500 border border-slate-700`}
+          className={`${className} bg-card flex items-center justify-center text-xs text-muted-foreground border border-border`}
         >
           Image non disponible
         </div>

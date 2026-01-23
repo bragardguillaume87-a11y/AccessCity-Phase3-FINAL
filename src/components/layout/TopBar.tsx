@@ -74,7 +74,7 @@ export default function TopBar({
 }: TopBarProps) {
   return (
     <header
-      className="sticky top-0 z-fixed-v2 bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0"
+      className="sticky top-0 z-fixed-v2 bg-card border-b border-border shadow-lg flex-shrink-0"
       role="banner"
       aria-label="Application header"
     >
@@ -85,7 +85,7 @@ export default function TopBar({
             {onBack && (
               <button
                 onClick={onBack}
-                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                className="px-3 py-2 bg-muted hover:bg-muted text-foreground text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
                 title="Retour à l'accueil"
                 aria-label="Retour à l'accueil"
               >
@@ -96,7 +96,7 @@ export default function TopBar({
               </button>
             )}
             <div>
-              <div className="text-xs font-semibold text-slate-400 tracking-wide uppercase">
+              <div className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
                 AccessCity Studio
               </div>
               <h1 className="text-xl font-bold text-white mt-0.5">
@@ -108,7 +108,7 @@ export default function TopBar({
           {/* Center: Toolbar with Button Groups */}
           <nav className="flex items-center gap-3" aria-label="Actions principales">
             {/* Group 1: Content Management */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-slate-700/30 rounded-lg border border-slate-600/50" role="group" aria-label="Gestion du contenu">
+            <div className="flex items-center gap-1 px-2 py-1 bg-muted/30 rounded-lg border border-border/50" role="group" aria-label="Gestion du contenu">
               <Button
                 variant="toolbar"
                 size="sm"
@@ -132,10 +132,10 @@ export default function TopBar({
             </div>
 
             {/* Separator */}
-            <div className="h-8 w-px bg-slate-600" aria-hidden="true" />
+            <div className="h-8 w-px bg-muted" aria-hidden="true" />
 
             {/* Group 2: Project Actions */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-slate-700/30 rounded-lg border border-slate-600/50" role="group" aria-label="Actions du projet">
+            <div className="flex items-center gap-1 px-2 py-1 bg-muted/30 rounded-lg border border-border/50" role="group" aria-label="Actions du projet">
               <Button
                 variant="toolbar"
                 size="sm"
@@ -173,14 +173,14 @@ export default function TopBar({
           {/* Right: Undo/Redo + Validation + Save indicator */}
           <div className="flex items-center gap-3">
             {/* Undo/Redo buttons */}
-            <div className="flex items-center gap-1 border-r border-slate-600 pr-3" role="group" aria-label="Historique">
+            <div className="flex items-center gap-1 border-r border-border pr-3" role="group" aria-label="Historique">
               <button
                 onClick={undo}
                 disabled={!canUndo}
                 className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all ${
                   canUndo
-                    ? "bg-slate-700 hover:bg-slate-600 text-slate-100"
-                    : "bg-slate-800 text-slate-600 cursor-not-allowed"
+                    ? "bg-muted hover:bg-muted text-foreground"
+                    : "bg-card text-muted-foreground cursor-not-allowed"
                 }`}
                 title="Undo | Shortcut: Ctrl+Z"
                 aria-label="Annuler (Ctrl+Z)"
@@ -193,8 +193,8 @@ export default function TopBar({
                 disabled={!canRedo}
                 className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all ${
                   canRedo
-                    ? "bg-slate-700 hover:bg-slate-600 text-slate-100"
-                    : "bg-slate-800 text-slate-600 cursor-not-allowed"
+                    ? "bg-muted hover:bg-muted text-foreground"
+                    : "bg-card text-muted-foreground cursor-not-allowed"
                 }`}
                 title="Redo | Shortcut: Ctrl+Y"
                 aria-label="Refaire (Ctrl+Y)"
@@ -256,7 +256,7 @@ export default function TopBar({
                 </div>
               ) : (
                 <div
-                  className="flex items-center gap-2 text-slate-500 text-xs font-medium"
+                  className="flex items-center gap-2 text-muted-foreground text-xs font-medium"
                   role="status"
                   aria-live="polite"
                   aria-atomic="true"

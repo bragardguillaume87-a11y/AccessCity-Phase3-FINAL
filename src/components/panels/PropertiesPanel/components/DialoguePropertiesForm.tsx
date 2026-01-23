@@ -70,9 +70,9 @@ export function DialoguePropertiesForm({
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-card">
       {/* Header with duplicate button */}
-      <div className="flex-shrink-0 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
+      <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-white uppercase tracking-wide">Dialogue Properties</h3>
         <Button
           variant="outline"
@@ -86,7 +86,7 @@ export function DialoguePropertiesForm({
       </div>
 
       {/* Tabs */}
-      <div className="flex-shrink-0 border-b border-slate-700">
+      <div className="flex-shrink-0 border-b border-border">
         <div className="flex px-4" role="tablist">
           <button
             role="tab"
@@ -95,7 +95,7 @@ export function DialoguePropertiesForm({
             className={`px-4 py-3 text-xs font-semibold transition-colors ${
               activeTab === 'properties'
                 ? 'text-white border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-300'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Properties
@@ -107,7 +107,7 @@ export function DialoguePropertiesForm({
             className={`px-4 py-3 text-xs font-semibold transition-colors ${
               activeTab === 'choices'
                 ? 'text-white border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-300'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Choices ({dialogue.choices?.length || 0})
@@ -120,14 +120,14 @@ export function DialoguePropertiesForm({
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Speaker */}
           <div>
-            <label htmlFor="dialogue-speaker" className="block text-xs font-semibold text-slate-400 mb-1.5">
+            <label htmlFor="dialogue-speaker" className="block text-xs font-semibold text-muted-foreground mb-1.5">
               Speaker
             </label>
             <select
               id="dialogue-speaker"
               value={dialogue.speaker || ''}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleUpdate({ speaker: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">-- Select speaker --</option>
               {characters.map(char => (
@@ -140,7 +140,7 @@ export function DialoguePropertiesForm({
 
           {/* Text */}
           <div>
-            <label htmlFor="dialogue-text" className="block text-xs font-semibold text-slate-400 mb-1.5">
+            <label htmlFor="dialogue-text" className="block text-xs font-semibold text-muted-foreground mb-1.5">
               Text
             </label>
             <textarea
@@ -148,22 +148,22 @@ export function DialoguePropertiesForm({
               value={dialogue.text || ''}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleUpdate({ text: e.target.value })}
               rows={4}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               placeholder="Enter dialogue text"
             />
           </div>
 
           {/* Stats */}
-          <div className="pt-4 border-t border-slate-700">
-            <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase">Info</h4>
-            <div className="space-y-2 text-xs text-slate-500">
+          <div className="pt-4 border-t border-border">
+            <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Info</h4>
+            <div className="space-y-2 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Index:</span>
-                <span className="text-slate-300 font-semibold">{dialogueIndex}</span>
+                <span className="text-foreground font-semibold">{dialogueIndex}</span>
               </div>
               <div className="flex justify-between">
                 <span>Choices:</span>
-                <span className="text-slate-300 font-semibold">{dialogue.choices?.length || 0}</span>
+                <span className="text-foreground font-semibold">{dialogue.choices?.length || 0}</span>
               </div>
             </div>
           </div>
@@ -197,7 +197,7 @@ export function DialoguePropertiesForm({
               />
             ))
           ) : (
-            <div className="text-center py-8 text-slate-600">
+            <div className="text-center py-8 text-muted-foreground">
               <p className="text-sm">No choices for this dialogue</p>
               <p className="text-xs mt-1">Click "+ Add Choice" to create branching</p>
             </div>
@@ -206,7 +206,7 @@ export function DialoguePropertiesForm({
       )}
 
       {/* Auto-save indicator */}
-      <div className="flex-shrink-0 border-t border-slate-700 p-3">
+      <div className="flex-shrink-0 border-t border-border p-3">
         <AutoSaveIndicator lastSaved={lastSaved ? new Date(lastSaved) : null} isSaving={isSaving} />
       </div>
     </div>

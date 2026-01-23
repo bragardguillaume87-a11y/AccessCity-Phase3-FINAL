@@ -245,7 +245,7 @@ export default function AddCharacterToSceneModal({
             ) : (
               <div className="space-y-6">
                 {/* Sprite preview LARGE - Draggable */}
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-8 flex items-center justify-center min-h-[256px]">
+                <div className="bg-gradient-to-br from-card to-background rounded-xl p-8 flex items-center justify-center min-h-[256px]">
                   {currentSprite ? (
                     <motion.img
                       key={currentSprite}
@@ -342,8 +342,8 @@ export default function AddCharacterToSceneModal({
                       onClick={() => setPosition(position ? null : { x: 50, y: 50 })}
                       className={`px-3 py-1 text-xs rounded transition-colors ${
                         position
-                          ? 'bg-purple-600 text-white hover:bg-purple-700'
-                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
                       }`}
                     >
                       {position ? 'Désactiver (auto)' : 'Activer'}
@@ -379,9 +379,9 @@ export default function AddCharacterToSceneModal({
                       </div>
                     </>
                   ) : (
-                    <div className="text-sm text-slate-400 bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                    <div className="text-sm text-muted-foreground bg-card/50 rounded-lg p-3 border border-border">
                       🎯 Position automatique intelligente activée<br/>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-muted-foreground/70">
                         Le personnage sera placé automatiquement selon son type (player à gauche, autres au centre/droite)
                       </span>
                     </div>

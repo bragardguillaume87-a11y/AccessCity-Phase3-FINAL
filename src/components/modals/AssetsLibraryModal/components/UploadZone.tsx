@@ -151,10 +151,10 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
             ? "Déposez vos fichiers ici !"
             : "Glissez-déposez vos images"}
         </p>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           ou cliquez pour parcourir
         </p>
-        <p className="text-xs text-slate-500 mt-2">
+        <p className="text-xs text-muted-foreground/70 mt-2">
           PNG, JPG, SVG, GIF, WebP • Max 10MB par fichier
         </p>
       </div>
@@ -180,13 +180,13 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
       {/* Progress indicator if upload in progress */}
       {isUploading && (
         <div className="w-full max-w-xs">
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-cyan-500 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400 mt-2 text-center">
+          <p className="text-xs text-muted-foreground mt-2 text-center">
             Upload en cours... {progress}%
           </p>
         </div>

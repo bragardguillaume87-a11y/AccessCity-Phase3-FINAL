@@ -29,6 +29,14 @@ interface AssetsManifest {
   assets: Record<string, Asset[]>;
 }
 
+interface DeleteAssetsResult {
+  success: boolean;
+  deleted: { path: string; deleted: boolean }[];
+  errors?: { path: string; error: string }[];
+  count: number;
+  message: string;
+}
+
 interface UseAssetsReturn {
   assets: Asset[];
   loading: boolean;
@@ -36,16 +44,22 @@ interface UseAssetsReturn {
   categories: string[];
   manifest: AssetsManifest | null;
   reloadManifest: () => void;
+  deleteAssets: (paths: string[]) => Promise<DeleteAssetsResult>;
+  deleting: boolean;
 }
 
 // ============================================================================
 // HOOK
 // ============================================================================
 
+// Server URL for asset operations (upload server)
+const ASSET_SERVER_URL = 'http://localhost:3001';
+
 export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
   const { category = null, autoLoad = true } = options;
   const [manifest, setManifest] = useState<AssetsManifest | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
@@ -123,6 +137,61 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     setReloadTrigger(prev => prev + 1);
   }, []);
 
+  /**
+   * Delete assets from the server
+   * @param paths - Array of asset paths to delete (e.g., ['/assets/backgrounds/image.png'])
+   * @returns Promise with deletion results
+   */
+  const deleteAssets = useCallback(async (paths: string[]): Promise<DeleteAssetsResult> => {
+    if (paths.length === 0) {
+      return { success: false, deleted: [], count: 0, message: 'No paths provided' };
+    }
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${ASSET_SERVER_URL}/api/assets`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ paths }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error ${response.status}`);
+      }
+
+      const result: DeleteAssetsResult = await response.json();
+
+      // Reload manifest after successful deletion
+      if (result.count > 0) {
+        logger.info(`[useAssets] Deleted ${result.count} asset(s), reloading manifest...`);
+        // Small delay to allow server to regenerate manifest
+        setTimeout(() => {
+          setReloadTrigger(prev => prev + 1);
+        }, 500);
+      }
+
+      setDeleting(false);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete assets';
+      logger.error('[useAssets] Delete error:', err);
+      setError(errorMessage);
+      setDeleting(false);
+      return {
+        success: false,
+        deleted: [],
+        errors: [{ path: 'all', error: errorMessage }],
+        count: 0,
+        message: errorMessage
+      };
+    }
+  }, []);
+
   const assets = useMemo(() => {
     if (!manifest || !manifest.assets) return [];
 
@@ -150,7 +219,9 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     error,
     categories,
     manifest,
-    reloadManifest
+    reloadManifest,
+    deleteAssets,
+    deleting
   };
 }
 

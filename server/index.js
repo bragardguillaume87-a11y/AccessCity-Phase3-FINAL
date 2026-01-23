@@ -158,6 +158,69 @@ app.get('/api/assets/:category', (req, res) => {
   }
 });
 
+// Delete asset endpoint
+app.delete('/api/assets', async (req, res) => {
+  try {
+    const { paths } = req.body;
+
+    if (!paths || !Array.isArray(paths) || paths.length === 0) {
+      return res.status(400).json({ error: 'No asset paths provided' });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const assetPath of paths) {
+      // Security: Validate path format to prevent directory traversal
+      if (!assetPath.startsWith('/assets/') || assetPath.includes('..')) {
+        errors.push({ path: assetPath, error: 'Invalid path format' });
+        continue;
+      }
+
+      // Convert URL path to filesystem path
+      const relativePath = assetPath.replace('/assets/', '');
+      const fullPath = path.join(__dirname, '../public/assets', relativePath);
+
+      // Check file exists
+      if (!fs.existsSync(fullPath)) {
+        errors.push({ path: assetPath, error: 'File not found' });
+        continue;
+      }
+
+      // Delete file
+      try {
+        fs.unlinkSync(fullPath);
+        results.push({ path: assetPath, deleted: true });
+        console.log(`[Asset Delete] Deleted: ${assetPath}`);
+      } catch (deleteError) {
+        errors.push({ path: assetPath, error: deleteError.message });
+      }
+    }
+
+    // Regenerate manifest after deletion
+    if (results.length > 0) {
+      try {
+        const manifestScript = path.join(__dirname, '../tools/generate-assets-manifest.js');
+        await execAsync(`node "${manifestScript}"`);
+        console.log('[Asset Delete] Manifest regenerated');
+      } catch (manifestError) {
+        console.error('[Asset Delete] Manifest regeneration failed:', manifestError);
+      }
+    }
+
+    res.json({
+      success: true,
+      deleted: results,
+      errors: errors.length > 0 ? errors : undefined,
+      count: results.length,
+      message: `${results.length} asset(s) deleted`
+    });
+  } catch (error) {
+    console.error('[Asset Delete] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Error handler
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {

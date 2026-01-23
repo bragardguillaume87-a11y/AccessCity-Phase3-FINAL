@@ -118,7 +118,7 @@ export default function AssetsLibraryModal({
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const { assets: rawAssets, loading, error: rawError } = useAssets();
+  const { assets: rawAssets, loading, error: rawError, deleteAssets, deleting } = useAssets();
 
   // Add IDs to assets (useAssets returns assets without IDs)
   const assets = useMemo(() => {
@@ -187,11 +187,32 @@ export default function AssetsLibraryModal({
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedAssets.size === 0) return;
-    if (window.confirm(`Supprimer ${selectedAssets.size} asset(s) sélectionné(s) ?`)) {
-      // Note: This would need actual delete implementation in useAssets hook
-      setSelectedAssets(new Set());
+    if (!window.confirm(`Supprimer ${selectedAssets.size} asset(s) sélectionné(s) ? Cette action est irréversible.`)) {
+      return;
+    }
+
+    // Convert Set to Array for API call
+    const pathsToDelete = Array.from(selectedAssets);
+
+    try {
+      const result = await deleteAssets(pathsToDelete);
+
+      if (result.success && result.count > 0) {
+        // Clear selection after successful deletion
+        setSelectedAssets(new Set());
+
+        // Show success message
+        alert(`${result.count} asset(s) supprimé(s) avec succès.`);
+      } else if (result.errors && result.errors.length > 0) {
+        // Show error message
+        const errorMessages = result.errors.map(e => `${e.path}: ${e.error}`).join('\n');
+        alert(`Erreur lors de la suppression:\n${errorMessages}`);
+      }
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Erreur lors de la suppression des assets. Vérifiez que le serveur est démarré (npm run server).');
     }
   };
 

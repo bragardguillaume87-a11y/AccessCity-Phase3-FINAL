@@ -177,7 +177,7 @@ export default function MainCanvas({
   // Keyboard shortcuts for character manipulation
   useCanvasKeyboard({
     selectedCharacterId: selection.selectedCharacterId,
-    selectedScene,
+    selectedScene: selectedScene ?? null,
     sceneCharacters,
     characters: actions.characters,
     removeCharacterFromScene: actions.removeCharacterFromScene,
@@ -303,7 +303,7 @@ export default function MainCanvas({
                   character={character}
                   canvasDimensions={canvasDimensions}
                   gridEnabled={viewState.gridEnabled}
-                  selectedCharacterId={selection.selectedCharacterId}
+                  selectedCharacterId={selection.selectedCharacterId ?? undefined}
                   onCharacterClick={selection.handleCharacterClick}
                   onContextMenu={contextMenu.handleCharacterRightClick}
                   onUpdatePosition={handleUpdateCharacterPosition}
@@ -433,7 +433,9 @@ export default function MainCanvas({
         isOpen={showAddCharacterModal}
         onClose={handleCloseAddCharacterModal}
         characters={actions.characters}
-        onAddCharacter={actions.handleAddCharacterConfirm}
+        onAddCharacter={(characterId, mood, position) =>
+          actions.handleAddCharacterConfirm(characterId, mood, position ?? undefined)
+        }
       />
     </div>
   );

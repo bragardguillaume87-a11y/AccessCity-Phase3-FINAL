@@ -271,7 +271,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
                   Positionnement Rapide
                 </p>
                 <CharacterPositioningTools
-                  characterId={null}
+                  characterId={undefined}
                   sceneId={selectedScene?.id}
                 />
               </div>

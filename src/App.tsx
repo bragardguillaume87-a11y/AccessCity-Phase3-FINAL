@@ -21,7 +21,7 @@ function App() {
     // On peut charger depuis localStorage ici si besoin
     return DEMO_QUESTS;
   });
-  const [selectedQuestId, setSelectedQuestId] = useState(null);
+  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [newQuestName, setNewQuestName] = useState("");
   // Check URL for demo mode (?demo=true) and tokens mode (?tokens=true)
   const urlParams = new URLSearchParams(window.location.search);
@@ -48,7 +48,7 @@ function App() {
   }
 
   // Sélectionner une quête
-  function handleSelectQuest(id) {
+  function handleSelectQuest(id: string) {
     setSelectedQuestId(id);
   }
 

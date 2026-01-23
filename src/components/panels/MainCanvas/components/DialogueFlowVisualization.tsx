@@ -38,7 +38,7 @@ export function DialogueFlowVisualization({
         </h3>
 
         {/* View mode toggle */}
-        <Tabs value={viewMode} onValueChange={onViewModeChange}>
+        <Tabs value={viewMode} onValueChange={(value) => onViewModeChange(value as 'visual' | 'graph')}>
           <TabsList>
             <TabsTrigger value="visual">
               <List className="h-4 w-4" />

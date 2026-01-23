@@ -14,7 +14,7 @@ import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/Announceme
 import MainCanvas from './panels/MainCanvas';
 import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
-import type { ModalContext } from '../types';
+import type { ModalContext, SelectedElementType, FullscreenMode } from '../types';
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
@@ -32,7 +32,11 @@ const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
  * - Right: PropertiesPanel (properties of selected element)
  * ASCII only, no hardcoded French strings.
  */
-export default function EditorShell({ onBack = null }) {
+interface EditorShellProps {
+  onBack?: (() => void) | null;
+}
+
+export default function EditorShell({ onBack = null }: EditorShellProps) {
   // Zustand stores (memoized selectors for better performance)
   const scenes = useScenes();
   const characters = useCharacters();
@@ -47,13 +51,13 @@ export default function EditorShell({ onBack = null }) {
   const validation = useValidation();
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [selectedElement, setSelectedElement] = useState(null);
+  const [selectedElement, setSelectedElement] = useState<SelectedElementType>(null);
 
   // Track active tab in LeftPanel ('scenes' or 'dialogues')
   const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
 
   // PHASE 6: Fullscreen mode state (null | 'graph' | 'canvas' | 'preview')
-  const [fullscreenMode, setFullscreenMode] = useState(null);
+  const [fullscreenMode, setFullscreenMode] = useState<FullscreenMode>(null);
 
   // Modal state management
   const [activeModal, setActiveModal] = useState<string | null>(null); // 'characters' | 'assets' | 'export' | 'preview' | null
@@ -106,7 +110,7 @@ export default function EditorShell({ onBack = null }) {
   }, [scenes, selectedSceneForEdit]);
 
   // Handler for ProblemsPanel navigation
-  const handleNavigateTo = (tab, params) => {
+  const handleNavigateTo = (_tab: string, params?: { sceneId?: string }) => {
     if (params?.sceneId) {
       setSelectedSceneForEdit(params.sceneId);
     }
@@ -115,23 +119,23 @@ export default function EditorShell({ onBack = null }) {
 
   // Handler for scene selection from Explorer
   // Always select first dialogue when scene is chosen (visual novel behavior)
-  const handleSceneSelect = (sceneId) => {
+  const handleSceneSelect = (sceneId: string) => {
     setSelectedSceneForEdit(sceneId);
     // Set to null - the auto-select effect will pick up the first dialogue
     setSelectedElement(null);
   };
 
   // Handler for character selection from Explorer
-  const handleCharacterSelect = (charId) => {
+  const handleCharacterSelect = (charId: string) => {
     setSelectedElement({ type: 'character', id: charId });
   };
 
   // Handler for dialogue selection from Explorer
-  const handleDialogueSelect = (sceneId, dialogueIndex, metadata) => {
+  const handleDialogueSelect = (sceneId: string, dialogueIndex: number, metadata?: { type: string; sceneCharacterId?: string }) => {
     setSelectedSceneForEdit(sceneId);
 
     // If metadata is provided (e.g., for scene character selection), use it
-    if (metadata && metadata.type === 'sceneCharacter') {
+    if (metadata && metadata.type === 'sceneCharacter' && metadata.sceneCharacterId) {
       setSelectedElement({
         type: 'sceneCharacter',
         sceneId,
@@ -285,7 +289,7 @@ export default function EditorShell({ onBack = null }) {
                   onSelectDialogue={handleDialogueSelect}
                   onOpenModal={(modal, context = {}) => {
                     setActiveModal(modal);
-                    setModalContext(context);
+                    setModalContext(context as ModalContext);
                   }}
                   fullscreenMode={fullscreenMode}
                   onFullscreenChange={setFullscreenMode}
@@ -321,7 +325,7 @@ export default function EditorShell({ onBack = null }) {
                     <UnifiedPanel
                       onOpenModal={(modal, context) => {
                         setActiveModal(modal);
-                        setModalContext(context);
+                        setModalContext(context as ModalContext);
                       }}
                     />
                   ) : (
@@ -331,7 +335,7 @@ export default function EditorShell({ onBack = null }) {
                       characters={characters}
                       onOpenModal={(modal, context) => {
                         setActiveModal(modal);
-                        setModalContext(context);
+                        setModalContext(context as ModalContext);
                       }}
                     />
                   )}

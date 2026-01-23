@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAssets, getRecentAssets, addToRecentAssets } from '@/hooks/useAssets';
 
+interface AvatarPickerProps {
+  currentSprites?: Record<string, string>;
+  onSelect: (mood: string, path: string) => void;
+  mood: string;
+  labels?: Record<string, string>;
+}
+
 /**
  * Sélecteur d'avatar pour un personnage
  * Permet de parcourir les assets disponibles et de sélectionner un sprite
@@ -9,7 +16,7 @@ import { useAssets, getRecentAssets, addToRecentAssets } from '@/hooks/useAssets
  * - Fallback to all assets when 'characters' category is empty
  * - Harmonized with Midnight Bloom theme (slate → semantic classes)
  */
-export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} }) => {
+export const AvatarPicker: React.FC<AvatarPickerProps> = ({ currentSprites = {}, onSelect, mood, labels = {} }) => {
   // Try characters first, fallback to all assets if empty
   const { assets: characterAssets, loading: loadingChars } = useAssets({ category: 'characters' });
   const { assets: allAssets, loading: loadingAll, error } = useAssets({});
@@ -19,7 +26,7 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
   const assets = hasCharacterAssets ? characterAssets : allAssets;
   const loading = loadingChars || loadingAll;
 
-  const [recentAssets, setRecentAssets] = useState([]);
+  const [recentAssets, setRecentAssets] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Charger les assets récents au montage
@@ -34,7 +41,7 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
     asset.path.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSelect = (assetPath) => {
+  const handleSelect = (assetPath: string) => {
     onSelect(mood, assetPath);
     // Ajouter aux récents
     const newRecent = addToRecentAssets('character-sprites', assetPath, 6);
@@ -154,11 +161,18 @@ export const AvatarPicker = ({ currentSprites = {}, onSelect, mood, labels = {} 
   );
 };
 
+interface AssetThumbnailProps {
+  path: string;
+  name: string;
+  isSelected: boolean;
+  onClick: () => void;
+}
+
 /**
  * Composant miniature d'asset
  * Harmonized with Midnight Bloom theme
  */
-const AssetThumbnail = ({ path, name, isSelected, onClick }) => (
+const AssetThumbnail: React.FC<AssetThumbnailProps> = ({ path, name, isSelected, onClick }) => (
   <div
     onClick={onClick}
     className={`relative aspect-square border-2 rounded-lg overflow-hidden cursor-pointer bg-background transition-all ${

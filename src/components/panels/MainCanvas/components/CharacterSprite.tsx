@@ -1,6 +1,7 @@
 import React from 'react';
 import { Rnd } from 'react-rnd';
 import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import { percentToPixels, pixelsToPercent, RESIZING_CONFIG } from '@/utils/canvasPositioning';
 import { Z_INDEX } from '@/utils/zIndexLayers';
 import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
@@ -55,9 +56,9 @@ export const CharacterSprite = React.memo(function CharacterSprite({
   const gridSize = 24; // Match grid pattern size
   const dragGrid = gridEnabled ? [gridSize, gridSize] : [1, 1];
 
-  // Get animation variant
-  const entranceAnimation = sceneChar.entranceAnimation || 'none';
-  const animationVariant = CHARACTER_ANIMATION_VARIANTS[entranceAnimation] || CHARACTER_ANIMATION_VARIANTS.none;
+  // Get animation variant (cast to Variants for framer-motion compatibility)
+  const entranceAnimation = (sceneChar.entranceAnimation || 'none') as keyof typeof CHARACTER_ANIMATION_VARIANTS;
+  const animationVariant = (CHARACTER_ANIMATION_VARIANTS[entranceAnimation] || CHARACTER_ANIMATION_VARIANTS.none) as unknown as Variants;
 
   return (
     <Rnd

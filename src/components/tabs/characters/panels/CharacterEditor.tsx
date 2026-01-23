@@ -228,7 +228,7 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ character, cha
               currentSprites={formData.sprites}
               onSelect={handleSpriteSelect}
               mood={activeMood}
-              labels={labels}
+              labels={labels as Record<string, string>}
             />
           </div>
 

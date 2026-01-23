@@ -190,9 +190,11 @@ export function CharactersModal({
 
     // Create new character and update it with duplicated data
     const newId = addCharacter();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _duplicatedId, ...duplicatedData } = duplicatedChar;
     updateCharacter({
       id: newId,
-      ...duplicatedChar
+      ...duplicatedData
     });
 
     // Show duplication feedback

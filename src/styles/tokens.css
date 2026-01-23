@@ -197,6 +197,20 @@
   --error-light: #fee2e2;
   --info: var(--accent-blue);
   --info-light: #dbeafe;
+
+  /* ========== HOME.CSS COMPATIBILITY ALIASES ========== */
+  /* These aliases map home.css naming to token naming */
+
+  --font-family: var(--font-family-base);
+  --font-size-4xl: 2.25rem;     /* 36px - Missing from base tokens */
+
+  /* Spacing aliases (home.css uses --spacing-*, tokens use --space-*) */
+  --spacing-xs: var(--space-1);   /* 4px */
+  --spacing-sm: var(--space-2);   /* 8px */
+  --spacing-md: var(--space-4);   /* 16px */
+  --spacing-lg: var(--space-6);   /* 24px */
+  --spacing-xl: var(--space-8);   /* 32px */
+  --spacing-2xl: var(--space-12); /* 48px */
 }
 
 /* ========== UTILITY CLASSES ========== */

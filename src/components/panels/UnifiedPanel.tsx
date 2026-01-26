@@ -40,11 +40,13 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
   const { assets: backgrounds } = useAssets({ category: 'backgrounds' });
 
   // PHASE 8: Define which sections show in Simple mode
-  const simpleSections = ['Backgrounds', 'Text', 'Characters', 'Objets'];
+  // PHASE 9: Added 'Audio' for audio support
+  const simpleSections = ['Backgrounds', 'Text', 'Characters', 'Objets', 'Audio'];
 
   // Handler for background drag start
   const handleBackgroundDragStart = (e: React.DragEvent, backgroundUrl: string) => {
-    const dragData = { type: 'background', backgroundUrl };
+    const dragData = { type: 'background', url: backgroundUrl };
+    e.dataTransfer.setData('text/x-drag-type', 'background');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
@@ -52,6 +54,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
   // Handler for prop (emoji object) drag start
   const handlePropDragStart = (e: React.DragEvent, emoji: string) => {
     const dragData = { type: 'prop', emoji };
+    e.dataTransfer.setData('text/x-drag-type', 'prop');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
@@ -66,6 +69,7 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
 
     const config = textConfig[textType] || textConfig.body;
     const dragData = { type: 'textbox', ...config };
+    e.dataTransfer.setData('text/x-drag-type', 'textbox');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
@@ -369,25 +373,37 @@ export default function UnifiedPanel({ onOpenModal }: UnifiedPanelProps) {
         >
           <div className="space-y-2">
             <Button
-              variant="outline"
+              variant="token-primary"
               size="sm"
-              className="w-full justify-start hover:bg-[var(--color-bg-hover)]"
-              aria-label="Add background music"
+              onClick={() => onOpenModal('assets', { category: 'music' })}
+              className="w-full justify-start"
+              aria-label="Browse background music library"
             >
               <Volume2 className="w-4 h-4" aria-hidden="true" />
-              Background Music
+              Musique de fond
             </Button>
             <Button
               variant="outline"
               size="sm"
+              onClick={() => onOpenModal('assets', { category: 'sfx' })}
               className="w-full justify-start hover:bg-[var(--color-bg-hover)]"
-              aria-label="Add sound effect"
+              aria-label="Browse sound effects library"
             >
               <Volume2 className="w-4 h-4" aria-hidden="true" />
-              Sound Effects
+              Effets sonores
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenModal('assets', { category: 'voices' })}
+              className="w-full justify-start hover:bg-[var(--color-bg-hover)]"
+              aria-label="Browse voice recordings library"
+            >
+              <Volume2 className="w-4 h-4" aria-hidden="true" />
+              Voix off
             </Button>
             <p className="text-xs text-[var(--color-text-muted)] pt-2 border-t border-[var(--color-border-base)]">
-              Add audio clips to scenes
+              Ajoutez des pistes audio aux scènes
             </p>
           </div>
         </CollapsibleSection>

@@ -142,7 +142,7 @@ export default function CharacterEditorModal({
   const hasFormErrors = Object.keys(errors).some(key => errors[key as keyof typeof errors]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleCancel}>
+    <Dialog open={isOpen} onOpenChange={handleCancel} modal={false}>
       <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0 dark bg-background text-foreground">
         {/* Header with Completeness - REFACTORED COMPONENT */}
         <CompletenessHeader

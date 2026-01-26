@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { useState } from 'react';
-import type { Dialogue, Scene, Character } from '@/types';
+import type { Dialogue, Scene, Character, ModalType, DialogueAudio } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Copy, Plus } from 'lucide-react';
+import { Copy, Plus, Volume2, X } from 'lucide-react';
 
 export interface DialoguePropertiesFormProps {
   dialogue: Dialogue;
@@ -14,6 +15,7 @@ export interface DialoguePropertiesFormProps {
   scenes: Scene[];  // NEW: All scenes for dropdown navigation
   onUpdate: (sceneId: string, dialogueIndex: number, updates: Partial<Dialogue>) => void;
   onDuplicate: () => void;
+  onOpenModal?: (modalType: ModalType, config?: { category?: string; targetSceneId?: string }) => void;
   lastSaved?: number;
   isSaving?: boolean;
 }
@@ -38,6 +40,7 @@ export function DialoguePropertiesForm({
   scenes,
   onUpdate,
   onDuplicate,
+  onOpenModal,
   lastSaved,
   isSaving
 }: DialoguePropertiesFormProps) {
@@ -151,6 +154,87 @@ export function DialoguePropertiesForm({
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               placeholder="Enter dialogue text"
             />
+          </div>
+
+          {/* Sound Effect (SFX) */}
+          <div className="pt-4 border-t border-border">
+            <label className="text-xs font-semibold text-muted-foreground mb-2 uppercase flex items-center gap-1.5">
+              <Volume2 className="h-3.5 w-3.5" />
+              Effet sonore
+            </label>
+
+            {dialogue.sfx?.url ? (
+              <div className="space-y-3 mt-2">
+                {/* Current SFX display */}
+                <div className="flex items-center gap-2 p-2 bg-background rounded-lg border border-border">
+                  <div className="w-8 h-8 rounded bg-accent/20 flex items-center justify-center">
+                    <Volume2 className="h-4 w-4 text-accent" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">
+                      {dialogue.sfx.url.split('/').pop()}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Volume: {Math.round((dialogue.sfx.volume || 0.7) * 100)}%
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleUpdate({ sfx: undefined })}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {/* Volume slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Volume</span>
+                    <span className="text-xs text-foreground font-medium">
+                      {Math.round((dialogue.sfx.volume || 0.7) * 100)}%
+                    </span>
+                  </div>
+                  <Slider
+                    value={[(dialogue.sfx.volume || 0.7) * 100]}
+                    onValueChange={([v]) => handleUpdate({
+                      sfx: { ...dialogue.sfx, volume: v / 100 } as DialogueAudio
+                    })}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Change SFX button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    if (onOpenModal) {
+                      onOpenModal('assets', { category: 'sfx' });
+                    }
+                  }}
+                >
+                  Changer l'effet
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (onOpenModal) {
+                    onOpenModal('assets', { category: 'sfx' });
+                  }
+                }}
+                className="w-full h-16 mt-2 border-2 border-dashed border-border hover:border-accent hover:bg-background/50 flex flex-col gap-1 text-muted-foreground hover:text-accent"
+              >
+                <Volume2 className="w-5 h-5" />
+                <span className="text-xs font-medium">Ajouter un effet sonore</span>
+              </Button>
+            )}
           </div>
 
           {/* Stats */}

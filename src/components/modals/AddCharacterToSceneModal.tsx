@@ -121,7 +121,7 @@ export default function AddCharacterToSceneModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogContent className="max-w-5xl max-h-[90vh]" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>Ajouter un personnage à la scène</DialogTitle>
@@ -261,6 +261,9 @@ export default function AddCharacterToSceneModal({
                         const dragEvent = e as unknown as React.DragEvent<HTMLImageElement>;
                         setIsDragging(true);
                         dragEvent.dataTransfer.effectAllowed = 'copy';
+                        // Set drag type for visual feedback (accessible in dragOver)
+                        dragEvent.dataTransfer.setData('text/x-drag-type', 'character');
+                        // Set full data for drop handling
                         dragEvent.dataTransfer.setData('application/json', JSON.stringify({
                           characterId: selectedCharacterId,
                           mood: mood,
@@ -324,7 +327,7 @@ export default function AddCharacterToSceneModal({
                               </Card>
                             </motion.div>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent portal={false}>
                             <p>Cliquer pour sélectionner &quot;{moodOption}&quot;</p>
                           </TooltipContent>
                         </Tooltip>

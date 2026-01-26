@@ -19,7 +19,9 @@ const PORT = process.env.PORT || 3001;
 // CORS for Vite dev server (accept multiple ports)
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -53,18 +55,23 @@ const storage = multer.diskStorage({
   }
 });
 
+// Separate configurations for images and audio
+const imageTypes = /jpeg|jpg|png|gif|svg|webp/;
+const audioTypes = /mp3|wav|ogg|m4a|flac/;
+const audioMimeTypes = /audio\/(mpeg|wav|ogg|mp4|flac|x-m4a)/;
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max (for longer audio files)
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|svg|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isImage = imageTypes.test(ext) && imageTypes.test(file.mimetype);
+    const isAudio = audioTypes.test(ext.slice(1)) || audioMimeTypes.test(file.mimetype);
 
-    if (extname && mimetype) {
+    if (isImage || isAudio) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images allowed (jpeg, jpg, png, gif, svg, webp).'));
+      cb(new Error('Invalid file type. Allowed: images (jpeg, jpg, png, gif, svg, webp) and audio (mp3, wav, ogg, m4a, flac).'));
     }
   }
 });
@@ -217,6 +224,90 @@ app.delete('/api/assets', async (req, res) => {
     });
   } catch (error) {
     console.error('[Asset Delete] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Move asset to different category endpoint
+app.patch('/api/assets/move', async (req, res) => {
+  try {
+    const { path: assetPath, newCategory } = req.body;
+
+    // Validate inputs
+    if (!assetPath || !newCategory) {
+      return res.status(400).json({ error: 'Asset path and new category are required' });
+    }
+
+    const validCategories = ['backgrounds', 'characters', 'illustrations', 'music', 'sfx', 'voices'];
+    if (!validCategories.includes(newCategory)) {
+      return res.status(400).json({ error: `Invalid category. Must be one of: ${validCategories.join(', ')}` });
+    }
+
+    // Security: Validate path format to prevent directory traversal
+    if (!assetPath.startsWith('/assets/') || assetPath.includes('..')) {
+      return res.status(400).json({ error: 'Invalid path format' });
+    }
+
+    // Extract current category and filename
+    const pathParts = assetPath.replace('/assets/', '').split('/');
+    if (pathParts.length !== 2) {
+      return res.status(400).json({ error: 'Invalid path structure' });
+    }
+
+    const [currentCategory, filename] = pathParts;
+
+    // Check if already in target category
+    if (currentCategory === newCategory) {
+      return res.json({
+        success: true,
+        message: 'Asset is already in this category',
+        newPath: assetPath
+      });
+    }
+
+    // Build paths
+    const sourcePath = path.join(__dirname, '../public/assets', currentCategory, filename);
+    const destDir = path.join(__dirname, '../public/assets', newCategory);
+    const destPath = path.join(destDir, filename);
+
+    // Check source file exists
+    if (!fs.existsSync(sourcePath)) {
+      return res.status(404).json({ error: 'Source file not found' });
+    }
+
+    // Create destination directory if needed
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+
+    // Check if destination file already exists
+    if (fs.existsSync(destPath)) {
+      return res.status(409).json({ error: 'A file with this name already exists in the destination category' });
+    }
+
+    // Move the file
+    fs.renameSync(sourcePath, destPath);
+    console.log(`[Asset Move] Moved: ${assetPath} → /assets/${newCategory}/${filename}`);
+
+    // Regenerate manifest
+    try {
+      const manifestScript = path.join(__dirname, '../tools/generate-assets-manifest.js');
+      await execAsync(`node "${manifestScript}"`);
+      console.log('[Asset Move] Manifest regenerated');
+    } catch (manifestError) {
+      console.error('[Asset Move] Manifest regeneration failed:', manifestError);
+    }
+
+    const newAssetPath = `/assets/${newCategory}/${filename}`;
+    res.json({
+      success: true,
+      oldPath: assetPath,
+      newPath: newAssetPath,
+      newCategory,
+      message: `Asset moved to ${newCategory}`
+    });
+  } catch (error) {
+    console.error('[Asset Move] Error:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -1,5 +1,7 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useUIStore, useScenes, useCharacters } from '../stores/index.ts';
+import { useSelection, toSelectedElementType } from '../hooks/useSelection.ts';
+import { useEditorLogic } from '../hooks/useEditorLogic.ts';
 import { useUndoRedo } from '../hooks/useUndoRedo.ts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { Panel, Group, Separator } from 'react-resizable-panels';
@@ -14,12 +16,12 @@ import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/Announceme
 import MainCanvas from './panels/MainCanvas';
 import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
-import type { ModalContext, SelectedElementType, FullscreenMode } from '../types';
+import type { ModalContext, FullscreenMode } from '../types';
 
 const LeftPanel = React.lazy(() => import('./panels/LeftPanel'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
 const UnifiedPanel = React.lazy(() => import('./panels/UnifiedPanel'));
-const CharactersModal = React.lazy(() => import('./modals/CharactersModal'));
+const CharactersModalV2 = React.lazy(() => import('./modals/CharactersModalV2'));
 const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal'));
 const SettingsModal = React.lazy(() => import('./modals/SettingsModal'));
 const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
@@ -37,6 +39,7 @@ interface EditorShellProps {
 }
 
 export default function EditorShell({ onBack = null }: EditorShellProps) {
+  // === DATA LAYER ===
   // Zustand stores (memoized selectors for better performance)
   const scenes = useScenes();
   const characters = useCharacters();
@@ -45,25 +48,31 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const lastSaved = useUIStore((state) => state.lastSaved);
   const isSaving = useUIStore((state) => state.isSaving);
 
+  // Selection state (centralized in SelectionStore)
+  const { selectedElement } = useSelection();
+
   // Undo/Redo functionality from zundo
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
+  // === BUSINESS LOGIC LAYER ===
+  // All business logic extracted to useEditorLogic (Clean Architecture)
+  const editorLogic = useEditorLogic({
+    scenes,
+    selectedSceneForEdit,
+    setSelectedSceneForEdit,
+  });
+
+  // === UI STATE LAYER ===
+  // UI-only state (not business logic)
   const validation = useValidation();
   const [showProblemsPanel, setShowProblemsPanel] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<SelectedElementType>(null);
-
-  // Track active tab in LeftPanel ('scenes' or 'dialogues')
   const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
-
-  // PHASE 6: Fullscreen mode state (null | 'graph' | 'canvas' | 'preview')
   const [fullscreenMode, setFullscreenMode] = useState<FullscreenMode>(null);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [modalContext, setModalContext] = useState<ModalContext>({});
 
-  // Modal state management
-  const [activeModal, setActiveModal] = useState<string | null>(null); // 'characters' | 'assets' | 'export' | 'preview' | null
-  const [modalContext, setModalContext] = useState<ModalContext>({}); // { characterId, category, sceneId, ... }
-
-  // KEYBOARD SHORTCUTS: Register global keyboard shortcuts (Ctrl+Z, Ctrl+Y, etc.)
+  // === KEYBOARD SHORTCUTS ===
   useKeyboardShortcuts({
     onUndo: undo,
     onRedo: redo,
@@ -71,6 +80,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     onCommandPalette: () => setCommandPaletteOpen(true),
   });
 
+  // === ONE-TIME SETUP ===
   // Detect old localStorage cache that might block panel resizing
   useEffect(() => {
     const oldKeys = [
@@ -85,89 +95,26 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     }
   }, []);
 
-  // Auto-select first dialogue on initial load or when scene changes
-  // Visual novel behavior: always show first dialogue when scene is selected
-  useEffect(() => {
-    // Find the current scene
-    const currentScene = scenes.find(s => s.id === selectedSceneForEdit);
+  // === PRESENTATION-LAYER HANDLERS ===
+  // Thin wrappers that delegate to business logic + handle UI state
 
-    // Guard: need a scene with dialogues
-    if (!currentScene?.dialogues?.length) {
-      return;
-    }
-
-    // Guard: don't override existing dialogue selection for this scene
-    if (
-      selectedElement?.type === 'dialogue' &&
-      selectedElement?.sceneId === currentScene.id
-    ) {
-      return;
-    }
-
-    // Auto-select first dialogue
-    logger.info(`[EditorShell] Auto-selecting first dialogue for scene: ${currentScene.id}`);
-    setSelectedElement({ type: 'dialogue', sceneId: currentScene.id, index: 0 });
-  }, [scenes, selectedSceneForEdit]);
-
-  // Handler for ProblemsPanel navigation
   const handleNavigateTo = (_tab: string, params?: { sceneId?: string }) => {
-    if (params?.sceneId) {
-      setSelectedSceneForEdit(params.sceneId);
-    }
-    setShowProblemsPanel(false);
+    editorLogic.handleNavigateTo(_tab, params);
+    setShowProblemsPanel(false); // UI state update
   };
 
-  // Handler for scene selection from Explorer
-  // Always select first dialogue when scene is chosen (visual novel behavior)
-  const handleSceneSelect = (sceneId: string) => {
-    setSelectedSceneForEdit(sceneId);
-    // Set to null - the auto-select effect will pick up the first dialogue
-    setSelectedElement(null);
-  };
-
-  // Handler for character selection from Explorer
-  const handleCharacterSelect = (charId: string) => {
-    setSelectedElement({ type: 'character', id: charId });
-  };
-
-  // Handler for dialogue selection from Explorer
-  const handleDialogueSelect = (sceneId: string, dialogueIndex: number, metadata?: { type: string; sceneCharacterId?: string }) => {
-    setSelectedSceneForEdit(sceneId);
-
-    // If metadata is provided (e.g., for scene character selection), use it
-    if (metadata && metadata.type === 'sceneCharacter' && metadata.sceneCharacterId) {
-      setSelectedElement({
-        type: 'sceneCharacter',
-        sceneId,
-        sceneCharacterId: metadata.sceneCharacterId,
-      });
-    } else {
-      setSelectedElement({ type: 'dialogue', sceneId, index: dialogueIndex });
-    }
-  };
-
-  // Handler for tab change in LeftPanel
-  // - 'scenes' tab: show UnifiedPanel (Add Elements) by setting selectedElement to scene
-  // - 'dialogues' tab: clear scene selection to trigger auto-select in MainCanvas
   const handleTabChange = (tab: 'scenes' | 'dialogues') => {
-    logger.debug('[EditorShell] Tab changed to:', tab);
-    setLeftPanelActiveTab(tab);
-
-    if (tab === 'scenes') {
-      // Always set to scene type to show UnifiedPanel
-      // If no scene selected, select first one (if exists)
-      const sceneId = selectedSceneForEdit || scenes[0]?.id;
-      if (sceneId) {
-        setSelectedSceneForEdit(sceneId);
-        setSelectedElement({ type: 'scene', id: sceneId });
-      }
-    } else if (tab === 'dialogues') {
-      // Clear to null - auto-select in MainCanvas will pick up first dialogue
-      setSelectedElement(null);
-    }
+    setLeftPanelActiveTab(tab); // UI state update
+    editorLogic.handleTabChange(tab); // Business logic delegation
   };
 
   const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
+
+  // Convert SelectedElement to SelectedElementType for legacy components
+  const selectedElementLegacy = useMemo(
+    () => toSelectedElementType(selectedElement),
+    [selectedElement]
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -255,8 +202,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                   <LeftPanel
                     activeTab={leftPanelActiveTab}
                     onTabChange={handleTabChange}
-                    onDialogueSelect={handleDialogueSelect}
-                    onSceneSelect={handleSceneSelect}
+                    onDialogueSelect={editorLogic.handleDialogueSelect}
+                    onSceneSelect={editorLogic.handleSceneSelect}
                   />
                 </ErrorBoundary>
               </Sidebar>
@@ -285,8 +232,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               <ErrorBoundary name="MainCanvas">
                 <MainCanvas
                   selectedScene={selectedScene}
-                  selectedElement={selectedElement}
-                  onSelectDialogue={handleDialogueSelect}
+                  selectedElement={selectedElementLegacy}
+                  onSelectDialogue={editorLogic.handleDialogueSelect}
                   onOpenModal={(modal, context = {}) => {
                     setActiveModal(modal);
                     setModalContext(context as ModalContext);
@@ -330,7 +277,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                     />
                   ) : (
                     <PropertiesPanel
-                      selectedElement={selectedElement}
+                      selectedElement={selectedElementLegacy}
                       selectedScene={selectedScene}
                       characters={characters}
                       onOpenModal={(modal, context) => {
@@ -361,8 +308,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
           </ErrorBoundary>
         )}
         {activeModal === 'characters' && (
-          <ErrorBoundary name="CharactersModal">
-            <CharactersModal
+          <ErrorBoundary name="CharactersModalV2">
+            <CharactersModalV2
               isOpen={true}
               onClose={() => setActiveModal(null)}
               initialCharacterId={modalContext.characterId}

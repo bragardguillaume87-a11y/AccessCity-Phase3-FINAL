@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Upload, Image as ImageIcon, Sparkles, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAssetUpload } from '../hooks/useAssetUpload';
+
+// Audio categories for conditional icon rendering
+const AUDIO_CATEGORIES = ['music', 'sfx', 'voices'];
 
 /**
  * Props for UploadZone component
@@ -56,10 +59,13 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
     setIsDragActive(false);
 
     const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    // Accept both images and audio files
+    const validFiles = files.filter(f =>
+      f.type.startsWith('image/') || f.type.startsWith('audio/')
+    );
 
-    if (imageFiles.length > 0) {
-      uploadFiles(imageFiles);
+    if (validFiles.length > 0) {
+      uploadFiles(validFiles);
     }
   }, [uploadFiles]);
 
@@ -91,7 +97,7 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
         <input
           type="file"
           multiple
-          accept="image/*"
+          accept="image/*,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/flac"
           onChange={handleFileInput}
           className="hidden"
           id={`upload-input-${category}`}
@@ -139,6 +145,8 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
       >
         {isDragActive ? (
           <Sparkles className="w-8 h-8 text-white animate-pulse" />
+        ) : AUDIO_CATEGORIES.includes(category) ? (
+          <Music className="w-8 h-8 text-white" />
         ) : (
           <ImageIcon className="w-8 h-8 text-white" />
         )}
@@ -149,13 +157,17 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
         <p className="text-base font-semibold text-white">
           {isDragActive
             ? "Déposez vos fichiers ici !"
-            : "Glissez-déposez vos images"}
+            : AUDIO_CATEGORIES.includes(category)
+              ? "Glissez-déposez vos fichiers audio"
+              : "Glissez-déposez vos images"}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           ou cliquez pour parcourir
         </p>
         <p className="text-xs text-muted-foreground/70 mt-2">
-          PNG, JPG, SVG, GIF, WebP • Max 10MB par fichier
+          {AUDIO_CATEGORIES.includes(category)
+            ? "MP3, WAV, OGG, FLAC • Max 50MB par fichier"
+            : "PNG, JPG, SVG, GIF, WebP • Max 10MB par fichier"}
         </p>
       </div>
 
@@ -163,7 +175,7 @@ export function UploadZone({ category = 'background', compact = false }: UploadZ
       <input
         type="file"
         multiple
-        accept="image/*"
+        accept="image/*,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/flac"
         onChange={handleFileInput}
         className="hidden"
         id={`upload-input-full-${category}`}

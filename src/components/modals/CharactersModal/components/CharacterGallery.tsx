@@ -61,23 +61,25 @@ export function CharacterGallery({
   onCreateCharacter
 }: CharacterGalleryProps) {
   return (
-    <ScrollArea className="flex-1 px-8 py-6">
-      {!hasCharacters ? (
-        <CharacterEmptyState
-          searchQuery={searchQuery}
-          onCreateCharacter={onCreateCharacter}
-        />
-      ) : (
-        <div
-          className={
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-              : 'space-y-3'
-          }
-        >
-          {children}
-        </div>
-      )}
+    <ScrollArea className="flex-1">
+      <div className="p-6">
+        {!hasCharacters ? (
+          <CharacterEmptyState
+            searchQuery={searchQuery}
+            onCreateCharacter={onCreateCharacter}
+          />
+        ) : (
+          <div
+            className={
+              viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                : 'space-y-3'
+            }
+          >
+            {children}
+          </div>
+        )}
+      </div>
     </ScrollArea>
   );
 }

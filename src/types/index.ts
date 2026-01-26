@@ -48,6 +48,52 @@ export interface DiceCheck {
 }
 
 // ============================================================================
+// AUDIO
+// ============================================================================
+
+/**
+ * Audio configuration for scene background music
+ *
+ * @example
+ * ```typescript
+ * const sceneAudio: SceneAudio = {
+ *   url: '/assets/music/ambient-forest.mp3',
+ *   volume: 0.5,
+ *   loop: true,
+ *   continueToNextScene: false
+ * };
+ * ```
+ */
+export interface SceneAudio {
+  /** URL path to the audio file */
+  url: string;
+  /** Volume level 0-1, default 0.5 */
+  volume?: number;
+  /** Whether to loop the audio, default true */
+  loop?: boolean;
+  /** Whether to continue playing on next scene, default false */
+  continueToNextScene?: boolean;
+}
+
+/**
+ * Audio configuration for dialogue sound effects
+ *
+ * @example
+ * ```typescript
+ * const dialogueSfx: DialogueAudio = {
+ *   url: '/assets/sfx/door-knock.wav',
+ *   volume: 0.7
+ * };
+ * ```
+ */
+export interface DialogueAudio {
+  /** URL path to the audio file */
+  url: string;
+  /** Volume level 0-1, default 0.7 */
+  volume?: number;
+}
+
+// ============================================================================
 // SCENES & DIALOGUES
 // ============================================================================
 
@@ -56,6 +102,8 @@ export interface Dialogue {
   speaker: string;
   text: string;
   choices: DialogueChoice[];
+  /** Sound effect to play when this dialogue appears */
+  sfx?: DialogueAudio;
 }
 
 /**
@@ -116,6 +164,8 @@ export interface Scene {
   characters: SceneCharacter[];
   textBoxes?: TextBox[];
   props?: Prop[];
+  /** Background music configuration for this scene */
+  audio?: SceneAudio;
 }
 
 // ============================================================================
@@ -245,6 +295,9 @@ export interface AssetStats {
     backgrounds: number;
     characters: number;
     illustrations: number;
+    music: number;
+    sfx: number;
+    voices: number;
   };
 }
 

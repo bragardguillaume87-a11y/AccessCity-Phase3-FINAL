@@ -1,50 +1,38 @@
 {
-  "generated": "2026-01-23T11:59:58.515Z",
+  "generated": "2026-01-26T17:18:26.244Z",
   "version": "1.0.0",
-  "totalAssets": 4,
+  "totalAssets": 3,
   "categories": [
-    "backgrounds",
-    "illustrations"
+    "backgrounds"
   ],
   "assets": {
     "backgrounds": [
       {
-        "id": "backgrounds/1152407-1766912155373",
-        "name": "1152407-1766912155373",
-        "path": "/assets/backgrounds/1152407-1766912155373.jpg",
-        "type": "jpg",
+        "id": "backgrounds/61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
+        "name": "61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
+        "path": "/assets/backgrounds/61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715.png",
+        "type": "png",
         "category": "backgrounds",
-        "size": 257048,
-        "modified": "2025-12-28T08:55:55.377Z"
-      }
-    ],
-    "illustrations": [
-      {
-        "id": "illustrations/1152407-1766108312655",
-        "name": "1152407-1766108312655",
-        "path": "/assets/illustrations/1152407-1766108312655.jpg",
-        "type": "jpg",
-        "category": "illustrations",
-        "size": 257048,
-        "modified": "2025-12-19T01:38:32.660Z"
+        "size": 1273399,
+        "modified": "2026-01-23T22:10:10.806Z"
       },
       {
-        "id": "illustrations/46d516554e2684a85857ef4b1c44eb3b-1766219966013",
-        "name": "46d516554e2684a85857ef4b1c44eb3b-1766219966013",
-        "path": "/assets/illustrations/46d516554e2684a85857ef4b1c44eb3b-1766219966013.jpg",
-        "type": "jpg",
-        "category": "illustrations",
-        "size": 190628,
-        "modified": "2025-12-20T08:39:26.020Z"
+        "id": "backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902",
+        "name": "de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902",
+        "path": "/assets/backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1784558,
+        "modified": "2026-01-23T22:10:04.911Z"
       },
       {
-        "id": "illustrations/4809677696321801264396237113013811855004898n-1766108299595",
-        "name": "4809677696321801264396237113013811855004898n-1766108299595",
-        "path": "/assets/illustrations/4809677696321801264396237113013811855004898n-1766108299595.jpg",
-        "type": "jpg",
-        "category": "illustrations",
-        "size": 744683,
-        "modified": "2025-12-19T01:38:19.620Z"
+        "id": "backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293",
+        "name": "ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293",
+        "path": "/assets/backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1137731,
+        "modified": "2026-01-23T22:10:13.313Z"
       }
     ]
   }

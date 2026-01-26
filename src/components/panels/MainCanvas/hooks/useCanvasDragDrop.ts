@@ -32,10 +32,16 @@ export interface UseCanvasDragDropProps {
 }
 
 /**
+ * Supported drag item types
+ */
+export type DragType = 'background' | 'character' | 'textbox' | 'prop' | 'emoji';
+
+/**
  * Return type for useCanvasDragDrop hook
  */
 export interface UseCanvasDragDropReturn {
   isDragOver: boolean;
+  dragType: DragType | null;
   dropFeedback: string | null;
   handleDragOver: (e: React.DragEvent) => void;
   handleDragLeave: (e: React.DragEvent) => void;
@@ -80,15 +86,28 @@ export function useCanvasDragDrop({
   actions
 }: UseCanvasDragDropProps): UseCanvasDragDropReturn {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [dragType, setDragType] = useState<DragType | null>(null);
   const [dropFeedback, setDropFeedback] = useState<string | null>(null);
 
   /**
    * Handle drag over - Enable drop and show visual feedback
+   * Detects drag type from dataTransfer to show appropriate feedback
+   *
+   * Note: Uses custom MIME type 'text/x-drag-type' to detect type during dragOver
+   * since HTML5 API doesn't allow reading 'application/json' until drop event
    */
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     setIsDragOver(true);
+
+    // Detect drag type from custom MIME type (accessible during dragOver)
+    if (e.dataTransfer.types.includes('text/x-drag-type')) {
+      const dragTypeValue = e.dataTransfer.getData('text/x-drag-type');
+      if (dragTypeValue && ['background', 'character', 'textbox', 'prop', 'emoji'].includes(dragTypeValue)) {
+        setDragType(dragTypeValue as DragType);
+      }
+    }
   };
 
   /**
@@ -97,6 +116,7 @@ export function useCanvasDragDrop({
   const handleDragLeave = (e: React.DragEvent) => {
     if (!canvasNode?.contains(e.relatedTarget as Node)) {
       setIsDragOver(false);
+      setDragType(null);
     }
   };
 
@@ -204,6 +224,7 @@ export function useCanvasDragDrop({
 
   return {
     isDragOver,
+    dragType,
     dropFeedback,
     handleDragOver,
     handleDragLeave,

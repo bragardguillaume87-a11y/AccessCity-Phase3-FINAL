@@ -127,7 +127,7 @@ export function CharacterSearchToolbar({
           <SelectTrigger className="w-48" aria-label="Trier par">
             <SelectValue placeholder="Trier par" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent portal={false}>
             <SelectItem value="name">A → Z</SelectItem>
             <SelectItem value="name-desc">Z → A</SelectItem>
             <SelectItem value="completeness">Complétude</SelectItem>
@@ -139,7 +139,7 @@ export function CharacterSearchToolbar({
           <SelectTrigger className="w-48" aria-label="Filtrer par humeur">
             <SelectValue placeholder="Filtrer par humeur" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent portal={false}>
             <SelectItem value="all">Toutes les humeurs</SelectItem>
             <SelectItem value="neutral">Neutral</SelectItem>
             <SelectItem value="happy">Happy</SelectItem>

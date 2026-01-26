@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { Scene, GameStats } from '@/types';
 import { useScenesStore, useSettingsStore } from '../../stores/index';
 import { useGameState } from '../../hooks/useGameState';
 import { Button } from '../ui/button';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Volume2, VolumeX } from 'lucide-react';
+import { audioManager } from '../../utils/audioManager';
 
 export interface PreviewPlayerProps {
   initialSceneId?: string | null;
@@ -15,13 +16,81 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
   const scenes = useScenesStore(state => state.scenes);
   const variables = useSettingsStore(state => state.variables);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [audioInitialized, setAudioInitialized] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const liveRegionRef = useRef<HTMLDivElement>(null);
+  const previousSceneIdRef = useRef<string | null>(null);
 
   const { currentScene, currentDialogue, stats, history, isPaused, chooseOption, goToNextDialogue, goToScene, setIsPaused } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
     initialStats: (variables as GameStats) || {}
   });
+
+  // Initialize audio on first user interaction
+  const initializeAudio = useCallback(async () => {
+    if (!audioInitialized) {
+      try {
+        await audioManager.initialize();
+        setAudioInitialized(true);
+      } catch (error) {
+        console.warn('[PreviewPlayer] Audio initialization failed:', error);
+      }
+    }
+  }, [audioInitialized]);
+
+  // Toggle mute
+  const toggleMute = useCallback(() => {
+    const newMuted = audioManager.toggleMute();
+    setIsMuted(newMuted);
+  }, []);
+
+  // Handle scene change - play BGM
+  useEffect(() => {
+    if (!audioInitialized || !currentScene) return;
+
+    const previousSceneId = previousSceneIdRef.current;
+    previousSceneIdRef.current = currentScene.id;
+
+    // Check if scene changed
+    if (previousSceneId && previousSceneId !== currentScene.id) {
+      // Get previous scene to check continueToNextScene
+      const previousScene = scenes.find(s => s.id === previousSceneId);
+
+      // If previous scene had audio with continueToNextScene, don't stop
+      if (previousScene?.audio?.continueToNextScene && currentScene.audio?.url === previousScene.audio.url) {
+        // Same audio, keep playing
+        return;
+      }
+
+      // Stop previous BGM if not continuing
+      if (!previousScene?.audio?.continueToNextScene) {
+        audioManager.stopBGM(500);
+      }
+    }
+
+    // Play new scene's BGM if it has one
+    if (currentScene.audio?.url) {
+      audioManager.playBGM(currentScene.audio);
+    }
+  }, [audioInitialized, currentScene, scenes]);
+
+  // Handle dialogue change - play SFX
+  useEffect(() => {
+    if (!audioInitialized || !currentDialogue) return;
+
+    // Play dialogue SFX if present
+    if (currentDialogue.sfx?.url) {
+      audioManager.playSFX(currentDialogue.sfx);
+    }
+  }, [audioInitialized, currentDialogue]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      audioManager.stopBGM(0);
+    };
+  }, []);
 
   // Annonce accessibilité
   useEffect(() => {
@@ -42,13 +111,31 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
   }
 
   return (
-    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'bg-background text-white'}`}>
+    <div
+      className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'bg-background text-white'}`}
+      onClick={initializeAudio}
+    >
       <div ref={liveRegionRef} className="sr-only" aria-live="polite" />
 
       {/* Header */}
       <header className="flex justify-between items-center p-4 border-b border-border bg-card">
         <h2 className="font-bold">Preview: {currentScene.title}</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {/* Audio controls */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              initializeAudio();
+              toggleMute();
+            }}
+            className={`px-3 py-1 rounded text-sm flex items-center gap-1.5 ${
+              isMuted ? 'bg-red-600/20 text-red-400' : 'bg-muted'
+            }`}
+            title={isMuted ? 'Activer le son' : 'Couper le son'}
+          >
+            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            {isMuted ? 'Son OFF' : 'Son ON'}
+          </button>
           <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-3 py-1 bg-muted rounded text-sm">
             {isFullscreen ? 'Quitter Plein écran' : 'Plein écran'}
           </button>

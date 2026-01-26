@@ -28,6 +28,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
       characterId,
       mood
     };
+    e.dataTransfer.setData('text/x-drag-type', 'character');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
 

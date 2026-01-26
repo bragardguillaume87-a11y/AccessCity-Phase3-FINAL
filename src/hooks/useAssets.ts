@@ -37,6 +37,15 @@ interface DeleteAssetsResult {
   message: string;
 }
 
+interface MoveAssetResult {
+  success: boolean;
+  oldPath?: string;
+  newPath?: string;
+  newCategory?: string;
+  message: string;
+  error?: string;
+}
+
 interface UseAssetsReturn {
   assets: Asset[];
   loading: boolean;
@@ -46,6 +55,8 @@ interface UseAssetsReturn {
   reloadManifest: () => void;
   deleteAssets: (paths: string[]) => Promise<DeleteAssetsResult>;
   deleting: boolean;
+  moveAsset: (assetPath: string, newCategory: string) => Promise<MoveAssetResult>;
+  moving: boolean;
 }
 
 // ============================================================================
@@ -60,6 +71,7 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
   const [manifest, setManifest] = useState<AssetsManifest | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
@@ -192,6 +204,59 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     }
   }, []);
 
+  /**
+   * Move an asset to a different category
+   * @param assetPath - Current asset path (e.g., '/assets/illustrations/image.png')
+   * @param newCategory - Target category ('backgrounds', 'characters', 'illustrations')
+   * @returns Promise with move result including new path
+   */
+  const moveAsset = useCallback(async (assetPath: string, newCategory: string): Promise<MoveAssetResult> => {
+    if (!assetPath || !newCategory) {
+      return { success: false, message: 'Asset path and new category are required' };
+    }
+
+    setMoving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${ASSET_SERVER_URL}/api/assets/move`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path: assetPath, newCategory }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error ${response.status}`);
+      }
+
+      const result: MoveAssetResult = await response.json();
+
+      // Reload manifest after successful move
+      if (result.success) {
+        logger.info(`[useAssets] Moved asset to ${newCategory}, reloading manifest...`);
+        setTimeout(() => {
+          setReloadTrigger(prev => prev + 1);
+        }, 500);
+      }
+
+      setMoving(false);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to move asset';
+      logger.error('[useAssets] Move error:', err);
+      setError(errorMessage);
+      setMoving(false);
+      return {
+        success: false,
+        message: errorMessage,
+        error: errorMessage
+      };
+    }
+  }, []);
+
   const assets = useMemo(() => {
     if (!manifest || !manifest.assets) return [];
 
@@ -221,7 +286,9 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     manifest,
     reloadManifest,
     deleteAssets,
-    deleting
+    deleting,
+    moveAsset,
+    moving
   };
 }
 

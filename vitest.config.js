@@ -1,36 +1,32 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './tests/setup.js',
-    css: true,
-    include: ['tests/**/*.{test,spec}.{js,jsx}'], // Only Vitest tests
-    exclude: [
-      'node_modules',
-      'dist',
-      'e2e', // Exclude Playwright
-      'test', // Exclude old test folder
-      '**/*.spec.ts', // Exclude TypeScript specs
-    ],
+    setupFiles: './src/test/setup.ts',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
-        'tests/',
-        '**/*.config.js',
-        '**/dist/**',
+        'src/test/',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/*.spec.ts',
+        '**/*.spec.tsx',
       ],
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
     },
   },
 });

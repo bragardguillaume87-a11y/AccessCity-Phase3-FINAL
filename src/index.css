@@ -662,60 +662,62 @@ textarea {
 
 @layer base {
   /* Light mode (fallback) */
+  /* HSL format: H S% L% (without hsl() wrapper - Tailwind adds it) */
   :root {
-    --background: #f9f9f9;
-    --foreground: #333333;
-    --card: #ffffff;
-    --card-foreground: #333333;
-    --popover: #ffffff;
-    --popover-foreground: #333333;
-    --primary: #6c5ce7;
-    --primary-foreground: #ffffff;
-    --secondary: #a1c9f2;
-    --secondary-foreground: #333333;
-    --muted: #c9c4b5;
-    --muted-foreground: #6e6e6e;
-    --accent: #8b9467;
-    --accent-foreground: #ffffff;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: #d4d4d4;
-    --input: #d4d4d4;
-    --ring: #6c5ce7;
-    --chart-1: #6c5ce7;
-    --chart-2: #8e44ad;
-    --chart-3: #4b0082;
-    --chart-4: #6495ed;
-    --chart-5: #4682b4;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+    --primary: 248 75% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 209 78% 79%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 43 19% 75%;
+    --muted-foreground: 0 0% 43%;
+    --accent: 77 18% 49%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 83%;
+    --input: 0 0% 83%;
+    --ring: 248 75% 64%;
+    --chart-1: 248 75% 64%;
+    --chart-2: 283 49% 47%;
+    --chart-3: 275 100% 25%;
+    --chart-4: 219 79% 66%;
+    --chart-5: 207 44% 49%;
     --radius: 0.5rem;
   }
 
   /* Dark mode - Midnight Bloom */
+  /* HSL format: H S% L% (without hsl() wrapper - Tailwind adds it) */
   .dark {
-    --background: #1a1d23;
-    --foreground: #e5e5e5;
-    --card: #2f3436;
-    --card-foreground: #e5e5e5;
-    --popover: #2f3436;
-    --popover-foreground: #e5e5e5;
-    --primary: #6c5ce7;
-    --primary-foreground: #ffffff;
-    --secondary: #4b0082;
-    --secondary-foreground: #e5e5e5;
-    --muted: #444444;
-    --muted-foreground: #a3a3a3;
-    --accent: #6495ed;
-    --accent-foreground: #e5e5e5;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: #444444;
-    --input: #444444;
-    --ring: #6c5ce7;
-    --chart-1: #6c5ce7;
-    --chart-2: #8e44ad;
-    --chart-3: #4b0082;
-    --chart-4: #6495ed;
-    --chart-5: #4682b4;
+    --background: 220 15% 12%;
+    --foreground: 0 0% 90%;
+    --card: 195 7% 20%;
+    --card-foreground: 0 0% 90%;
+    --popover: 195 7% 20%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 248 75% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 275 100% 25%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 27%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 219 79% 66%;
+    --accent-foreground: 0 0% 90%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 27%;
+    --input: 0 0% 27%;
+    --ring: 248 75% 64%;
+    --chart-1: 248 75% 64%;
+    --chart-2: 283 49% 47%;
+    --chart-3: 275 100% 25%;
+    --chart-4: 219 79% 66%;
+    --chart-5: 207 44% 49%;
   }
 
   /* Apply dark class to root by default (dark-first app) */

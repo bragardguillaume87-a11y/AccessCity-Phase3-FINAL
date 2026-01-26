@@ -8,6 +8,10 @@ import { logger } from "@/utils/logger"
  * Displayed when an unhandled error occurs in the component tree
  */
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  // Type guards for TypeScript strict mode
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
   return (
     <div
       role="alert"
@@ -45,8 +49,8 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
                 Détails de l'erreur (pour les développeurs)
               </summary>
               <pre className="bg-gray-950 border border-gray-800 rounded p-4 text-xs text-red-400 overflow-auto max-h-64">
-                {error.message}
-                {error.stack && "\n\n" + error.stack}
+                {errorMessage}
+                {errorStack && "\n\n" + errorStack}
               </pre>
             </details>
 

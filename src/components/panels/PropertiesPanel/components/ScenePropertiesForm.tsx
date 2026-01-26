@@ -1,8 +1,10 @@
 import * as React from 'react';
-import type { Scene, ModalType } from '@/types';
+import type { Scene, ModalType, SceneAudio } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Music, Volume2, Repeat, ArrowRight } from 'lucide-react';
 
 export interface ScenePropertiesFormProps {
   scene: Scene;
@@ -150,6 +152,119 @@ export function ScenePropertiesForm({
               )}
             </div>
           </details>
+        </div>
+
+        {/* Audio / Background Music */}
+        <div className="pt-4 border-t border-border">
+          <label className="text-xs font-semibold text-muted-foreground mb-2 uppercase flex items-center gap-1.5">
+            <Music className="h-3.5 w-3.5" />
+            Musique de fond
+          </label>
+
+          {scene.audio?.url ? (
+            <div className="space-y-3">
+              {/* Current audio display */}
+              <div className="flex items-center gap-2 p-2 bg-background rounded-lg border border-border">
+                <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center">
+                  <Music className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">
+                    {scene.audio.url.split('/').pop()}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Volume: {Math.round((scene.audio.volume || 0.5) * 100)}%
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => handleUpdate({ audio: undefined })}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
+              {/* Volume slider */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Volume2 className="h-3 w-3" />
+                    Volume
+                  </span>
+                  <span className="text-xs text-foreground font-medium">
+                    {Math.round((scene.audio.volume || 0.5) * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  value={[(scene.audio.volume || 0.5) * 100]}
+                  onValueChange={([v]) => handleUpdate({
+                    audio: { ...scene.audio, volume: v / 100 } as SceneAudio
+                  })}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Loop toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Repeat className="h-3 w-3" />
+                  Boucle
+                </span>
+                <Switch
+                  checked={scene.audio.loop !== false}
+                  onCheckedChange={(checked) => handleUpdate({
+                    audio: { ...scene.audio, loop: checked } as SceneAudio
+                  })}
+                />
+              </div>
+
+              {/* Continue to next scene toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ArrowRight className="h-3 w-3" />
+                  Continuer sur scène suivante
+                </span>
+                <Switch
+                  checked={scene.audio.continueToNextScene === true}
+                  onCheckedChange={(checked) => handleUpdate({
+                    audio: { ...scene.audio, continueToNextScene: checked } as SceneAudio
+                  })}
+                />
+              </div>
+
+              {/* Change audio button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  if (onOpenModal) {
+                    onOpenModal('assets', { category: 'music', targetSceneId: scene.id });
+                  }
+                }}
+              >
+                <Upload className="h-3 w-3" />
+                Changer la musique
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (onOpenModal) {
+                  onOpenModal('assets', { category: 'music', targetSceneId: scene.id });
+                }
+              }}
+              className="w-full h-20 border-2 border-dashed border-border hover:border-primary hover:bg-background/50 flex flex-col gap-1 text-muted-foreground hover:text-primary"
+            >
+              <Music className="w-6 h-6" />
+              <span className="text-xs font-medium">Ajouter une musique</span>
+            </Button>
+          )}
         </div>
 
         {/* Stats */}

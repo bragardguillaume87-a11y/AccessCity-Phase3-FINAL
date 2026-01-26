@@ -167,7 +167,7 @@ export function MoodListItem({
                     {hasSprite ? 'Changer' : 'Assigner'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[600px] p-0" align="end" side="left">
+                <PopoverContent className="w-[600px] p-0" align="end" side="left" portal={false}>
                   <div className="max-h-[400px] overflow-y-auto p-4">
                     <h4 className="font-semibold mb-3">
                       Sélectionner un sprite pour: <span className="text-primary">{mood}</span>

@@ -8,7 +8,13 @@ const __dirname = path.dirname(__filename);
 const ASSETS_DIR = path.join(__dirname, '../public/assets');
 const OUTPUT_FILE = path.join(__dirname, '../public/assets-manifest.json');
 
-const supportedExtensions = ['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif'];
+// Image and audio extensions
+const supportedExtensions = [
+  // Images
+  '.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif',
+  // Audio
+  '.mp3', '.wav', '.ogg', '.m4a', '.flac'
+];
 
 function scanDirectory(dir, baseDir = dir) {
   if (!fs.existsSync(dir)) {

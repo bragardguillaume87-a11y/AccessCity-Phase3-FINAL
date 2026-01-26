@@ -281,7 +281,7 @@ export default function MainCanvas({
             onDrop={dragDrop.handleDrop}
           >
             {/* Drop Zone Indicator */}
-            <DropZoneIndicator isDragOver={dragDrop.isDragOver} />
+            <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
 
             {/* Grid Overlay */}
             <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />

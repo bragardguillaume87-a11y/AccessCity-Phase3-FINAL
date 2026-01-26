@@ -1,0 +1,167 @@
+{
+  "version": "1.0.0",
+  "exportDate": "2025-11-23T12:00:00.000Z",
+  "scenes": {
+    "scenes": [
+      {
+        "id": "demo_start",
+        "title": "Le Dilemme du Parc (Démo)",
+        "description": "Une scène de démonstration utilisant toutes les fonctionnalités : humeurs, conditions, effets.",
+        "dialogues": [
+          {
+            "speaker": "narrator",
+            "mood": "neutral",
+            "text": "Vous arrivez devant le vieux parc de la ville. Le soleil brille, mais un obstacle se dresse devant vous.",
+            "background": "assets/backgrounds/city_street.svg"
+          },
+          {
+            "speaker": "player",
+            "mood": "thoughtful",
+            "text": "Cette porte tourniquet... Je ne suis pas sûr que mon fauteuil puisse passer.",
+            "background": "assets/backgrounds/city_street.svg"
+          },
+          {
+            "speaker": "counsellor",
+            "mood": "neutral",
+            "text": "Bonjour ! C'est un vrai problème, n'est-ce pas ? C'est 'historique', disent-ils.",
+            "background": "assets/backgrounds/city_street.svg"
+          },
+          {
+            "speaker": "counsellor",
+            "mood": "helpful",
+            "text": "Que comptez-vous faire ?",
+            "background": "assets/backgrounds/city_street.svg",
+            "choices": [
+              {
+                "text": "Essayer de forcer le passage",
+                "targetScene": "demo_force",
+                "effects": [
+                  {
+                    "variable": "Physique",
+                    "operation": "add",
+                    "value": -10
+                  }
+                ]
+              },
+              {
+                "text": "Chercher une entrée latérale",
+                "targetScene": "demo_search",
+                "effects": [
+                  {
+                    "variable": "Autonomie",
+                    "operation": "add",
+                    "value": 5
+                  }
+                ]
+              },
+              {
+                "text": "[Confiance > 40] Proposer des travaux",
+                "targetScene": "demo_propose",
+                "conditions": [
+                  {
+                    "variable": "Confiance",
+                    "operator": ">",
+                    "value": 40
+                  }
+                ],
+                "effects": [
+                  {
+                    "variable": "Moral",
+                    "operation": "add",
+                    "value": 10
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "demo_force",
+        "title": "Passage en force",
+        "description": "Résultat du choix 1",
+        "dialogues": [
+          {
+            "speaker": "player",
+            "mood": "sad",
+            "text": "Aïe... Ça coince. J'ai rayé ma main courante et je suis bloqué.",
+            "background": "assets/backgrounds/city_street.svg"
+          },
+          {
+            "speaker": "narrator",
+            "mood": "neutral",
+            "text": "Votre barre de Physique diminue. Ce n'était pas la meilleure idée.",
+            "background": "assets/backgrounds/city_street.svg"
+          }
+        ]
+      },
+      {
+        "id": "demo_search",
+        "title": "Recherche alternative",
+        "description": "Résultat du choix 2",
+        "dialogues": [
+          {
+            "speaker": "player",
+            "mood": "happy",
+            "text": "Regardez ! Il y a un portail de service ouvert un peu plus loin.",
+            "background": "assets/backgrounds/city_street.svg"
+          },
+          {
+            "speaker": "counsellor",
+            "mood": "happy",
+            "text": "Bien vu ! L'observation est la clé de l'autonomie.",
+            "background": "assets/backgrounds/city_street.svg"
+          }
+        ]
+      },
+      {
+        "id": "demo_propose",
+        "title": "Proposition citoyenne",
+        "description": "Résultat du choix 3 (Conditionnel)",
+        "dialogues": [
+          {
+            "speaker": "player",
+            "mood": "happy",
+            "text": "Ce n'est pas normal. Je vais lancer une pétition pour remplacer ce tourniquet.",
+            "background": "assets/backgrounds/city_street.svg"
+          },
+          {
+            "speaker": "counsellor",
+            "mood": "surprised",
+            "text": "Quelle énergie ! Je vais soutenir votre dossier à la mairie.",
+            "background": "assets/backgrounds/city_street.svg"
+          }
+        ]
+      }
+    ]
+  },
+  "characters": {
+    "characters": [
+        {
+          "id": "player",
+          "name": "Joueur",
+          "description": "Le personnage principal.",
+          "sprites": { "neutral": "assets/characters/player/neutral.svg", "happy": "assets/characters/player/neutral.svg", "sad": "assets/characters/player/neutral.svg", "thoughtful": "assets/characters/player/neutral.svg" },
+          "moods": ["neutral", "happy", "sad", "thoughtful"]
+        },
+        {
+          "id": "counsellor",
+          "name": "Conseiller",
+          "description": "Guide.",
+          "sprites": { "neutral": "assets/characters/counsellor/neutral.svg", "happy": "assets/characters/counsellor/neutral.svg", "helpful": "assets/characters/counsellor/neutral.svg", "surprised": "assets/characters/counsellor/neutral.svg" },
+          "moods": ["neutral", "happy", "helpful", "surprised"]
+        },
+        {
+          "id": "narrator",
+          "name": "Narrateur",
+          "description": "Voix off.",
+          "sprites": { "neutral": "assets/characters/narrator/icon.svg" },
+          "moods": ["neutral"]
+        }
+    ]
+  },
+  "uiLayout": {
+    "theme": "dark",
+    "panels": { "left": "20%", "center": "60%", "right": "20%" }
+  }
+}

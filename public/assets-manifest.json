@@ -1,0 +1,39 @@
+{
+  "generated": "2026-01-26T17:18:26.244Z",
+  "version": "1.0.0",
+  "totalAssets": 3,
+  "categories": [
+    "backgrounds"
+  ],
+  "assets": {
+    "backgrounds": [
+      {
+        "id": "backgrounds/61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
+        "name": "61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
+        "path": "/assets/backgrounds/61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1273399,
+        "modified": "2026-01-23T22:10:10.806Z"
+      },
+      {
+        "id": "backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902",
+        "name": "de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902",
+        "path": "/assets/backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1784558,
+        "modified": "2026-01-23T22:10:04.911Z"
+      },
+      {
+        "id": "backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293",
+        "name": "ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293",
+        "path": "/assets/backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1137731,
+        "modified": "2026-01-23T22:10:13.313Z"
+      }
+    ]
+  }
+}

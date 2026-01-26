@@ -1,0 +1,17 @@
+TOP_LEVEL: dirs=17 files=31
+RECURSIVE_EXCLUDING: node_modules,.git,.vite,dist,build,coverage,test-results
+RECURSIVE: dirs=30 files=158
+PER_TOP_LEVEL_DIR (excluding node_modules,.git,.vite,dist,build,coverage,test-results):
+- .claude: files_direct=1, subdirs_direct=0, files_recursive=1, subdirs_recursive=0
+- .github: files_direct=1, subdirs_direct=1, files_recursive=2, subdirs_recursive=1
+- .perplexity-context: files_direct=2, subdirs_direct=0, files_recursive=2, subdirs_recursive=0
+- .vscode: files_direct=2, subdirs_direct=0, files_recursive=2, subdirs_recursive=0
+- assets: files_direct=0, subdirs_direct=2, files_recursive=4, subdirs_recursive=5
+- docs: files_direct=13, subdirs_direct=1, files_recursive=44, subdirs_recursive=1
+- e2e: files_direct=8, subdirs_direct=0, files_recursive=8, subdirs_recursive=0
+- legacy: files_direct=0, subdirs_direct=1, files_recursive=1, subdirs_recursive=1
+- public: files_direct=1, subdirs_direct=1, files_recursive=1, subdirs_recursive=4
+- src: files_direct=4, subdirs_direct=6, files_recursive=56, subdirs_recursive=6
+- test: files_direct=1, subdirs_direct=0, files_recursive=1, subdirs_recursive=0
+- tools: files_direct=5, subdirs_direct=0, files_recursive=5, subdirs_recursive=0
+EXCLUDED_TOP_LEVEL_DIRECT:

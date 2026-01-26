@@ -1,0 +1,14 @@
+/* ============================================================================
+   DEPRECATED: src/styles/theme.css
+
+   This file is deprecated and will be removed in a future version.
+   All variables have been migrated to src/styles/tokens.css
+
+   Please update your imports:
+   - BEFORE: import './styles/theme.css';
+   - AFTER:  import './styles/tokens.css'; (or use index.css which imports it)
+
+   This file now just re-exports tokens.css for backwards compatibility.
+   ============================================================================ */
+
+@import './tokens.css';

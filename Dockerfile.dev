@@ -1,0 +1,21 @@
+# ===========================================
+# AccessCity Frontend - Development Image
+# ===========================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for file watching
+RUN apk add --no-cache git
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies
+RUN npm ci
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Start Vite dev server with host binding for Docker
+CMD ["npm", "run", "dev:vite", "--", "--host", "0.0.0.0"]

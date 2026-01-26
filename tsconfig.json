@@ -1,0 +1,59 @@
+{
+  "compilerOptions": {
+    // Target & Module
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    // Bundler mode (Vite 7 optimized)
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+
+    // JSX
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    // Type Checking - Ready for STRICT MODE (activate in next phase)
+    "strict": false, // TODO Phase 7: Activate strict mode + fix 100 type errors
+    "noUnusedLocals": false, // TODO Phase 7: Enable after strict mode
+    "noUnusedParameters": false, // TODO Phase 7: Enable after strict mode
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false, // TODO Phase 7: Enable with strict mode
+    "exactOptionalPropertyTypes": false,
+
+    // JS migration complete - TypeScript only
+    "allowJs": false,
+    "checkJs": false,
+
+    // Performance optimizations
+    "skipLibCheck": true,
+    "incremental": true,
+
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "src/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.jsx",
+    "src/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ],
+  "references": [
+    { "path": "./tsconfig.node.json" }
+  ]
+}

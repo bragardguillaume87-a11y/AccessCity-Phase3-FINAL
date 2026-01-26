@@ -1,0 +1,39 @@
+ORPHAN/UNUSED FILES REPORT
+===========================
+Last Updated: 2026-01-18
+
+STATUS: ✅ CLEANED - 19 fichiers orphelins supprimés
+
+HOOKS (src/hooks/):
+  ✅ SUPPRIMÉ: useAssetPreloader.ts
+  ⚠️ GARDÉ: useLocalStorageFavorites.ts - UTILISÉ par useFavorites.ts et useCharacterFavorites.ts
+
+UTILITIES (src/utils/):
+  ✅ SUPPRIMÉ: modalStack.ts
+  ✅ SUPPRIMÉ: soundFeedback.ts
+
+COMPONENTS (src/components/):
+  ✅ SUPPRIMÉ: AssetsLibraryPanel.tsx
+  ✅ SUPPRIMÉ: BackgroundPanel.tsx
+  ✅ SUPPRIMÉ: CharactersPanel.tsx
+  ✅ SUPPRIMÉ: ExportPanel.tsx
+  ✅ SUPPRIMÉ: ImportPanel.tsx
+  ✅ SUPPRIMÉ: OnboardingModal.tsx
+  ✅ SUPPRIMÉ: PlayerPreview.tsx
+  ✅ SUPPRIMÉ: PlayMode.tsx
+
+PANELS (src/components/panels/):
+  ✅ SUPPRIMÉ: ExplorerPanel.tsx
+  ✅ SUPPRIMÉ: ExportPanel.tsx
+  ✅ SUPPRIMÉ: TimelineHeader.tsx
+
+MAIN CANVAS COMPONENTS (src/components/panels/MainCanvas/components/):
+  ✅ SUPPRIMÉ: RightPanelToggle.tsx
+
+UI COMPONENTS (src/components/ui/ - shadcn/ui library):
+  ✅ SUPPRIMÉ: command.tsx
+  ✅ SUPPRIMÉ: dropdown-menu.tsx
+  ✅ SUPPRIMÉ: sheet.tsx
+  ✅ SUPPRIMÉ: switch.tsx
+
+TOTAL: 19 fichiers supprimés, 1 gardé (useLocalStorageFavorites)

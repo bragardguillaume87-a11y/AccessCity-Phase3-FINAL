@@ -12,7 +12,7 @@ import DialogueWizardProgressBar from './components/WizardProgressBar';
 import WizardNavigation from '@/components/character-editor/CharacterWizard/components/WizardNavigation';
 import StepComplexity from './components/StepComplexity';
 import StepBasics from './components/StepBasics';
-// import StepChoices from './components/StepChoices';
+import StepChoices from './components/StepChoices';
 // import StepReview from './components/StepReview';
 
 interface DialogueWizardProps {
@@ -143,23 +143,16 @@ export function DialogueWizard({
 
       case 'choices':
         return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-muted-foreground">
-              <p>Étape Choices - Composant à créer</p>
-              <p className="text-sm mt-2">
-                Complexité: {formData.complexityLevel}
-              </p>
-              <p className="text-sm">
-                Choix: {formData.choices.length}
-              </p>
-              <button
-                onClick={() => handleValidChange(true)}
-                className="mt-4 px-4 py-2 bg-orange-500 text-white rounded"
-              >
-                Temporary: Validate Choices
-              </button>
-            </div>
-          </div>
+          <StepChoices
+            complexityLevel={formData.complexityLevel || 'simple'}
+            choices={formData.choices}
+            scenes={scenes}
+            currentSceneId={sceneId}
+            onUpdateChoice={(index, updates) => {
+              formActions.updateChoice(index, updates);
+            }}
+            onValidChange={handleValidChange}
+          />
         );
 
       case 'review':

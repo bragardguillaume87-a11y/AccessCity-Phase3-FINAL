@@ -72,12 +72,17 @@ export interface LibraryTabProps {
 }
 
 /**
- * LibraryTab - Browse and search tab
+ * LibraryTab - Browse and search tab (AMÉLIORATION UI/UX)
  *
  * Pattern: EXACT copy structure AssetsLibraryModal LibraryTab
  *
  * Main browsing interface with advanced filtering capabilities.
  * Displays characters in a grid with search, filters, and quick actions.
+ *
+ * ## ✨ AMÉLIORATIONS APPLIQUÉES :
+ * - **Badges colorés vivants** : green-500/20 pour complets, amber-500/20 pour incomplets
+ * - **Micro-animations** : Transitions sur changement de filtre
+ * - **Meilleur feedback visuel** : Badges avec border-2 et couleurs accent
  *
  * CRITICAL Layout Classes:
  * - Root div: flex flex-col flex-1 min-h-0
@@ -187,7 +192,7 @@ export function LibraryTab({
             {searchQuery && (
               <button
                 onClick={() => onSearchChange('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                 aria-label="Effacer la recherche"
               >
                 <X className="h-3.5 w-3.5" />
@@ -195,16 +200,16 @@ export function LibraryTab({
             )}
           </div>
 
-          {/* Completeness Quick Filters */}
-          <div className="flex items-center gap-1">
+          {/* ✨ AMÉLIORÉ : Completeness Quick Filters avec badges colorés */}
+          <div className="flex items-center gap-1.5">
             <Button
               variant={filterCompleteness === 'all' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => onFilterCompletenessChange('all')}
-              className="h-7 px-2.5 text-xs gap-1"
+              className="h-7 px-2.5 text-xs gap-1.5 transition-all duration-200 hover:scale-[1.02]"
             >
               Tous
-              <Badge variant="outline" className="ml-0.5 text-[10px] h-4 px-1 border-slate-600">
+              <Badge variant="outline" className="ml-0.5 text-[10px] h-4 px-1.5 border-slate-600 bg-slate-700/50">
                 {completenessCount.all}
               </Badge>
             </Button>
@@ -212,10 +217,14 @@ export function LibraryTab({
               variant={filterCompleteness === 'complete' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => onFilterCompletenessChange('complete')}
-              className="h-7 px-2.5 text-xs gap-1"
+              className="h-7 px-2.5 text-xs gap-1.5 transition-all duration-200 hover:scale-[1.02]"
             >
               Complets
-              <Badge variant="outline" className="ml-0.5 text-[10px] h-4 px-1 border-green-700 text-green-400">
+              {/* ✨ NOUVEAU : Badge vert vivant */}
+              <Badge
+                variant="outline"
+                className="ml-0.5 text-[10px] h-4 px-1.5 bg-green-500/20 border-green-400/60 text-green-200 font-semibold"
+              >
                 {completenessCount.complete}
               </Badge>
             </Button>
@@ -223,10 +232,14 @@ export function LibraryTab({
               variant={filterCompleteness === 'incomplete' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => onFilterCompletenessChange('incomplete')}
-              className="h-7 px-2.5 text-xs gap-1"
+              className="h-7 px-2.5 text-xs gap-1.5 transition-all duration-200 hover:scale-[1.02]"
             >
               Incomplets
-              <Badge variant="outline" className="ml-0.5 text-[10px] h-4 px-1 border-yellow-700 text-yellow-400">
+              {/* ✨ NOUVEAU : Badge amber vivant */}
+              <Badge
+                variant="outline"
+                className="ml-0.5 text-[10px] h-4 px-1.5 bg-amber-500/20 border-amber-400/60 text-amber-200 font-semibold"
+              >
                 {completenessCount.incomplete}
               </Badge>
             </Button>
@@ -245,11 +258,11 @@ export function LibraryTab({
               </SelectContent>
             </Select>
 
-            <div className="flex items-center border border-slate-600 rounded-md">
+            <div className="flex items-center border border-slate-600 rounded-md overflow-hidden">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-7 w-7 rounded-r-none"
+                className="h-7 w-7 rounded-none transition-all duration-200"
                 onClick={() => onViewModeChange('grid')}
                 aria-label="Vue grille"
               >
@@ -258,7 +271,7 @@ export function LibraryTab({
               <Button
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-7 w-7 rounded-l-none"
+                className="h-7 w-7 rounded-none transition-all duration-200"
                 onClick={() => onViewModeChange('list')}
                 aria-label="Vue liste"
               >
@@ -299,9 +312,9 @@ export function LibraryTab({
             </Select>
           )}
 
-          {/* Results Count */}
+          {/* ✨ AMÉLIORÉ : Results Count avec animation */}
           {isFiltering && (
-            <span className="text-[11px] text-slate-400 ml-auto">
+            <span className="text-[11px] text-slate-400 ml-auto animate-fade-in">
               {filteredCharacters.length}/{characters.length} personnages
             </span>
           )}

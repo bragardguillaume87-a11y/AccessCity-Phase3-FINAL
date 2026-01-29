@@ -15,7 +15,7 @@ import type {
 import type { CanvasProp } from './MainCanvas/components/PropElement';
 import type { CanvasTextBox } from './MainCanvas/components/TextBoxElement';
 import { useScenesStore, useCharactersStore } from '../../stores/index';
-import ContextMenu from '../ui/ContextMenu';
+import { CharacterContextMenu } from './MainCanvas/components/CharacterContextMenu';
 import AddCharacterToSceneModal from '../modals/AddCharacterToSceneModal';
 import TimelinePlayhead from './TimelinePlayhead';
 import { useCanvasKeyboard } from '@/hooks/useCanvasKeyboard';
@@ -418,13 +418,20 @@ export default function MainCanvas({
         onSetBackground={actions.handleSetBackground}
       />
 
-      {/* Context Menu */}
+      {/* Context Menu - Kid-friendly character menu */}
       {contextMenu.contextMenuData && (
-        <ContextMenu
+        <CharacterContextMenu
           x={contextMenu.contextMenuData.x}
           y={contextMenu.contextMenuData.y}
-          items={contextMenu.contextMenuData.items}
+          sceneChar={contextMenu.contextMenuData.sceneChar}
+          character={contextMenu.contextMenuData.character}
           onClose={contextMenu.closeContextMenu}
+          onEdit={contextMenu.handleEdit}
+          onChangeMood={contextMenu.handleChangeMood}
+          onChangeAnimation={contextMenu.handleChangeAnimation}
+          onChangeLayer={contextMenu.handleChangeLayer}
+          onFlipHorizontal={contextMenu.handleFlipHorizontal}
+          onRemove={contextMenu.handleRemove}
         />
       )}
 

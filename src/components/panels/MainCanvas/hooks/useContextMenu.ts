@@ -1,23 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { Scene, Character, SceneCharacter, ModalType } from '@/types';
 
 /**
- * Context menu item definition
+ * Context menu data for the new kid-friendly CharacterContextMenu
  */
-export interface ContextMenuItem {
-  label: string;
-  icon: string;
-  onClick: () => void;
-  danger?: boolean;
-}
-
-/**
- * Context menu data (position + items)
- */
-export interface ContextMenuData {
+export interface CharacterContextMenuData {
   x: number;
   y: number;
-  items: ContextMenuItem[];
+  sceneChar: SceneCharacter;
+  character: Character;
 }
 
 /**
@@ -42,34 +33,33 @@ export interface UseContextMenuProps {
  * Return type for useContextMenu hook
  */
 export interface UseContextMenuReturn {
-  contextMenuData: ContextMenuData | null;
+  contextMenuData: CharacterContextMenuData | null;
   handleCharacterRightClick: (e: React.MouseEvent, sceneChar: SceneCharacter) => void;
   closeContextMenu: () => void;
+  // Action handlers for CharacterContextMenu (take explicit IDs to avoid stale closures)
+  handleEdit: (characterId: string) => void;
+  handleChangeMood: (sceneCharId: string, mood: string) => void;
+  handleChangeAnimation: (sceneCharId: string, animation: string) => void;
+  handleChangeLayer: (sceneCharId: string, zIndex: number) => void;
+  handleFlipHorizontal: (sceneCharId: string) => void;
+  handleRemove: (sceneCharId: string) => void;
 }
 
 /**
  * useContextMenu - Manage context menu for character interactions
  *
- * This hook handles the right-click context menu for characters on the canvas,
- * providing options to:
+ * This hook handles the right-click context menu for characters on the canvas.
+ * Works with the new kid-friendly CharacterContextMenu component.
+ *
+ * Features:
  * - Edit character properties
- * - Change mood
- * - Change entrance animation
- * - Change Z-index (layer order)
- * - Remove from scene
+ * - Change mood (visual picker)
+ * - Change entrance animation (visual picker)
+ * - Change Z-index/layer (visual picker)
+ * - Remove from scene (with confirmation)
  *
  * @param props - Configuration and action callbacks
  * @returns Context menu state and handlers
- *
- * @example
- * ```tsx
- * const { contextMenuData, handleCharacterRightClick, closeContextMenu } = useContextMenu({
- *   selectedScene,
- *   characters,
- *   actions: { updateSceneCharacter, removeCharacterFromScene },
- *   onOpenModal
- * });
- * ```
  */
 export function useContextMenu({
   selectedScene,
@@ -77,97 +67,103 @@ export function useContextMenu({
   actions,
   onOpenModal
 }: UseContextMenuProps): UseContextMenuReturn {
-  const [contextMenuData, setContextMenuData] = useState<ContextMenuData | null>(null);
+  const [contextMenuData, setContextMenuData] = useState<CharacterContextMenuData | null>(null);
 
   /**
-   * Handle right-click on character - Build and display context menu
+   * Handle right-click on character - Show context menu
    */
-  const handleCharacterRightClick = (e: React.MouseEvent, sceneChar: SceneCharacter) => {
+  const handleCharacterRightClick = useCallback((e: React.MouseEvent, sceneChar: SceneCharacter) => {
     e.preventDefault();
+    e.stopPropagation(); // Stop event from bubbling to parent elements
 
     const character = characters.find(c => c.id === sceneChar.characterId);
-    const characterName = character?.name || 'Character';
+    if (!character) return;
 
     setContextMenuData({
       x: e.clientX,
       y: e.clientY,
-      items: [
-        {
-          label: `Edit ${characterName}`,
-          icon: '✏️',
-          onClick: () => {
-            if (onOpenModal) {
-              onOpenModal('characters', { characterId: sceneChar.characterId });
-            }
-          }
-        },
-        {
-          label: 'Change Mood',
-          icon: '😊',
-          onClick: () => {
-            const currentMood = sceneChar.mood || 'neutral';
-            const newMood = prompt(`Enter mood for ${characterName}:`, currentMood);
-            if (newMood && newMood !== currentMood && selectedScene) {
-              actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { mood: newMood });
-            }
-          }
-        },
-        {
-          label: 'Change Entrance Animation',
-          icon: '✨',
-          onClick: () => {
-            const animations = ['none', 'fadeIn', 'slideInLeft', 'slideInRight', 'slideInUp', 'slideInDown', 'pop', 'bounce'];
-            const current = sceneChar.entranceAnimation || 'none';
-            const message = `Select entrance animation for ${characterName}:\n\nAvailable animations:\n${animations.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n\nCurrent: ${current}`;
-            const choice = prompt(message, current);
-
-            if (choice && animations.includes(choice.toLowerCase()) && selectedScene) {
-              actions.updateSceneCharacter(selectedScene.id, sceneChar.id, {
-                entranceAnimation: choice.toLowerCase()
-              });
-              alert(`Entrance animation set to: ${choice}\n\nReload the scene to see the animation.`);
-            }
-          }
-        },
-        {
-          label: 'Change Z-Index',
-          icon: '🎯',
-          onClick: () => {
-            const currentZIndex = sceneChar.zIndex || 1;
-            const newZIndex = prompt(`Enter Z-Index (layer order) for ${characterName}:`, String(currentZIndex));
-            if (newZIndex !== null && selectedScene) {
-              const parsedZIndex = parseInt(newZIndex);
-              if (!isNaN(parsedZIndex)) {
-                actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { zIndex: parsedZIndex });
-              }
-            }
-          }
-        },
-        {
-          label: 'Remove from Scene',
-          icon: '🗑️',
-          onClick: () => {
-            const confirmed = window.confirm(`Remove ${characterName} from this scene?`);
-            if (confirmed && selectedScene) {
-              actions.removeCharacterFromScene(selectedScene.id, sceneChar.id);
-            }
-          },
-          danger: true
-        }
-      ]
+      sceneChar,
+      character
     });
-  };
+  }, [characters]);
 
   /**
    * Close context menu
    */
-  const closeContextMenu = () => {
+  const closeContextMenu = useCallback(() => {
     setContextMenuData(null);
-  };
+  }, []);
+
+  /**
+   * Open character editor (takes explicit characterId to avoid stale closures)
+   */
+  const handleEdit = useCallback((characterId: string) => {
+    if (!onOpenModal) {
+      console.error('[useContextMenu] handleEdit: onOpenModal callback is not defined!');
+      console.error('[useContextMenu] Make sure MainCanvas receives onOpenModal prop from EditorShell');
+      return;
+    }
+    console.log('[useContextMenu] Opening character editor for:', characterId);
+    onOpenModal('characters', { characterId });
+  }, [onOpenModal]);
+
+  /**
+   * Change character mood in scene
+   */
+  const handleChangeMood = useCallback((sceneCharId: string, mood: string) => {
+    if (selectedScene) {
+      actions.updateSceneCharacter(selectedScene.id, sceneCharId, { mood });
+    }
+  }, [selectedScene, actions]);
+
+  /**
+   * Change character entrance animation
+   */
+  const handleChangeAnimation = useCallback((sceneCharId: string, animation: string) => {
+    if (selectedScene) {
+      actions.updateSceneCharacter(selectedScene.id, sceneCharId, { entranceAnimation: animation });
+    }
+  }, [selectedScene, actions]);
+
+  /**
+   * Change character layer/z-index
+   */
+  const handleChangeLayer = useCallback((sceneCharId: string, zIndex: number) => {
+    if (selectedScene) {
+      actions.updateSceneCharacter(selectedScene.id, sceneCharId, { zIndex });
+    }
+  }, [selectedScene, actions]);
+
+  /**
+   * Flip character horizontally (mirror left-right)
+   */
+  const handleFlipHorizontal = useCallback((sceneCharId: string) => {
+    if (selectedScene) {
+      const sceneChar = selectedScene.characters.find(c => c.id === sceneCharId);
+      if (sceneChar) {
+        actions.updateSceneCharacter(selectedScene.id, sceneCharId, { flipped: !sceneChar.flipped });
+      }
+    }
+  }, [selectedScene, actions]);
+
+  /**
+   * Remove character from scene
+   */
+  const handleRemove = useCallback((sceneCharId: string) => {
+    if (selectedScene) {
+      actions.removeCharacterFromScene(selectedScene.id, sceneCharId);
+    }
+  }, [selectedScene, actions]);
 
   return {
     contextMenuData,
     handleCharacterRightClick,
     closeContextMenu,
+    handleEdit,
+    handleChangeMood,
+    handleChangeAnimation,
+    handleChangeLayer,
+    handleFlipHorizontal,
+    handleRemove
   };
 }

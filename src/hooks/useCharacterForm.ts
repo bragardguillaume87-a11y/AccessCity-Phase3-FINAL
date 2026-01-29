@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useCharacterValidation } from './useCharacterValidation';
 import type { Character } from '@/types';
 
@@ -108,6 +108,18 @@ export function useCharacterForm(
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   const { validateAll } = useCharacterValidation(characters, initialCharacter);
+
+  // Reset form when initialCharacter changes (different character selected)
+  useEffect(() => {
+    setFormData({
+      ...initialCharacter,
+      moods: initialCharacter.moods || ['neutral'],
+      sprites: initialCharacter.sprites || {}
+    });
+    setErrors({});
+    setWarnings({});
+    setHasChanges(false);
+  }, [initialCharacter.id]);
 
   /**
    * Update a form field

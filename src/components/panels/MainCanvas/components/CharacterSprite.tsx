@@ -114,6 +114,9 @@ export const CharacterSprite = React.memo(function CharacterSprite({
             src={sprite}
             alt={character.name}
             className="w-full h-full object-contain drop-shadow-lg group-hover:scale-105 transition-transform pointer-events-none"
+            style={{
+              transform: sceneChar.flipped ? 'scaleX(-1)' : undefined
+            }}
             draggable="false"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -155,6 +158,7 @@ export const CharacterSprite = React.memo(function CharacterSprite({
     prevProps.sceneChar.position?.x === nextProps.sceneChar.position?.x &&
     prevProps.sceneChar.position?.y === nextProps.sceneChar.position?.y &&
     prevProps.sceneChar.scale === nextProps.sceneChar.scale &&
+    prevProps.sceneChar.flipped === nextProps.sceneChar.flipped &&
     prevProps.sceneChar.entranceAnimation === nextProps.sceneChar.entranceAnimation &&
     prevProps.character.id === nextProps.character.id &&
     prevProps.character.sprites === nextProps.character.sprites &&

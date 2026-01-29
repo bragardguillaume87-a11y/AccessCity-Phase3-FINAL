@@ -157,6 +157,9 @@ export default function AssetsLibraryModal({
     if (!isOpen) {
       setSearchQuery('');
       setPreviewAsset(null);
+      setActiveCategory('all');
+      setSortOrder('name-asc');
+      setActiveTab('library');
     }
   }, [isOpen]);
 

@@ -137,6 +137,7 @@ export interface SceneCharacter {
   zIndex?: number;
   entranceAnimation: string;
   exitAnimation: string;
+  flipped?: boolean; // Mirror horizontally (flip left-right)
 }
 
 export interface TextBox {

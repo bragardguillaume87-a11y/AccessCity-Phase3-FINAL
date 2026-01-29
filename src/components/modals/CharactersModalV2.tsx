@@ -86,6 +86,7 @@ export function CharactersModalV2({
   // ===== ZUSTAND STORES (granular selectors) =====
   const characters = useCharactersStore((state) => state.characters);
   const addCharacter = useCharactersStore((state) => state.addCharacter);
+  const updateCharacter = useCharactersStore((state) => state.updateCharacter);
   const deleteCharacter = useCharactersStore((state) => state.deleteCharacter);
   const scenes = useScenesStore((state) => state.scenes);
 
@@ -149,10 +150,15 @@ export function CharactersModalV2({
 
   // Auto-open editor if initialCharacterId provided
   useEffect(() => {
+    console.log('[CharactersModalV2] useEffect triggered:', { isOpen, initialCharacterId });
     if (isOpen && initialCharacterId) {
       const char = characters.find((c) => c.id === initialCharacterId);
+      console.log('[CharactersModalV2] Found character:', char);
       if (char) {
+        console.log('[CharactersModalV2] Opening editor for:', char.name);
         setEditingCharacter(char);
+      } else {
+        console.warn('[CharactersModalV2] Character not found with id:', initialCharacterId);
       }
     }
   }, [isOpen, initialCharacterId, characters]);
@@ -246,9 +252,12 @@ export function CharactersModalV2({
     setEditingCharacter(null);
   }, []);
 
-  const handleEditorSave = useCallback(() => {
+  const handleEditorSave = useCallback((character: Character) => {
+    // Save to store
+    updateCharacter(character);
+    // Close editor
     setEditingCharacter(null);
-  }, []);
+  }, [updateCharacter]);
 
   // Get validation errors for display
   const validationErrors = useMemo(() => {
@@ -275,7 +284,7 @@ export function CharactersModalV2({
   // ===== RENDER =====
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
+      <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
         <DialogContent className="max-w-[1200px] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
           {/* HEADER - Compact style matching AssetsLibraryModal */}
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-slate-700/50 bg-slate-900">

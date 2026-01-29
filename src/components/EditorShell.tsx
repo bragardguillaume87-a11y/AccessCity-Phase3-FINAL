@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, Suspense, useMemo, useCallback } from 'react';
 import { useUIStore, useScenes, useCharacters } from '../stores/index.ts';
 import { useSelection, toSelectedElementType } from '../hooks/useSelection.ts';
 import { useEditorLogic } from '../hooks/useEditorLogic.ts';
@@ -108,6 +108,13 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     editorLogic.handleTabChange(tab); // Business logic delegation
   };
 
+  // Stable modal opener to prevent race conditions
+  const handleOpenModal = useCallback((modal: string, context: unknown = {}) => {
+    console.log('[EditorShell] handleOpenModal called:', { modal, context });
+    setActiveModal(modal);
+    setModalContext(context as ModalContext);
+  }, []);
+
   const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
 
   // Convert SelectedElement to SelectedElementType for legacy components
@@ -146,7 +153,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
       {/* Header with ARIA landmark */}
       <TopBar
         onBack={onBack}
-        onOpenModal={setActiveModal}
+        onOpenModal={(modal) => handleOpenModal(modal, {})}
         undo={undo}
         redo={redo}
         canUndo={canUndo}
@@ -234,10 +241,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                   selectedScene={selectedScene}
                   selectedElement={selectedElementLegacy}
                   onSelectDialogue={editorLogic.handleDialogueSelect}
-                  onOpenModal={(modal, context = {}) => {
-                    setActiveModal(modal);
-                    setModalContext(context as ModalContext);
-                  }}
+                  onOpenModal={handleOpenModal}
                   fullscreenMode={fullscreenMode}
                   onFullscreenChange={setFullscreenMode}
                 />
@@ -270,20 +274,14 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                 <ErrorBoundary name="PropertiesPanel">
                   {selectedElement?.type === 'scene' ? (
                     <UnifiedPanel
-                      onOpenModal={(modal, context) => {
-                        setActiveModal(modal);
-                        setModalContext(context as ModalContext);
-                      }}
+                      onOpenModal={handleOpenModal}
                     />
                   ) : (
                     <PropertiesPanel
                       selectedElement={selectedElementLegacy}
                       selectedScene={selectedScene}
                       characters={characters}
-                      onOpenModal={(modal, context) => {
-                        setActiveModal(modal);
-                        setModalContext(context as ModalContext);
-                      }}
+                      onOpenModal={handleOpenModal}
                     />
                   )}
                 </ErrorBoundary>

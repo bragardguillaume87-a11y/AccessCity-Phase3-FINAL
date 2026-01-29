@@ -654,7 +654,125 @@ textarea {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
 }
 
+/* ========================================
+   CHARACTERS MODAL V2 ANIMATIONS
+   ======================================== */
 
+/* Card stagger animation - effet décalé pour les cartes */
+.card-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.card-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.card-stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.card-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.card-stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.card-stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.card-stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.card-stagger > *:nth-child(8) { animation-delay: 0.4s; }
+.card-stagger > *:nth-child(9) { animation-delay: 0.45s; }
+.card-stagger > *:nth-child(10) { animation-delay: 0.5s; }
+
+/* Custom scrollbar slate theme pour modals dark */
+.custom-scrollbar-slate::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar-slate::-webkit-scrollbar-track {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar-slate::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 3px;
+}
+
+.custom-scrollbar-slate::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+/* ========================================
+   CHARACTER WIZARD ANIMATIONS (Kid-Friendly)
+   ======================================== */
+
+/* Bounce in for success feedback */
+@keyframes bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-bounce-in { animation: bounce-in 0.4s ease-out; }
+
+/* Gentle pulse for selected items */
+@keyframes gentle-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+}
+.animate-gentle-pulse { animation: gentle-pulse 2s ease-in-out infinite; }
+
+/* Sparkle effect */
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+.animate-sparkle { animation: sparkle 0.6s ease-in-out; }
+
+/* Step slide in */
+@keyframes step-slide-in {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-step-slide { animation: step-slide-in 0.3s ease-out; }
+
+/* Button press feedback */
+@keyframes button-press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.animate-button-press { animation: button-press 0.15s ease-out; }
+
+/* Star fill animation */
+@keyframes star-fill {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-star-fill { animation: star-fill 0.3s ease-out forwards; }
+
+/* Celebration shake */
+@keyframes celebration-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+.animate-celebration { animation: celebration-shake 0.5s ease-in-out; }
+
+/* Progress bar fill */
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+.animate-progress-fill { animation: progress-fill 0.5s ease-out; }
+
+/* Wizard step connector line */
+.wizard-connector {
+  transition: background-color 0.3s ease;
+}
+
+.wizard-connector.completed {
+  background: linear-gradient(90deg, #8B5CF6, #EC4899);
+}
+
+/* Large touch targets for kids (44px minimum) */
+.touch-target-large {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.touch-target-xl {
+  min-height: 56px;
+  min-width: 56px;
+}
 
 /* ========================================
    MIDNIGHT BLOOM THEME - tweakcn.com

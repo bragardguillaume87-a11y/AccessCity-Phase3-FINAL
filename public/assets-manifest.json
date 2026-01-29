@@ -1,9 +1,11 @@
 {
-  "generated": "2026-01-26T17:18:26.244Z",
+  "generated": "2026-01-28T20:20:43.349Z",
   "version": "1.0.0",
-  "totalAssets": 3,
+  "totalAssets": 10,
   "categories": [
-    "backgrounds"
+    "backgrounds",
+    "characters",
+    "music"
   ],
   "assets": {
     "backgrounds": [
@@ -33,6 +35,73 @@
         "category": "backgrounds",
         "size": 1137731,
         "modified": "2026-01-23T22:10:13.313Z"
+      }
+    ],
+    "characters": [
+      {
+        "id": "characters/01-1769468247355",
+        "name": "01-1769468247355",
+        "path": "/assets/characters/01-1769468247355.png",
+        "type": "png",
+        "category": "characters",
+        "size": 111670,
+        "modified": "2026-01-26T22:57:27.359Z"
+      },
+      {
+        "id": "characters/a-1769628071209",
+        "name": "a-1769628071209",
+        "path": "/assets/characters/a-1769628071209.png",
+        "type": "png",
+        "category": "characters",
+        "size": 111543,
+        "modified": "2026-01-28T19:21:11.209Z"
+      },
+      {
+        "id": "characters/aa-1769631637542",
+        "name": "aa-1769631637542",
+        "path": "/assets/characters/aa-1769631637542.png",
+        "type": "png",
+        "category": "characters",
+        "size": 119387,
+        "modified": "2026-01-28T20:20:37.546Z"
+      },
+      {
+        "id": "characters/b-1769628075775",
+        "name": "b-1769628075775",
+        "path": "/assets/characters/b-1769628075775.png",
+        "type": "png",
+        "category": "characters",
+        "size": 126820,
+        "modified": "2026-01-28T19:21:15.773Z"
+      },
+      {
+        "id": "characters/bb-1769631641012",
+        "name": "bb-1769631641012",
+        "path": "/assets/characters/bb-1769631641012.png",
+        "type": "png",
+        "category": "characters",
+        "size": 133932,
+        "modified": "2026-01-28T20:20:41.014Z"
+      },
+      {
+        "id": "characters/cc-1769631643290",
+        "name": "cc-1769631643290",
+        "path": "/assets/characters/cc-1769631643290.png",
+        "type": "png",
+        "category": "characters",
+        "size": 105689,
+        "modified": "2026-01-28T20:20:43.292Z"
+      }
+    ],
+    "music": [
+      {
+        "id": "music/lookupguitarjazz-1769627898826",
+        "name": "lookupguitarjazz-1769627898826",
+        "path": "/assets/music/lookupguitarjazz-1769627898826.mp3",
+        "type": "mp3",
+        "category": "music",
+        "size": 3427288,
+        "modified": "2026-01-28T19:18:18.892Z"
       }
     ]
   }

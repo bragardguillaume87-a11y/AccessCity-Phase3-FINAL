@@ -167,11 +167,23 @@ export function MoodListItem({
                     {hasSprite ? 'Changer' : 'Assigner'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[600px] p-0" align="end" side="left" portal={false}>
+                <PopoverContent className="w-[600px] p-0" align="end" side="left">
                   <div className="max-h-[400px] overflow-y-auto p-4">
-                    <h4 className="font-semibold mb-3">
-                      Sélectionner un sprite pour: <span className="text-primary">{mood}</span>
-                    </h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold">
+                        Sélectionner un sprite pour: <span className="text-primary">{mood}</span>
+                      </h4>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setShowSpritePicker(false)}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        aria-label="Fermer"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <AvatarPicker
                       currentSprites={sprites}
                       onSelect={handleSpriteSelect}

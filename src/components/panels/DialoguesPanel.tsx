@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Dialog, DialogContent } from '../ui/dialog';
 import { useScenesStore, useUIStore } from '@/stores';
 import { DialogueCard } from './DialoguesPanel/DialogueCard';
+import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
 
 /**
  * DialoguesPanel - Liste des dialogues avec drag-and-drop (PHASE 2)
@@ -27,6 +29,10 @@ export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
   const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
   const reorderDialogues = useScenesStore(state => state.reorderDialogues);
   const addDialogue = useScenesStore(state => state.addDialogue);
+
+  // DialogueWizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editDialogueIndex, setEditDialogueIndex] = useState<number | undefined>();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -61,6 +67,17 @@ export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
       text: 'Nouveau dialogue',
       choices: []
     });
+  };
+
+  const handleOpenWizard = () => {
+    setEditDialogueIndex(undefined); // undefined = nouveau dialogue
+    setWizardOpen(true);
+  };
+
+  const handleWizardSave = () => {
+    // Le DialogueWizard gère la sauvegarde via le store
+    setWizardOpen(false);
+    setEditDialogueIndex(undefined);
   };
 
   if (!selectedScene) {
@@ -126,18 +143,45 @@ export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
         )}
       </div>
 
-      {/* Footer avec bouton "Nouveau dialogue" */}
+      {/* Footer avec boutons "Assistant Dialogue" et "Mode Expert" */}
       <div className="flex-shrink-0 p-3 border-t-2 border-[var(--color-border-base)]">
-        <Button
-          variant="token-primary"
-          size="sm"
-          onClick={handleAddDialogue}
-          className="w-full"
-        >
-          <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
-          Nouveau dialogue
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="token-primary"
+            size="sm"
+            onClick={handleOpenWizard}
+            className="flex-1"
+          >
+            <Sparkles className="w-4 h-4 mr-2" aria-hidden="true" />
+            Assistant Dialogue
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddDialogue}
+            className="flex-1"
+          >
+            <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+            Mode Expert
+          </Button>
+        </div>
       </div>
+
+      {/* DialogueWizard Modal */}
+      {selectedScene && (
+        <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+          <DialogContent className="max-w-4xl h-[90vh] p-0">
+            <DialogueWizard
+              sceneId={selectedScene.id}
+              dialogueIndex={editDialogueIndex}
+              dialogue={editDialogueIndex !== undefined ? dialogues[editDialogueIndex] : undefined}
+              scenes={scenes}
+              onSave={handleWizardSave}
+              onClose={() => setWizardOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

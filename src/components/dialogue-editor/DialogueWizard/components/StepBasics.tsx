@@ -146,13 +146,13 @@ export function StepBasics({
             <SelectContent>
               {/* Narrator option */}
               <SelectItem value="narrator" className="text-base py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-lg">📖</span>
                   </div>
-                  <div>
-                    <div className="font-semibold">Narrateur</div>
-                    <div className="text-xs text-muted-foreground">Voix qui raconte l'histoire</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold truncate">Narrateur</div>
+                    <div className="text-xs text-muted-foreground truncate">Voix qui raconte l'histoire</div>
                   </div>
                 </div>
               </SelectItem>
@@ -160,21 +160,21 @@ export function StepBasics({
               {/* Characters */}
               {characters.map((char) => (
                 <SelectItem key={char.id} value={char.id} className="text-base py-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     {char.sprites?.neutral ? (
                       <img
                         src={char.sprites.neutral}
                         alt={char.name}
-                        className="w-8 h-8 rounded-lg object-contain bg-muted"
+                        className="w-8 h-8 rounded-lg object-contain bg-muted flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center flex-shrink-0">
                         <span className="text-lg">👤</span>
                       </div>
                     )}
-                    <div>
-                      <div className="font-semibold">{char.name}</div>
-                      <div className="text-xs text-muted-foreground">Personnage</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate">{char.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">Personnage</div>
                     </div>
                   </div>
                 </SelectItem>

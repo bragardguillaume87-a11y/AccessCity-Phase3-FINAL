@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Copy, Plus, Volume2, X } from 'lucide-react';
+import { Copy, Plus, Volume2, X, Sparkles } from 'lucide-react';
 
 export interface DialoguePropertiesFormProps {
   dialogue: Dialogue;
@@ -18,6 +18,8 @@ export interface DialoguePropertiesFormProps {
   onOpenModal?: (modalType: ModalType, config?: { category?: string; targetSceneId?: string }) => void;
   lastSaved?: number;
   isSaving?: boolean;
+  wizardOpen?: boolean;
+  onWizardOpenChange?: (open: boolean) => void;
 }
 
 type TabType = 'properties' | 'choices';
@@ -42,7 +44,9 @@ export function DialoguePropertiesForm({
   onDuplicate,
   onOpenModal,
   lastSaved,
-  isSaving
+  isSaving,
+  wizardOpen,
+  onWizardOpenChange
 }: DialoguePropertiesFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('properties');
 
@@ -257,6 +261,19 @@ export function DialoguePropertiesForm({
       {/* Choices tab */}
       {activeTab === 'choices' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Assistant Dialogue button */}
+          {onWizardOpenChange && (
+            <Button
+              variant="gaming-primary"
+              size="default"
+              onClick={() => onWizardOpenChange(true)}
+              className="w-full"
+            >
+              <Sparkles className="h-4 w-4" />
+              Assistant Dialogue
+            </Button>
+          )}
+
           {/* Add Choice button */}
           <Button
             variant="gaming-success"

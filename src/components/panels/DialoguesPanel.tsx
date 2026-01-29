@@ -152,9 +152,6 @@ export function DialoguesPanel({
 
       {/* Footer avec boutons "Assistant Dialogue" et "Mode Expert" */}
       <div className="flex-shrink-0 p-3 border-t-2 border-[var(--color-border-base)]">
-        <div className="mb-2 text-xs text-center">
-          wizardOpen: {String(wizardOpen)}
-        </div>
         <div className="flex gap-2">
           <Button
             variant="token-primary"

@@ -22,9 +22,22 @@ export interface LeftPanelProps {
   onTabChange: (tab: 'scenes' | 'dialogues') => void;
   onDialogueSelect?: (sceneId: string, index: number, metadata?: unknown) => void;
   onSceneSelect?: (sceneId: string) => void;
+  wizardOpen?: boolean;
+  onWizardOpenChange?: (open: boolean) => void;
+  editDialogueIndex?: number;
+  onEditDialogueIndexChange?: (index: number | undefined) => void;
 }
 
-export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, onSceneSelect }: LeftPanelProps) {
+export default function LeftPanel({
+  activeTab,
+  onTabChange,
+  onDialogueSelect,
+  onSceneSelect,
+  wizardOpen: controlledWizardOpen,
+  onWizardOpenChange,
+  editDialogueIndex: controlledEditDialogueIndex,
+  onEditDialogueIndexChange
+}: LeftPanelProps) {
   // Zustand stores
   const scenes = useScenesStore(state => state.scenes);
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
@@ -32,9 +45,14 @@ export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, on
   const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
   const addDialogue = useScenesStore(state => state.addDialogue);
 
-  // DialogueWizard state - LIFTED TO PARENT to survive tab unmounts
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [editDialogueIndex, setEditDialogueIndex] = useState<number | undefined>();
+  // DialogueWizard state - Use controlled if provided, otherwise local state
+  const [localWizardOpen, setLocalWizardOpen] = useState(false);
+  const [localEditDialogueIndex, setLocalEditDialogueIndex] = useState<number | undefined>();
+
+  const wizardOpen = controlledWizardOpen ?? localWizardOpen;
+  const setWizardOpen = onWizardOpenChange ?? setLocalWizardOpen;
+  const editDialogueIndex = controlledEditDialogueIndex ?? localEditDialogueIndex;
+  const setEditDialogueIndex = onEditDialogueIndexChange ?? setLocalEditDialogueIndex;
 
   // Gestionnaire de changement d'onglet
   const handleTabChange = (newTab: string) => {
@@ -127,7 +145,7 @@ export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, on
             onClose={() => setWizardOpen(false)}
           />
         ) : (
-          <div className="p-8 text-center text-red-500 text-2xl font-bold bg-yellow-300">Aucune scène sélectionnée</div>
+          <div className="p-8 text-center">Aucune scène sélectionnée</div>
         )}
       </DialogContent>
     </Dialog>

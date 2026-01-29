@@ -135,7 +135,13 @@ export function StepComplexity({
                   "overflow-hidden group",
                   isSelected
                     ? "border-primary ring-4 ring-primary/30 shadow-2xl"
-                    : "border-border hover:border-primary/50 shadow-lg hover:shadow-xl"
+                    : isHovered
+                      ? card.id === 'simple'
+                        ? "border-blue-500 ring-4 ring-blue-500/40 shadow-[0_0_30px_rgba(59,130,246,0.5)]"
+                        : card.id === 'medium'
+                          ? "border-purple-500 ring-4 ring-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.5)]"
+                          : "border-orange-500 ring-4 ring-orange-500/40 shadow-[0_0_30px_rgba(249,115,22,0.5)]"
+                      : "border-border hover:border-primary/50 shadow-lg"
                 )}
                 whileHover={{ scale: 1.02, y: -4 }}
                 whileTap={{ scale: 0.98 }}
@@ -233,17 +239,6 @@ export function StepComplexity({
                   )}
                 </div>
 
-                {/* Hover glow effect */}
-                {isHovered && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={cn(
-                      "absolute inset-0 pointer-events-none opacity-5",
-                      `bg-gradient-to-br ${card.color}`
-                    )}
-                  />
-                )}
               </motion.button>
             </motion.div>
           );

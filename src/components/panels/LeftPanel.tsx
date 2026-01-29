@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
 import DialoguesPanel from './DialoguesPanel';
 import { useScenesStore, useUIStore } from '../../stores/index';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
 
 /**
  * LeftPanel - Système d'onglets Scènes/Dialogues (PHASE 2)
@@ -27,6 +29,12 @@ export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, on
   const scenes = useScenesStore(state => state.scenes);
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
+  const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
+  const addDialogue = useScenesStore(state => state.addDialogue);
+
+  // DialogueWizard state - LIFTED TO PARENT to survive tab unmounts
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editDialogueIndex, setEditDialogueIndex] = useState<number | undefined>();
 
   // Gestionnaire de changement d'onglet
   const handleTabChange = (newTab: string) => {
@@ -34,7 +42,22 @@ export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, on
     onTabChange(tab);
   };
 
+  const handleWizardSave = (dialogue: any) => {
+    if (!selectedScene) return;
+
+    if (editDialogueIndex !== undefined) {
+      const updateDialogue = useScenesStore.getState().updateDialogue;
+      updateDialogue(selectedScene.id, editDialogueIndex, dialogue);
+    } else {
+      addDialogue(selectedScene.id, dialogue);
+    }
+
+    setWizardOpen(false);
+    setEditDialogueIndex(undefined);
+  };
+
   return (
+    <>
     <Tabs
       value={activeTab}
       onValueChange={handleTabChange}
@@ -61,21 +84,53 @@ export default function LeftPanel({ activeTab, onTabChange, onDialogueSelect, on
       {/* Tabs Content avec animations fade-in */}
       <TabsContent
         value="scenes"
-        className="flex-1 overflow-hidden m-0 animate-in fade-in duration-200"
+        className="flex-1 m-0 animate-in fade-in duration-200"
       >
-        <ScenesSidebar
-          scenes={scenes}
-          selectedSceneId={selectedSceneForEdit}
-          onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
-        />
+        <div className="h-full overflow-y-auto overflow-x-hidden">
+          <ScenesSidebar
+            scenes={scenes}
+            selectedSceneId={selectedSceneForEdit}
+            onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
+          />
+        </div>
       </TabsContent>
 
       <TabsContent
         value="dialogues"
-        className="flex-1 overflow-hidden m-0 animate-in fade-in duration-200"
+        className="flex-1 m-0 animate-in fade-in duration-200"
       >
-        <DialoguesPanel onDialogueSelect={onDialogueSelect} />
+        <div className="h-full overflow-y-auto overflow-x-hidden">
+          <DialoguesPanel
+            onDialogueSelect={onDialogueSelect}
+            wizardOpen={wizardOpen}
+            onWizardOpenChange={setWizardOpen}
+            editDialogueIndex={editDialogueIndex}
+            onEditDialogueIndexChange={setEditDialogueIndex}
+          />
+        </div>
       </TabsContent>
     </Tabs>
+
+    {/* DialogueWizard Modal - Outside Tabs to survive unmounts */}
+    <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+      <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Assistant de création de dialogue</DialogTitle>
+        </DialogHeader>
+        {selectedScene ? (
+          <DialogueWizard
+            sceneId={selectedScene.id}
+            dialogueIndex={editDialogueIndex}
+            dialogue={editDialogueIndex !== undefined ? selectedScene.dialogues[editDialogueIndex] : undefined}
+            scenes={scenes}
+            onSave={handleWizardSave}
+            onClose={() => setWizardOpen(false)}
+          />
+        ) : (
+          <div className="p-8 text-center text-red-500 text-2xl font-bold bg-yellow-300">Aucune scène sélectionnée</div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

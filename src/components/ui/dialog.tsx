@@ -31,11 +31,7 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPortal>
-    {/* Custom backdrop that always renders with blur, even with modal={false} */}
-    <div
-      className="fixed inset-0 z-[1049] bg-black/60 backdrop-blur-md animate-in fade-in-0 pointer-events-none"
-      aria-hidden="true"
-    />
+    <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

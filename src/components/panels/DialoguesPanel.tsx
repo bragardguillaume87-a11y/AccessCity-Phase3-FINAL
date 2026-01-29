@@ -1,12 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus, MessageSquare, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Dialog, DialogContent } from '../ui/dialog';
 import { useScenesStore, useUIStore } from '@/stores';
 import { DialogueCard } from './DialoguesPanel/DialogueCard';
-import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
 
 /**
  * DialoguesPanel - Liste des dialogues avec drag-and-drop (PHASE 2)
@@ -21,18 +19,33 @@ import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
 
 export interface DialoguesPanelProps {
   onDialogueSelect?: (sceneId: string, index: number) => void;
+  wizardOpen?: boolean;
+  onWizardOpenChange?: (open: boolean) => void;
+  editDialogueIndex?: number;
+  onEditDialogueIndexChange?: (index: number | undefined) => void;
 }
 
-export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
+export function DialoguesPanel({
+  onDialogueSelect,
+  wizardOpen: controlledWizardOpen,
+  onWizardOpenChange,
+  editDialogueIndex: controlledEditDialogueIndex,
+  onEditDialogueIndexChange
+}: DialoguesPanelProps) {
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
   const scenes = useScenesStore(state => state.scenes);
   const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
   const reorderDialogues = useScenesStore(state => state.reorderDialogues);
   const addDialogue = useScenesStore(state => state.addDialogue);
 
-  // DialogueWizard state
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [editDialogueIndex, setEditDialogueIndex] = useState<number | undefined>();
+  // Use controlled props if provided, otherwise use local state
+  const [localWizardOpen, setLocalWizardOpen] = useState(false);
+  const [localEditDialogueIndex, setLocalEditDialogueIndex] = useState<number | undefined>();
+
+  const wizardOpen = controlledWizardOpen ?? localWizardOpen;
+  const setWizardOpen = onWizardOpenChange ?? setLocalWizardOpen;
+  const editDialogueIndex = controlledEditDialogueIndex ?? localEditDialogueIndex;
+  const setEditDialogueIndex = onEditDialogueIndexChange ?? setLocalEditDialogueIndex;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -72,12 +85,6 @@ export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
   const handleOpenWizard = () => {
     setEditDialogueIndex(undefined); // undefined = nouveau dialogue
     setWizardOpen(true);
-  };
-
-  const handleWizardSave = () => {
-    // Le DialogueWizard gère la sauvegarde via le store
-    setWizardOpen(false);
-    setEditDialogueIndex(undefined);
   };
 
   if (!selectedScene) {
@@ -145,6 +152,9 @@ export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
 
       {/* Footer avec boutons "Assistant Dialogue" et "Mode Expert" */}
       <div className="flex-shrink-0 p-3 border-t-2 border-[var(--color-border-base)]">
+        <div className="mb-2 text-xs text-center">
+          wizardOpen: {String(wizardOpen)}
+        </div>
         <div className="flex gap-2">
           <Button
             variant="token-primary"
@@ -166,22 +176,6 @@ export function DialoguesPanel({ onDialogueSelect }: DialoguesPanelProps) {
           </Button>
         </div>
       </div>
-
-      {/* DialogueWizard Modal */}
-      {selectedScene && (
-        <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-          <DialogContent className="max-w-4xl h-[90vh] p-0">
-            <DialogueWizard
-              sceneId={selectedScene.id}
-              dialogueIndex={editDialogueIndex}
-              dialogue={editDialogueIndex !== undefined ? dialogues[editDialogueIndex] : undefined}
-              scenes={scenes}
-              onSave={handleWizardSave}
-              onClose={() => setWizardOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

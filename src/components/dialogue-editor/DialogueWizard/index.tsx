@@ -7,11 +7,9 @@ import { useDialogueWizardState, type DialogueWizardStep } from './hooks/useDial
 import { useDialogueForm } from './hooks/useDialogueForm';
 import { useChoiceValidation } from './hooks/useChoiceValidation';
 
-// Reuse components from CharacterWizard
-import WizardProgressBar from '@/components/character-editor/CharacterWizard/components/WizardProgressBar';
+// DialogueWizard components
+import DialogueWizardProgressBar from './components/WizardProgressBar';
 import WizardNavigation from '@/components/character-editor/CharacterWizard/components/WizardNavigation';
-
-// DialogueWizard step components
 import StepComplexity from './components/StepComplexity';
 import StepBasics from './components/StepBasics';
 // import StepChoices from './components/StepChoices';
@@ -48,6 +46,8 @@ export function DialogueWizard({
   onSave,
   onClose
 }: DialogueWizardProps) {
+  console.log('[DialogueWizard] Component mounted, sceneId:', sceneId, 'dialogueIndex:', dialogueIndex);
+
   // Wizard state management
   const [wizardState, wizardActions] = useDialogueWizardState(
     dialogue ? undefined : undefined // Will be set when complexity is chosen
@@ -186,10 +186,10 @@ export function DialogueWizard({
     <div className="flex flex-col h-full overflow-hidden">
       {/* Progress bar - fixed height */}
       <div className="flex-shrink-0">
-        <WizardProgressBar
-          currentStep={wizardState.currentStep as any} // Type conversion for compatibility
-          visitedSteps={wizardState.visitedSteps as any}
-          onStepClick={(step) => wizardActions.goToStep(step as DialogueWizardStep)}
+        <DialogueWizardProgressBar
+          currentStep={wizardState.currentStep}
+          visitedSteps={wizardState.visitedSteps}
+          onStepClick={wizardActions.goToStep}
         />
       </div>
 

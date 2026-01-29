@@ -156,8 +156,8 @@ export function StepComplexity({
 
                 {/* Age badge */}
                 <div className={cn(
-                  "absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-bold",
-                  "bg-gradient-to-r", card.color, "text-white shadow-md z-10"
+                  "absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-bold text-white shadow-md z-10",
+                  `bg-gradient-to-r ${card.color}`
                 )}>
                   {card.ageLabel}
                 </div>
@@ -173,8 +173,8 @@ export function StepComplexity({
                       } : {}}
                       transition={{ duration: 0.6 }}
                       className={cn(
-                        "w-20 h-20 mx-auto rounded-2xl flex items-center justify-center",
-                        "bg-gradient-to-br", card.color, "shadow-lg"
+                        "w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg",
+                        `bg-gradient-to-br ${card.color}`
                       )}
                     >
                       <span className="text-5xl">{card.emoji}</span>
@@ -200,7 +200,7 @@ export function StepComplexity({
                       >
                         <div className={cn(
                           "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
-                          "bg-gradient-to-br", card.color
+                          `bg-gradient-to-br ${card.color}`
                         )}>
                           <span className="text-white text-xs font-bold">✓</span>
                         </div>
@@ -225,7 +225,7 @@ export function StepComplexity({
                     >
                       <div className={cn(
                         "px-6 py-3 rounded-xl text-white font-bold text-center shadow-lg",
-                        "bg-gradient-to-r", card.color
+                        `bg-gradient-to-r ${card.color}`
                       )}>
                         {card.buttonLabel}
                       </div>
@@ -239,8 +239,8 @@ export function StepComplexity({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className={cn(
-                      "absolute inset-0 pointer-events-none",
-                      "bg-gradient-to-br", card.color, "opacity-5"
+                      "absolute inset-0 pointer-events-none opacity-5",
+                      `bg-gradient-to-br ${card.color}`
                     )}
                   />
                 )}

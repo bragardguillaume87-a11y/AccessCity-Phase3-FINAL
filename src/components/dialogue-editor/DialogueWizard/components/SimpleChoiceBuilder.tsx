@@ -43,9 +43,6 @@ export function SimpleChoiceBuilder({
       if (!choice.text || choice.text.trim().length < 5) {
         errors.push(`Le choix ${idx + 1} doit avoir au moins 5 caractères`);
       }
-      if (!choice.nextSceneId && !choice.nextDialogueId) {
-        errors.push(`Le choix ${idx + 1} doit mener quelque part`);
-      }
     });
 
     return {
@@ -96,7 +93,7 @@ export function SimpleChoiceBuilder({
       <div className="grid md:grid-cols-2 gap-6">
         {cardConfigs.map((config) => {
           const choice = choices[config.index];
-          const isValid = choice.text && choice.text.length >= 5 && (choice.nextSceneId || choice.nextDialogueId);
+          const isValid = choice.text && choice.text.trim().length >= 5;
           const charCount = choice.text?.length || 0;
 
           return (
@@ -174,17 +171,20 @@ export function SimpleChoiceBuilder({
                       Scène suivante
                     </Label>
                     <Select
-                      value={choice.nextSceneId || ''}
-                      onValueChange={(value) => onUpdateChoice(config.index as 0 | 1, {
-                        nextSceneId: value,
-                        nextDialogueId: value ? undefined : choice.nextDialogueId
-                      })}
+                      value={choice.nextSceneId || '__none__'}
+                      onValueChange={(value) => {
+                        const sceneId = value === '__none__' ? undefined : value;
+                        onUpdateChoice(config.index as 0 | 1, {
+                          nextSceneId: sceneId,
+                          nextDialogueId: sceneId ? undefined : choice.nextDialogueId
+                        });
+                      }}
                     >
                       <SelectTrigger id={`scene-${config.index}`} className="text-sm">
-                        <SelectValue placeholder="-- Choisir une scène --" />
+                        <SelectValue placeholder="-- Continuer dans cette scène --" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">-- Aucune --</SelectItem>
+                        <SelectItem value="__none__">-- Continuer dans cette scène --</SelectItem>
                         {scenes.filter(s => s.id !== currentSceneId).map(scene => (
                           <SelectItem key={scene.id} value={scene.id}>
                             {scene.title || 'Sans titre'}
@@ -201,19 +201,22 @@ export function SimpleChoiceBuilder({
                         Ou dialogue suivant (même scène)
                       </Label>
                       <Select
-                        value={choice.nextDialogueId || ''}
-                        onValueChange={(value) => onUpdateChoice(config.index as 0 | 1, {
-                          nextDialogueId: value
-                        })}
+                        value={choice.nextDialogueId || '__none__'}
+                        onValueChange={(value) => {
+                          const dialogueId = value === '__none__' ? undefined : value;
+                          onUpdateChoice(config.index as 0 | 1, {
+                            nextDialogueId: dialogueId
+                          });
+                        }}
                       >
                         <SelectTrigger id={`dialogue-${config.index}`} className="text-sm">
-                          <SelectValue placeholder="-- Continuer dans cette scène --" />
+                          <SelectValue placeholder="-- Passer au dialogue suivant --" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">-- Aucun --</SelectItem>
+                          <SelectItem value="__none__">-- Passer au dialogue suivant --</SelectItem>
                           {currentScene.dialogues.map((dialogue, idx) => (
                             <SelectItem key={dialogue.id} value={dialogue.id}>
-                              #{idx + 1}: {dialogue.text.substring(0, 30)}...
+                              #{idx + 1}: {dialogue.text?.substring(0, 30) || 'Vide'}
                             </SelectItem>
                           ))}
                         </SelectContent>

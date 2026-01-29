@@ -36,14 +36,14 @@ export default function LeftPanel({
   wizardOpen: controlledWizardOpen,
   onWizardOpenChange,
   editDialogueIndex: controlledEditDialogueIndex,
-  onEditDialogueIndexChange
+  onEditDialogueIndexChange,
 }: LeftPanelProps) {
   // Zustand stores
-  const scenes = useScenesStore(state => state.scenes);
-  const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
-  const setSelectedSceneForEdit = useUIStore(state => state.setSelectedSceneForEdit);
-  const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
-  const addDialogue = useScenesStore(state => state.addDialogue);
+  const scenes = useScenesStore((state) => state.scenes);
+  const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
+  const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
+  const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
+  const addDialogue = useScenesStore((state) => state.addDialogue);
 
   // DialogueWizard state - Use controlled if provided, otherwise local state
   const [localWizardOpen, setLocalWizardOpen] = useState(false);
@@ -76,79 +76,77 @@ export default function LeftPanel({
 
   return (
     <>
-    <Tabs
-      value={activeTab}
-      onValueChange={handleTabChange}
-      className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
-    >
-      {/* Tabs Header avec indicateur gaming */}
-      <TabsList className="w-full grid grid-cols-2 rounded-none border-b-2 border-[var(--color-border-base)] bg-transparent p-0 h-auto">
-        <TabsTrigger
-          value="scenes"
-          className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 gap-2"
-        >
-          <Film className="w-4 h-4" aria-hidden="true" />
-          <span className="font-semibold text-sm">Scènes</span>
-        </TabsTrigger>
-        <TabsTrigger
-          value="dialogues"
-          className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 gap-2"
-        >
-          <MessageSquare className="w-4 h-4" aria-hidden="true" />
-          <span className="font-semibold text-sm">Dialogues</span>
-        </TabsTrigger>
-      </TabsList>
-
-      {/* Tabs Content avec animations fade-in */}
-      <TabsContent
-        value="scenes"
-        className="flex-1 m-0 animate-in fade-in duration-200"
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
       >
-        <div className="h-full overflow-y-auto overflow-x-hidden">
-          <ScenesSidebar
-            scenes={scenes}
-            selectedSceneId={selectedSceneForEdit}
-            onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
-          />
-        </div>
-      </TabsContent>
+        {/* Tabs Header avec indicateur gaming */}
+        <TabsList className="w-full grid grid-cols-2 rounded-none border-b-2 border-[var(--color-border-base)] bg-transparent p-0 h-auto">
+          <TabsTrigger
+            value="scenes"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 gap-2"
+          >
+            <Film className="w-4 h-4" aria-hidden="true" />
+            <span className="font-semibold text-sm">Scènes</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="dialogues"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 gap-2"
+          >
+            <MessageSquare className="w-4 h-4" aria-hidden="true" />
+            <span className="font-semibold text-sm">Dialogues</span>
+          </TabsTrigger>
+        </TabsList>
 
-      <TabsContent
-        value="dialogues"
-        className="flex-1 m-0 animate-in fade-in duration-200"
-      >
-        <div className="h-full overflow-y-auto overflow-x-hidden">
-          <DialoguesPanel
-            onDialogueSelect={onDialogueSelect}
-            wizardOpen={wizardOpen}
-            onWizardOpenChange={setWizardOpen}
-            editDialogueIndex={editDialogueIndex}
-            onEditDialogueIndexChange={setEditDialogueIndex}
-          />
-        </div>
-      </TabsContent>
-    </Tabs>
+        {/* Tabs Content avec animations fade-in */}
+        <TabsContent value="scenes" className="flex-1 m-0 animate-in fade-in duration-200">
+          <div className="h-full overflow-y-auto overflow-x-hidden">
+            <ScenesSidebar
+              scenes={scenes}
+              selectedSceneId={selectedSceneForEdit}
+              onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
+            />
+          </div>
+        </TabsContent>
 
-    {/* DialogueWizard Modal - Outside Tabs to survive unmounts */}
-    <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-      <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Assistant de création de dialogue</DialogTitle>
-        </DialogHeader>
-        {selectedScene ? (
-          <DialogueWizard
-            sceneId={selectedScene.id}
-            dialogueIndex={editDialogueIndex}
-            dialogue={editDialogueIndex !== undefined ? selectedScene.dialogues[editDialogueIndex] : undefined}
-            scenes={scenes}
-            onSave={handleWizardSave}
-            onClose={() => setWizardOpen(false)}
-          />
-        ) : (
-          <div className="p-8 text-center">Aucune scène sélectionnée</div>
-        )}
-      </DialogContent>
-    </Dialog>
+        <TabsContent value="dialogues" className="flex-1 m-0 animate-in fade-in duration-200">
+          <div className="h-full overflow-y-auto overflow-x-hidden">
+            <DialoguesPanel
+              onDialogueSelect={onDialogueSelect}
+              wizardOpen={wizardOpen}
+              onWizardOpenChange={setWizardOpen}
+              editDialogueIndex={editDialogueIndex}
+              onEditDialogueIndexChange={setEditDialogueIndex}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* DialogueWizard Modal - Outside Tabs to survive unmounts */}
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Assistant de création de dialogue</DialogTitle>
+          </DialogHeader>
+          {selectedScene ? (
+            <DialogueWizard
+              sceneId={selectedScene.id}
+              dialogueIndex={editDialogueIndex}
+              dialogue={
+                editDialogueIndex !== undefined
+                  ? selectedScene.dialogues[editDialogueIndex]
+                  : undefined
+              }
+              scenes={scenes}
+              onSave={handleWizardSave}
+              onClose={() => setWizardOpen(false)}
+            />
+          ) : (
+            <div className="p-8 text-center">Aucune scène sélectionnée</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

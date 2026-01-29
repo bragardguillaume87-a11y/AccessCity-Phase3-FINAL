@@ -56,10 +56,10 @@ export function StepChoices({
       );
 
     case 'medium':
-      return <PlaceholderBuilder type="medium" />;
+      return <PlaceholderBuilder type="medium" onValidChange={onValidChange} />;
 
     case 'complex':
-      return <PlaceholderBuilder type="complex" />;
+      return <PlaceholderBuilder type="complex" onValidChange={onValidChange} />;
 
     default:
       return null;
@@ -69,7 +69,11 @@ export function StepChoices({
 /**
  * PlaceholderBuilder - Coming Soon placeholder for Medium and Complex modes
  */
-function PlaceholderBuilder({ type }: { type: 'medium' | 'complex' }) {
+function PlaceholderBuilder({ type, onValidChange }: { type: 'medium' | 'complex'; onValidChange: (isValid: boolean) => void }) {
+  // Mark as invalid so user can't proceed past placeholder
+  React.useEffect(() => {
+    onValidChange(false);
+  }, [onValidChange]);
   const config = {
     medium: {
       icon: Dices,
@@ -123,11 +127,6 @@ function PlaceholderBuilder({ type }: { type: 'medium' | 'complex' }) {
           Ce mode sera ajouté prochainement
         </p>
       </div>
-
-      {/* Temporary validation - always false for placeholders */}
-      {React.useEffect(() => {
-        onValidChange(false);
-      }, [])}
     </div>
   );
 }

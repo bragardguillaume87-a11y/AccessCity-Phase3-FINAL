@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Character } from '@/types';
 import type { CharactersTabLabels } from '../CharactersTab';
+import { SYSTEM_CHARACTERS } from '@/config/constants';
 
 /**
  * Props for CharacterCard component
@@ -32,7 +33,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   onDelete,
   labels = {}
 }) => {
-  const isSystemCharacter = character.id === 'player' || character.id === 'narrator';
+  const isSystemCharacter = (SYSTEM_CHARACTERS as readonly string[]).includes(character.id);
 
   const cardStyle = {
     padding: '12px',

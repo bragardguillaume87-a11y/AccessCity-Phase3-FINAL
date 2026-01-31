@@ -142,8 +142,19 @@ export function useGameState({
   }, [history]);
 
   const goToNextDialogue = useCallback(() => {
-    if (!currentScene?.dialogues) return;
-    const currentIndex = currentScene.dialogues.findIndex((d) => d.id === currentDialogue?.id);
+    if (!currentScene?.dialogues || !currentDialogue) return;
+
+    // Explicit convergence: dialogue has a nextDialogueId (e.g. branch response → rejoin main flow)
+    if (currentDialogue.nextDialogueId) {
+      const target = currentScene.dialogues.find((d) => d.id === currentDialogue.nextDialogueId);
+      if (target) {
+        setCurrentDialogueId(target.id);
+        return;
+      }
+    }
+
+    // Default: advance linearly
+    const currentIndex = currentScene.dialogues.findIndex((d) => d.id === currentDialogue.id);
     if (currentIndex === -1 || currentIndex === currentScene.dialogues.length - 1) return;
     setCurrentDialogueId(currentScene.dialogues[currentIndex + 1].id);
   }, [currentScene, currentDialogue]);
@@ -182,11 +193,6 @@ export function useGameState({
         }
       });
       applyStatsDelta(delta);
-    }
-
-    // Legacy support: statsDelta object (now properly typed in DialogueChoice)
-    if (choice.statsDelta) {
-      applyStatsDelta(choice.statsDelta);
     }
 
     // Handle dice check (now properly typed in DialogueChoice)

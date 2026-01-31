@@ -104,6 +104,10 @@ export interface Dialogue {
   choices: DialogueChoice[];
   /** Sound effect to play when this dialogue appears */
   sfx?: DialogueAudio;
+  /** Explicit next dialogue ID for convergence after branching */
+  nextDialogueId?: string;
+  /** Whether this dialogue is a branch response (visual marker in editor) */
+  isResponse?: boolean;
 }
 
 /**
@@ -115,8 +119,6 @@ export interface DialogueChoice {
   effects: Effect[];
   nextSceneId?: string;
   nextDialogueId?: string;
-  // Legacy support for old format
-  statsDelta?: GameStats;
   // Game mechanic: dice check
   diceCheck?: DiceCheck;
 }

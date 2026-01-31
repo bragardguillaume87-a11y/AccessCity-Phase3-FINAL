@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { Scene } from '@/types';
 import type { DialogueFormData } from './useDialogueForm';
 
 /**
@@ -19,12 +18,10 @@ export interface ValidationResult {
  * - Complex: 2-4 choices with effects or navigation
  *
  * @param formData - Current form data
- * @param scenes - All scenes for navigation validation
  * @returns Validation result with errors
  */
 export function useChoiceValidation(
-  formData: DialogueFormData,
-  scenes: Scene[]
+  formData: DialogueFormData
 ): ValidationResult {
   return useMemo(() => {
     const errors: string[] = [];
@@ -55,9 +52,9 @@ export function useChoiceValidation(
             errors.push(`Choix ${index + 1}: Le texte est trop court (minimum 5 caractères)`);
           }
 
-          if (!choice.nextSceneId && !choice.nextDialogueId) {
-            errors.push(`Choix ${index + 1}: Doit mener quelque part (scène ou dialogue suivant)`);
-          }
+          // Navigation is optional in simple mode:
+          // - If responses are created, the wizard auto-links nextDialogueId
+          // - If no responses, the engine auto-advances to next dialogue
         });
         break;
       }
@@ -135,7 +132,7 @@ export function useChoiceValidation(
       isValid: errors.length === 0,
       errors
     };
-  }, [formData, scenes]);
+  }, [formData]);
 }
 
 export default useChoiceValidation;

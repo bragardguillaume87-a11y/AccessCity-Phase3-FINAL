@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
@@ -6,6 +6,7 @@ import DialoguesPanel from './DialoguesPanel';
 import { useScenesStore, useUIStore } from '../../stores/index';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
+import type { Dialogue } from '@/types';
 
 /**
  * LeftPanel - Système d'onglets Scènes/Dialogues (PHASE 2)
@@ -22,10 +23,6 @@ export interface LeftPanelProps {
   onTabChange: (tab: 'scenes' | 'dialogues') => void;
   onDialogueSelect?: (sceneId: string, index: number, metadata?: unknown) => void;
   onSceneSelect?: (sceneId: string) => void;
-  wizardOpen?: boolean;
-  onWizardOpenChange?: (open: boolean) => void;
-  editDialogueIndex?: number;
-  onEditDialogueIndexChange?: (index: number | undefined) => void;
 }
 
 export default function LeftPanel({
@@ -33,10 +30,6 @@ export default function LeftPanel({
   onTabChange,
   onDialogueSelect,
   onSceneSelect,
-  wizardOpen: controlledWizardOpen,
-  onWizardOpenChange,
-  editDialogueIndex: controlledEditDialogueIndex,
-  onEditDialogueIndexChange,
 }: LeftPanelProps) {
   // Zustand stores
   const scenes = useScenesStore((state) => state.scenes);
@@ -44,15 +37,14 @@ export default function LeftPanel({
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
   const addDialogue = useScenesStore((state) => state.addDialogue);
+  const addDialogues = useScenesStore((state) => state.addDialogues);
+  const updateDialogue = useScenesStore((state) => state.updateDialogue);
 
-  // DialogueWizard state - Use controlled if provided, otherwise local state
-  const [localWizardOpen, setLocalWizardOpen] = useState(false);
-  const [localEditDialogueIndex, setLocalEditDialogueIndex] = useState<number | undefined>();
-
-  const wizardOpen = controlledWizardOpen ?? localWizardOpen;
-  const setWizardOpen = onWizardOpenChange ?? setLocalWizardOpen;
-  const editDialogueIndex = controlledEditDialogueIndex ?? localEditDialogueIndex;
-  const setEditDialogueIndex = onEditDialogueIndexChange ?? setLocalEditDialogueIndex;
+  // DialogueWizard state from UIStore (no more prop-drilling)
+  const wizardOpen = useUIStore((state) => state.dialogueWizardOpen);
+  const setWizardOpen = useUIStore((state) => state.setDialogueWizardOpen);
+  const editDialogueIndex = useUIStore((state) => state.dialogueWizardEditIndex);
+  const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
 
   // Gestionnaire de changement d'onglet
   const handleTabChange = (newTab: string) => {
@@ -60,14 +52,22 @@ export default function LeftPanel({
     onTabChange(tab);
   };
 
-  const handleWizardSave = (dialogue: any) => {
-    if (!selectedScene) return;
+  const handleWizardSave = (dialogues: Dialogue[]) => {
+    if (!selectedScene || dialogues.length === 0) return;
 
     if (editDialogueIndex !== undefined) {
-      const updateDialogue = useScenesStore.getState().updateDialogue;
-      updateDialogue(selectedScene.id, editDialogueIndex, dialogue);
+      // Edit mode: update the main dialogue (first in array)
+      updateDialogue(selectedScene.id, editDialogueIndex, dialogues[0]);
     } else {
-      addDialogue(selectedScene.id, dialogue);
+      // Create mode: determine convergence point for response dialogues
+      // If response dialogues exist and we're appending at the end,
+      // there's no convergence point yet (scene ends after responses).
+      // Convergence will auto-resolve when more dialogues are added.
+      if (dialogues.length === 1) {
+        addDialogue(selectedScene.id, dialogues[0]);
+      } else {
+        addDialogues(selectedScene.id, dialogues);
+      }
     }
 
     setWizardOpen(false);
@@ -114,20 +114,23 @@ export default function LeftPanel({
           <div className="h-full overflow-y-auto overflow-x-hidden">
             <DialoguesPanel
               onDialogueSelect={onDialogueSelect}
-              wizardOpen={wizardOpen}
-              onWizardOpenChange={setWizardOpen}
-              editDialogueIndex={editDialogueIndex}
-              onEditDialogueIndexChange={setEditDialogueIndex}
             />
           </div>
         </TabsContent>
       </Tabs>
 
       {/* DialogueWizard Modal - Outside Tabs to survive unmounts */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+      <Dialog open={wizardOpen} onOpenChange={(open) => {
+        setWizardOpen(open);
+        if (!open) setEditDialogueIndex(undefined);
+      }}>
         <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Assistant de création de dialogue</DialogTitle>
+            <DialogTitle>
+              {editDialogueIndex !== undefined
+                ? 'Modifier un dialogue avec l\'assistant'
+                : 'Créer un nouveau dialogue'}
+            </DialogTitle>
           </DialogHeader>
           {selectedScene ? (
             <DialogueWizard

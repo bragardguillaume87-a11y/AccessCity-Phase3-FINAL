@@ -30,8 +30,6 @@ export interface PropertiesPanelProps {
   selectedScene: Scene | undefined;
   characters: Character[];
   onOpenModal?: (modal: ModalType | string, context?: unknown) => void;
-  wizardOpen?: boolean;
-  onWizardOpenChange?: (open: boolean) => void;
 }
 
 export default function PropertiesPanel({
@@ -39,8 +37,6 @@ export default function PropertiesPanel({
   selectedScene,
   characters,
   onOpenModal,
-  wizardOpen,
-  onWizardOpenChange
 }: PropertiesPanelProps) {
   // Zustand stores (memoized selectors)
   const scenes = useScenes();
@@ -164,8 +160,6 @@ export default function PropertiesPanel({
         onDuplicate={() => handleDuplicateDialogue(selectedScene.id, selectedElement.index)}
         lastSaved={lastSaved}
         isSaving={isSaving}
-        wizardOpen={wizardOpen}
-        onWizardOpenChange={onWizardOpenChange}
       />
     );
   }

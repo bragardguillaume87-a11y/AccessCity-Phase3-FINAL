@@ -2,6 +2,17 @@ import { useState, useCallback } from 'react';
 import type { Dialogue, DialogueChoice, DialogueAudio, Effect, DiceCheck } from '@/types';
 import type { ComplexityLevel } from './useDialogueWizardState';
 
+/** Default stat for dice checks. TODO: align with GAME_STATS when i18n is implemented */
+const DEFAULT_DICE_STAT = 'Empathie';
+
+/**
+ * Response data for branch responses (after player choice)
+ */
+export interface ResponseData {
+  speaker: string;
+  text: string;
+}
+
 /**
  * Form data for dialogue wizard
  */
@@ -11,6 +22,7 @@ export interface DialogueFormData {
   sfx?: DialogueAudio;
   choices: DialogueChoice[];
   complexityLevel: ComplexityLevel | null;
+  responses: ResponseData[];
 }
 
 /**
@@ -20,6 +32,7 @@ export interface DialogueFormActions {
   updateField: (field: keyof DialogueFormData, value: any) => void;
   setComplexity: (level: ComplexityLevel) => void;
   updateChoice: (index: number, updates: Partial<DialogueChoice>) => void;
+  updateResponse: (index: number, updates: Partial<ResponseData>) => void;
   addChoice: () => void;
   removeChoice: (index: number) => void;
   reset: () => void;
@@ -74,7 +87,7 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
           text: '',
           effects: [],
           diceCheck: {
-            stat: 'Empathie',
+            stat: DEFAULT_DICE_STAT,
             difficulty: 12,
             success: {},
             failure: {}
@@ -117,7 +130,8 @@ export function useDialogueForm(
         text: initialDialogue.text,
         sfx: initialDialogue.sfx,
         choices: initialDialogue.choices,
-        complexityLevel: inferComplexity(initialDialogue)
+        complexityLevel: inferComplexity(initialDialogue),
+        responses: []
       };
     }
 
@@ -125,7 +139,8 @@ export function useDialogueForm(
       speaker: '',
       text: '',
       choices: [],
-      complexityLevel: null
+      complexityLevel: null,
+      responses: []
     };
   });
 
@@ -134,10 +149,12 @@ export function useDialogueForm(
   }, []);
 
   const setComplexity = useCallback((level: ComplexityLevel) => {
+    const newChoices = generateDefaultChoices(level);
     setFormData(prev => ({
       ...prev,
       complexityLevel: level,
-      choices: generateDefaultChoices(level)
+      choices: newChoices,
+      responses: newChoices.map(() => ({ speaker: '', text: '' }))
     }));
   }, []);
 
@@ -167,7 +184,17 @@ export function useDialogueForm(
   const removeChoice = useCallback((index: number) => {
     setFormData(prev => ({
       ...prev,
-      choices: prev.choices.filter((_, i) => i !== index)
+      choices: prev.choices.filter((_, i) => i !== index),
+      responses: prev.responses.filter((_, i) => i !== index)
+    }));
+  }, []);
+
+  const updateResponse = useCallback((index: number, updates: Partial<ResponseData>) => {
+    setFormData(prev => ({
+      ...prev,
+      responses: prev.responses.map((r, i) =>
+        i === index ? { ...r, ...updates } : r
+      )
     }));
   }, []);
 
@@ -176,7 +203,8 @@ export function useDialogueForm(
       speaker: '',
       text: '',
       choices: [],
-      complexityLevel: null
+      complexityLevel: null,
+      responses: []
     });
   }, []);
 
@@ -184,6 +212,7 @@ export function useDialogueForm(
     updateField,
     setComplexity,
     updateChoice,
+    updateResponse,
     addChoice,
     removeChoice,
     reset

@@ -18,6 +18,8 @@ interface UIState {
   isSaving: boolean;
   announcement: string;
   urgentAnnouncement: string;
+  dialogueWizardOpen: boolean;
+  dialogueWizardEditIndex: number | undefined;
 
   // Actions
   setSelectedSceneId: (sceneId: string | null) => void;
@@ -26,6 +28,8 @@ interface UIState {
   setIsSaving: (isSaving: boolean) => void;
   setAnnouncement: (message: string) => void;
   setUrgentAnnouncement: (message: string) => void;
+  setDialogueWizardOpen: (open: boolean) => void;
+  setDialogueWizardEditIndex: (index: number | undefined) => void;
 }
 
 // ============================================================================
@@ -42,6 +46,8 @@ export const useUIStore = create<UIState>()(
       isSaving: false,
       announcement: '',
       urgentAnnouncement: '',
+      dialogueWizardOpen: false,
+      dialogueWizardEditIndex: undefined,
 
       // Actions
       setSelectedSceneId: (sceneId) => {
@@ -66,6 +72,14 @@ export const useUIStore = create<UIState>()(
 
       setUrgentAnnouncement: (message) => {
         set({ urgentAnnouncement: message }, false, 'ui/setUrgentAnnouncement');
+      },
+
+      setDialogueWizardOpen: (open) => {
+        set({ dialogueWizardOpen: open }, false, 'ui/setDialogueWizardOpen');
+      },
+
+      setDialogueWizardEditIndex: (index) => {
+        set({ dialogueWizardEditIndex: index }, false, 'ui/setDialogueWizardEditIndex');
       },
     })),
     { name: 'UIStore' }

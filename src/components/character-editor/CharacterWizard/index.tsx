@@ -5,8 +5,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Character } from '@/types';
 
 // Wizard components
-import { useWizardState, type WizardStep } from './hooks/useWizardState';
-import WizardProgressBar from './components/WizardProgressBar';
+import { useWizardState, WIZARD_STEPS, type WizardStep } from './hooks/useWizardState';
+import { WizardProgressBar } from '@/components/ui/WizardProgressBar';
 import WizardNavigation from './components/WizardNavigation';
 import StepIdentity from './components/StepIdentity';
 import StepAppearance from './components/StepAppearance';
@@ -158,6 +158,7 @@ export function CharacterWizard({
       {/* Progress bar - fixed height */}
       <div className="flex-shrink-0">
         <WizardProgressBar
+          steps={WIZARD_STEPS}
           currentStep={wizardState.currentStep}
           visitedSteps={wizardState.visitedSteps}
           onStepClick={wizardActions.goToStep}

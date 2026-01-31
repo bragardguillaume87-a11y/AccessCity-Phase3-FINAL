@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import dagre from 'dagre';
 import type { Node, Edge } from '@xyflow/react';
 import type { Dialogue, DialogueChoice, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme } from '@/types';
+import { DEFAULTS } from '@/config/constants';
 
 /**
  * Union type for all graph node types
@@ -68,7 +69,7 @@ export function useDialogueGraph(
         data: {
           dialogue,
           index,
-          speaker: dialogue.speaker || 'narrator',
+          speaker: dialogue.speaker || DEFAULTS.DIALOGUE_SPEAKER,
           text: dialogue.text || '',
           speakerMood: (dialogue as any).speakerMood || 'neutral',
           choices: dialogue.choices || [],
@@ -85,8 +86,25 @@ export function useDialogueGraph(
       const sourceId = `${sceneId}-d-${index}`;
       const hasChoices = dialogue.choices && dialogue.choices.length > 0;
 
-      // Linear edge: dialogue → next dialogue (if no choices)
-      if (!hasChoices && index < dialogues.length - 1) {
+      // Convergence edge: dialogue has explicit nextDialogueId (e.g. response → rejoin main flow)
+      if (dialogue.nextDialogueId) {
+        const targetIdx = dialogues.findIndex(d => d.id === dialogue.nextDialogueId);
+        if (targetIdx !== -1) {
+          edges.push({
+            id: `${sourceId}-converge-to-${sceneId}-d-${targetIdx}`,
+            source: sourceId,
+            target: `${sceneId}-d-${targetIdx}`,
+            type: 'smoothstep',
+            animated: false,
+            label: '↩ rejoint',
+            style: { stroke: '#22c55e', strokeWidth: 2, strokeDasharray: '4,4' },
+            labelStyle: { fill: '#86efac', fontSize: 11, fontWeight: 500 },
+            labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 }
+          });
+        }
+      }
+      // Linear edge: dialogue → next dialogue (if no choices and no explicit next)
+      else if (!hasChoices && index < dialogues.length - 1) {
         edges.push({
           id: `${sourceId}-to-${sceneId}-d-${index + 1}`,
           source: sourceId,

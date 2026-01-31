@@ -71,9 +71,6 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const [fullscreenMode, setFullscreenMode] = useState<FullscreenMode>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [modalContext, setModalContext] = useState<ModalContext>({});
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [editDialogueIndex, setEditDialogueIndex] = useState<number | undefined>();
-
   // === KEYBOARD SHORTCUTS ===
   useKeyboardShortcuts({
     onUndo: undo,
@@ -213,10 +210,6 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                     onTabChange={handleTabChange}
                     onDialogueSelect={editorLogic.handleDialogueSelect}
                     onSceneSelect={editorLogic.handleSceneSelect}
-                    wizardOpen={wizardOpen}
-                    onWizardOpenChange={setWizardOpen}
-                    editDialogueIndex={editDialogueIndex}
-                    onEditDialogueIndexChange={setEditDialogueIndex}
                   />
                 </ErrorBoundary>
               </Sidebar>
@@ -288,8 +281,6 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                       selectedScene={selectedScene}
                       characters={characters}
                       onOpenModal={handleOpenModal}
-                      wizardOpen={wizardOpen}
-                      onWizardOpenChange={setWizardOpen}
                     />
                   )}
                 </ErrorBoundary>

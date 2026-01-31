@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, GitBranch, Edit2, Copy, Trash2 } from 'lucide-react';
+import { GripVertical, GitBranch, Wand2, Copy, Trash2, MessageCircleReply } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { useScenesStore } from '@/stores/scenesStore';
 import { useCharactersStore } from '@/stores/charactersStore';
@@ -26,9 +26,10 @@ export interface DialogueCardProps {
   index: number;
   sceneId: string;
   onDialogueSelect?: (sceneId: string, index: number) => void;
+  onEditWithWizard?: (index: number) => void;
 }
 
-export function DialogueCard({ id, dialogue, index, sceneId, onDialogueSelect }: DialogueCardProps) {
+export function DialogueCard({ id, dialogue, index, sceneId, onDialogueSelect, onEditWithWizard }: DialogueCardProps) {
   const {
     attributes,
     listeners,
@@ -48,10 +49,26 @@ export function DialogueCard({ id, dialogue, index, sceneId, onDialogueSelect }:
   const duplicateDialogue = useScenesStore(state => state.duplicateDialogue);
   const deleteDialogue = useScenesStore(state => state.deleteDialogue);
 
+  const scenes = useScenesStore(state => state.scenes);
+
   const speaker = characters.find(c => c.id === dialogue.speaker);
   const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
   const hasChoices = dialogue.choices && dialogue.choices.length > 0;
   const truncatedText = dialogue.text?.substring(0, 50) || '(empty)';
+  const isResponse = dialogue.isResponse === true;
+
+  // Determine response index (A=0, B=1) by checking which choice points to this dialogue
+  const responseIndex = (() => {
+    if (!isResponse) return -1;
+    const scene = scenes.find(s => s.id === sceneId);
+    if (!scene) return -1;
+    for (const d of scene.dialogues) {
+      for (let ci = 0; ci < d.choices.length; ci++) {
+        if (d.choices[ci].nextDialogueId === dialogue.id) return ci;
+      }
+    }
+    return -1;
+  })();
 
   const handleClick = () => {
     // PHASE 3: Use onDialogueSelect for synchronized 3 actions
@@ -85,12 +102,18 @@ export function DialogueCard({ id, dialogue, index, sceneId, onDialogueSelect }:
       ref={setNodeRef}
       style={style}
       data-dialogue-id={`${sceneId}-${index}`} // Pour scroll auto (PHASE 3)
-      className="group relative bg-[var(--color-bg-base)] border-2 border-[var(--color-border-base)] hover:border-[var(--color-primary)] rounded-lg p-3 transition-all cursor-pointer magnetic-lift hover:shadow-[var(--shadow-game-glow)]"
+      className={`group relative bg-[var(--color-bg-base)] border-2 rounded-lg p-3 transition-all cursor-pointer magnetic-lift hover:shadow-[var(--shadow-game-glow)] ${
+        isResponse
+          ? responseIndex === 0
+            ? 'border-l-emerald-500 border-l-4 border-[var(--color-border-base)] hover:border-emerald-400'
+            : 'border-l-rose-500 border-l-4 border-[var(--color-border-base)] hover:border-rose-400'
+          : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]'
+      }`}
       onClick={handleClick}
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      aria-label={`Dialogue ${index + 1}: ${truncatedText}`}
+      aria-label={`${isResponse ? `Réponse ${responseIndex === 0 ? 'A' : 'B'} - ` : ''}Dialogue ${index + 1}: ${truncatedText}`}
     >
       {/* Drag Handle */}
       <div
@@ -105,11 +128,21 @@ export function DialogueCard({ id, dialogue, index, sceneId, onDialogueSelect }:
 
       {/* Content */}
       <div className="ml-6">
-        {/* Header: Speaker + Choices badge */}
+        {/* Header: Speaker + Choices/Response badge */}
         <div className="flex items-center gap-2 mb-2">
           <div className="px-2 py-0.5 bg-blue-600 rounded text-xs font-bold text-white">
             {speakerName}
           </div>
+          {isResponse && (
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
+              responseIndex === 0
+                ? 'bg-emerald-600/20 border border-emerald-500 text-emerald-300'
+                : 'bg-rose-600/20 border border-rose-500 text-rose-300'
+            }`}>
+              <MessageCircleReply className="w-3 h-3" aria-hidden="true" />
+              Réponse {responseIndex === 0 ? 'A' : 'B'}
+            </div>
+          )}
           {hasChoices && (
             <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-600/20 border border-purple-500 rounded text-xs text-purple-300">
               <GitBranch className="w-3 h-3" aria-hidden="true" />
@@ -131,14 +164,14 @@ export function DialogueCard({ id, dialogue, index, sceneId, onDialogueSelect }:
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-6 w-6 hover:text-primary hover:bg-primary/10"
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: Ouvrir modal édition dialogue
+              onEditWithWizard?.(index);
             }}
-            aria-label="Éditer le dialogue"
+            aria-label="Modifier avec l'assistant magique"
           >
-            <Edit2 className="w-3 h-3" />
+            <Wand2 className="w-3 h-3" />
           </Button>
           <Button
             variant="ghost"

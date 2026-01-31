@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCharactersStore } from '@/stores';
+import { DEFAULTS } from '@/config/constants';
 import { cn } from '@/lib/utils';
 
 interface StepBasicsProps {
@@ -136,28 +137,15 @@ export function StepBasics({
             <User className="w-5 h-5 text-primary" />
             Qui parle ?
           </Label>
-          <Select value={speaker || 'narrator'} onValueChange={onSpeakerChange}>
+          <Select value={speaker || DEFAULTS.DIALOGUE_SPEAKER} onValueChange={onSpeakerChange}>
             <SelectTrigger
               id="speaker"
-              className="h-14 text-base border-2 focus:ring-4 focus:ring-primary/20"
+              className="h-14 text-base border-2 focus:ring-4 focus:ring-primary/20 [&>span]:flex [&>span]:items-center [&>span]:overflow-hidden [&>span]:min-w-0"
             >
               <SelectValue placeholder="Choisis un personnage..." />
             </SelectTrigger>
             <SelectContent>
-              {/* Narrator option */}
-              <SelectItem value="narrator" className="text-base py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg">📖</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold truncate">Narrateur</div>
-                    <div className="text-xs text-muted-foreground truncate">Voix qui raconte l'histoire</div>
-                  </div>
-                </div>
-              </SelectItem>
-
-              {/* Characters */}
+              {/* Characters from store (includes Narrateur as a system character) */}
               {characters.map((char) => (
                 <SelectItem key={char.id} value={char.id} className="text-base py-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -172,10 +160,7 @@ export function StepBasics({
                         <span className="text-lg">👤</span>
                       </div>
                     )}
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold truncate">{char.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">Personnage</div>
-                    </div>
+                    <span className="font-semibold truncate">{char.name}</span>
                   </div>
                 </SelectItem>
               ))}
@@ -200,7 +185,7 @@ export function StepBasics({
             >
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span>
-                {characters.find(c => c.id === speaker)?.name || 'Narrateur'} va parler 👍
+                {characters.find(c => c.id === speaker)?.name || speaker} va parler 👍
               </span>
             </motion.div>
           )}
@@ -219,7 +204,7 @@ export function StepBasics({
               onChange={(e) => onTextChange(e.target.value)}
               placeholder="Écris le dialogue ici... (minimum 10 caractères)"
               className={cn(
-                "min-h-[200px] text-base border-2 focus:ring-4 focus:ring-primary/20 resize-none",
+                "min-h-[120px] text-base border-2 focus:ring-4 focus:ring-primary/20 resize-none",
                 "transition-all duration-200",
                 validation.errors.length > 0 && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
                 validation.isValid && "border-green-500 focus:border-green-500 focus:ring-green-500/20"

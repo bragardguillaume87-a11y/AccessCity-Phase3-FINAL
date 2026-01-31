@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo } from 'react';
 /**
  * Dialogue wizard step identifiers
  */
-export type DialogueWizardStep = 'complexity' | 'basics' | 'choices' | 'review';
+export type DialogueWizardStep = 'complexity' | 'basics' | 'choices' | 'responses' | 'review';
 
 /**
  * Complexity level for dialogue creation
@@ -66,6 +66,12 @@ export const DIALOGUE_WIZARD_STEPS: StepConfig[] = [
     label: 'Choix',
     icon: '🎯',
     description: 'Crée les options pour le joueur'
+  },
+  {
+    id: 'responses',
+    label: 'Réponses',
+    icon: '💡',
+    description: 'Que se passe-t-il après le choix ?'
   },
   {
     id: 'review',

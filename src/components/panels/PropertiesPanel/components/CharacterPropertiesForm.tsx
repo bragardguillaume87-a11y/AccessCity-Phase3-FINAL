@@ -6,6 +6,7 @@ import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker';
 import { useMoodManagement } from '@/hooks/useMoodManagement';
 import { Copy, Plus } from 'lucide-react';
+import { SYSTEM_CHARACTERS } from '@/config/constants';
 
 export interface CharacterPropertiesFormProps {
   character: Character;
@@ -39,7 +40,7 @@ export function CharacterPropertiesForm({
   lastSaved,
   isSaving
 }: CharacterPropertiesFormProps) {
-  const isSystemCharacter = character.id === 'player' || character.id === 'narrator';
+  const isSystemCharacter = (SYSTEM_CHARACTERS as readonly string[]).includes(character.id);
 
   // Calculate usage statistics
   const appearancesCount = scenes.filter(scene =>

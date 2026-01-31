@@ -247,13 +247,6 @@ export function exportToHTMLStandalone(data: ScenarioData): string {
       const dialogue = scene.dialogues[currentDialogueIndex];
       const choice = dialogue.choices[index];
 
-      if (choice.statsDelta) {
-        stats.physique += choice.statsDelta.physique || 0;
-        stats.mentale += choice.statsDelta.mentale || 0;
-        stats.sociale += choice.statsDelta.sociale || 0;
-        updateStats();
-      }
-
       if (choice.nextSceneId) {
         currentSceneId = choice.nextSceneId;
         currentDialogueIndex = 0;
@@ -398,12 +391,6 @@ class GameScene extends Phaser.Scene {
   }
 
   handleChoice(choice) {
-    if (choice.statsDelta) {
-      this.stats.physique += choice.statsDelta.physique || 0;
-      this.stats.mentale += choice.statsDelta.mentale || 0;
-      this.stats.sociale += choice.statsDelta.sociale || 0;
-    }
-
     if (choice.nextSceneId) {
       this.currentSceneId = choice.nextSceneId;
       this.currentDialogueIndex = 0;

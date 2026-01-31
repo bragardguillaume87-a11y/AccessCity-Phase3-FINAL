@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus, MessageSquare, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useScenesStore, useUIStore } from '@/stores';
+import { DialogueFactory } from '@/factories/DialogueFactory';
+import { DEFAULTS } from '@/config/constants';
 import { DialogueCard } from './DialoguesPanel/DialogueCard';
 
 /**
@@ -19,18 +21,10 @@ import { DialogueCard } from './DialoguesPanel/DialogueCard';
 
 export interface DialoguesPanelProps {
   onDialogueSelect?: (sceneId: string, index: number) => void;
-  wizardOpen?: boolean;
-  onWizardOpenChange?: (open: boolean) => void;
-  editDialogueIndex?: number;
-  onEditDialogueIndexChange?: (index: number | undefined) => void;
 }
 
 export function DialoguesPanel({
   onDialogueSelect,
-  wizardOpen: controlledWizardOpen,
-  onWizardOpenChange,
-  editDialogueIndex: controlledEditDialogueIndex,
-  onEditDialogueIndexChange
 }: DialoguesPanelProps) {
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
   const scenes = useScenesStore(state => state.scenes);
@@ -38,14 +32,9 @@ export function DialoguesPanel({
   const reorderDialogues = useScenesStore(state => state.reorderDialogues);
   const addDialogue = useScenesStore(state => state.addDialogue);
 
-  // Use controlled props if provided, otherwise use local state
-  const [localWizardOpen, setLocalWizardOpen] = useState(false);
-  const [localEditDialogueIndex, setLocalEditDialogueIndex] = useState<number | undefined>();
-
-  const wizardOpen = controlledWizardOpen ?? localWizardOpen;
-  const setWizardOpen = onWizardOpenChange ?? setLocalWizardOpen;
-  const editDialogueIndex = controlledEditDialogueIndex ?? localEditDialogueIndex;
-  const setEditDialogueIndex = onEditDialogueIndexChange ?? setLocalEditDialogueIndex;
+  // DialogueWizard state from UIStore
+  const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
+  const setEditDialogueIndex = useUIStore(state => state.setDialogueWizardEditIndex);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -74,16 +63,16 @@ export function DialoguesPanel({
 
   const handleAddDialogue = () => {
     if (!selectedScene) return;
-    addDialogue(selectedScene.id, {
-      id: `dialogue-${Date.now()}`,
-      speaker: '',
-      text: 'Nouveau dialogue',
-      choices: []
-    });
+    addDialogue(selectedScene.id, DialogueFactory.createText(DEFAULTS.DIALOGUE_SPEAKER, 'Nouveau dialogue'));
   };
 
   const handleOpenWizard = () => {
     setEditDialogueIndex(undefined); // undefined = nouveau dialogue
+    setWizardOpen(true);
+  };
+
+  const handleEditWithWizard = (index: number) => {
+    setEditDialogueIndex(index);
     setWizardOpen(true);
   };
 
@@ -143,6 +132,7 @@ export function DialoguesPanel({
                   index={idx}
                   sceneId={selectedScene.id}
                   onDialogueSelect={onDialogueSelect}
+                  onEditWithWizard={handleEditWithWizard}
                 />
               ))}
             </SortableContext>

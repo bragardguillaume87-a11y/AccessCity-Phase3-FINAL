@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { ChoiceEditor } from './ChoiceEditor';
 import { Copy, Plus, Volume2, X, Sparkles } from 'lucide-react';
+import { useUIStore } from '@/stores';
 
 export interface DialoguePropertiesFormProps {
   dialogue: Dialogue;
@@ -18,8 +19,6 @@ export interface DialoguePropertiesFormProps {
   onOpenModal?: (modalType: ModalType, config?: { category?: string; targetSceneId?: string }) => void;
   lastSaved?: number;
   isSaving?: boolean;
-  wizardOpen?: boolean;
-  onWizardOpenChange?: (open: boolean) => void;
 }
 
 type TabType = 'properties' | 'choices';
@@ -45,10 +44,10 @@ export function DialoguePropertiesForm({
   onOpenModal,
   lastSaved,
   isSaving,
-  wizardOpen,
-  onWizardOpenChange
 }: DialoguePropertiesFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('properties');
+  const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
+  const setEditDialogueIndex = useUIStore(state => state.setDialogueWizardEditIndex);
 
   const handleUpdate = (updates: Partial<Dialogue>) => {
     onUpdate(scene.id, dialogueIndex, updates);
@@ -261,18 +260,19 @@ export function DialoguePropertiesForm({
       {/* Choices tab */}
       {activeTab === 'choices' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* Assistant Dialogue button */}
-          {onWizardOpenChange && (
-            <Button
-              variant="gaming-primary"
-              size="default"
-              onClick={() => onWizardOpenChange(true)}
-              className="w-full"
-            >
-              <Sparkles className="h-4 w-4" />
-              Assistant Dialogue
-            </Button>
-          )}
+          {/* Modifier avec l'assistant magique */}
+          <Button
+            variant="gaming-primary"
+            size="default"
+            onClick={() => {
+              setEditDialogueIndex(dialogueIndex);
+              setWizardOpen(true);
+            }}
+            className="w-full"
+          >
+            <Sparkles className="h-4 w-4" />
+            Modifier avec l'Assistant
+          </Button>
 
           {/* Add Choice button */}
           <Button

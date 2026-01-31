@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Character, Scene } from '@/types';
 import type { CharactersTabLabels } from '../CharactersTab';
+import { SYSTEM_CHARACTERS } from '@/config/constants';
 
 /**
  * Props for CharacterProperties component
@@ -124,7 +125,7 @@ export const CharacterProperties: React.FC<CharacterPropertiesProps> = ({ charac
         </div>
 
         {/* Avertissement pour les personnages système */}
-        {(character.id === 'player' || character.id === 'narrator') && (
+        {(SYSTEM_CHARACTERS as readonly string[]).includes(character.id) && (
           <div style={{
             marginTop: '16px',
             padding: '12px',

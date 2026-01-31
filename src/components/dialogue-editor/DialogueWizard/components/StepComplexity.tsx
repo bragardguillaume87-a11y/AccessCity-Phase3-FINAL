@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Target, Dices, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ComplexityLevel } from '../hooks/useDialogueWizardState';
 
 interface StepComplexityProps {
   selectedLevel: ComplexityLevel | null;
   onSelect: (level: ComplexityLevel) => void;
-  onContinue: () => void;
 }
 
 interface ComplexityCard {
@@ -21,6 +19,7 @@ interface ComplexityCard {
   features: string[];
   color: string;
   gradient: string;
+  hoverStyles: string;
   buttonLabel: string;
   preview: string;
 }
@@ -40,6 +39,7 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     ],
     color: 'from-blue-500 to-blue-600',
     gradient: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10',
+    hoverStyles: 'border-blue-500 ring-4 ring-blue-500/40 shadow-[0_0_30px_rgba(59,130,246,0.5)]',
     buttonLabel: 'Commencer - Mode Simple',
     preview: '💬 → 👍 ou 👎'
   },
@@ -57,6 +57,7 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     ],
     color: 'from-purple-500 to-purple-600',
     gradient: 'bg-gradient-to-br from-purple-500/20 to-purple-600/10',
+    hoverStyles: 'border-purple-500 ring-4 ring-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.5)]',
     buttonLabel: 'Lancer les dés !',
     preview: '🎲 → ✅ ou ❌'
   },
@@ -74,6 +75,7 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     ],
     color: 'from-orange-500 to-orange-600',
     gradient: 'bg-gradient-to-br from-orange-500/20 to-orange-600/10',
+    hoverStyles: 'border-orange-500 ring-4 ring-orange-500/40 shadow-[0_0_30px_rgba(249,115,22,0.5)]',
     buttonLabel: 'Mode Expert',
     preview: '🌳 → 1️⃣ 2️⃣ 3️⃣ 4️⃣'
   }
@@ -89,8 +91,7 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
  */
 export function StepComplexity({
   selectedLevel,
-  onSelect,
-  onContinue
+  onSelect
 }: StepComplexityProps) {
   const [hoveredCard, setHoveredCard] = useState<ComplexityLevel | null>(null);
 
@@ -136,11 +137,7 @@ export function StepComplexity({
                   isSelected
                     ? "border-primary ring-4 ring-primary/30 shadow-2xl"
                     : isHovered
-                      ? card.id === 'simple'
-                        ? "border-blue-500 ring-4 ring-blue-500/40 shadow-[0_0_30px_rgba(59,130,246,0.5)]"
-                        : card.id === 'medium'
-                          ? "border-purple-500 ring-4 ring-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.5)]"
-                          : "border-orange-500 ring-4 ring-orange-500/40 shadow-[0_0_30px_rgba(249,115,22,0.5)]"
+                      ? card.hoverStyles
                       : "border-border hover:border-primary/50 shadow-lg"
                 )}
                 whileHover={{ scale: 1.02, y: -4 }}
@@ -244,24 +241,6 @@ export function StepComplexity({
           );
         })}
       </div>
-
-      {/* Continue button (shown when a level is selected) */}
-      {selectedLevel && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center pt-4"
-        >
-          <Button
-            onClick={onContinue}
-            size="lg"
-            variant="default"
-            className="text-lg px-12 py-6 shadow-xl hover:shadow-2xl transition-all"
-          >
-            Continuer avec {COMPLEXITY_CARDS.find(c => c.id === selectedLevel)?.title} 🚀
-          </Button>
-        </motion.div>
-      )}
 
       {/* Help text */}
       <div className="text-center text-sm text-muted-foreground pt-4">

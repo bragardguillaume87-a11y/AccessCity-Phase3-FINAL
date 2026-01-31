@@ -1,26 +1,30 @@
 import React, { useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DialogueFactory } from '@/factories/DialogueFactory';
+import { logger } from '@/utils/logger';
+import { DEFAULTS } from '@/config/constants';
 import type { Dialogue, Scene } from '@/types';
 
 // Wizard hooks
-import { useDialogueWizardState, type DialogueWizardStep } from './hooks/useDialogueWizardState';
+import { useDialogueWizardState, DIALOGUE_WIZARD_STEPS, type DialogueWizardStep } from './hooks/useDialogueWizardState';
 import { useDialogueForm } from './hooks/useDialogueForm';
 import { useChoiceValidation } from './hooks/useChoiceValidation';
 
 // DialogueWizard components
-import DialogueWizardProgressBar from './components/WizardProgressBar';
-import WizardNavigation from '@/components/character-editor/CharacterWizard/components/WizardNavigation';
+import { WizardProgressBar } from '@/components/ui/WizardProgressBar';
+import { WizardNavigation } from '@/components/ui/WizardNavigation';
 import StepComplexity from './components/StepComplexity';
 import StepBasics from './components/StepBasics';
 import StepChoices from './components/StepChoices';
-// import StepReview from './components/StepReview';
+import StepResponses from './components/StepResponses';
+import StepReview from './components/StepReview';
 
 interface DialogueWizardProps {
   sceneId: string;
   dialogueIndex?: number;
   dialogue?: Dialogue;
   scenes: Scene[];
-  onSave: (dialogue: Dialogue) => void;
+  onSave: (dialogues: Dialogue[]) => void;
   onClose: () => void;
 }
 
@@ -46,18 +50,14 @@ export function DialogueWizard({
   onSave,
   onClose
 }: DialogueWizardProps) {
-  console.log('[DialogueWizard] Component mounted, sceneId:', sceneId, 'dialogueIndex:', dialogueIndex);
-
   // Wizard state management
-  const [wizardState, wizardActions] = useDialogueWizardState(
-    dialogue ? undefined : undefined // Will be set when complexity is chosen
-  );
+  const [wizardState, wizardActions] = useDialogueWizardState();
 
   // Form data management
   const [formData, formActions] = useDialogueForm(dialogue);
 
   // Validation
-  const validation = useChoiceValidation(formData, scenes);
+  const validation = useChoiceValidation(formData);
 
   // Sync complexity between wizard and form
   const handleComplexityChange = useCallback(
@@ -70,11 +70,6 @@ export function DialogueWizard({
     [wizardActions, formActions]
   );
 
-  // Handle continue from complexity step
-  const handleComplexityContinue = useCallback(() => {
-    wizardActions.nextStep();
-  }, [wizardActions]);
-
   // Handle step validation changes
   const handleValidChange = useCallback(
     (isValid: boolean) => {
@@ -83,22 +78,74 @@ export function DialogueWizard({
     [wizardActions]
   );
 
+  // Handle skip responses step
+  const handleSkipResponses = useCallback(() => {
+    // Clear responses and advance to review
+    formActions.updateField('responses', []);
+    wizardActions.nextStep();
+  }, [formActions, wizardActions]);
+
   // Handle save from review step
   const handleWizardSave = useCallback(() => {
-    const newDialogue: Dialogue = {
-      id: dialogue?.id || `dialogue-${Date.now()}`,
-      speaker: formData.speaker,
-      text: formData.text,
-      choices: formData.choices,
-      sfx: formData.sfx
-    };
+    try {
+      const hasResponses = formData.responses.some(r => r.text.trim().length > 0);
 
-    onSave(newDialogue);
+      if (hasResponses) {
+        // Create response dialogue IDs upfront for linking
+        const responseAId = `dialogue-${Date.now()}-resp-a`;
+        const responseBId = `dialogue-${Date.now()}-resp-b`;
 
-    // Close after short delay for celebration animation
-    setTimeout(() => {
-      onClose();
-    }, 2000);
+        // Main dialogue: link each choice to its response dialogue
+        const linkedChoices = formData.choices.map((choice, i) => ({
+          ...choice,
+          nextDialogueId: i === 0 ? responseAId : responseBId,
+        }));
+
+        const mainDialogue = DialogueFactory.create({
+          id: dialogue?.id,
+          speaker: formData.speaker,
+          text: formData.text,
+          choices: linkedChoices,
+          sfx: formData.sfx
+        });
+
+        // Response dialogues (no choices, marked as responses)
+        // nextDialogueId will be set by the parent (convergence point)
+        const dialogues: Dialogue[] = [mainDialogue];
+
+        formData.responses.forEach((response, i) => {
+          if (response.text.trim()) {
+            dialogues.push({
+              id: i === 0 ? responseAId : responseBId,
+              speaker: response.speaker || formData.speaker || DEFAULTS.DIALOGUE_SPEAKER,
+              text: response.text,
+              choices: [],
+              isResponse: true,
+            });
+          }
+        });
+
+        onSave(dialogues);
+      } else {
+        // Single dialogue (no responses)
+        const newDialogue = DialogueFactory.create({
+          id: dialogue?.id,
+          speaker: formData.speaker,
+          text: formData.text,
+          choices: formData.choices,
+          sfx: formData.sfx
+        });
+
+        onSave([newDialogue]);
+      }
+
+      // Close after short delay for celebration animation
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (error) {
+      logger.error('[DialogueWizard] Save failed:', error);
+    }
   }, [formData, dialogue, onSave, onClose]);
 
   // Get navigation labels
@@ -109,6 +156,8 @@ export function DialogueWizard({
       case 'basics':
         return 'Créer les choix';
       case 'choices':
+        return 'Continuer';
+      case 'responses':
         return 'Terminer';
       default:
         return 'Suivant';
@@ -123,18 +172,17 @@ export function DialogueWizard({
           <StepComplexity
             selectedLevel={formData.complexityLevel}
             onSelect={handleComplexityChange}
-            onContinue={handleComplexityContinue}
           />
         );
 
       case 'basics':
         return (
           <StepBasics
-            speaker={formData.speaker || 'narrator'}
+            speaker={formData.speaker || DEFAULTS.DIALOGUE_SPEAKER}
             text={formData.text}
             onSpeakerChange={(speaker) => {
               // Convert 'narrator' to empty string for storage
-              formActions.updateField('speaker', speaker === 'narrator' ? '' : speaker);
+              formActions.updateField('speaker', speaker === DEFAULTS.DIALOGUE_SPEAKER ? '' : speaker);
             }}
             onTextChange={(text) => formActions.updateField('text', text)}
             onValidChange={handleValidChange}
@@ -155,19 +203,27 @@ export function DialogueWizard({
           />
         );
 
+      case 'responses':
+        return (
+          <StepResponses
+            choices={formData.choices}
+            responses={formData.responses}
+            defaultSpeaker={formData.speaker || DEFAULTS.DIALOGUE_SPEAKER}
+            onUpdateResponse={(index, updates) => {
+              formActions.updateResponse(index, updates);
+            }}
+            onValidChange={handleValidChange}
+            onSkip={handleSkipResponses}
+          />
+        );
+
       case 'review':
         return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-muted-foreground">
-              <p>Étape Review - Composant à créer</p>
-              <button
-                onClick={handleWizardSave}
-                className="mt-4 px-4 py-2 bg-purple-500 text-white rounded"
-              >
-                Temporary: Save Dialogue
-              </button>
-            </div>
-          </div>
+          <StepReview
+            formData={formData}
+            onSave={handleWizardSave}
+            onEditStep={wizardActions.goToStep}
+          />
         );
 
       default:
@@ -179,7 +235,8 @@ export function DialogueWizard({
     <div className="flex flex-col h-full overflow-hidden">
       {/* Progress bar - fixed height */}
       <div className="flex-shrink-0">
-        <DialogueWizardProgressBar
+        <WizardProgressBar
+          steps={DIALOGUE_WIZARD_STEPS}
           currentStep={wizardState.currentStep}
           visitedSteps={wizardState.visitedSteps}
           onStepClick={wizardActions.goToStep}
@@ -205,7 +262,7 @@ export function DialogueWizard({
               onNext={wizardActions.nextStep}
               nextDisabled={!wizardState.canProceed}
               nextLabel={getNextLabel()}
-              isLastStep={wizardState.currentStep === 'choices'}
+              isLastStep={wizardState.currentStep === 'responses'}
             />
           </div>
         </div>

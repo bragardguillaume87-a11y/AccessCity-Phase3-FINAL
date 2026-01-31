@@ -38,20 +38,49 @@ export function DialoguePreviewOverlay({
       className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950 via-background/95 to-transparent px-4 py-3 pointer-events-none"
       style={{ zIndex: Z_INDEX.CANVAS_DIALOGUE_OVERLAY }}
     >
-      {/* Dialogue Box */}
-      <div className="bg-background/90 backdrop-blur-sm border border-border rounded-xl p-3 shadow-lg max-w-2xl mx-auto pointer-events-auto">
-        {/* Speaker Name */}
-        <div className="flex items-center gap-2 mb-2">
+      {/* Dialogue Box - compact */}
+      <div className="bg-background/90 backdrop-blur-sm border border-border rounded-xl p-2 shadow-lg max-w-2xl mx-auto pointer-events-auto max-h-[200px] overflow-y-auto">
+        {/* Speaker Name + Nav */}
+        <div className="flex items-center gap-2 mb-1.5">
           <div className="px-2 py-0.5 bg-blue-600 rounded-lg">
             <span className="text-white font-bold text-xs">{speakerName}</span>
           </div>
           <div className="flex-1 h-px bg-muted" />
-          <span className="text-xs text-muted-foreground font-medium">PREVIEW</span>
+          {/* Compact navigation - icon only */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate('prev');
+              }}
+              disabled={dialogueIndex === 0}
+              className="h-6 w-6 p-0 disabled:opacity-30 transition-all"
+              aria-label="Dialogue précédent"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+            </Button>
+            <span className="text-[10px] text-muted-foreground font-mono">{dialogueIndex + 1}/{totalDialogues}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate('next');
+              }}
+              disabled={dialogueIndex >= totalDialogues - 1}
+              className="h-6 w-6 p-0 disabled:opacity-30 transition-all"
+              aria-label="Dialogue suivant"
+            >
+              <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
 
         {/* Dialogue Text with Typewriter + Skip */}
         <p
-          className="text-white text-sm leading-relaxed mb-3 cursor-pointer transition-opacity hover:opacity-90"
+          className="text-white text-sm leading-relaxed mb-1.5 cursor-pointer transition-opacity hover:opacity-90 line-clamp-3"
           onClick={() => skip()}
           role="button"
           tabIndex={0}
@@ -66,13 +95,18 @@ export function DialoguePreviewOverlay({
           {displayText || '(empty dialogue)'}
         </p>
 
-        {/* Choices */}
+        {/* Choices - clickable */}
         {dialogue.choices && dialogue.choices.length > 0 && (
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {dialogue.choices.map((choice, cIdx) => (
-              <div
+              <button
                 key={cIdx}
-                className="bg-card/50 hover:bg-muted/50 border border-border hover:border-blue-500 rounded-lg px-3 py-2 transition-all cursor-pointer group"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate('next');
+                }}
+                className="w-full text-left bg-card/50 hover:bg-muted/50 border border-border hover:border-blue-500 rounded-lg px-3 py-1.5 transition-all cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-foreground text-sm group-hover:text-white transition-colors">
@@ -84,48 +118,10 @@ export function DialoguePreviewOverlay({
                     </span>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
-
-        {/* Navigation Controls */}
-        <div className="mt-3 pt-2 border-t border-border flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNavigate('prev');
-              }}
-              disabled={dialogueIndex === 0}
-              className="h-7 px-2 text-xs hover:bg-muted/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all group"
-              aria-label="Dialogue précédent"
-            >
-              <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" aria-hidden="true" />
-              Précédent
-            </Button>
-            <Button
-              variant="gaming-primary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNavigate('next');
-              }}
-              disabled={dialogueIndex >= totalDialogues - 1}
-              className="h-7 px-2 text-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all group"
-              aria-label="Dialogue suivant"
-            >
-              Suivant
-              <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-mono">{dialogueIndex + 1} / {totalDialogues}</span>
-            <span className="opacity-70">{isComplete ? '✓' : '...'}</span>
-          </div>
-        </div>
       </div>
     </div>
   );

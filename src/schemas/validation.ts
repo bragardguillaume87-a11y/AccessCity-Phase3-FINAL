@@ -94,7 +94,7 @@ export const DiceCheckBranchSchema = z.object({
  */
 export const DiceCheckSchema = z.object({
   stat: NonEmptyString,
-  difficulty: z.number().min(0).max(100),
+  difficulty: z.number().min(1).max(20), // d20 dice system
   success: DiceCheckBranchSchema.optional(),
   failure: DiceCheckBranchSchema.optional(),
 });
@@ -140,7 +140,6 @@ export const DialogueChoiceSchema = z.object({
   effects: z.array(EffectSchema).default([]),
   nextSceneId: OptionalString,
   nextDialogueId: OptionalString,
-  statsDelta: GameStatsSchema.optional(),
   diceCheck: DiceCheckSchema.optional(),
 });
 
@@ -175,6 +174,8 @@ export const DialogueSchema = z.object({
   ),
   choices: z.array(DialogueChoiceSchema).default([]),
   sfx: DialogueAudioSchema.optional(),
+  nextDialogueId: OptionalString,
+  isResponse: z.boolean().optional(),
 });
 
 /**

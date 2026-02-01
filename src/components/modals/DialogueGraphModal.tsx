@@ -28,6 +28,9 @@ export function DialogueGraphModal() {
   // State for auto-layout: increment to force graph recalculation
   const [layoutVersion, setLayoutVersion] = useState(0);
 
+  // PHASE 3.5: State for layout direction (TB = vertical, LR = horizontal)
+  const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>('TB');
+
   // UI Store
   const isOpen = useUIStore((state) => state.dialogueGraphModalOpen);
   const setIsOpen = useUIStore((state) => state.setDialogueGraphModalOpen);
@@ -78,6 +81,12 @@ export function DialogueGraphModal() {
     setLayoutVersion((v) => v + 1);
   };
 
+  const handleToggleLayout = () => {
+    // Toggle between vertical (TB) and horizontal (LR) layout
+    setLayoutDirection((d) => (d === 'TB' ? 'LR' : 'TB'));
+    setLayoutVersion((v) => v + 1); // Force Dagre recalculation
+  };
+
   if (!selectedScene) return null;
 
   return (
@@ -115,6 +124,8 @@ export function DialogueGraphModal() {
             onDelete={handleDelete}
             onDuplicate={handleDuplicate}
             onAutoLayout={handleAutoLayout}
+            onToggleLayout={handleToggleLayout}
+            layoutDirection={layoutDirection}
             onClose={handleClose}
           />
 
@@ -129,6 +140,7 @@ export function DialogueGraphModal() {
               selectedElement={selectedElement}
               onSelectDialogue={handleSelectDialogue}
               editMode={true}
+              layoutDirection={layoutDirection}
             />
           </div>
 

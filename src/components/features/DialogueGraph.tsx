@@ -35,6 +35,8 @@ interface DialogueGraphInnerProps {
   onOpenModal?: (modalType: string) => void;
   /** Enable edit mode (PHASE 2): activates onConnect, onNodeDoubleClick → wizard, keyboard Delete/Duplicate */
   editMode?: boolean;
+  /** Layout direction (PHASE 3.5): 'TB' = vertical (top-to-bottom), 'LR' = horizontal (left-to-right) */
+  layoutDirection?: 'TB' | 'LR';
 }
 
 /**
@@ -58,7 +60,8 @@ function DialogueGraphInner({
   selectedElement,
   onSelectDialogue,
   onOpenModal,
-  editMode = false
+  editMode = false,
+  layoutDirection = 'TB'  // PHASE 3.5: Default to vertical layout
 }: DialogueGraphInnerProps): React.JSX.Element {
   const { fitView } = useReactFlow();
   const validation = useValidation();
@@ -71,7 +74,8 @@ function DialogueGraphInner({
   const { nodes, edges } = useDialogueGraph(
     dialogues,
     sceneId,
-    validation as { errors?: { dialogues?: Record<string, any[]> } } | null
+    validation as { errors?: { dialogues?: Record<string, any[]> } } | null,
+    layoutDirection  // PHASE 3.5: Pass layout direction to Dagre
   );
 
   // PHASE 2: Actions hook for edit mode

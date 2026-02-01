@@ -1,4 +1,4 @@
-import { Trash2, Copy, Workflow, X } from 'lucide-react';
+import { Trash2, Copy, Workflow, X, ArrowDown, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -27,6 +27,10 @@ export interface DialogueGraphToolbarProps {
   onDuplicate: () => void;
   /** Callback pour réorganiser le graphe (auto-layout Dagre) */
   onAutoLayout: () => void;
+  /** Callback pour basculer la direction du layout (TB/LR) */
+  onToggleLayout: () => void;
+  /** Direction actuelle du layout ('TB' = vertical, 'LR' = horizontal) */
+  layoutDirection: 'TB' | 'LR';
   /** Callback pour fermer l'éditeur nodal */
   onClose: () => void;
 }
@@ -36,6 +40,8 @@ export function DialogueGraphToolbar({
   onDelete,
   onDuplicate,
   onAutoLayout,
+  onToggleLayout,
+  layoutDirection,
   onClose,
 }: DialogueGraphToolbarProps) {
   return (
@@ -75,6 +81,28 @@ export function DialogueGraphToolbar({
           <div className="h-6 w-px bg-border" aria-hidden="true" />
         </>
       )}
+
+      {/* Toggle Layout Direction (PHASE 3.5) */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onToggleLayout}
+        title={`Basculer en mode ${layoutDirection === 'TB' ? 'horizontal (LR)' : 'vertical (TB)'}`}
+        aria-label="Basculer l'orientation du graphe (vertical/horizontal)"
+        className="hover:bg-accent transition-colors"
+      >
+        {layoutDirection === 'TB' ? (
+          <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        ) : (
+          <ArrowDown className="w-4 h-4" aria-hidden="true" />
+        )}
+        <span className="ml-2 text-xs font-medium">
+          {layoutDirection === 'TB' ? 'Horizontal' : 'Vertical'}
+        </span>
+      </Button>
+
+      {/* Séparateur visuel */}
+      <div className="h-6 w-px bg-border" aria-hidden="true" />
 
       {/* Auto-layout */}
       <Button

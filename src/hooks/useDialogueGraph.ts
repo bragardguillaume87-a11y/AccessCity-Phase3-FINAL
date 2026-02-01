@@ -50,7 +50,8 @@ interface ValidationWithErrors {
 export function useDialogueGraph(
   dialogues: Dialogue[] = [],
   sceneId: string = '',
-  validation: ValidationWithErrors | null = null
+  validation: ValidationWithErrors | null = null,
+  layoutDirection: 'TB' | 'LR' = 'TB'  // PHASE 3.5: Layout direction parameter
 ): UseDialogueGraphReturn {
   return useMemo(() => {
     if (!dialogues || dialogues.length === 0) {
@@ -198,13 +199,13 @@ export function useDialogueGraph(
     });
 
     // Step 3: Calculate layout with dagre
-    const layoutedNodes = calculateLayoutWithDagre(nodes, edges);
+    const layoutedNodes = calculateLayoutWithDagre(nodes, edges, layoutDirection);
 
     return {
       nodes: layoutedNodes,
       edges
     };
-  }, [dialogues, sceneId, validation]);
+  }, [dialogues, sceneId, validation, layoutDirection]);
 }
 
 /**
@@ -214,14 +215,18 @@ export function useDialogueGraph(
  * @param edges - ReactFlow edges
  * @returns Nodes with calculated positions
  */
-function calculateLayoutWithDagre(nodes: GraphNode[], edges: Edge[]): GraphNode[] {
+function calculateLayoutWithDagre(
+  nodes: GraphNode[],
+  edges: Edge[],
+  layoutDirection: 'TB' | 'LR' = 'TB'  // PHASE 3.5: Layout direction
+): GraphNode[] {
   const dagreGraph = new dagre.graphlib.Graph();
 
   // Configure graph layout
   dagreGraph.setGraph({
-    rankdir: 'TB', // Top to Bottom
-    nodesep: 120,  // Horizontal spacing between nodes
-    ranksep: 180,  // Vertical spacing between ranks
+    rankdir: layoutDirection, // PHASE 3.5: Dynamic direction (TB=vertical, LR=horizontal)
+    nodesep: layoutDirection === 'TB' ? 80 : 120,   // Reduce horizontal spacing for TB
+    ranksep: layoutDirection === 'TB' ? 220 : 180,  // Increase vertical spacing for TB
     marginx: 50,
     marginy: 50
   });

@@ -6,6 +6,7 @@ import DialoguesPanel from './DialoguesPanel';
 import { useScenesStore, useUIStore } from '../../stores/index';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
+import { DialogueGraphModal } from '../modals/DialogueGraphModal';
 import type { Dialogue } from '@/types';
 
 /**
@@ -157,6 +158,9 @@ export default function LeftPanel({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* DialogueGraph Modal - Full-screen node editor */}
+      <DialogueGraphModal />
     </>
   );
 }

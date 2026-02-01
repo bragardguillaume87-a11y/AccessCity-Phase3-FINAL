@@ -71,6 +71,10 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const [fullscreenMode, setFullscreenMode] = useState<FullscreenMode>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [modalContext, setModalContext] = useState<ModalContext>({});
+
+  // Graph modal state from UIStore
+  const setGraphModalOpen = useUIStore((state) => state.setDialogueGraphModalOpen);
+  const setGraphSelectedScene = useUIStore((state) => state.setDialogueGraphSelectedScene);
   // === KEYBOARD SHORTCUTS ===
   useKeyboardShortcuts({
     onUndo: undo,
@@ -110,9 +114,19 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   // Stable modal opener to prevent race conditions
   const handleOpenModal = useCallback((modal: string, context: unknown = {}) => {
     console.log('[EditorShell] handleOpenModal called:', { modal, context });
+
+    // Special case: Graph modal uses Zustand state
+    if (modal === 'graph') {
+      if (selectedSceneForEdit) {
+        setGraphSelectedScene(selectedSceneForEdit);
+        setGraphModalOpen(true);
+      }
+      return;
+    }
+
     setActiveModal(modal);
     setModalContext(context as ModalContext);
-  }, []);
+  }, [selectedSceneForEdit, setGraphModalOpen, setGraphSelectedScene]);
 
   const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
 

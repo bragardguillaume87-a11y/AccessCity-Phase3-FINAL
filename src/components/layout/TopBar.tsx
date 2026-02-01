@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { Users, Image, Settings, Download, Play } from "lucide-react"
+import { Users, Image, Settings, Download, Play, Network } from "lucide-react"
 import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
 
 /**
@@ -18,7 +18,7 @@ export interface TopBarValidation {
 /**
  * Modal types that can be opened from TopBar
  */
-export type TopBarModalType = "characters" | "assets" | "project" | "export" | "preview"
+export type TopBarModalType = "characters" | "assets" | "graph" | "project" | "export" | "preview"
 
 /**
  * Props for TopBar component
@@ -128,6 +128,17 @@ export default function TopBar({
               >
                 <Image className="h-4 w-4" />
                 Ressources
+              </Button>
+              <Button
+                variant="gaming-accent"
+                size="sm"
+                onClick={() => onOpenModal("graph")}
+                title="Vue Graphe - Éditeur nodal des dialogues | Raccourci: Ctrl+Shift+G"
+                aria-label="Vue Graphe - Éditeur nodal (Ctrl+Shift+G)"
+                className="shadow-md"
+              >
+                <Network className="h-4 w-4" />
+                Vue Graphe
               </Button>
             </div>
 

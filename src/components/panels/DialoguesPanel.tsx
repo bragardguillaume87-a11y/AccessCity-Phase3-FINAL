@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus, MessageSquare, Sparkles } from 'lucide-react';
+import { Plus, MessageSquare, Sparkles, Network } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useScenesStore, useUIStore } from '@/stores';
 import { DialogueFactory } from '@/factories/DialogueFactory';
@@ -35,6 +35,10 @@ export function DialoguesPanel({
   // DialogueWizard state from UIStore
   const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore(state => state.setDialogueWizardEditIndex);
+
+  // DialogueGraph modal state from UIStore
+  const setGraphModalOpen = useUIStore(state => state.setDialogueGraphModalOpen);
+  const setGraphSelectedScene = useUIStore(state => state.setDialogueGraphSelectedScene);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -74,6 +78,12 @@ export function DialoguesPanel({
   const handleEditWithWizard = (index: number) => {
     setEditDialogueIndex(index);
     setWizardOpen(true);
+  };
+
+  const handleOpenGraphModal = () => {
+    if (!selectedScene) return;
+    setGraphSelectedScene(selectedScene.id);
+    setGraphModalOpen(true);
   };
 
   if (!selectedScene) {
@@ -140,26 +150,40 @@ export function DialoguesPanel({
         )}
       </div>
 
-      {/* Footer avec boutons "Assistant Dialogue" et "Mode Expert" */}
+      {/* Footer avec boutons "Assistant Dialogue", "Mode Expert" et "Vue Graphe" */}
       <div className="flex-shrink-0 p-3 border-t-2 border-[var(--color-border-base)]">
-        <div className="flex gap-2">
-          <Button
-            variant="token-primary"
-            size="sm"
-            onClick={handleOpenWizard}
-            className="flex-1"
-          >
-            <Sparkles className="w-4 h-4 mr-2" aria-hidden="true" />
-            Assistant Dialogue
-          </Button>
+        <div className="flex flex-col gap-2">
+          {/* Row 1: Assistant + Expert */}
+          <div className="flex gap-2">
+            <Button
+              variant="token-primary"
+              size="sm"
+              onClick={handleOpenWizard}
+              className="flex-1"
+            >
+              <Sparkles className="w-4 h-4 mr-2" aria-hidden="true" />
+              Assistant Dialogue
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddDialogue}
+              className="flex-1"
+            >
+              <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+              Mode Expert
+            </Button>
+          </div>
+
+          {/* Row 2: Vue Graphe */}
           <Button
             variant="outline"
             size="sm"
-            onClick={handleAddDialogue}
-            className="flex-1"
+            onClick={handleOpenGraphModal}
+            className="w-full"
           >
-            <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
-            Mode Expert
+            <Network className="w-4 h-4 mr-2" aria-hidden="true" />
+            Vue Graphe (Éditeur Nodal)
           </Button>
         </div>
       </div>

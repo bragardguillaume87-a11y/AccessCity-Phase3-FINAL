@@ -20,6 +20,8 @@ interface UIState {
   urgentAnnouncement: string;
   dialogueWizardOpen: boolean;
   dialogueWizardEditIndex: number | undefined;
+  dialogueGraphModalOpen: boolean;
+  dialogueGraphSelectedScene: string | null;
 
   // Actions
   setSelectedSceneId: (sceneId: string | null) => void;
@@ -30,6 +32,8 @@ interface UIState {
   setUrgentAnnouncement: (message: string) => void;
   setDialogueWizardOpen: (open: boolean) => void;
   setDialogueWizardEditIndex: (index: number | undefined) => void;
+  setDialogueGraphModalOpen: (open: boolean) => void;
+  setDialogueGraphSelectedScene: (sceneId: string | null) => void;
 }
 
 // ============================================================================
@@ -48,6 +52,8 @@ export const useUIStore = create<UIState>()(
       urgentAnnouncement: '',
       dialogueWizardOpen: false,
       dialogueWizardEditIndex: undefined,
+      dialogueGraphModalOpen: false,
+      dialogueGraphSelectedScene: null,
 
       // Actions
       setSelectedSceneId: (sceneId) => {
@@ -80,6 +86,14 @@ export const useUIStore = create<UIState>()(
 
       setDialogueWizardEditIndex: (index) => {
         set({ dialogueWizardEditIndex: index }, false, 'ui/setDialogueWizardEditIndex');
+      },
+
+      setDialogueGraphModalOpen: (open) => {
+        set({ dialogueGraphModalOpen: open }, false, 'ui/setDialogueGraphModalOpen');
+      },
+
+      setDialogueGraphSelectedScene: (sceneId) => {
+        set({ dialogueGraphSelectedScene: sceneId }, false, 'ui/setDialogueGraphSelectedScene');
       },
     })),
     { name: 'UIStore' }

@@ -315,17 +315,33 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
         </div>
       )}
 
-      {/* Bottom handle */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={{
-          background: colors.border,
-          width: '12px',
-          height: '12px',
-          border: `2px solid ${colors.bg}`
-        }}
-      />
+      {/* Multi-handles: One handle per choice (PHASE 2) */}
+      {choices.map((choice, index) => {
+        // Colors for handles (repeating pattern)
+        const handleColors = ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6']; // emerald, rose, amber, purple
+        const handleColor = handleColors[index % handleColors.length];
+
+        // Position: distribute handles evenly at the bottom
+        const leftPosition = ((index + 1) / (choices.length + 1)) * 100;
+
+        return (
+          <Handle
+            key={choice.id}
+            type="source"
+            position={Position.Bottom}
+            id={`choice-${index}`}
+            style={{
+              left: `${leftPosition}%`,
+              background: handleColor,
+              width: '12px',
+              height: '12px',
+              border: '2px solid white',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)'
+            }}
+            aria-label={`Connexion pour le choix "${choice.text}"`}
+          />
+        );
+      })}
     </div>
   );
 });

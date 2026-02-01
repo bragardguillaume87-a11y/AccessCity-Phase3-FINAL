@@ -9,12 +9,14 @@ import {
   ReactFlowProvider,
   Node,
   NodeMouseHandler,
-  FitViewOptions
+  FitViewOptions,
+  Connection
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './DialogueGraph.css';
 
 import { useDialogueGraph } from '../../hooks/useDialogueGraph';
+import { useDialogueGraphActions } from '../../hooks/useDialogueGraphActions';
 import { nodeTypes } from './DialogueGraphNodes.tsx';
 import { useValidation } from '../../hooks/useValidation';
 import type { Scene, DialogueNodeData, TerminalNodeData } from '@/types';
@@ -31,6 +33,8 @@ interface DialogueGraphInnerProps {
   onSelectDialogue: (sceneId: string, dialogueIndex: number) => void;
   /** Callback to open a modal (unused in current implementation) */
   onOpenModal?: (modalType: string) => void;
+  /** Enable edit mode (PHASE 2): activates onConnect, onNodeDoubleClick → wizard, keyboard Delete/Duplicate */
+  editMode?: boolean;
 }
 
 /**
@@ -53,7 +57,8 @@ function DialogueGraphInner({
   selectedScene,
   selectedElement,
   onSelectDialogue,
-  onOpenModal
+  onOpenModal,
+  editMode = false
 }: DialogueGraphInnerProps): React.JSX.Element {
   const { fitView } = useReactFlow();
   const validation = useValidation();
@@ -68,6 +73,9 @@ function DialogueGraphInner({
     sceneId,
     validation as { errors?: { dialogues?: Record<string, any[]> } } | null
   );
+
+  // PHASE 2: Actions hook for edit mode
+  const actions = useDialogueGraphActions(sceneId);
 
   // Local state for selected nodes
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -107,13 +115,22 @@ function DialogueGraphInner({
     const dialogueIndex = (node.data as DialogueNodeData).index;
 
     if (dialogueIndex !== undefined) {
-      // Select dialogue and scroll to it in the editor
-      onSelectDialogue(sceneId, dialogueIndex);
-
-      // Could trigger focus on dialogue editor here
-      // For now, just selecting is enough
+      if (editMode) {
+        // PHASE 2: In edit mode, open DialogueWizard
+        actions.handleNodeDoubleClick(node.id);
+      } else {
+        // View mode: just select dialogue and scroll to it
+        onSelectDialogue(sceneId, dialogueIndex);
+      }
     }
-  }, [sceneId, onSelectDialogue]);
+  }, [sceneId, onSelectDialogue, editMode, actions]);
+
+  // Handle connections (PHASE 2: edit mode only)
+  const onConnect = useCallback((params: Connection) => {
+    if (editMode) {
+      actions.handleReconnectChoice(params);
+    }
+  }, [editMode, actions]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((event: KeyboardEvent): void => {
@@ -145,6 +162,21 @@ function DialogueGraphInner({
       case 'Escape':
         event.preventDefault();
         setSelectedNodeId(null);
+        onSelectDialogue(sceneId, -1);
+        break;
+      // PHASE 2: Edit mode keyboard shortcuts
+      case 'Delete':
+        if (editMode && selectedNodeId) {
+          event.preventDefault();
+          actions.handleDeleteNode(selectedNodeId);
+          setSelectedNodeId(null);
+        }
+        break;
+      case 'd':
+        if (editMode && event.ctrlKey && selectedNodeId) {
+          event.preventDefault();
+          actions.handleDuplicateNode(selectedNodeId);
+        }
         break;
       default:
         return;
@@ -158,7 +190,7 @@ function DialogueGraphInner({
         onSelectDialogue(sceneId, targetNodeIndex);
       }
     }
-  }, [selectedNodeId, nodes, sceneId, onSelectDialogue]);
+  }, [selectedNodeId, nodes, sceneId, onSelectDialogue, editMode, actions]);
 
   // Attach keyboard listener
   useEffect(() => {
@@ -199,6 +231,7 @@ function DialogueGraphInner({
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
+        onConnect={editMode ? onConnect : undefined}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}

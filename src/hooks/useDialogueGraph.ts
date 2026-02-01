@@ -150,6 +150,7 @@ export function useDialogueGraph(
               edges.push({
                 id: `${sourceId}-choice-${choiceIdx}-to-${targetId}`,
                 source: sourceId,
+                sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
                 target: targetId,
                 type: 'smoothstep',
                 animated: true,
@@ -182,6 +183,7 @@ export function useDialogueGraph(
             edges.push({
               id: `${sourceId}-choice-${choiceIdx}-to-terminal`,
               source: sourceId,
+              sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
               target: terminalId,
               type: 'smoothstep',
               animated: true,

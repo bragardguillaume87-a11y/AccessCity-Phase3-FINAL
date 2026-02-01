@@ -144,7 +144,21 @@ export function useGameState({
   const goToNextDialogue = useCallback(() => {
     if (!currentScene?.dialogues || !currentDialogue) return;
 
-    // Explicit convergence: dialogue has a nextDialogueId (e.g. branch response → rejoin main flow)
+    // If this dialogue is a response (isResponse: true), skip to the next non-response dialogue (convergence point)
+    if (currentDialogue.isResponse) {
+      const currentIndex = currentScene.dialogues.findIndex((d) => d.id === currentDialogue.id);
+      // Find the next dialogue that is NOT a response
+      for (let i = currentIndex + 1; i < currentScene.dialogues.length; i++) {
+        if (!currentScene.dialogues[i].isResponse) {
+          setCurrentDialogueId(currentScene.dialogues[i].id);
+          return;
+        }
+      }
+      // No convergence point found - end of scene
+      return;
+    }
+
+    // Explicit convergence: dialogue has a nextDialogueId (e.g. manual linking)
     if (currentDialogue.nextDialogueId) {
       const target = currentScene.dialogues.find((d) => d.id === currentDialogue.nextDialogueId);
       if (target) {

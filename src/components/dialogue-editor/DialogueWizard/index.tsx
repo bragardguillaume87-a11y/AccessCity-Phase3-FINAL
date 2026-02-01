@@ -80,15 +80,18 @@ export function DialogueWizard({
 
   // Handle skip responses step
   const handleSkipResponses = useCallback(() => {
-    // Clear responses and advance to review
+    // Clear responses and go directly to review (bypass validation)
     formActions.updateField('responses', []);
-    wizardActions.nextStep();
+    wizardActions.goToStep('review');
   }, [formActions, wizardActions]);
 
   // Handle save from review step
   const handleWizardSave = useCallback(() => {
     try {
       const hasResponses = formData.responses.some(r => r.text.trim().length > 0);
+
+      // Normalize speaker: empty string means narrator (converted in StepBasics)
+      const normalizedSpeaker = formData.speaker || DEFAULTS.DIALOGUE_SPEAKER;
 
       if (hasResponses) {
         // Create response dialogue IDs upfront for linking
@@ -103,7 +106,7 @@ export function DialogueWizard({
 
         const mainDialogue = DialogueFactory.create({
           id: dialogue?.id,
-          speaker: formData.speaker,
+          speaker: normalizedSpeaker,
           text: formData.text,
           choices: linkedChoices,
           sfx: formData.sfx
@@ -117,7 +120,7 @@ export function DialogueWizard({
           if (response.text.trim()) {
             dialogues.push({
               id: i === 0 ? responseAId : responseBId,
-              speaker: response.speaker || formData.speaker || DEFAULTS.DIALOGUE_SPEAKER,
+              speaker: response.speaker || normalizedSpeaker,
               text: response.text,
               choices: [],
               isResponse: true,
@@ -130,7 +133,7 @@ export function DialogueWizard({
         // Single dialogue (no responses)
         const newDialogue = DialogueFactory.create({
           id: dialogue?.id,
-          speaker: formData.speaker,
+          speaker: normalizedSpeaker,
           text: formData.text,
           choices: formData.choices,
           sfx: formData.sfx

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import dagre from 'dagre';
 import type { Node, Edge } from '@xyflow/react';
-import type { Dialogue, DialogueChoice, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme } from '@/types';
+import type { Dialogue, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme } from '@/types';
 import { DEFAULTS } from '@/config/constants';
 
 /**
@@ -86,7 +86,7 @@ export function useDialogueGraph(
       const sourceId = `${sceneId}-d-${index}`;
       const hasChoices = dialogue.choices && dialogue.choices.length > 0;
 
-      // Convergence edge: dialogue has explicit nextDialogueId (e.g. response → rejoin main flow)
+      // Convergence edge: dialogue has explicit nextDialogueId (e.g. manual linking)
       if (dialogue.nextDialogueId) {
         const targetIdx = dialogues.findIndex(d => d.id === dialogue.nextDialogueId);
         if (targetIdx !== -1) {
@@ -103,7 +103,28 @@ export function useDialogueGraph(
           });
         }
       }
-      // Linear edge: dialogue → next dialogue (if no choices and no explicit next)
+      // Response convergence: if dialogue is a response, find next non-response dialogue
+      else if (dialogue.isResponse) {
+        // Find the next dialogue that is NOT a response (convergence point)
+        for (let targetIdx = index + 1; targetIdx < dialogues.length; targetIdx++) {
+          if (!dialogues[targetIdx].isResponse) {
+            edges.push({
+              id: `${sourceId}-response-converge-to-${sceneId}-d-${targetIdx}`,
+              source: sourceId,
+              target: `${sceneId}-d-${targetIdx}`,
+              type: 'smoothstep',
+              animated: false,
+              label: '↩ rejoint',
+              style: { stroke: '#22c55e', strokeWidth: 2, strokeDasharray: '4,4' },
+              labelStyle: { fill: '#86efac', fontSize: 11, fontWeight: 500 },
+              labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 }
+            });
+            break; // Only create edge to the FIRST non-response dialogue
+          }
+        }
+        // If no convergence point found, response leads to end of scene (no edge)
+      }
+      // Linear edge: dialogue → next dialogue (if no choices, not a response, and no explicit next)
       else if (!hasChoices && index < dialogues.length - 1) {
         edges.push({
           id: `${sourceId}-to-${sceneId}-d-${index + 1}`,

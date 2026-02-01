@@ -111,6 +111,44 @@ export function StepReview({
         )}
       </div>
 
+      {/* Responses preview */}
+      {formData.responses.some(r => r.text.trim().length > 0) && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <span className="text-base">💡</span>
+            Réponses après les choix
+          </h4>
+          <div className="space-y-2">
+            {formData.responses.map((response, idx) => {
+              if (!response.text.trim()) return null;
+              const responseSpeaker = response.speaker || speakerId;
+              const responseSpeakerLabel = characters.find(c => c.id === responseSpeaker)?.name || responseSpeaker;
+              const choiceText = formData.choices[idx]?.text || `Choix ${idx + 1}`;
+              const bgColor = idx === 0 ? 'from-emerald-600/20 to-emerald-500/20' : 'from-rose-600/20 to-rose-500/20';
+              const borderColor = idx === 0 ? 'border-emerald-500/30' : 'border-rose-500/30';
+
+              return (
+                <div
+                  key={idx}
+                  className={cn(
+                    "rounded-xl border overflow-hidden",
+                    borderColor
+                  )}
+                >
+                  <div className={cn("px-3 py-1.5 text-xs text-muted-foreground bg-gradient-to-r", bgColor)}>
+                    Si le joueur choisit : « {choiceText} »
+                  </div>
+                  <div className="p-3 bg-card/30">
+                    <p className="text-xs font-semibold text-primary mb-1">{responseSpeakerLabel}</p>
+                    <p className="text-sm text-foreground/90">{response.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         <SummaryCard

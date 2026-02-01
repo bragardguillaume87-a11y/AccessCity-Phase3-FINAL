@@ -38,6 +38,7 @@ export default function LeftPanel({
   const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
   const addDialogue = useScenesStore((state) => state.addDialogue);
   const addDialogues = useScenesStore((state) => state.addDialogues);
+  const insertDialoguesAfter = useScenesStore((state) => state.insertDialoguesAfter);
   const updateDialogue = useScenesStore((state) => state.updateDialogue);
 
   // DialogueWizard state from UIStore (no more prop-drilling)
@@ -56,8 +57,14 @@ export default function LeftPanel({
     if (!selectedScene || dialogues.length === 0) return;
 
     if (editDialogueIndex !== undefined) {
-      // Edit mode: update the main dialogue (first in array)
+      // Edit mode: update the main dialogue
       updateDialogue(selectedScene.id, editDialogueIndex, dialogues[0]);
+
+      // If there are response dialogues, insert them after the main dialogue
+      if (dialogues.length > 1) {
+        const responseDialogues = dialogues.slice(1); // Get responses (dialogues[1], dialogues[2], ...)
+        insertDialoguesAfter(selectedScene.id, editDialogueIndex, responseDialogues);
+      }
     } else {
       // Create mode: determine convergence point for response dialogues
       // If response dialogues exist and we're appending at the end,

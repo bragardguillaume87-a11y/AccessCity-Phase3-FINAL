@@ -31,6 +31,7 @@ interface ScenesState {
   // Actions: Dialogues
   addDialogue: (sceneId: string, dialogue: Dialogue) => void;
   addDialogues: (sceneId: string, dialogues: Dialogue[]) => void;
+  insertDialoguesAfter: (sceneId: string, afterIndex: number, dialogues: Dialogue[]) => void;
   updateDialogue: (sceneId: string, index: number, patch: Partial<Dialogue> | ((dialogue: Dialogue) => Partial<Dialogue>)) => void;
   deleteDialogue: (sceneId: string, index: number) => void;
   reorderDialogues: (sceneId: string, oldIndex: number, newIndex: number) => void;
@@ -335,6 +336,22 @@ export const useScenesStore = create<ScenesState>()(
                   : { ...s, dialogues: [...(s.dialogues || []), ...dialogues] }
               ),
             }), false, 'scenes/addDialogues');
+          },
+
+          insertDialoguesAfter: (sceneId, afterIndex, dialogues) => {
+            if (!dialogues || dialogues.length === 0) return;
+
+            set((state) => ({
+              scenes: state.scenes.map((s) => {
+                if (s.id !== sceneId) return s;
+
+                const list = [...(s.dialogues || [])];
+                // Insert dialogues after the specified index
+                list.splice(afterIndex + 1, 0, ...dialogues);
+
+                return { ...s, dialogues: list };
+              }),
+            }), false, 'scenes/insertDialoguesAfter');
           },
 
           updateDialogue: (sceneId, index, patch) => {

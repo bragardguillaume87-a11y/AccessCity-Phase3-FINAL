@@ -118,11 +118,16 @@ export function DialogueWizard({
 
         formData.responses.forEach((response, i) => {
           if (response.text.trim()) {
-            dialogues.push({
+            // Use DialogueFactory for consistency and Zod validation
+            const responseDialogue = DialogueFactory.create({
               id: i === 0 ? responseAId : responseBId,
               speaker: response.speaker || normalizedSpeaker,
               text: response.text,
               choices: [],
+            });
+            // Add isResponse flag after factory creation (not in factory options)
+            dialogues.push({
+              ...responseDialogue,
               isResponse: true,
             });
           }

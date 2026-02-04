@@ -1,0 +1,230 @@
+/**
+ * Accessibility Styles for Dialogue Graph Modal
+ *
+ * PHASE 5.5 - Styles d'accessibilite:
+ * - Focus visible (WCAG 2.4.7)
+ * - High contrast mode (prefers-contrast)
+ * - Reduced motion (prefers-reduced-motion)
+ * - Screen reader only utilities
+ */
+
+/* ============================================================================
+   FOCUS VISIBLE - WCAG 2.4.7
+   ============================================================================ */
+
+/* Focus styles for dialogue nodes */
+.dialogue-node:focus-visible,
+.choice-node:focus-visible,
+.terminal-node:focus-visible {
+  outline: 3px solid #06b6d4; /* cyan-500 */
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.3);
+}
+
+/* Focus styles for handles */
+.react-flow__handle:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 1px;
+  transform: scale(1.3);
+}
+
+/* Focus styles for buttons in toolbar */
+.dialogue-graph-modal button:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   HIGH CONTRAST MODE - prefers-contrast: high
+   ============================================================================ */
+
+@media (prefers-contrast: high) {
+  /* Nodes with solid borders and high contrast colors */
+  .dialogue-node,
+  .choice-node {
+    border: 4px solid currentColor !important;
+    background: #000 !important;
+    color: #fff !important;
+  }
+
+  .terminal-node {
+    border: 4px solid #f59e0b !important;
+    background: #000 !important;
+    color: #fff !important;
+  }
+
+  /* Edges with thick strokes */
+  .react-flow__edge path {
+    stroke-width: 4px !important;
+    stroke: #fff !important;
+  }
+
+  /* Labels with high contrast */
+  .react-flow__edge-text {
+    fill: #fff !important;
+    font-weight: 700 !important;
+  }
+
+  .react-flow__edge-textbg {
+    fill: #000 !important;
+    fill-opacity: 1 !important;
+  }
+
+  /* Handles more visible */
+  .react-flow__handle {
+    border: 3px solid #fff !important;
+    background: #06b6d4 !important;
+  }
+
+  /* Selection indicator */
+  .react-flow__node.selected .dialogue-node,
+  .react-flow__node.selected .choice-node,
+  .react-flow__node.selected .terminal-node {
+    outline: 4px solid #fef08a !important;
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION - prefers-reduced-motion: reduce
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all animations */
+  .dialogue-node,
+  .choice-node,
+  .terminal-node,
+  .react-flow__edge path,
+  .cosmos-star,
+  .cosmos-nebula,
+  .cosmos-particles {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Disable edge animations */
+  .react-flow__edge.animated path {
+    animation: none !important;
+    stroke-dasharray: none !important;
+  }
+
+  /* Disable hover transforms */
+  .dialogue-node:hover,
+  .choice-node:hover,
+  .terminal-node:hover {
+    transform: none !important;
+  }
+
+  /* Keep minimal transitions for user feedback */
+  .dialogue-node:focus-visible,
+  .choice-node:focus-visible,
+  .terminal-node:focus-visible {
+    transition: outline 0.1s ease-out !important;
+  }
+}
+
+/* ============================================================================
+   SCREEN READER ONLY - .sr-only
+   ============================================================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link for keyboard users */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #000;
+  color: #fff;
+  padding: 8px 16px;
+  z-index: 9999;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ============================================================================
+   KEYBOARD MODE - Disables drag behaviors
+   ============================================================================ */
+
+.keyboard-mode .react-flow__node {
+  cursor: default !important;
+}
+
+.keyboard-mode .react-flow__handle {
+  cursor: default !important;
+  pointer-events: none;
+}
+
+.keyboard-mode .react-flow__pane {
+  cursor: default !important;
+}
+
+/* Visual indicator for keyboard mode */
+.keyboard-mode .dialogue-node:focus,
+.keyboard-mode .choice-node:focus,
+.keyboard-mode .terminal-node:focus {
+  outline: 3px dashed #06b6d4;
+  outline-offset: 4px;
+}
+
+/* ============================================================================
+   HIGH CONTRAST MODE (Manual toggle, not system)
+   ============================================================================ */
+
+.high-contrast-mode .dialogue-node,
+.high-contrast-mode .choice-node {
+  border: 4px solid #fff !important;
+  background: #1a1a2e !important;
+}
+
+.high-contrast-mode .terminal-node {
+  border: 4px solid #fbbf24 !important;
+  background: #1a1a2e !important;
+}
+
+.high-contrast-mode .react-flow__edge path {
+  stroke-width: 4px !important;
+}
+
+.high-contrast-mode .react-flow__background {
+  background: #0a0a0a !important;
+}
+
+/* ============================================================================
+   LIST VIEW MODE - Alternative to graph
+   ============================================================================ */
+
+.list-mode .react-flow {
+  display: none;
+}
+
+/* ============================================================================
+   TOUCH TARGET SIZE - WCAG 2.5.5 (AAA)
+   ============================================================================ */
+
+/* Ensure minimum touch target size of 44x44px */
+.dialogue-graph-modal button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Larger handles for touch devices */
+@media (pointer: coarse) {
+  .react-flow__handle {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}

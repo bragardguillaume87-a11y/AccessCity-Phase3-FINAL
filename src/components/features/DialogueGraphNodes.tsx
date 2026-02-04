@@ -66,9 +66,16 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
   const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
   const displayStageDirections = stageDirections ? (stageDirections.length > 50 ? stageDirections.substring(0, 50) + '...' : stageDirections) : null;
 
+  // PHASE 5.2: ARIA label for screen readers
+  const ariaLabel = `Dialogue ${index + 1}: ${speaker || 'Narrator'} dit "${displayText}"`;
+
   return (
     <div
       className={`dialogue-node ${theme.animations.nodeHover}`}
+      role="treeitem"
+      aria-label={ariaLabel}
+      aria-selected={selected}
+      tabIndex={0}
       style={{
         background: bgColor,
         borderColor: selected ? COLORS.SELECTED : borderColor,
@@ -294,9 +301,17 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
   const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
   const displayStageDirections = stageDirections ? (stageDirections.length > 50 ? stageDirections.substring(0, 50) + '...' : stageDirections) : null;
 
+  // PHASE 5.2: ARIA label for screen readers
+  const ariaLabel = `Dialogue ${index + 1} avec ${choices.length} choix: ${speaker || 'Narrator'} dit "${displayText}"`;
+
   return (
     <div
       className={`choice-node ${theme.animations.nodeHover}`}
+      role="treeitem"
+      aria-label={ariaLabel}
+      aria-selected={selected}
+      aria-expanded={choices.length > 0}
+      tabIndex={0}
       style={{
         background: bgColor,
         borderColor: selected ? COLORS.SELECTED : borderColor,
@@ -315,6 +330,7 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
       <Handle
         type="target"
         position={Position.Top}
+        aria-label="Point de connexion entrant"
         style={{
           background: borderColor,
           width: `${sizes.handleSize}px`,
@@ -567,9 +583,16 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
 
   const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
 
+  // PHASE 5.2: ARIA label for screen readers
+  const ariaLabel = `Saut vers scene: ${label}${choiceText ? ` (via "${choiceText}")` : ''}`;
+
   return (
     <div
       className={`terminal-node ${theme.animations.nodeHover}`}
+      role="treeitem"
+      aria-label={ariaLabel}
+      aria-selected={selected}
+      tabIndex={0}
       style={{
         background: themeColors.bgGradient || themeColors.bg,
         borderColor: selected ? COLORS.SELECTED : themeColors.border,

@@ -70,17 +70,70 @@ export async function openCharactersModal(page: Page) {
 }
 
 /**
- * Helper: Créer un nouveau personnage
+ * Helper: Créer un nouveau personnage via le wizard multi-étapes
+ *
+ * Flow actuel (CharacterWizard):
+ * 1. Cliquer "+ Nouveau personnage" -> ouvre CharacterEditorModal
+ * 2. Le modal ouvre en mode wizard (step 1: Identity)
+ * 3. Remplir le nom et passer au step suivant
+ * 4. Continuer jusqu'au step 4 (Review) et sauvegarder
+ *
+ * @param page - Page Playwright
+ * @param name - Nom du personnage à créer
+ * @param skipToEnd - Si true, saute directement à l'étape finale
  */
-export async function createCharacter(page: Page, name: string) {
-  const nameInput = page.getByPlaceholder(/Nom du personnage/i);
-  await nameInput.click();
-  await nameInput.type(name);
+export async function createCharacter(page: Page, name: string, skipToEnd: boolean = true) {
+  // Étape 1: Cliquer sur "+ Nouveau personnage"
+  const newCharButton = page.getByRole('button', { name: /Nouveau personnage/i });
+  await newCharButton.click();
 
-  const addButton = page.getByRole('button', { name: /Ajouter/i }).first();
-  await expect(addButton).toBeEnabled({ timeout: 5000 });
-  await addButton.click();
+  // Attendre que le wizard s'ouvre (CharacterEditorModal)
+  await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
+  await page.waitForTimeout(500);
 
+  // Le wizard ouvre à l'étape Identity
+  const dialog = page.locator('[role="dialog"]');
+
+  // Remplir le nom du personnage
+  const nameInput = dialog.locator('input').first();
+  await nameInput.fill(name);
+  await page.waitForTimeout(300);
+
+  if (skipToEnd) {
+    // Cliquer rapidement sur chaque étape pour aller jusqu'à Review
+    // Les étapes sont dans une WizardProgressBar avec des boutons cliquables
+
+    // Chercher et cliquer sur l'étape "Terminé" ou "Review" si disponible
+    const reviewStep = dialog.getByText(/Terminé|Review|Récap/i);
+    const hasReviewStep = await reviewStep.isVisible().catch(() => false);
+
+    if (hasReviewStep) {
+      await reviewStep.click({ force: true });
+      await page.waitForTimeout(500);
+    } else {
+      // Sinon, cliquer sur "Continuer" plusieurs fois
+      for (let i = 0; i < 3; i++) {
+        const continueBtn = dialog.getByRole('button', { name: /Continuer|Suivant|Next/i });
+        const hasContinue = await continueBtn.isVisible().catch(() => false);
+        if (hasContinue) {
+          await continueBtn.click();
+          await page.waitForTimeout(500);
+        }
+      }
+    }
+  }
+
+  // Cliquer sur le bouton de création/sauvegarde final
+  const saveButton = dialog.getByRole('button', { name: /Créer|Sauvegarder|Terminer|Enregistrer/i });
+  const hasSaveButton = await saveButton.isVisible().catch(() => false);
+
+  if (hasSaveButton) {
+    await saveButton.click();
+    // Attendre la fermeture du modal et l'animation de célébration
+    await page.waitForTimeout(2500);
+  }
+
+  // Vérifier que le personnage apparaît dans la liste
   await expect(page.getByText(name)).toBeVisible({ timeout: 10000 });
 }
 

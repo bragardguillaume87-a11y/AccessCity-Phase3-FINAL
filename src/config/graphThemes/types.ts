@@ -130,4 +130,24 @@ export interface GraphTheme {
     /** Use emoji rendering instead of Lucide icons */
     useEmoji: boolean;
   };
+
+  /** Node shape configuration (for child-friendly themes) */
+  shapes?: {
+    /** Type of node shape: rectangle (default), pill (very rounded), bubble (speech bubble style) */
+    nodeShape: 'rectangle' | 'pill' | 'bubble';
+    /** Add speech bubble tail to dialogue nodes */
+    speechBubbleTail?: boolean;
+    /** Add decorative elements (stars, sparkles) */
+    decorativeElements?: boolean;
+    /** Edge type: 'step' (orthogonal), 'smoothstep' (rounded corners), 'bezier' (curves), 'straight' (direct diagonal) */
+    edgeType?: 'step' | 'smoothstep' | 'bezier' | 'straight';
+  };
+
+  /** Touch/drag interaction settings (for child-friendly themes) */
+  interactions?: {
+    /** Minimum touch target size in px (WCAG recommends 44px, children need 48px+) */
+    minTouchTarget: number;
+    /** Show drag handle indicators (emoji on handles) */
+    showDragIndicators?: boolean;
+  };
 }

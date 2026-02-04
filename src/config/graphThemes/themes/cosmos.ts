@@ -36,14 +36,21 @@ export const COSMOS_COLORS = {
   GLOW_PINK: 'rgba(236, 72, 153, 0.6)',
   GLOW_CYAN: 'rgba(6, 182, 212, 0.6)',
   GLOW_BLUE: 'rgba(59, 130, 246, 0.6)',
+
+  // PHASE 7: Perplexity cosmic palette
+  PERPLEXITY_PURPLE: '#9D4EDD',
+  PERPLEXITY_BLUE: '#3A86FF',
+  PERPLEXITY_PINK: '#FF006E',
+  PERPLEXITY_CYAN: '#06FFF0',
+  PERPLEXITY_YELLOW: '#FFD60A',
 };
 
-// Cosmos gradients
+// PHASE 7: Cosmos gradients - radial for 3D planet effect (light source top-left)
 export const COSMOS_GRADIENTS = {
-  PLANET_DIALOGUE: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #60a5fa 100%)',
-  PLANET_CHOICE: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 50%, #c084fc 100%)',
-  PLANET_TERMINAL: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #fbbf24 100%)',
-  PLANET_RESPONSE: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #34d399 100%)',
+  PLANET_DIALOGUE: 'radial-gradient(ellipse at 30% 20%, #60a5fa 0%, #3b82f6 40%, #1d4ed8 100%)',
+  PLANET_CHOICE: 'radial-gradient(ellipse at 30% 20%, #c084fc 0%, #a855f7 40%, #7c3aed 100%)',
+  PLANET_TERMINAL: 'radial-gradient(ellipse at 30% 20%, #fbbf24 0%, #f59e0b 40%, #d97706 100%)',
+  PLANET_RESPONSE: 'radial-gradient(ellipse at 30% 20%, #34d399 0%, #10b981 40%, #059669 100%)',
 };
 
 // Cosmos shadows with glow
@@ -134,13 +141,14 @@ export const cosmosTheme: GraphTheme = {
   },
 
   // Larger sizes for children (easier to click)
+  // PHASE 6: Enhanced for playful bubble shapes
   sizes: {
-    nodeWidth: 340,
-    nodeMinHeight: 160,
-    nodeBorderRadius: 24,
-    handleSize: 22,  // Bigger handles for children (was 18)
-    fontSizeSpeaker: 16,
-    fontSizeText: 14,
+    nodeWidth: 360,          // Slightly wider for bubble shape
+    nodeMinHeight: 140,      // Shorter for squatter bubbles
+    nodeBorderRadius: 50,    // Very rounded = bubble/pill shape
+    handleSize: 32,          // Much bigger handles for children (2cm target)
+    fontSizeSpeaker: 18,     // Larger text for readability
+    fontSizeText: 16,
   },
 
   animations: {
@@ -161,5 +169,19 @@ export const cosmosTheme: GraphTheme = {
     terminal: '⭐',    // Star for scene jumps
     response: '💬',    // Speech bubble for responses
     useEmoji: true,
+  },
+
+  // PHASE 6: Child-friendly bubble shapes
+  shapes: {
+    nodeShape: 'bubble',
+    speechBubbleTail: true,      // Add speech bubble tail to nodes
+    decorativeElements: true,    // Add stars/sparkles
+    edgeType: 'straight',        // Direct diagonal lines (like Articy:draft)
+  },
+
+  // PHASE 6: Enhanced touch/drag for children
+  interactions: {
+    minTouchTarget: 48,          // WCAG AAA for children
+    showDragIndicators: true,    // Show emoji on handles
   },
 };

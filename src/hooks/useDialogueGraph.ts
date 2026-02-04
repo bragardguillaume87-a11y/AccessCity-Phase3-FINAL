@@ -98,6 +98,9 @@ export function useDialogueGraph(
         sceneJump: theme?.edges.sceneJump || { stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5,5', animated: true }
       };
 
+      // PHASE 6: Edge type from theme (bezier for cosmos, step for default)
+      const edgeType = theme?.shapes?.edgeType || 'step';
+
       // Convergence edge: dialogue has explicit nextDialogueId (e.g. manual linking)
       if (dialogue.nextDialogueId) {
         const targetIdx = dialogues.findIndex(d => d.id === dialogue.nextDialogueId);
@@ -106,7 +109,7 @@ export function useDialogueGraph(
             id: `${sourceId}-converge-to-${sceneId}-d-${targetIdx}`,
             source: sourceId,
             target: `${sceneId}-d-${targetIdx}`,
-            type: 'step',
+            type: edgeType,
             animated: edgeStyles.convergence.animated,
             label: '↩ rejoint',
             style: {
@@ -129,7 +132,7 @@ export function useDialogueGraph(
               id: `${sourceId}-response-converge-to-${sceneId}-d-${targetIdx}`,
               source: sourceId,
               target: `${sceneId}-d-${targetIdx}`,
-              type: 'step',
+              type: edgeType,
               animated: edgeStyles.convergence.animated,
               label: '↩ rejoint',
               style: {
@@ -152,7 +155,7 @@ export function useDialogueGraph(
           id: `${sourceId}-to-${sceneId}-d-${index + 1}`,
           source: sourceId,
           target: `${sceneId}-d-${index + 1}`,
-          type: 'step',
+          type: edgeType,
           animated: edgeStyles.linear.animated,
           style: {
             stroke: edgeStyles.linear.stroke,
@@ -178,7 +181,7 @@ export function useDialogueGraph(
                 source: sourceId,
                 sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
                 target: targetId,
-                type: 'step',
+                type: edgeType,
                 animated: edgeStyles.choice.animated,
                 label: edgeLabel,
                 style: {
@@ -215,7 +218,7 @@ export function useDialogueGraph(
               source: sourceId,
               sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
               target: terminalId,
-              type: 'step',
+              type: edgeType,
               animated: edgeStyles.sceneJump.animated,
               label: choice.text?.substring(0, 20) + '...' || 'Jump to scene',
               style: {

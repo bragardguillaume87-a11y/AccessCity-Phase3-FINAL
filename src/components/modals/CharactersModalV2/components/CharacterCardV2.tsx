@@ -182,6 +182,7 @@ export function CharacterCardV2({
               onDuplicate(character.id);
             }}
             title="Dupliquer"
+            aria-label="Dupliquer le personnage"
           >
             <Copy className="h-4 w-4" />
           </Button>
@@ -194,6 +195,7 @@ export function CharacterCardV2({
               onDelete(character);
             }}
             title="Supprimer"
+            aria-label="Supprimer le personnage"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

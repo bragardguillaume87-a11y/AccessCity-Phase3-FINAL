@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
@@ -6,8 +6,15 @@ import DialoguesPanel from './DialoguesPanel';
 import { useScenesStore, useUIStore } from '../../stores/index';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
-import { DialogueGraphModal } from '../modals/DialogueGraphModal';
+import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
+import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import type { Dialogue } from '@/types';
+
+// PHASE 4 (Option 4): Lazy load DialogueGraphModal for bundle optimization
+// This modal contains ReactFlow, Dagre, and theme system (~300KB)
+const DialogueGraphModal = React.lazy(() =>
+  import('../modals/DialogueGraphModal').then(module => ({ default: module.DialogueGraphModal }))
+);
 
 /**
  * LeftPanel - Système d'onglets Scènes/Dialogues (PHASE 2)
@@ -48,6 +55,10 @@ export default function LeftPanel({
   const editDialogueIndex = useUIStore((state) => state.dialogueWizardEditIndex);
   const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
 
+  // PHASE 4: Cosmos theme effects for node creation celebration
+  const isCosmosTheme = useIsCosmosTheme();
+  const { celebrateNodeCreation } = useCosmosEffects();
+
   // Gestionnaire de changement d'onglet
   const handleTabChange = (newTab: string) => {
     const tab = newTab as 'scenes' | 'dialogues';
@@ -75,6 +86,11 @@ export default function LeftPanel({
         addDialogue(selectedScene.id, dialogues[0]);
       } else {
         addDialogues(selectedScene.id, dialogues);
+      }
+
+      // PHASE 4: Cosmos celebration effect for new dialogue creation
+      if (isCosmosTheme) {
+        celebrateNodeCreation();
       }
     }
 
@@ -159,8 +175,10 @@ export default function LeftPanel({
         </DialogContent>
       </Dialog>
 
-      {/* DialogueGraph Modal - Full-screen node editor */}
-      <DialogueGraphModal />
+      {/* DialogueGraph Modal - Full-screen node editor (lazy loaded) */}
+      <Suspense fallback={null}>
+        <DialogueGraphModal />
+      </Suspense>
     </>
   );
 }

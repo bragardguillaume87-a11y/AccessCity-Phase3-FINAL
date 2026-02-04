@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback, Suspense } from 'react';
 import { X } from 'lucide-react';
 import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -8,9 +8,14 @@ import { DialogueGraphToolbar } from './components/DialogueGraphToolbar';
 import { DialogueGraphPalette } from './components/DialogueGraphPalette';
 import { DialoguePropertiesPanel } from './components/DialoguePropertiesPanel';
 import { ThemeSelector } from './components/ThemeSelector';
-import { CosmosBackground } from '../features/CosmosBackground';
 import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
 import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
+
+// PHASE 4 (Option 4): Lazy load CosmosBackground for bundle optimization
+// Only loaded when Cosmos theme is active (~117KB with canvas-confetti)
+const CosmosBackground = React.lazy(() =>
+  import('../features/CosmosBackground').then(module => ({ default: module.CosmosBackground }))
+);
 // PHASE 5: Accessibility imports
 import { useGraphKeyboardNav, GraphLiveRegion } from '@/hooks/useGraphKeyboardNav';
 import { AccessibilityToolbar, useAccessibilityShortcuts, type AccessibilityMode } from './components/AccessibilityToolbar';
@@ -247,8 +252,12 @@ export function DialogueGraphModal() {
                   transition: 'background-color 0.3s ease',
                 }}
               >
-                {/* PHASE 4: Animated background for Cosmos theme */}
-                {isCosmosTheme && <CosmosBackground />}
+                {/* PHASE 4: Animated background for Cosmos theme (lazy loaded) */}
+                {isCosmosTheme && (
+                  <Suspense fallback={null}>
+                    <CosmosBackground />
+                  </Suspense>
+                )}
 
                 {/* ReactFlow Graph */}
                 <DialogueGraph

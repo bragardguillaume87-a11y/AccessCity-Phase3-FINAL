@@ -11,6 +11,95 @@ import type { DialogueNodeData, TerminalNodeData, ValidationProblem } from '@/ty
 import './CosmosBackground.css';
 
 /**
+ * PHASE 6: Decorative Components for Child-Friendly Themes
+ * These components add playful visual elements when shapes config is enabled
+ */
+
+/**
+ * SpeechBubbleTail - SVG tail for bubble-shaped nodes
+ * Makes nodes look like speech bubbles (comic book style)
+ */
+const SpeechBubbleTail = ({ color }: { color: string }) => (
+  <svg
+    style={{
+      position: 'absolute',
+      bottom: '-14px',
+      left: '20%',
+      width: '28px',
+      height: '16px',
+      overflow: 'visible',
+      pointerEvents: 'none',
+      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+    }}
+    viewBox="0 0 28 16"
+    aria-hidden="true"
+  >
+    <path
+      d="M0 0 C6 0 10 12 14 16 C18 12 22 0 28 0"
+      fill={color}
+      stroke="none"
+    />
+  </svg>
+);
+
+/**
+ * DecorativeStars - Sparkle decoration for playful themes
+ * Adds visual delight for children
+ */
+const DecorativeStars = ({ position = 'top-right' }: { position?: 'top-right' | 'top-left' }) => (
+  <span
+    style={{
+      position: 'absolute',
+      top: '-10px',
+      [position === 'top-right' ? 'right' : 'left']: '-10px',
+      fontSize: '20px',
+      pointerEvents: 'none',
+      filter: 'drop-shadow(0 0 4px rgba(255, 215, 0, 0.8))',
+      animation: 'cosmos-sparkle 2s ease-in-out infinite',
+    }}
+    aria-hidden="true"
+  >
+    ✨
+  </span>
+);
+
+/**
+ * DragIndicator - Visual hint for draggable nodes
+ * Helps children understand they can drag the node
+ */
+const DragIndicator = () => (
+  <div
+    style={{
+      position: 'absolute',
+      top: '10px',
+      left: '10px',
+      display: 'flex',
+      gap: '3px',
+      opacity: 0.4,
+      pointerEvents: 'none',
+    }}
+    className="cosmos-drag-indicator"
+    aria-hidden="true"
+  >
+    <span style={{ fontSize: '6px', color: 'white' }}>●</span>
+    <span style={{ fontSize: '6px', color: 'white' }}>●</span>
+  </div>
+);
+
+/**
+ * PHASE 7: Helper to get style for secondary (lateral) handles
+ * These handles are smaller and more discrete than the main top/bottom handles
+ */
+const getSecondaryHandleStyle = (handleSize: number) => ({
+  width: `${handleSize * 0.5}px`,
+  height: `${handleSize * 0.5}px`,
+  background: 'rgba(255, 255, 255, 0.25)',
+  border: '2px solid rgba(255, 255, 255, 0.4)',
+  opacity: 0.5,
+  transition: 'all 0.2s ease',
+});
+
+/**
  * Helper: Get character avatar URL from store
  * Returns the sprite for the given mood, or the first available sprite
  */
@@ -69,9 +158,16 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
   // PHASE 5.2: ARIA label for screen readers
   const ariaLabel = `Dialogue ${index + 1}: ${speaker || 'Narrator'} dit "${displayText}"`;
 
+  // PHASE 4: Build CSS classes - hover animation + selected animation (Cosmos pulsing glow)
+  const nodeClasses = [
+    'dialogue-node',
+    theme.animations.nodeHover,
+    selected && theme.animations.nodeSelected
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`dialogue-node ${theme.animations.nodeHover}`}
+      className={nodeClasses}
       role="treeitem"
       aria-label={ariaLabel}
       aria-selected={selected}
@@ -90,17 +186,66 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
         position: 'relative'
       }}
     >
-      {/* Top handle */}
+      {/* PHASE 6: Decorative elements for child-friendly themes */}
+      {theme.shapes?.decorativeElements && <DecorativeStars position="top-right" />}
+      {theme.interactions?.showDragIndicators && <DragIndicator />}
+
+      {/* Top handle - enlarged for children */}
       <Handle
         type="target"
         position={Position.Top}
+        id="top"
         style={{
           background: borderColor,
           width: `${sizes.handleSize}px`,
           height: `${sizes.handleSize}px`,
-          border: `2px solid ${themeColors.bg}`
+          border: `3px solid ${themeColors.bg}`,
+          boxShadow: theme.interactions?.showDragIndicators
+            ? `0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)`
+            : '0 2px 4px rgba(0,0,0,0.2)',
+          transition: 'all 0.2s ease',
         }}
-      />
+      >
+        {/* PHASE 6: Drag indicator emoji for children */}
+        {theme.interactions?.showDragIndicators && (
+          <span
+            style={{
+              position: 'absolute',
+              top: '-22px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '14px',
+              pointerEvents: 'none',
+              opacity: 0.7,
+            }}
+            className="cosmos-handle-indicator"
+          >
+            🔗
+          </span>
+        )}
+      </Handle>
+
+      {/* PHASE 7: Left handle (target) - discrete secondary connection */}
+      {theme.shapes?.nodeShape === 'bubble' && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left"
+          className="cosmos-secondary-handle"
+          style={getSecondaryHandleStyle(sizes.handleSize)}
+        />
+      )}
+
+      {/* PHASE 7: Right handle (source) - discrete secondary connection */}
+      {theme.shapes?.nodeShape === 'bubble' && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          className="cosmos-secondary-handle"
+          style={getSecondaryHandleStyle(sizes.handleSize)}
+        />
+      )}
 
       {/* Header: Avatar + Speaker + Index (Articy-inspired) */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
@@ -245,15 +390,25 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
         </div>
       )}
 
-      {/* Bottom handle */}
+      {/* PHASE 6: Speech bubble tail for child-friendly themes */}
+      {theme.shapes?.speechBubbleTail && (
+        <SpeechBubbleTail color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg} />
+      )}
+
+      {/* Bottom handle - enlarged for children */}
       <Handle
         type="source"
         position={Position.Bottom}
+        id="bottom"
         style={{
           background: borderColor,
           width: `${sizes.handleSize}px`,
           height: `${sizes.handleSize}px`,
-          border: `2px solid ${themeColors.bg}`
+          border: `3px solid ${themeColors.bg}`,
+          boxShadow: theme.interactions?.showDragIndicators
+            ? `0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)`
+            : '0 2px 4px rgba(0,0,0,0.2)',
+          transition: 'all 0.2s ease',
         }}
       />
     </div>
@@ -304,9 +459,16 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
   // PHASE 5.2: ARIA label for screen readers
   const ariaLabel = `Dialogue ${index + 1} avec ${choices.length} choix: ${speaker || 'Narrator'} dit "${displayText}"`;
 
+  // PHASE 4: Build CSS classes - hover animation + selected animation (Cosmos pulsing glow)
+  const nodeClasses = [
+    'choice-node',
+    theme.animations.nodeHover,
+    selected && theme.animations.nodeSelected
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`choice-node ${theme.animations.nodeHover}`}
+      className={nodeClasses}
       role="treeitem"
       aria-label={ariaLabel}
       aria-selected={selected}
@@ -326,18 +488,67 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
         position: 'relative'
       }}
     >
-      {/* Top handle */}
+      {/* PHASE 6: Decorative elements for child-friendly themes */}
+      {theme.shapes?.decorativeElements && <DecorativeStars position="top-left" />}
+      {theme.interactions?.showDragIndicators && <DragIndicator />}
+
+      {/* Top handle - enlarged for children */}
       <Handle
         type="target"
         position={Position.Top}
+        id="top"
         aria-label="Point de connexion entrant"
         style={{
           background: borderColor,
           width: `${sizes.handleSize}px`,
           height: `${sizes.handleSize}px`,
-          border: `2px solid ${themeColors.bg}`
+          border: `3px solid ${themeColors.bg}`,
+          boxShadow: theme.interactions?.showDragIndicators
+            ? `0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)`
+            : '0 2px 4px rgba(0,0,0,0.2)',
+          transition: 'all 0.2s ease',
         }}
-      />
+      >
+        {/* PHASE 6: Drag indicator emoji for children */}
+        {theme.interactions?.showDragIndicators && (
+          <span
+            style={{
+              position: 'absolute',
+              top: '-22px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '14px',
+              pointerEvents: 'none',
+              opacity: 0.7,
+            }}
+            className="cosmos-handle-indicator"
+          >
+            🔗
+          </span>
+        )}
+      </Handle>
+
+      {/* PHASE 7: Left handle (target) - discrete secondary connection */}
+      {theme.shapes?.nodeShape === 'bubble' && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left"
+          className="cosmos-secondary-handle"
+          style={getSecondaryHandleStyle(sizes.handleSize)}
+        />
+      )}
+
+      {/* PHASE 7: Right handle (source) - discrete secondary connection */}
+      {theme.shapes?.nodeShape === 'bubble' && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          className="cosmos-secondary-handle"
+          style={getSecondaryHandleStyle(sizes.handleSize)}
+        />
+      )}
 
       {/* Header: Avatar + Speaker + Index (Articy-inspired) */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
@@ -525,7 +736,12 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
         </div>
       )}
 
-      {/* Multi-handles: One handle per choice (PHASE 2) */}
+      {/* PHASE 6: Speech bubble tail for child-friendly themes */}
+      {theme.shapes?.speechBubbleTail && (
+        <SpeechBubbleTail color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg} />
+      )}
+
+      {/* Multi-handles: One handle per choice (PHASE 2) - enlarged for children */}
       {choices.map((choice, choiceIndex) => {
         // Colors for handles (repeating pattern)
         const handleColors = ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6']; // emerald, rose, amber, purple
@@ -546,7 +762,10 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
               width: `${sizes.handleSize}px`,
               height: `${sizes.handleSize}px`,
               border: '3px solid white',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)'
+              boxShadow: theme.interactions?.showDragIndicators
+                ? `0 0 0 6px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4)`
+                : '0 2px 6px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease',
             }}
             aria-label={`Connexion pour le choix "${choice.text}"`}
           />
@@ -586,9 +805,16 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
   // PHASE 5.2: ARIA label for screen readers
   const ariaLabel = `Saut vers scene: ${label}${choiceText ? ` (via "${choiceText}")` : ''}`;
 
+  // PHASE 4: Build CSS classes - hover animation + selected animation (Cosmos pulsing glow)
+  const nodeClasses = [
+    'terminal-node',
+    theme.animations.nodeHover,
+    selected && theme.animations.nodeSelected
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`terminal-node ${theme.animations.nodeHover}`}
+      className={nodeClasses}
       role="treeitem"
       aria-label={ariaLabel}
       aria-selected={selected}

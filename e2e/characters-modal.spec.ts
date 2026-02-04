@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import './coverage-hook';
 import type { Page } from '@playwright/test';
-import { openEditor } from './test-helpers';
+import { openEditor, createCharacter } from './test-helpers';
 
 /**
  * Tests E2E pour CharactersModal avec nouveau CharacterEditorModal
@@ -17,39 +17,7 @@ async function openCharactersModal(page: Page) {
   await page.waitForSelector('text=Gestion des personnages', { timeout: 5000 });
 }
 
-/**
- * Helper: Créer un nouveau personnage (via le wizard multi-étapes)
- */
-async function createCharacter(page: Page, name: string) {
-  // Cliquer sur le bouton "+ Nouveau personnage"
-  const newCharButton = page.getByRole('button', { name: /Nouveau personnage/i });
-  await newCharButton.click();
-
-  // Attendre que le wizard soit complètement ouvert
-  await page.waitForSelector('text=Comment s\'appelle', { timeout: 5000 });
-  await page.waitForTimeout(500);
-
-  // Le wizard s'ouvre avec le champ "Comment s'appelle ton personnage ?"
-  // L'input est dans le dialog, on le trouve via le role dialog
-  const dialog = page.locator('[role="dialog"]');
-  const nameInput = dialog.locator('input').first();
-  await nameInput.fill(name);
-  await page.waitForTimeout(300);
-
-  // Aller directement à l'onglet "Terminé !" pour finaliser rapidement
-  const finishTab = dialog.getByText(/Terminé/i);
-  await finishTab.click({ force: true });
-  await page.waitForTimeout(500);
-
-  // Cliquer sur le bouton de création final
-  const createButton = dialog.getByRole('button', { name: /Créer|Terminer|Valider/i });
-  const hasCreateButton = await createButton.isVisible().catch(() => false);
-
-  if (hasCreateButton) {
-    await createButton.click();
-    await page.waitForTimeout(500);
-  }
-}
+// Note: Using global createCharacter helper from test-helpers.ts
 
 /**
  * Helper: Ouvrir l'éditeur d'un personnage
@@ -84,8 +52,9 @@ test.describe('CharactersModal - Gestion des personnages', () => {
   });
 
   test.skip('Créer un nouveau personnage simple', async ({ page }) => {
-    // TODO: Le wizard multi-étapes nécessite une refonte du test
-    // Le test doit suivre les étapes: Identité -> Apparence -> Expressions -> Terminé
+    // TODO: Le helper createCharacter ne complète pas correctement le wizard 4 étapes
+    // Le wizard nécessite de naviguer Identity -> Appearance -> Expressions -> Review
+    // mais le flow exact avec les validations n'est pas encore stable en E2E
     const characterName = 'TestHero';
     await createCharacter(page, characterName);
     await expect(page.getByText(characterName)).toBeVisible();
@@ -121,19 +90,24 @@ test.describe('CharactersModal - Gestion des personnages', () => {
   });
 
   test.skip('Supprimer un personnage', async ({ page }) => {
+    // TODO: Dépend de createCharacter qui ne fonctionne pas encore
+    // Une fois createCharacter fixé, ce test devrait fonctionner avec les aria-label ajoutés
     const characterName = 'ToDelete';
 
     await createCharacter(page, characterName);
     await expect(page.getByText(characterName)).toBeVisible();
 
-    // Cliquer sur le bouton Supprimer
-    const characterCard = page.locator(`text=${characterName}`).locator('..').locator('..');
-    const deleteButton = characterCard.getByRole('button', { name: /🗑️ Supprimer/i });
+    // Hover sur la carte pour faire apparaître les boutons
+    const characterCard = page.locator('.group').filter({ hasText: characterName }).first();
+    await characterCard.hover();
+
+    // Cliquer sur le bouton Supprimer (chercher par aria-label)
+    const deleteButton = characterCard.getByRole('button', { name: /Supprimer le personnage/i });
     await deleteButton.click();
 
     // Confirmer la suppression dans la modal de confirmation
     await page.waitForTimeout(500);
-    const confirmButton = page.getByRole('button', { name: /Supprimer/i });
+    const confirmButton = page.getByRole('button', { name: /Supprimer/i }).last();
     await confirmButton.click();
 
     // Vérifier que le personnage a disparu
@@ -143,26 +117,27 @@ test.describe('CharactersModal - Gestion des personnages', () => {
   });
 
   test.skip('Dupliquer un personnage', async ({ page }) => {
+    // TODO: Dépend de createCharacter qui ne fonctionne pas encore
+    // Une fois createCharacter fixé, ce test devrait fonctionner avec les aria-label ajoutés
     const originalName = 'Original';
 
     await createCharacter(page, originalName);
     await expect(page.getByText(originalName)).toBeVisible();
 
-    // Cliquer sur le bouton Dupliquer
-    const characterCard = page.locator(`text=${originalName}`).locator('..').locator('..');
-    const duplicateButton = characterCard.getByRole('button', { name: /📋 Dupliquer/i });
+    // Hover sur la carte pour faire apparaître les boutons
+    const characterCard = page.locator('.group').filter({ hasText: originalName }).first();
+    await characterCard.hover();
+
+    // Cliquer sur le bouton Dupliquer (chercher par aria-label)
+    const duplicateButton = characterCard.getByRole('button', { name: /Dupliquer le personnage/i });
     await duplicateButton.click();
 
-    // Attendre la duplication
+    // Attendre la duplication et l'ouverture de l'éditeur
     await page.waitForTimeout(1000);
 
-    // Vérifier qu'un personnage "Original (copie)" ou similaire existe
-    const duplicatedCharacter = page.getByText(/Original.*copie|Original \d+/i);
-    const hasDuplicate = await duplicatedCharacter.isVisible().catch(() => false);
-
-    // Le duplicata devrait ouvrir l'éditeur automatiquement
-    const editorModal = page.getByText(/Éditer:|Nouveau personnage/i);
-    await expect(editorModal.first()).toBeVisible({ timeout: 3000 });
+    // L'éditeur devrait s'ouvrir pour le personnage dupliqué
+    const editorModal = page.locator('[role="dialog"]');
+    await expect(editorModal).toBeVisible({ timeout: 3000 });
   });
 });
 

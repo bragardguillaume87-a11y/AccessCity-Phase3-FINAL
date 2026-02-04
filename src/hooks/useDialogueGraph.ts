@@ -106,7 +106,7 @@ export function useDialogueGraph(
             id: `${sourceId}-converge-to-${sceneId}-d-${targetIdx}`,
             source: sourceId,
             target: `${sceneId}-d-${targetIdx}`,
-            type: 'smoothstep',
+            type: 'step',
             animated: edgeStyles.convergence.animated,
             label: '↩ rejoint',
             style: {
@@ -129,7 +129,7 @@ export function useDialogueGraph(
               id: `${sourceId}-response-converge-to-${sceneId}-d-${targetIdx}`,
               source: sourceId,
               target: `${sceneId}-d-${targetIdx}`,
-              type: 'smoothstep',
+              type: 'step',
               animated: edgeStyles.convergence.animated,
               label: '↩ rejoint',
               style: {
@@ -152,7 +152,7 @@ export function useDialogueGraph(
           id: `${sourceId}-to-${sceneId}-d-${index + 1}`,
           source: sourceId,
           target: `${sceneId}-d-${index + 1}`,
-          type: 'smoothstep',
+          type: 'step',
           animated: edgeStyles.linear.animated,
           style: {
             stroke: edgeStyles.linear.stroke,
@@ -178,7 +178,7 @@ export function useDialogueGraph(
                 source: sourceId,
                 sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
                 target: targetId,
-                type: 'smoothstep',
+                type: 'step',
                 animated: edgeStyles.choice.animated,
                 label: edgeLabel,
                 style: {
@@ -215,7 +215,7 @@ export function useDialogueGraph(
               source: sourceId,
               sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
               target: terminalId,
-              type: 'smoothstep',
+              type: 'step',
               animated: edgeStyles.sceneJump.animated,
               label: choice.text?.substring(0, 20) + '...' || 'Jump to scene',
               style: {

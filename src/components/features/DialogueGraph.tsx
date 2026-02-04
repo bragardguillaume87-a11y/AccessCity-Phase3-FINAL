@@ -281,7 +281,7 @@ function DialogueGraphInner({
         minZoom={0.1}
         maxZoom={2}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'step',  // PHASE 3.6: Changed from smoothstep to step for orthogonal edges
           animated: false
         }}
         className="dialogue-reactflow"

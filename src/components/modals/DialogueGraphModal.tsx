@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -11,6 +11,11 @@ import { ThemeSelector } from './components/ThemeSelector';
 import { CosmosBackground } from '../features/CosmosBackground';
 import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
 import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
+// PHASE 5: Accessibility imports
+import { useGraphKeyboardNav, GraphLiveRegion } from '@/hooks/useGraphKeyboardNav';
+import { AccessibilityToolbar, useAccessibilityShortcuts, type AccessibilityMode } from './components/AccessibilityToolbar';
+import { GraphListView } from './components/GraphListView';
+import './styles/a11y.css';
 
 /**
  * DialogueGraphModal - Full-screen modal for interactive dialogue graph editing
@@ -19,7 +24,7 @@ import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
  * PHASE 2: ✅ Interactive editing (Hybrid approach: Toolbar + Palette + Double-click wizard + Drag handles)
  * PHASE 3: ✅ Panneau de propriétés latéral (édition rapide speaker + text)
  * PHASE 4: ✅ Design amélioré avec système de thèmes (Cosmos pour enfants)
- * PHASE 5: Accessibilité complète (keyboard nav, screen reader, alternate modes) (à venir)
+ * PHASE 5: ✅ Accessibilité complète (keyboard nav, screen reader, alternate modes)
  */
 export function DialogueGraphModal() {
   const [selectedElement, setSelectedElement] = useState<{
@@ -32,11 +37,15 @@ export function DialogueGraphModal() {
   const [layoutVersion, setLayoutVersion] = useState(0);
 
   // PHASE 3.5: State for layout direction (TB = vertical, LR = horizontal)
-  const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>('TB');
+  // PHASE 3.6: Default to LR (horizontal) for better readability
+  const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>('LR');
 
   // PHASE 4: Theme system
   const isCosmosTheme = useIsCosmosTheme();
   const theme = useGraphTheme();
+
+  // PHASE 5: Accessibility state
+  const [accessibilityMode, setAccessibilityMode] = useState<AccessibilityMode>('visual');
 
   // UI Store
   const isOpen = useUIStore((state) => state.dialogueGraphModalOpen);
@@ -51,11 +60,75 @@ export function DialogueGraphModal() {
   // PHASE 2: Actions for interactive editing
   const actions = useDialogueGraphActions(selectedScene?.id || '');
 
-  const handleClose = () => {
+  // Define handleClose early (needed by keyboard nav hook)
+  const handleClose = useCallback(() => {
     setIsOpen(false);
     setSelectedSceneId(null);
     setSelectedElement(null);
-  };
+  }, [setIsOpen, setSelectedSceneId]);
+
+  // PHASE 5: Accessibility hooks
+  // Get nodes from scene for keyboard navigation (simplified type for navigation only)
+  const graphNodes = selectedScene?.dialogues.map((d, i) => ({
+    id: `${selectedScene.id}-d-${i}`,
+    position: { x: i * 400, y: 0 }, // Approximate positions for navigation
+    data: {} as Record<string, unknown> // Type-safe for Node interface
+  })) || [];
+
+  // Keyboard navigation handlers
+  const handleKeyboardSelectNode = useCallback((nodeId: string | null) => {
+    if (!nodeId || !selectedScene) {
+      setSelectedElement(null);
+      return;
+    }
+    const parts = nodeId.split('-d-');
+    const index = parseInt(parts[1], 10);
+    if (!isNaN(index)) {
+      setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
+    }
+  }, [selectedScene]);
+
+  const handleKeyboardEditNode = useCallback((nodeId: string) => {
+    actions.handleNodeDoubleClick(nodeId);
+  }, [actions]);
+
+  const handleKeyboardDeleteNode = useCallback((nodeId: string) => {
+    actions.handleDeleteNode(nodeId);
+    setSelectedElement(null);
+  }, [actions]);
+
+  const handleKeyboardDuplicateNode = useCallback((nodeId: string) => {
+    actions.handleDuplicateNode(nodeId);
+  }, [actions]);
+
+  // Keyboard navigation hook
+  const { announcements } = useGraphKeyboardNav({
+    nodes: graphNodes,
+    selectedNodeId: selectedElement ? `${selectedElement.sceneId}-d-${selectedElement.index}` : null,
+    onSelectNode: handleKeyboardSelectNode,
+    onEditNode: handleKeyboardEditNode,
+    onDeleteNode: handleKeyboardDeleteNode,
+    onDuplicateNode: handleKeyboardDuplicateNode,
+    onClose: handleClose,
+    isEnabled: isOpen && accessibilityMode !== 'list'
+  });
+
+  // Accessibility mode shortcuts (Ctrl+K, Ctrl+L, Ctrl+H)
+  useAccessibilityShortcuts(setAccessibilityMode, isOpen);
+
+  // Handler for list view dialogue selection
+  const handleListSelectDialogue = useCallback((index: number) => {
+    if (selectedScene) {
+      setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
+    }
+  }, [selectedScene]);
+
+  const handleListEditDialogue = useCallback((index: number) => {
+    if (selectedScene) {
+      const nodeId = `${selectedScene.id}-d-${index}`;
+      actions.handleNodeDoubleClick(nodeId);
+    }
+  }, [selectedScene, actions]);
 
   const handleSelectDialogue = (sceneId: string, dialogueIndex: number) => {
     // Set selected element for properties panel (PHASE 3)
@@ -96,9 +169,17 @@ export function DialogueGraphModal() {
 
   if (!selectedScene) return null;
 
+  // PHASE 5: CSS classes for accessibility modes
+  const a11yClasses = [
+    'dialogue-graph-modal',
+    accessibilityMode === 'keyboard' && 'keyboard-mode',
+    accessibilityMode === 'highContrast' && 'high-contrast-mode',
+    accessibilityMode === 'list' && 'list-mode'
+  ].filter(Boolean).join(' ');
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="!w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 gap-0 bg-[var(--color-bg-base)] flex flex-col">
+      <DialogContent className={`!w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 gap-0 bg-[var(--color-bg-base)] flex flex-col ${a11yClasses}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[var(--color-border-base)] bg-[var(--color-bg-elevated)] flex-shrink-0">
           <div>
@@ -126,46 +207,67 @@ export function DialogueGraphModal() {
 
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden relative">
-          {/* PHASE 2: Toolbar (flottant, se décale quand le panneau propriétés est ouvert) */}
-          <DialogueGraphToolbar
-            selectedNodeId={
-              selectedElement
-                ? `${selectedElement.sceneId}-${selectedElement.index}`
-                : null
-            }
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-            onAutoLayout={handleAutoLayout}
-            onToggleLayout={handleToggleLayout}
-            layoutDirection={layoutDirection}
-            onClose={handleClose}
-            isPanelOpen={selectedElement !== null && selectedElement.index !== undefined}
-          />
+          {/* PHASE 5: Screen reader live region */}
+          <GraphLiveRegion announcements={announcements} />
 
-          {/* PHASE 2: Palette (flottant en haut à gauche) */}
-          <DialogueGraphPalette onCreate={actions.handleCreateDialogue} />
-
-          {/* Graph Canvas */}
-          <div
-            className="flex-1 relative h-full overflow-hidden"
-            style={{
-              backgroundColor: theme.background.value,
-              transition: 'background-color 0.3s ease',
-            }}
-          >
-            {/* PHASE 4: Animated background for Cosmos theme */}
-            {isCosmosTheme && <CosmosBackground />}
-
-            {/* ReactFlow Graph */}
-            <DialogueGraph
-              key={layoutVersion}
-              selectedScene={selectedScene}
-              selectedElement={selectedElement}
-              onSelectDialogue={handleSelectDialogue}
-              editMode={true}
-              layoutDirection={layoutDirection}
+          {/* PHASE 5: List View Mode - Alternative to graph for screen readers */}
+          {accessibilityMode === 'list' ? (
+            <GraphListView
+              sceneId={selectedScene.id}
+              selectedDialogueIndex={selectedElement?.index ?? null}
+              onSelectDialogue={handleListSelectDialogue}
+              onEditDialogue={handleListEditDialogue}
             />
-          </div>
+          ) : (
+            <>
+              {/* PHASE 2: Toolbar (flottant, se décale quand le panneau propriétés est ouvert) */}
+              <DialogueGraphToolbar
+                selectedNodeId={
+                  selectedElement
+                    ? `${selectedElement.sceneId}-${selectedElement.index}`
+                    : null
+                }
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
+                onAutoLayout={handleAutoLayout}
+                onToggleLayout={handleToggleLayout}
+                layoutDirection={layoutDirection}
+                onClose={handleClose}
+                isPanelOpen={selectedElement !== null && selectedElement.index !== undefined}
+              />
+
+              {/* PHASE 2: Palette (flottant en haut à gauche) */}
+              <DialogueGraphPalette onCreate={actions.handleCreateDialogue} />
+
+              {/* Graph Canvas */}
+              <div
+                className="flex-1 relative h-full overflow-hidden"
+                style={{
+                  backgroundColor: theme.background.value,
+                  transition: 'background-color 0.3s ease',
+                }}
+              >
+                {/* PHASE 4: Animated background for Cosmos theme */}
+                {isCosmosTheme && <CosmosBackground />}
+
+                {/* ReactFlow Graph */}
+                <DialogueGraph
+                  key={layoutVersion}
+                  selectedScene={selectedScene}
+                  selectedElement={selectedElement}
+                  onSelectDialogue={handleSelectDialogue}
+                  editMode={true}
+                  layoutDirection={layoutDirection}
+                />
+              </div>
+            </>
+          )}
+
+          {/* PHASE 5: Accessibility Toolbar (bottom left) */}
+          <AccessibilityToolbar
+            currentMode={accessibilityMode}
+            onModeChange={setAccessibilityMode}
+          />
 
           {/* PHASE 3: Properties Panel */}
           {selectedElement && selectedElement.index !== undefined && (

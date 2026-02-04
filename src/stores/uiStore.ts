@@ -7,6 +7,36 @@ import { devtools, subscribeWithSelector } from 'zustand/middleware';
  */
 
 // ============================================================================
+// PERSISTENCE HELPERS
+// ============================================================================
+
+const GRAPH_THEME_KEY = 'accesscity-graph-theme';
+
+/**
+ * Get persisted theme ID from localStorage
+ */
+function getPersistedThemeId(): string {
+  if (typeof window === 'undefined') return 'default';
+  try {
+    return localStorage.getItem(GRAPH_THEME_KEY) || 'default';
+  } catch {
+    return 'default';
+  }
+}
+
+/**
+ * Persist theme ID to localStorage
+ */
+function persistThemeId(themeId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(GRAPH_THEME_KEY, themeId);
+  } catch {
+    // Ignore localStorage errors (private browsing, quota exceeded, etc.)
+  }
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -22,6 +52,7 @@ interface UIState {
   dialogueWizardEditIndex: number | undefined;
   dialogueGraphModalOpen: boolean;
   dialogueGraphSelectedScene: string | null;
+  graphThemeId: string;
 
   // Actions
   setSelectedSceneId: (sceneId: string | null) => void;
@@ -34,6 +65,7 @@ interface UIState {
   setDialogueWizardEditIndex: (index: number | undefined) => void;
   setDialogueGraphModalOpen: (open: boolean) => void;
   setDialogueGraphSelectedScene: (sceneId: string | null) => void;
+  setGraphThemeId: (themeId: string) => void;
 }
 
 // ============================================================================
@@ -54,6 +86,7 @@ export const useUIStore = create<UIState>()(
       dialogueWizardEditIndex: undefined,
       dialogueGraphModalOpen: false,
       dialogueGraphSelectedScene: null,
+      graphThemeId: getPersistedThemeId(),  // PHASE 4: Persist theme selection
 
       // Actions
       setSelectedSceneId: (sceneId) => {
@@ -94,6 +127,11 @@ export const useUIStore = create<UIState>()(
 
       setDialogueGraphSelectedScene: (sceneId) => {
         set({ dialogueGraphSelectedScene: sceneId }, false, 'ui/setDialogueGraphSelectedScene');
+      },
+
+      setGraphThemeId: (themeId) => {
+        persistThemeId(themeId);  // PHASE 4: Persist to localStorage
+        set({ graphThemeId: themeId }, false, 'ui/setGraphThemeId');
       },
     })),
     { name: 'UIStore' }

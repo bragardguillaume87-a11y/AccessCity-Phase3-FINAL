@@ -132,11 +132,13 @@ const SAMPLE_SCENES: Scene[] = [
             id: "choice-01-05-01",
             text: "Nous allons cartographier tous les points d'accès problématiques et proposer des solutions concrètes !",
             effects: [{ variable: "Mentale", value: 5, operation: "add" }],
+            nextDialogueId: "dialogue-01-06",  // PHASE 3.5: Connect to counsellor's response
           },
           {
             id: "choice-01-05-02",
             text: "Je n'ai pas beaucoup de temps pour les détails, mais c'est un projet important.",
             effects: [{ variable: "Mentale", value: -5, operation: "add" }],
+            nextDialogueId: "dialogue-01-06",  // PHASE 3.5: Connect to counsellor's response
           },
         ],
       },
@@ -411,11 +413,17 @@ export const useScenesStore = create<ScenesState>()(
                 const list = [...(s.dialogues || [])];
                 if (index < 0 || index >= list.length) return s;
 
-                // Duplicate the dialogue
+                // Duplicate the dialogue with a NEW unique ID
                 const original = list[index];
                 const duplicate: Dialogue = {
                   ...original,
+                  id: `dialogue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                   text: `${original.text} (copie)`,
+                  // Also duplicate choices with new IDs to avoid conflicts
+                  choices: original.choices.map((choice, i) => ({
+                    ...choice,
+                    id: `choice-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 5)}`,
+                  })),
                 };
 
                 // Insert just after the original

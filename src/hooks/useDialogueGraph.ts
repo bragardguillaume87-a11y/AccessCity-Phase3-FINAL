@@ -3,6 +3,7 @@ import dagre from 'dagre';
 import type { Node, Edge } from '@xyflow/react';
 import type { Dialogue, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme } from '@/types';
 import { DEFAULTS } from '@/config/constants';
+import type { GraphTheme } from '@/config/graphThemes/types';
 
 /**
  * Union type for all graph node types
@@ -51,7 +52,8 @@ export function useDialogueGraph(
   dialogues: Dialogue[] = [],
   sceneId: string = '',
   validation: ValidationWithErrors | null = null,
-  layoutDirection: 'TB' | 'LR' = 'TB'  // PHASE 3.5: Layout direction parameter
+  layoutDirection: 'TB' | 'LR' = 'TB',  // PHASE 3.5: Layout direction parameter
+  theme?: GraphTheme  // PHASE 4: Optional theme for dynamic edge styles
 ): UseDialogueGraphReturn {
   return useMemo(() => {
     if (!dialogues || dialogues.length === 0) {
@@ -72,7 +74,8 @@ export function useDialogueGraph(
           index,
           speaker: dialogue.speaker || DEFAULTS.DIALOGUE_SPEAKER,
           text: dialogue.text || '',
-          speakerMood: (dialogue as any).speakerMood || 'neutral',
+          speakerMood: dialogue.speakerMood || 'neutral',
+          stageDirections: dialogue.stageDirections || '',
           choices: dialogue.choices || [],
           // Enrich with validation issues if available
           issues: validation?.errors?.dialogues?.[dialogue.id] || []
@@ -87,6 +90,14 @@ export function useDialogueGraph(
       const sourceId = `${sceneId}-d-${index}`;
       const hasChoices = dialogue.choices && dialogue.choices.length > 0;
 
+      // PHASE 4: Edge styles from theme (with fallback to defaults)
+      const edgeStyles = {
+        linear: theme?.edges.linear || { stroke: '#64748b', strokeWidth: 2, animated: false },
+        choice: theme?.edges.choice || { stroke: '#8b5cf6', strokeWidth: 2, animated: true },
+        convergence: theme?.edges.convergence || { stroke: '#22c55e', strokeWidth: 2, strokeDasharray: '4,4', animated: false },
+        sceneJump: theme?.edges.sceneJump || { stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5,5', animated: true }
+      };
+
       // Convergence edge: dialogue has explicit nextDialogueId (e.g. manual linking)
       if (dialogue.nextDialogueId) {
         const targetIdx = dialogues.findIndex(d => d.id === dialogue.nextDialogueId);
@@ -96,9 +107,14 @@ export function useDialogueGraph(
             source: sourceId,
             target: `${sceneId}-d-${targetIdx}`,
             type: 'smoothstep',
-            animated: false,
+            animated: edgeStyles.convergence.animated,
             label: '↩ rejoint',
-            style: { stroke: '#22c55e', strokeWidth: 2, strokeDasharray: '4,4' },
+            style: {
+              stroke: edgeStyles.convergence.stroke,
+              strokeWidth: edgeStyles.convergence.strokeWidth,
+              strokeDasharray: edgeStyles.convergence.strokeDasharray,
+              filter: edgeStyles.convergence.filter
+            },
             labelStyle: { fill: '#86efac', fontSize: 11, fontWeight: 500 },
             labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 }
           });
@@ -114,9 +130,14 @@ export function useDialogueGraph(
               source: sourceId,
               target: `${sceneId}-d-${targetIdx}`,
               type: 'smoothstep',
-              animated: false,
+              animated: edgeStyles.convergence.animated,
               label: '↩ rejoint',
-              style: { stroke: '#22c55e', strokeWidth: 2, strokeDasharray: '4,4' },
+              style: {
+                stroke: edgeStyles.convergence.stroke,
+                strokeWidth: edgeStyles.convergence.strokeWidth,
+                strokeDasharray: edgeStyles.convergence.strokeDasharray,
+                filter: edgeStyles.convergence.filter
+              },
               labelStyle: { fill: '#86efac', fontSize: 11, fontWeight: 500 },
               labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 }
             });
@@ -132,8 +153,12 @@ export function useDialogueGraph(
           source: sourceId,
           target: `${sceneId}-d-${index + 1}`,
           type: 'smoothstep',
-          animated: false,
-          style: { stroke: '#64748b', strokeWidth: 2 }
+          animated: edgeStyles.linear.animated,
+          style: {
+            stroke: edgeStyles.linear.stroke,
+            strokeWidth: edgeStyles.linear.strokeWidth,
+            filter: edgeStyles.linear.filter
+          }
         });
       }
 
@@ -154,9 +179,13 @@ export function useDialogueGraph(
                 sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
                 target: targetId,
                 type: 'smoothstep',
-                animated: true,
+                animated: edgeStyles.choice.animated,
                 label: edgeLabel,
-                style: { stroke: '#8b5cf6', strokeWidth: 2 },
+                style: {
+                  stroke: edgeStyles.choice.stroke,
+                  strokeWidth: edgeStyles.choice.strokeWidth,
+                  filter: edgeStyles.choice.filter
+                },
                 labelStyle: { fill: '#e2e8f0', fontSize: 12, fontWeight: 500 },
                 labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 }
               });
@@ -187,9 +216,14 @@ export function useDialogueGraph(
               sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
               target: terminalId,
               type: 'smoothstep',
-              animated: true,
+              animated: edgeStyles.sceneJump.animated,
               label: choice.text?.substring(0, 20) + '...' || 'Jump to scene',
-              style: { stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5,5' },
+              style: {
+                stroke: edgeStyles.sceneJump.stroke,
+                strokeWidth: edgeStyles.sceneJump.strokeWidth,
+                strokeDasharray: edgeStyles.sceneJump.strokeDasharray,
+                filter: edgeStyles.sceneJump.filter
+              },
               labelStyle: { fill: '#e2e8f0', fontSize: 12, fontWeight: 500 },
               labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 }
             });
@@ -198,14 +232,14 @@ export function useDialogueGraph(
       }
     });
 
-    // Step 3: Calculate layout with dagre
-    const layoutedNodes = calculateLayoutWithDagre(nodes, edges, layoutDirection);
+    // Step 3: Calculate layout with dagre (pass theme for dynamic node sizes)
+    const layoutedNodes = calculateLayoutWithDagre(nodes, edges, layoutDirection, theme);
 
     return {
       nodes: layoutedNodes,
       edges
     };
-  }, [dialogues, sceneId, validation, layoutDirection]);
+  }, [dialogues, sceneId, validation, layoutDirection, theme]);
 }
 
 /**
@@ -213,12 +247,15 @@ export function useDialogueGraph(
  *
  * @param nodes - ReactFlow nodes (without positions)
  * @param edges - ReactFlow edges
+ * @param layoutDirection - 'TB' (vertical) or 'LR' (horizontal)
+ * @param theme - Optional theme for dynamic node sizes
  * @returns Nodes with calculated positions
  */
 function calculateLayoutWithDagre(
   nodes: GraphNode[],
   edges: Edge[],
-  layoutDirection: 'TB' | 'LR' = 'TB'  // PHASE 3.5: Layout direction
+  layoutDirection: 'TB' | 'LR' = 'TB',  // PHASE 3.5: Layout direction
+  theme?: GraphTheme  // PHASE 4: Theme for dynamic node sizes
 ): GraphNode[] {
   const dagreGraph = new dagre.graphlib.Graph();
 
@@ -234,11 +271,15 @@ function calculateLayoutWithDagre(
   // Set default edge config
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
+  // PHASE 4: Use theme sizes if available, otherwise use defaults
+  const defaultNodeWidth = theme?.sizes.nodeWidth ?? 320;
+  const defaultNodeHeight = theme?.sizes.nodeMinHeight ?? 140;
+
   // Add nodes to dagre graph
   nodes.forEach(node => {
-    // Node dimensions
-    const width = node.type === 'terminalNode' ? 200 : 320;
-    const height = node.type === 'terminalNode' ? 60 : 140;
+    // Node dimensions: terminal nodes are smaller, others use theme sizes
+    const width = node.type === 'terminalNode' ? 200 : defaultNodeWidth;
+    const height = node.type === 'terminalNode' ? 60 : defaultNodeHeight;
 
     dagreGraph.setNode(node.id, { width, height });
   });

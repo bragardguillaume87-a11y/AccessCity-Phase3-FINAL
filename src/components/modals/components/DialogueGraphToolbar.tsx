@@ -33,6 +33,8 @@ export interface DialogueGraphToolbarProps {
   layoutDirection: 'TB' | 'LR';
   /** Callback pour fermer l'éditeur nodal */
   onClose: () => void;
+  /** Is the properties panel currently open? Adjusts toolbar position */
+  isPanelOpen?: boolean;
 }
 
 export function DialogueGraphToolbar({
@@ -43,10 +45,15 @@ export function DialogueGraphToolbar({
   onToggleLayout,
   layoutDirection,
   onClose,
+  isPanelOpen = false,
 }: DialogueGraphToolbarProps) {
   return (
     <div
-      className="absolute top-4 right-4 flex items-center gap-2 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl px-3 py-2 z-10 shadow-xl"
+      className="absolute top-4 flex items-center gap-2 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl px-3 py-2 z-10 shadow-xl transition-all duration-300"
+      style={{
+        // When panel is open (30% width), position toolbar to the left of the panel
+        right: isPanelOpen ? 'calc(30% + 1rem)' : '1rem',
+      }}
       role="toolbar"
       aria-label="Actions de l'éditeur nodal"
     >

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -10,7 +10,9 @@ import {
   Node,
   NodeMouseHandler,
   FitViewOptions,
-  Connection
+  Connection,
+  NodeChange,
+  applyNodeChanges
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './DialogueGraph.css';
@@ -19,6 +21,7 @@ import { useDialogueGraph } from '../../hooks/useDialogueGraph';
 import { useDialogueGraphActions } from '../../hooks/useDialogueGraphActions';
 import { nodeTypes } from './DialogueGraphNodes.tsx';
 import { useValidation } from '../../hooks/useValidation';
+import { useGraphTheme } from '@/hooks/useGraphTheme';
 import type { Scene, DialogueNodeData, TerminalNodeData } from '@/types';
 
 /**
@@ -66,16 +69,20 @@ function DialogueGraphInner({
   const { fitView } = useReactFlow();
   const validation = useValidation();
 
+  // PHASE 4: Get current theme for edge styles
+  const theme = useGraphTheme();
+
   // Get dialogues from selected scene
   const dialogues = selectedScene?.dialogues || [];
   const sceneId = selectedScene?.id || '';
 
-  // Transform dialogues to graph structure
-  const { nodes, edges } = useDialogueGraph(
+  // Transform dialogues to graph structure (Dagre layout)
+  const { nodes: dagreNodes, edges } = useDialogueGraph(
     dialogues,
     sceneId,
     validation as { errors?: { dialogues?: Record<string, any[]> } } | null,
-    layoutDirection  // PHASE 3.5: Pass layout direction to Dagre
+    layoutDirection,  // PHASE 3.5: Pass layout direction to Dagre
+    theme  // PHASE 4: Pass theme for dynamic edge styles
   );
 
   // PHASE 2: Actions hook for edit mode
@@ -84,15 +91,41 @@ function DialogueGraphInner({
   // Local state for selected nodes
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  // PHASE 4.5: Local state for node positions (enables manual dragging)
+  // Store nodes with their positions - only update from Dagre when explicitly requested
+  const [localNodes, setLocalNodes] = useState<GraphNode[]>(dagreNodes);
+  const isInitialRender = useRef(true);
+  const prevDialoguesLength = useRef(dialogues.length);
+
+  // Sync local nodes with Dagre layout when:
+  // 1. First render (initial layout)
+  // 2. Dialogues count changes (node added/deleted)
+  // 3. Layout direction changes (TB/LR toggle)
+  // Note: Auto-layout button triggers re-render via key prop, which resets local state
+  useEffect(() => {
+    const dialoguesChanged = prevDialoguesLength.current !== dialogues.length;
+
+    if (isInitialRender.current || dialoguesChanged) {
+      setLocalNodes(dagreNodes);
+      isInitialRender.current = false;
+      prevDialoguesLength.current = dialogues.length;
+    }
+  }, [dagreNodes, dialogues.length]);
+
+  // Handle node changes (position, selection) for manual dragging
+  const onNodesChange = useCallback((changes: NodeChange<GraphNode>[]) => {
+    setLocalNodes((nds) => applyNodeChanges(changes, nds) as GraphNode[]);
+  }, []);
+
   // Fit view on mount and when nodes change
   useEffect(() => {
-    if (nodes.length > 0) {
+    if (localNodes.length > 0) {
       setTimeout(() => {
         const fitViewOptions: FitViewOptions = { padding: 0.2, duration: 300 };
         fitView(fitViewOptions);
       }, 100);
     }
-  }, [nodes, fitView]);
+  }, [localNodes.length, fitView]);
 
   // Sync selected node with selectedElement from EditorShell
   useEffect(() => {
@@ -133,6 +166,11 @@ function DialogueGraphInner({
   const onConnect = useCallback((params: Connection) => {
     if (editMode) {
       actions.handleReconnectChoice(params);
+      // PHASE 4: Cosmos sparkle effect on connection
+      // Use center of viewport as fallback position
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      actions.handleConnectionEffect(centerX, centerY);
     }
   }, [editMode, actions]);
 
@@ -140,7 +178,7 @@ function DialogueGraphInner({
   const handleKeyDown = useCallback((event: KeyboardEvent): void => {
     if (!selectedNodeId) return;
 
-    const currentIndex = nodes.findIndex((n: GraphNode) => n.id === selectedNodeId);
+    const currentIndex = localNodes.findIndex((n: GraphNode) => n.id === selectedNodeId);
     if (currentIndex === -1) return;
 
     let targetIndex = currentIndex;
@@ -152,12 +190,12 @@ function DialogueGraphInner({
         break;
       case 'ArrowDown':
         event.preventDefault();
-        targetIndex = Math.min(nodes.length - 1, currentIndex + 1);
+        targetIndex = Math.min(localNodes.length - 1, currentIndex + 1);
         break;
       case 'Enter':
         event.preventDefault();
         // Double-click behavior on Enter
-        const node = nodes[currentIndex];
+        const node = localNodes[currentIndex];
         const nodeIndex = (node.data as DialogueNodeData).index;
         if (nodeIndex !== undefined) {
           onSelectDialogue(sceneId, nodeIndex);
@@ -187,14 +225,14 @@ function DialogueGraphInner({
     }
 
     if (targetIndex !== currentIndex) {
-      const targetNode = nodes[targetIndex];
+      const targetNode = localNodes[targetIndex];
       setSelectedNodeId(targetNode.id);
       const targetNodeIndex = (targetNode.data as DialogueNodeData).index;
       if (targetNodeIndex !== undefined) {
         onSelectDialogue(sceneId, targetNodeIndex);
       }
     }
-  }, [selectedNodeId, nodes, sceneId, onSelectDialogue, editMode, actions]);
+  }, [selectedNodeId, localNodes, sceneId, onSelectDialogue, editMode, actions]);
 
   // Attach keyboard listener
   useEffect(() => {
@@ -227,15 +265,17 @@ function DialogueGraphInner({
   return (
     <div className="dialogue-graph-container">
       <ReactFlow
-        nodes={nodes.map((node: GraphNode) => ({
+        nodes={localNodes.map((node: GraphNode) => ({
           ...node,
           selected: node.id === selectedNodeId
         }))}
         edges={edges}
         nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onConnect={editMode ? onConnect : undefined}
+        nodesDraggable={editMode}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
@@ -280,6 +320,11 @@ function DialogueGraphInner({
         <div className="hint-item">
           <kbd>Double-click</kbd> to edit
         </div>
+        {editMode && (
+          <div className="hint-item">
+            <kbd>Drag</kbd> to move
+          </div>
+        )}
         <div className="hint-item">
           <kbd>↑↓</kbd> to navigate
         </div>

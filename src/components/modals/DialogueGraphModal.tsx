@@ -7,7 +7,10 @@ import DialogueGraph from '../features/DialogueGraph';
 import { DialogueGraphToolbar } from './components/DialogueGraphToolbar';
 import { DialogueGraphPalette } from './components/DialogueGraphPalette';
 import { DialoguePropertiesPanel } from './components/DialoguePropertiesPanel';
+import { ThemeSelector } from './components/ThemeSelector';
+import { CosmosBackground } from '../features/CosmosBackground';
 import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
+import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
 
 /**
  * DialogueGraphModal - Full-screen modal for interactive dialogue graph editing
@@ -15,7 +18,7 @@ import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
  * PHASE 1: ✅ Basic modal with existing DialogueGraph component
  * PHASE 2: ✅ Interactive editing (Hybrid approach: Toolbar + Palette + Double-click wizard + Drag handles)
  * PHASE 3: ✅ Panneau de propriétés latéral (édition rapide speaker + text)
- * PHASE 4: Design amélioré (gradients, effets) (à venir)
+ * PHASE 4: ✅ Design amélioré avec système de thèmes (Cosmos pour enfants)
  * PHASE 5: Accessibilité complète (keyboard nav, screen reader, alternate modes) (à venir)
  */
 export function DialogueGraphModal() {
@@ -30,6 +33,10 @@ export function DialogueGraphModal() {
 
   // PHASE 3.5: State for layout direction (TB = vertical, LR = horizontal)
   const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>('TB');
+
+  // PHASE 4: Theme system
+  const isCosmosTheme = useIsCosmosTheme();
+  const theme = useGraphTheme();
 
   // UI Store
   const isOpen = useUIStore((state) => state.dialogueGraphModalOpen);
@@ -102,19 +109,24 @@ export function DialogueGraphModal() {
               {selectedScene.dialogues.length} dialogue{selectedScene.dialogues.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            aria-label="Fermer l'éditeur nodal"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+
+          {/* PHASE 4: Theme selector + Close button */}
+          <div className="flex items-center gap-4">
+            <ThemeSelector />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              aria-label="Fermer l'éditeur nodal"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden relative">
-          {/* PHASE 2: Toolbar (flottant en haut à droite) */}
+          {/* PHASE 2: Toolbar (flottant, se décale quand le panneau propriétés est ouvert) */}
           <DialogueGraphToolbar
             selectedNodeId={
               selectedElement
@@ -127,13 +139,24 @@ export function DialogueGraphModal() {
             onToggleLayout={handleToggleLayout}
             layoutDirection={layoutDirection}
             onClose={handleClose}
+            isPanelOpen={selectedElement !== null && selectedElement.index !== undefined}
           />
 
           {/* PHASE 2: Palette (flottant en haut à gauche) */}
           <DialogueGraphPalette onCreate={actions.handleCreateDialogue} />
 
           {/* Graph Canvas */}
-          <div className="flex-1 relative bg-[var(--color-bg-base)] h-full">
+          <div
+            className="flex-1 relative h-full overflow-hidden"
+            style={{
+              backgroundColor: theme.background.value,
+              transition: 'background-color 0.3s ease',
+            }}
+          >
+            {/* PHASE 4: Animated background for Cosmos theme */}
+            {isCosmosTheme && <CosmosBackground />}
+
+            {/* ReactFlow Graph */}
             <DialogueGraph
               key={layoutVersion}
               selectedScene={selectedScene}

@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import type { Connection } from '@xyflow/react';
 import { useScenesStore, useUIStore } from '@/stores';
+import { useCosmosEffects } from '@/components/features/CosmosEffects';
+import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 
 /**
  * useDialogueGraphActions - Hook centralisant les actions d'édition du graphe de dialogues
@@ -20,6 +22,10 @@ export function useDialogueGraphActions(sceneId: string) {
   const setWizardOpen = useUIStore((state) => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
+
+  // PHASE 4: Cosmos theme effects
+  const isCosmosTheme = useIsCosmosTheme();
+  const { celebrateNodeCreation, flashOnDelete, sparkleOnConnection } = useCosmosEffects();
 
   /**
    * 1. Double-clic sur node → Ouvre DialogueWizard en mode édition
@@ -41,8 +47,12 @@ export function useDialogueGraphActions(sceneId: string) {
     (nodeId: string) => {
       const index = extractDialogueIndexFromNodeId(nodeId);
       deleteDialogue(sceneId, index);
+      // PHASE 4: Cosmos flash effect on delete
+      if (isCosmosTheme) {
+        flashOnDelete();
+      }
     },
-    [sceneId, deleteDialogue]
+    [sceneId, deleteDialogue, isCosmosTheme, flashOnDelete]
   );
 
   /**
@@ -52,8 +62,12 @@ export function useDialogueGraphActions(sceneId: string) {
     (nodeId: string) => {
       const index = extractDialogueIndexFromNodeId(nodeId);
       duplicateDialogue(sceneId, index);
+      // PHASE 4: Cosmos confetti effect on duplicate (node creation)
+      if (isCosmosTheme) {
+        celebrateNodeCreation();
+      }
     },
-    [sceneId, duplicateDialogue]
+    [sceneId, duplicateDialogue, isCosmosTheme, celebrateNodeCreation]
   );
 
   /**
@@ -100,9 +114,18 @@ export function useDialogueGraphActions(sceneId: string) {
         return;
       }
 
-      // Mettre à jour le nextDialogueId du choix
+      // Extract target dialogue index from node ID and get actual dialogue ID
+      const targetIndex = extractDialogueIndexFromNodeId(target);
+      const targetDialogue = scene?.dialogues[targetIndex];
+
+      if (!targetDialogue) {
+        console.warn('[useDialogueGraphActions] Invalid target dialogue', { target, targetIndex });
+        return;
+      }
+
+      // Mettre à jour le nextDialogueId du choix avec l'ID réel du dialogue (pas le node ID)
       const updatedChoices = dialogue.choices.map((choice, i) =>
-        i === choiceIndex ? { ...choice, nextDialogueId: target } : choice
+        i === choiceIndex ? { ...choice, nextDialogueId: targetDialogue.id } : choice
       );
 
       updateDialogue(sceneId, sourceIndex, {
@@ -112,12 +135,28 @@ export function useDialogueGraphActions(sceneId: string) {
     [sceneId, updateDialogue]
   );
 
+  /**
+   * 6. Effet sparkle lors d'une connexion (PHASE 4 - Cosmos)
+   */
+  const handleConnectionEffect = useCallback(
+    (x: number, y: number) => {
+      if (isCosmosTheme) {
+        sparkleOnConnection(x, y);
+      }
+    },
+    [isCosmosTheme, sparkleOnConnection]
+  );
+
   return {
     handleNodeDoubleClick,
     handleDeleteNode,
     handleDuplicateNode,
     handleCreateDialogue,
     handleReconnectChoice,
+    handleConnectionEffect,
+    // Export for external use
+    isCosmosTheme,
+    celebrateNodeCreation: isCosmosTheme ? celebrateNodeCreation : undefined,
   };
 }
 

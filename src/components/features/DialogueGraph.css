@@ -265,3 +265,44 @@
     font-size: 10px;
   }
 }
+
+/* ============================================
+   DEFAULT THEME ANIMATIONS
+   ============================================ */
+
+/* Default hover effect: subtle lift */
+.default-node-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.default-node-hover:hover {
+  transform: translateY(-2px);
+}
+
+/* Default selected state: cyan outline */
+.default-node-selected {
+  outline: 3px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* Default appear animation: fade in */
+.default-node-appear {
+  animation: default-appear 0.3s ease-out forwards;
+}
+
+@keyframes default-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Default edge animation */
+.default-edge-animated {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}

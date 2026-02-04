@@ -108,6 +108,10 @@ export interface Dialogue {
   nextDialogueId?: string;
   /** Whether this dialogue is a branch response (visual marker in editor) */
   isResponse?: boolean;
+  /** Speaker's mood/expression for avatar display (links to character sprite) */
+  speakerMood?: string;
+  /** Stage directions: actions, emotions, context not spoken but acted (like theater) */
+  stageDirections?: string;
 }
 
 /**
@@ -355,6 +359,8 @@ export interface DialogueNodeData extends Record<string, unknown> {
   speaker: string;
   text: string;
   speakerMood: string;
+  /** Stage directions: actions, emotions, context (like theater didascalies) */
+  stageDirections?: string;
   choices: DialogueChoice[];
   issues: ValidationProblem[];
 }

@@ -1,9 +1,28 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { MessageSquare, GitBranch, ExternalLink, AlertCircle, AlertTriangle } from 'lucide-react';
+import { MessageSquare, GitBranch, ExternalLink, AlertCircle, AlertTriangle, User } from 'lucide-react';
 import { getNodeColorTheme } from '../../hooks/useDialogueGraph';
-import { COLORS, SHADOWS, NODE_COLORS } from '@/config/colors';
+import { useGraphTheme } from '@/hooks/useGraphTheme';
+import { useCharactersStore } from '@/stores';
+import { COLORS, NODE_COLORS } from '@/config/colors';
 import type { DialogueNodeData, TerminalNodeData, ValidationProblem } from '@/types';
+
+// Import cosmos theme CSS for animations
+import './CosmosBackground.css';
+
+/**
+ * Helper: Get character avatar URL from store
+ * Returns the sprite for the given mood, or the first available sprite
+ */
+function useCharacterAvatar(speakerId: string, mood: string): string | null {
+  const characters = useCharactersStore((state) => state.characters);
+  const character = characters.find((c) => c.id === speakerId);
+
+  if (!character || !character.sprites) return null;
+
+  // Try to get sprite for specific mood, fallback to neutral, then first available
+  return character.sprites[mood] || character.sprites['neutral'] || Object.values(character.sprites)[0] || null;
+}
 
 /**
  * Props for DialogueNode component
@@ -25,28 +44,41 @@ interface DialogueNodeProps {
  * - Handles for connections (top + bottom)
  */
 export const DialogueNode = React.memo(function DialogueNode({ data, selected }: DialogueNodeProps): React.JSX.Element {
-  const { index, speaker, text, speakerMood, issues = [] } = data;
+  const { index, speaker, text, speakerMood, stageDirections, issues = [] } = data;
+  const theme = useGraphTheme();
   const colors = getNodeColorTheme('dialogueNode', issues);
+  const themeColors = theme.nodes.dialogue;
+  const sizes = theme.sizes;
+
+  // Get character avatar (Articy-inspired)
+  const avatarUrl = useCharacterAvatar(speaker, speakerMood || 'neutral');
 
   const hasErrors = issues.some((issue: ValidationProblem) => issue.type === 'error');
   const hasWarnings = issues.some((issue: ValidationProblem) => issue.type === 'warning');
 
+  // Use theme colors, fallback to validation colors if there are issues
+  const bgColor = hasErrors || hasWarnings ? colors.bg : (themeColors.bgGradient || themeColors.bg);
+  const borderColor = hasErrors || hasWarnings ? colors.border : themeColors.border;
+  const textColor = hasErrors || hasWarnings ? colors.text : themeColors.text;
+  const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
+
   // Truncate text for display
   const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
+  const displayStageDirections = stageDirections ? (stageDirections.length > 50 ? stageDirections.substring(0, 50) + '...' : stageDirections) : null;
 
   return (
     <div
-      className="dialogue-node"
+      className={`dialogue-node ${theme.animations.nodeHover}`}
       style={{
-        backgroundColor: colors.bg,
-        borderColor: selected ? COLORS.SELECTED : colors.border,
+        background: bgColor,
+        borderColor: selected ? COLORS.SELECTED : borderColor,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'solid',
-        borderRadius: '12px',
+        borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',
-        width: '320px',
-        minHeight: '140px',
-        boxShadow: selected ? SHADOWS.SELECTED : SHADOWS.DEFAULT,
+        width: `${sizes.nodeWidth}px`,
+        minHeight: `${sizes.nodeMinHeight}px`,
+        boxShadow: shadow,
         transition: 'all 0.2s ease',
         position: 'relative'
       }}
@@ -56,50 +88,113 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
         type="target"
         position={Position.Top}
         style={{
-          background: colors.border,
-          width: '12px',
-          height: '12px',
-          border: `2px solid ${colors.bg}`
+          background: borderColor,
+          width: `${sizes.handleSize}px`,
+          height: `${sizes.handleSize}px`,
+          border: `2px solid ${themeColors.bg}`
         }}
       />
 
-      {/* Header: Speaker + Index */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageSquare size={16} color={colors.text} />
-          <span style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>
-            {speaker || 'Narrator'}
-          </span>
-          {speakerMood && (
-            <span style={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY, fontStyle: 'italic' }}>
-              ({speakerMood})
-            </span>
+      {/* Header: Avatar + Speaker + Index (Articy-inspired) */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+        {/* Character Avatar (Articy-inspired) */}
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            border: `2px solid ${borderColor}`,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={speaker}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <User size={20} color={textColor} style={{ opacity: 0.5 }} />
           )}
         </div>
 
-        {/* Index badge */}
-        <span
+        {/* Speaker info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Icon: emoji for cosmos, Lucide for default */}
+              {theme.icons?.useEmoji ? (
+                <span style={{ fontSize: `${sizes.fontSizeSpeaker + 2}px`, lineHeight: 1 }}>
+                  {theme.icons.dialogue}
+                </span>
+              ) : (
+                <MessageSquare size={14} color={textColor} />
+              )}
+              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '600', color: textColor }}>
+                {speaker || 'Narrator'}
+              </span>
+              {speakerMood && speakerMood !== 'neutral' && (
+                <span style={{ fontSize: '10px', color: textColor, opacity: 0.7, fontStyle: 'italic' }}>
+                  ({speakerMood})
+                </span>
+              )}
+            </div>
+
+            {/* Index badge - playful for cosmos */}
+            <span
+              style={{
+                fontSize: theme.icons?.useEmoji ? '12px' : '11px',
+                fontWeight: '700',
+                color: COLORS.TEXT_DARK,
+                backgroundColor: textColor,
+                padding: theme.icons?.useEmoji ? '3px 10px' : '2px 6px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+            >
+              {theme.icons?.useEmoji && <span>💬</span>}
+              {index + 1}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stage Directions - Didascalies (Articy-inspired) */}
+      {displayStageDirections && (
+        <p
           style={{
-            fontSize: '12px',
-            fontWeight: '700',
-            color: COLORS.TEXT_DARK,
-            backgroundColor: colors.text,
-            padding: '2px 8px',
-            borderRadius: '12px'
+            fontSize: '11px',
+            lineHeight: '1.4',
+            color: textColor,
+            margin: '0 0 6px 0',
+            padding: '4px 8px',
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            borderRadius: '6px',
+            fontStyle: 'italic',
+            opacity: 0.85,
+            borderLeft: `3px solid ${borderColor}`
           }}
         >
-          D{index + 1}
-        </span>
-      </div>
+          {theme.icons?.useEmoji ? '🎬 ' : ''}{displayStageDirections}
+        </p>
+      )}
 
       {/* Dialogue text */}
       <p
         style={{
-          fontSize: '13px',
-          lineHeight: '1.5',
-          color: COLORS.TEXT_PRIMARY,
+          fontSize: `${sizes.fontSizeText}px`,
+          lineHeight: '1.6',
+          color: textColor,
           margin: '0',
-          wordWrap: 'break-word'
+          wordWrap: 'break-word',
+          opacity: 0.95
         }}
       >
         {displayText}
@@ -148,10 +243,10 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
         type="source"
         position={Position.Bottom}
         style={{
-          background: colors.border,
-          width: '12px',
-          height: '12px',
-          border: `2px solid ${colors.bg}`
+          background: borderColor,
+          width: `${sizes.handleSize}px`,
+          height: `${sizes.handleSize}px`,
+          border: `2px solid ${themeColors.bg}`
         }}
       />
     </div>
@@ -177,29 +272,41 @@ interface ChoiceNodeProps {
  * - GitBranch icon
  */
 export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Element {
-  const { index, speaker, text, speakerMood, choices = [], issues = [] } = data;
+  const { index, speaker, text, speakerMood, stageDirections, choices = [], issues = [] } = data;
+  const theme = useGraphTheme();
   const colors = getNodeColorTheme('choiceNode', issues);
+  const themeColors = theme.nodes.choice;
+  const sizes = theme.sizes;
+
+  // Get character avatar (Articy-inspired)
+  const avatarUrl = useCharacterAvatar(speaker, speakerMood || 'neutral');
 
   const hasErrors = issues.some((issue: ValidationProblem) => issue.type === 'error');
   const hasWarnings = issues.some((issue: ValidationProblem) => issue.type === 'warning');
 
+  // Use theme colors, fallback to validation colors if there are issues
+  const bgColor = hasErrors || hasWarnings ? colors.bg : (themeColors.bgGradient || themeColors.bg);
+  const borderColor = hasErrors || hasWarnings ? colors.border : themeColors.border;
+  const textColor = hasErrors || hasWarnings ? colors.text : themeColors.text;
+  const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
+
   // Truncate text for display
   const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
-  const choiceCount = choices.length;
+  const displayStageDirections = stageDirections ? (stageDirections.length > 50 ? stageDirections.substring(0, 50) + '...' : stageDirections) : null;
 
   return (
     <div
-      className="choice-node"
+      className={`choice-node ${theme.animations.nodeHover}`}
       style={{
-        backgroundColor: colors.bg,
-        borderColor: selected ? COLORS.SELECTED : colors.border,
+        background: bgColor,
+        borderColor: selected ? COLORS.SELECTED : borderColor,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'solid',
-        borderRadius: '12px',
+        borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',
-        width: '320px',
-        minHeight: '140px',
-        boxShadow: selected ? SHADOWS.SELECTED : SHADOWS.DEFAULT,
+        width: `${sizes.nodeWidth}px`,
+        minHeight: `${sizes.nodeMinHeight}px`,
+        boxShadow: shadow,
         transition: 'all 0.2s ease',
         position: 'relative'
       }}
@@ -209,72 +316,159 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
         type="target"
         position={Position.Top}
         style={{
-          background: colors.border,
-          width: '12px',
-          height: '12px',
-          border: `2px solid ${colors.bg}`
+          background: borderColor,
+          width: `${sizes.handleSize}px`,
+          height: `${sizes.handleSize}px`,
+          border: `2px solid ${themeColors.bg}`
         }}
       />
 
-      {/* Header: Speaker + Index */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <GitBranch size={16} color={colors.text} />
-          <span style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>
-            {speaker || 'Narrator'}
-          </span>
-          {speakerMood && (
-            <span style={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY, fontStyle: 'italic' }}>
-              ({speakerMood})
-            </span>
+      {/* Header: Avatar + Speaker + Index (Articy-inspired) */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+        {/* Character Avatar (Articy-inspired) */}
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            border: `2px solid ${borderColor}`,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={speaker}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <User size={20} color={textColor} style={{ opacity: 0.5 }} />
           )}
         </div>
 
-        {/* Index badge */}
-        <span
+        {/* Speaker info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Icon: emoji for cosmos, Lucide for default */}
+              {theme.icons?.useEmoji ? (
+                <span style={{ fontSize: `${sizes.fontSizeSpeaker + 2}px`, lineHeight: 1 }}>
+                  {theme.icons.choice}
+                </span>
+              ) : (
+                <GitBranch size={14} color={textColor} />
+              )}
+              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '600', color: textColor }}>
+                {speaker || 'Narrator'}
+              </span>
+              {speakerMood && speakerMood !== 'neutral' && (
+                <span style={{ fontSize: '10px', color: textColor, opacity: 0.7, fontStyle: 'italic' }}>
+                  ({speakerMood})
+                </span>
+              )}
+            </div>
+
+            {/* Index badge - playful for cosmos */}
+            <span
+              style={{
+                fontSize: theme.icons?.useEmoji ? '12px' : '11px',
+                fontWeight: '700',
+                color: COLORS.TEXT_DARK,
+                backgroundColor: textColor,
+                padding: theme.icons?.useEmoji ? '3px 10px' : '2px 6px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+            >
+              {theme.icons?.useEmoji && <span>🚀</span>}
+              {index + 1}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stage Directions - Didascalies (Articy-inspired) */}
+      {displayStageDirections && (
+        <p
           style={{
-            fontSize: '12px',
-            fontWeight: '700',
-            color: COLORS.TEXT_DARK,
-            backgroundColor: colors.text,
-            padding: '2px 8px',
-            borderRadius: '12px'
+            fontSize: '11px',
+            lineHeight: '1.4',
+            color: textColor,
+            margin: '0 0 6px 0',
+            padding: '4px 8px',
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            borderRadius: '6px',
+            fontStyle: 'italic',
+            opacity: 0.85,
+            borderLeft: `3px solid ${borderColor}`
           }}
         >
-          D{index + 1}
-        </span>
-      </div>
+          {theme.icons?.useEmoji ? '🎬 ' : ''}{displayStageDirections}
+        </p>
+      )}
 
       {/* Dialogue text */}
       <p
         style={{
-          fontSize: '13px',
-          lineHeight: '1.5',
-          color: COLORS.TEXT_PRIMARY,
+          fontSize: `${sizes.fontSizeText}px`,
+          lineHeight: '1.6',
+          color: textColor,
           margin: '0 0 8px 0',
-          wordWrap: 'break-word'
+          wordWrap: 'break-word',
+          opacity: 0.95
         }}
       >
         {displayText}
       </p>
 
-      {/* Choices badge */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          backgroundColor: NODE_COLORS.choiceNode.bg,
-          border: `1px solid ${NODE_COLORS.choiceNode.border}`,
-          borderRadius: '16px',
-          padding: '4px 10px',
-          fontSize: '12px',
-          fontWeight: '600',
-          color: NODE_COLORS.choiceNode.text
-        }}
-      >
-        <GitBranch size={12} />
-        {choiceCount} {choiceCount === 1 ? 'choice' : 'choices'}
+      {/* Choices preview - show first choices as mini-badges */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+        {choices.slice(0, 3).map((choice, i) => {
+          const choiceColors = ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6'];
+          return (
+            <span
+              key={choice.id}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                backgroundColor: `${choiceColors[i % choiceColors.length]}20`,
+                border: `2px solid ${choiceColors[i % choiceColors.length]}`,
+                borderRadius: '12px',
+                padding: '4px 10px',
+                fontSize: '11px',
+                fontWeight: '600',
+                color: choiceColors[i % choiceColors.length],
+                maxWidth: '100px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {theme.icons?.useEmoji && <span>✨</span>}
+              {choice.text?.substring(0, 12) || `Choix ${i + 1}`}
+            </span>
+          );
+        })}
+        {choices.length > 3 && (
+          <span
+            style={{
+              fontSize: '11px',
+              color: textColor,
+              opacity: 0.7,
+              padding: '4px 8px'
+            }}
+          >
+            +{choices.length - 3}
+          </span>
+        )}
       </div>
 
       {/* Error/Warning badges */}
@@ -316,26 +510,26 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
       )}
 
       {/* Multi-handles: One handle per choice (PHASE 2) */}
-      {choices.map((choice, index) => {
+      {choices.map((choice, choiceIndex) => {
         // Colors for handles (repeating pattern)
         const handleColors = ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6']; // emerald, rose, amber, purple
-        const handleColor = handleColors[index % handleColors.length];
+        const handleColor = handleColors[choiceIndex % handleColors.length];
 
         // Position: distribute handles evenly at the bottom
-        const leftPosition = ((index + 1) / (choices.length + 1)) * 100;
+        const leftPosition = ((choiceIndex + 1) / (choices.length + 1)) * 100;
 
         return (
           <Handle
             key={choice.id}
             type="source"
             position={Position.Bottom}
-            id={`choice-${index}`}
+            id={`choice-${choiceIndex}`}
             style={{
               left: `${leftPosition}%`,
               background: handleColor,
-              width: '12px',
-              height: '12px',
-              border: '2px solid white',
+              width: `${sizes.handleSize}px`,
+              height: `${sizes.handleSize}px`,
+              border: '3px solid white',
               boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)'
             }}
             aria-label={`Connexion pour le choix "${choice.text}"`}
@@ -366,22 +560,26 @@ interface TerminalNodeProps {
  * - Only has input handle (no output)
  */
 export const TerminalNode = React.memo(function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.Element {
-  const { sceneId, label, choiceText } = data;
-  const colors = getNodeColorTheme('terminalNode', []);
+  const { label, choiceText } = data;
+  const theme = useGraphTheme();
+  const themeColors = theme.nodes.terminal;
+  const sizes = theme.sizes;
+
+  const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
 
   return (
     <div
-      className="terminal-node"
+      className={`terminal-node ${theme.animations.nodeHover}`}
       style={{
-        backgroundColor: colors.bg,
-        borderColor: selected ? COLORS.SELECTED : colors.border,
+        background: themeColors.bgGradient || themeColors.bg,
+        borderColor: selected ? COLORS.SELECTED : themeColors.border,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'dashed',
-        borderRadius: '12px',
+        borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',
         width: '200px',
         minHeight: '60px',
-        boxShadow: selected ? SHADOWS.SELECTED : SHADOWS.DEFAULT,
+        boxShadow: shadow,
         transition: 'all 0.2s ease',
         display: 'flex',
         alignItems: 'center',
@@ -394,30 +592,38 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
         type="target"
         position={Position.Top}
         style={{
-          background: colors.border,
-          width: '12px',
-          height: '12px',
-          border: `2px solid ${colors.bg}`
+          background: themeColors.border,
+          width: `${sizes.handleSize}px`,
+          height: `${sizes.handleSize}px`,
+          border: `2px solid ${themeColors.bg}`
         }}
       />
 
-      <ExternalLink size={16} color={colors.text} />
+      {/* Icon: emoji for cosmos, Lucide for default */}
+      {theme.icons?.useEmoji ? (
+        <span style={{ fontSize: '24px', lineHeight: 1 }}>
+          {theme.icons.terminal}
+        </span>
+      ) : (
+        <ExternalLink size={16} color={themeColors.text} />
+      )}
       <div style={{ textAlign: 'center' }}>
         <p
           style={{
-            fontSize: '13px',
+            fontSize: `${sizes.fontSizeText}px`,
             fontWeight: '600',
-            color: colors.text,
+            color: themeColors.text,
             margin: '0'
           }}
         >
-          {label}
+          {theme.icons?.useEmoji ? '🌟 ' : ''}{label}
         </p>
         {choiceText && (
           <p
             style={{
               fontSize: '11px',
-              color: COLORS.TEXT_SECONDARY,
+              color: themeColors.text,
+              opacity: 0.8,
               margin: '4px 0 0 0',
               fontStyle: 'italic'
             }}

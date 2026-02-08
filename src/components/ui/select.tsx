@@ -65,16 +65,11 @@ const SelectContent = React.forwardRef<
     /** Set to false when inside a Dialog to avoid React 19 focus trap issues */
     portal?: boolean;
   }
->(({ className, children, position = "popper", container, portal = true, onPointerDownOutside, onInteractOutside, ...props }, ref) => {
-  // Event handlers to prevent Dialog from capturing events when portal={false}
-  const handlePointerDownOutside = portal ? onPointerDownOutside : (e: Event) => {
+>(({ className, children, position = "popper", container, portal = true, onPointerDownOutside, ...props }, ref) => {
+  // Event handler to prevent Dialog from capturing events when portal={false}
+  const handlePointerDownOutside = portal ? onPointerDownOutside : (e: Parameters<NonNullable<typeof onPointerDownOutside>>[0]) => {
     e.preventDefault();
-    onPointerDownOutside?.(e as React.PointerEvent<HTMLDivElement>);
-  };
-
-  const handleInteractOutside = portal ? onInteractOutside : (e: Event) => {
-    e.preventDefault();
-    onInteractOutside?.(e as React.FocusEvent<HTMLDivElement>);
+    onPointerDownOutside?.(e);
   };
 
   const content = (
@@ -88,7 +83,6 @@ const SelectContent = React.forwardRef<
       )}
       position={position}
       onPointerDownOutside={handlePointerDownOutside}
-      onInteractOutside={handleInteractOutside}
       {...props}>
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport

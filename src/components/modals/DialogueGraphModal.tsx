@@ -9,6 +9,7 @@ import { ThemeSelector } from './components/ThemeSelector';
 import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
+import { dialogueNodeId, extractDialogueIndex } from '@/config/handleConfig';
 
 // PHASE 4 (Option 4): Lazy load CosmosBackground for bundle optimization
 // Only loaded when Cosmos theme is active (~117KB with canvas-confetti)
@@ -74,7 +75,7 @@ export function DialogueGraphModal() {
   // PHASE 5: Accessibility hooks
   // Get nodes from scene for keyboard navigation (simplified type for navigation only)
   const graphNodes = selectedScene?.dialogues.map((d, i) => ({
-    id: `${selectedScene.id}-d-${i}`,
+    id: dialogueNodeId(selectedScene.id, i),
     position: { x: i * 400, y: 0 }, // Approximate positions for navigation
     data: {} as Record<string, unknown> // Type-safe for Node interface
   })) || [];
@@ -85,8 +86,7 @@ export function DialogueGraphModal() {
       setSelectedElement(null);
       return;
     }
-    const parts = nodeId.split('-d-');
-    const index = parseInt(parts[1], 10);
+    const index = extractDialogueIndex(nodeId);
     if (!isNaN(index)) {
       setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
     }
@@ -108,7 +108,7 @@ export function DialogueGraphModal() {
   // Keyboard navigation hook
   const { announcements } = useGraphKeyboardNav({
     nodes: graphNodes,
-    selectedNodeId: selectedElement ? `${selectedElement.sceneId}-d-${selectedElement.index}` : null,
+    selectedNodeId: selectedElement ? dialogueNodeId(selectedElement.sceneId!, selectedElement.index!) : null,
     onSelectNode: handleKeyboardSelectNode,
     onEditNode: handleKeyboardEditNode,
     onDeleteNode: handleKeyboardDeleteNode,
@@ -129,7 +129,7 @@ export function DialogueGraphModal() {
 
   const handleListEditDialogue = useCallback((index: number) => {
     if (selectedScene) {
-      const nodeId = `${selectedScene.id}-d-${index}`;
+      const nodeId = dialogueNodeId(selectedScene.id, index);
       actions.handleNodeDoubleClick(nodeId);
     }
   }, [selectedScene, actions]);
@@ -148,14 +148,14 @@ export function DialogueGraphModal() {
   // PHASE 2: Toolbar actions
   const handleDelete = () => {
     if (!selectedElement) return;
-    const nodeId = `${selectedElement.sceneId}-${selectedElement.index}`;
+    const nodeId = dialogueNodeId(selectedElement.sceneId!, selectedElement.index!);
     actions.handleDeleteNode(nodeId);
     setSelectedElement(null);
   };
 
   const handleDuplicate = () => {
     if (!selectedElement) return;
-    const nodeId = `${selectedElement.sceneId}-${selectedElement.index}`;
+    const nodeId = dialogueNodeId(selectedElement.sceneId!, selectedElement.index!);
     actions.handleDuplicateNode(nodeId);
     // Selection will stay on the original node
   };
@@ -245,7 +245,7 @@ export function DialogueGraphModal() {
               <DialogueGraphToolbar
                 selectedNodeId={
                   selectedElement
-                    ? `${selectedElement.sceneId}-${selectedElement.index}`
+                    ? dialogueNodeId(selectedElement.sceneId!, selectedElement.index!)
                     : null
                 }
                 onDelete={handleDelete}

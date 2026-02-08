@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from '@xyflow/react';
+import { useState } from 'react';
+import { BaseEdge, Edge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from '@xyflow/react';
+
+/** Data passed to CosmosChoiceEdge via edge.data */
+type CosmosEdgeData = { label?: string };
 
 /**
  * CosmosChoiceEdge - Custom edge component for choice connections
@@ -21,9 +24,9 @@ export function CosmosChoiceEdge({
   style = {},
   data,
   markerEnd,
-}: EdgeProps) {
+}: EdgeProps<Edge<CosmosEdgeData>>) {
   const [isHovered, setIsHovered] = useState(false);
-  const choiceText = data?.label || '';
+  const choiceText = data?.label ?? '';
 
   // Calculate edge path and label position
   const [edgePath, labelX, labelY] = getSmoothStepPath({

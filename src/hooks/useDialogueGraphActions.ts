@@ -4,7 +4,7 @@ import { useScenesStore, useUIStore } from '@/stores';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import type { ComplexityLevel } from '@/components/dialogue-editor/DialogueWizard/hooks/useDialogueWizardState';
-import { CHOICE_HANDLE_PREFIX } from '@/config/handleConfig';
+import { CHOICE_HANDLE_PREFIX, extractDialogueIndex } from '@/config/handleConfig';
 
 /**
  * useDialogueGraphActions - Hook centralisant les actions d'édition du graphe de dialogues
@@ -35,7 +35,7 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {
-      const index = extractDialogueIndexFromNodeId(nodeId);
+      const index = extractDialogueIndex(nodeId);
       setSelectedSceneForEdit(sceneId);
       setEditDialogueIndex(index);
       setWizardOpen(true);
@@ -48,7 +48,7 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
-      const index = extractDialogueIndexFromNodeId(nodeId);
+      const index = extractDialogueIndex(nodeId);
       deleteDialogue(sceneId, index);
       // PHASE 4: Cosmos flash effect on delete
       if (isCosmosTheme) {
@@ -63,7 +63,7 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleDuplicateNode = useCallback(
     (nodeId: string) => {
-      const index = extractDialogueIndexFromNodeId(nodeId);
+      const index = extractDialogueIndex(nodeId);
       duplicateDialogue(sceneId, index);
       // PHASE 4: Cosmos confetti effect on duplicate (node creation)
       if (isCosmosTheme) {
@@ -110,7 +110,7 @@ export function useDialogueGraphActions(sceneId: string) {
       if (!source || !sourceHandle || !target) return;
 
       // Extraire l'index du dialogue source
-      const sourceIndex = extractDialogueIndexFromNodeId(source);
+      const sourceIndex = extractDialogueIndex(source);
 
       // Extraire l'index du choix depuis le handle ID (format: "choice-0", "choice-1")
       const choiceIndex = parseInt(sourceHandle.replace(CHOICE_HANDLE_PREFIX, '') || '0', 10);
@@ -129,7 +129,7 @@ export function useDialogueGraphActions(sceneId: string) {
       }
 
       // Extract target dialogue index from node ID and get actual dialogue ID
-      const targetIndex = extractDialogueIndexFromNodeId(target);
+      const targetIndex = extractDialogueIndex(target);
       const targetDialogue = scene?.dialogues[targetIndex];
 
       if (!targetDialogue) {
@@ -172,22 +172,4 @@ export function useDialogueGraphActions(sceneId: string) {
     isCosmosTheme,
     celebrateNodeCreation: isCosmosTheme ? celebrateNodeCreation : undefined,
   };
-}
-
-/**
- * Helper: Extrait l'index du dialogue depuis le nodeId
- * Format attendu: "sceneId-dialogueIndex" ou "dialogue-index"
- */
-function extractDialogueIndexFromNodeId(nodeId: string): number {
-  const parts = nodeId.split('-');
-  // Prend le dernier segment qui doit être l'index
-  const indexStr = parts[parts.length - 1];
-  const index = parseInt(indexStr, 10);
-
-  if (isNaN(index)) {
-    console.warn('[useDialogueGraphActions] Invalid nodeId format:', nodeId);
-    return 0;
-  }
-
-  return index;
 }

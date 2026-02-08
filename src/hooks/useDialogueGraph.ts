@@ -5,7 +5,7 @@ import type { Dialogue, ValidationProblem, DialogueNodeData, TerminalNodeData, N
 import { DEFAULTS } from '@/config/constants';
 import type { GraphTheme } from '@/config/graphThemes/types';
 import { useUIStore } from '@/stores/uiStore';
-import { HANDLE_ID, choiceHandleId, buildNodeRowMap, getSerpentineHandles } from '@/config/handleConfig';
+import { HANDLE_ID, choiceHandleId, buildNodeRowMap, getSerpentineHandles, dialogueNodeId } from '@/config/handleConfig';
 
 /**
  * Union type for all graph node types
@@ -73,7 +73,7 @@ export function useDialogueGraph(
       const nodeType = hasChoices ? 'choiceNode' : 'dialogueNode';
 
       return {
-        id: `${sceneId}-d-${index}`,
+        id: dialogueNodeId(sceneId, index),
         type: nodeType,
         position: { x: 0, y: 0 }, // Will be calculated by dagre
         data: {
@@ -94,7 +94,7 @@ export function useDialogueGraph(
     const edges: Edge[] = [];
 
     dialogues.forEach((dialogue, index) => {
-      const sourceId = `${sceneId}-d-${index}`;
+      const sourceId = dialogueNodeId(sceneId, index);
       const hasChoices = dialogue.choices && dialogue.choices.length > 0;
 
       // PHASE 4: Edge styles from theme (with fallback to defaults)
@@ -116,7 +116,7 @@ export function useDialogueGraph(
             id: `${sourceId}-converge-to-${sceneId}-d-${targetIdx}`,
             source: sourceId,
             sourceHandle: HANDLE_ID.RIGHT,
-            target: `${sceneId}-d-${targetIdx}`,
+            target: dialogueNodeId(sceneId, targetIdx),
             targetHandle: HANDLE_ID.LEFT,
             type: edgeType,
             animated: edgeStyles.convergence.animated,
@@ -141,7 +141,7 @@ export function useDialogueGraph(
               id: `${sourceId}-response-converge-to-${sceneId}-d-${targetIdx}`,
               source: sourceId,
               sourceHandle: HANDLE_ID.RIGHT,
-              target: `${sceneId}-d-${targetIdx}`,
+              target: dialogueNodeId(sceneId, targetIdx),
               targetHandle: HANDLE_ID.LEFT,
               type: edgeType,
               animated: edgeStyles.convergence.animated,
@@ -166,7 +166,7 @@ export function useDialogueGraph(
           id: `${sourceId}-to-${sceneId}-d-${index + 1}`,
           source: sourceId,
           sourceHandle: HANDLE_ID.RIGHT,
-          target: `${sceneId}-d-${index + 1}`,
+          target: dialogueNodeId(sceneId, index + 1),
           targetHandle: HANDLE_ID.LEFT,
           type: edgeType,
           animated: edgeStyles.linear.animated,
@@ -186,7 +186,7 @@ export function useDialogueGraph(
             const targetIdx = dialogues.findIndex(d => d.id === choice.nextDialogueId);
 
             if (targetIdx !== -1) {
-              const targetId = `${sceneId}-d-${targetIdx}`;
+              const targetId = dialogueNodeId(sceneId, targetIdx);
               const edgeLabel = choice.text ? choice.text.substring(0, 20) + (choice.text.length > 20 ? '...' : '') : `Choice ${choiceIdx + 1}`;
 
               edges.push({

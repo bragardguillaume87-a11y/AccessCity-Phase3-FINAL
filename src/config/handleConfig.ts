@@ -151,3 +151,19 @@ export function getSerpentineHandles(
     };
   }
 }
+
+// ─── Node ID Helpers ─────────────────────────────────────────
+
+/** Dialogue node ID separator */
+const NODE_ID_SEPARATOR = '-d-';
+
+/** Build a dialogue node ID from sceneId and dialogue index */
+export function dialogueNodeId(sceneId: string, index: number): string {
+  return `${sceneId}${NODE_ID_SEPARATOR}${index}`;
+}
+
+/** Extract the dialogue index from a node ID. Returns NaN if invalid. */
+export function extractDialogueIndex(nodeId: string): number {
+  const parts = nodeId.split(NODE_ID_SEPARATOR);
+  return parseInt(parts[parts.length - 1], 10);
+}

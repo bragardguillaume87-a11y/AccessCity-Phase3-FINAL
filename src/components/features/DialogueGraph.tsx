@@ -20,9 +20,10 @@ import './DialogueGraph.css';
 
 import { useDialogueGraph } from '../../hooks/useDialogueGraph';
 import { useDialogueGraphActions } from '../../hooks/useDialogueGraphActions';
-import { useSerpentineSync } from '../../hooks/useSerpentineSync'; // SERP-7: Dynamic edge recalculation
+import { useSerpentineSync } from '../../hooks/useSerpentineSync';
 import { nodeTypes } from './DialogueGraphNodes.tsx';
 import { useValidation } from '../../hooks/useValidation';
+import { dialogueNodeId } from '@/config/handleConfig';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { CosmosEdgeGradients } from './CosmosEdgeGradients'; // PHASE 8: SVG gradients for cosmos edges
 import { CosmosChoiceEdge } from './CosmosChoiceEdge'; // PHASE 10: Custom edge with speech bubble
@@ -165,7 +166,7 @@ function DialogueGraphInner({
   // Sync selected node with selectedElement from EditorShell
   useEffect(() => {
     if (selectedElement?.type === 'dialogue' && selectedElement?.sceneId === sceneId) {
-      const nodeId = `${sceneId}-d-${selectedElement.index}`;
+      const nodeId = dialogueNodeId(sceneId, selectedElement.index!);
       setSelectedNodeId(nodeId);
     } else {
       setSelectedNodeId(null);

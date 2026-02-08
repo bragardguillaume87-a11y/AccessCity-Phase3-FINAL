@@ -1,7 +1,9 @@
 import React from 'react';
-import { Dices, Settings } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import type { DialogueChoice, Scene } from '@/types';
 import { SimpleChoiceBuilder } from './SimpleChoiceBuilder';
+import { DiceChoiceBuilder } from './DiceChoiceBuilder';
+import { ComplexChoiceBuilder } from './ComplexChoiceBuilder';
 import type { ComplexityLevel } from '../hooks/useDialogueWizardState';
 
 interface StepChoicesProps {
@@ -16,10 +18,10 @@ interface StepChoicesProps {
 }
 
 /**
- * StepChoices - Adaptive choice builder based on complexity level
+ * StepChoices - Adaptive choice builder based on complexity level (PHASE 2.4: Updated)
  *
  * Routes to appropriate builder:
- * - Simple: SimpleChoiceBuilder (2 binary choices)
+ * - Simple: Linear (no choices) or Binary (2 choices) via SimpleChoiceBuilder
  * - Medium: DiceChoiceBuilder (dice mechanics) - Coming Soon
  * - Complex: ComplexChoiceBuilder (2-4 choices + effects) - Coming Soon
  */
@@ -33,14 +35,37 @@ export function StepChoices({
   onRemoveChoice,
   onValidChange
 }: StepChoicesProps) {
+  // PHASE 2.3: Handle 4 distinct complexity levels
+  React.useEffect(() => {
+    // If linear dialogue (no choices), mark as valid so user can proceed
+    if (complexityLevel === 'linear') {
+      onValidChange(true);
+    }
+  }, [complexityLevel, onValidChange]);
+
   // Render appropriate builder based on complexity
   switch (complexityLevel) {
-    case 'simple':
-      // Simple mode requires exactly 2 choices
+    case 'linear':
+      // Linear dialogue: no choices (simple story)
+      return (
+        <div className="text-center py-12 space-y-4 text-muted-foreground">
+          <FileText className="w-16 h-16 mx-auto opacity-50" />
+          <div>
+            <p className="text-lg font-semibold">Ce dialogue est simple (sans choix)</p>
+            <p className="text-sm mt-2">Le joueur lira simplement le texte et continuera.</p>
+          </div>
+          <p className="text-sm bg-muted/50 rounded-lg p-4 max-w-md mx-auto">
+            💡 <strong>Astuce :</strong> Pour ajouter des choix, revenez à l'étape précédente et sélectionnez "À choisir".
+          </p>
+        </div>
+      );
+
+    case 'binary':
+      // Binary dialogue: exactly 2 simple choices
       if (choices.length !== 2) {
         return (
           <div className="flex items-center justify-center h-64">
-            <p className="text-destructive">Erreur : Le mode Simple nécessite exactement 2 choix</p>
+            <p className="text-destructive">Erreur : Le mode "À choisir" nécessite exactement 2 choix</p>
           </div>
         );
       }
@@ -55,80 +80,31 @@ export function StepChoices({
         />
       );
 
-    case 'medium':
-      return <PlaceholderBuilder type="medium" onValidChange={onValidChange} />;
+    case 'dice':
+      return (
+        <DiceChoiceBuilder
+          choices={choices}
+          onUpdateChoice={onUpdateChoice}
+          onAddChoice={onAddChoice}
+          onRemoveChoice={onRemoveChoice}
+          onValidChange={onValidChange}
+        />
+      );
 
-    case 'complex':
-      return <PlaceholderBuilder type="complex" onValidChange={onValidChange} />;
+    case 'expert':
+      return (
+        <ComplexChoiceBuilder
+          choices={choices}
+          onUpdateChoice={onUpdateChoice}
+          onAddChoice={onAddChoice}
+          onRemoveChoice={onRemoveChoice}
+          onValidChange={onValidChange}
+        />
+      );
 
     default:
       return null;
   }
-}
-
-/**
- * PlaceholderBuilder - Coming Soon placeholder for Medium and Complex modes
- */
-function PlaceholderBuilder({ type, onValidChange }: { type: 'medium' | 'complex'; onValidChange: (isValid: boolean) => void }) {
-  // Mark as invalid so user can't proceed past placeholder
-  React.useEffect(() => {
-    onValidChange(false);
-  }, [onValidChange]);
-  const config = {
-    medium: {
-      icon: Dices,
-      title: 'Dés Magiques',
-      description: 'Lancers de dés comme Baldur\'s Gate 3',
-      features: ['Dés à 20 faces', 'Tests de compétence', 'Succès ou échec'],
-      color: 'from-purple-500 to-purple-600',
-      emoji: '🎲'
-    },
-    complex: {
-      icon: Settings,
-      title: 'Mode Expert',
-      description: 'Variables multiples et effets avancés',
-      features: ['Jusqu\'à 4 choix', 'Effets multiples', 'Logique complexe'],
-      color: 'from-orange-500 to-orange-600',
-      emoji: '⚙️'
-    }
-  }[type];
-
-  const Icon = config.icon;
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6 p-8">
-      {/* Icon */}
-      <div className={`w-24 h-24 rounded-2xl flex items-center justify-center shadow-xl bg-gradient-to-br ${config.color}`}>
-        <span className="text-6xl">{config.emoji}</span>
-      </div>
-
-      {/* Title */}
-      <div className="space-y-2">
-        <h3 className="text-3xl font-bold text-foreground">{config.title}</h3>
-        <p className="text-lg text-muted-foreground">{config.description}</p>
-      </div>
-
-      {/* Features */}
-      <div className="space-y-2">
-        {config.features.map((feature, idx) => (
-          <div key={idx} className="flex items-center justify-center gap-2 text-foreground">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br ${config.color}`}>
-              <span className="text-white text-xs font-bold">✓</span>
-            </div>
-            <span>{feature}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Coming Soon Badge */}
-      <div className="mt-6 px-6 py-3 rounded-xl bg-primary/10 border-2 border-primary/50">
-        <p className="text-primary font-bold">🚧 Bientôt disponible ! 🚧</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Ce mode sera ajouté prochainement
-        </p>
-      </div>
-    </div>
-  );
 }
 
 export default StepChoices;

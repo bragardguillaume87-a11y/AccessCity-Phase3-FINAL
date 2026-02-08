@@ -111,31 +111,32 @@ export const cosmosTheme: GraphTheme = {
     },
   },
 
+  // PHASE 8: Enhanced edges with SVG gradients and stronger glows
   edges: {
     linear: {
-      stroke: '#64748b',
+      stroke: 'url(#cosmos-linear-gradient)', // SVG gradient Slate → Cyan
       strokeWidth: 3,
-      filter: 'drop-shadow(0 0 4px rgba(100, 116, 139, 0.5))',
-      animated: false,
+      filter: 'drop-shadow(0 0 6px rgba(100, 116, 139, 0.8)) drop-shadow(0 0 12px rgba(6, 255, 240, 0.3))',
+      animated: true, // Changed to true for subtle flow
     },
     choice: {
-      stroke: '#a855f7',
-      strokeWidth: 4,
-      filter: 'drop-shadow(0 0 8px rgba(168, 85, 247, 0.7))',
+      stroke: 'url(#cosmos-choice-gradient)', // SVG gradient Purple → Pink
+      strokeWidth: 5, // Thicker for children
+      filter: 'drop-shadow(0 0 10px rgba(157, 78, 221, 0.9)) drop-shadow(0 0 20px rgba(157, 78, 221, 0.5))',
       animated: true,
     },
     convergence: {
-      stroke: '#10b981',
-      strokeWidth: 3,
-      strokeDasharray: '8,4',
-      filter: 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.6))',
-      animated: false,
+      stroke: 'url(#cosmos-convergence-gradient)', // SVG gradient Green → Cyan
+      strokeWidth: 4,
+      strokeDasharray: '10,5', // Wider dashes for visibility
+      filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.8)) drop-shadow(0 0 16px rgba(6, 255, 240, 0.4))',
+      animated: true, // Changed to true for flow effect
     },
     sceneJump: {
-      stroke: '#f59e0b',
-      strokeWidth: 4,
-      strokeDasharray: '10,5',
-      filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.7))',
+      stroke: 'url(#cosmos-scene-gradient)', // SVG gradient Yellow → Cyan
+      strokeWidth: 5,
+      strokeDasharray: '12,6', // Wider dashes
+      filter: 'drop-shadow(0 0 12px rgba(255, 214, 10, 0.9)) drop-shadow(0 0 24px rgba(255, 0, 110, 0.5))',
       animated: true,
     },
   },
@@ -183,5 +184,21 @@ export const cosmosTheme: GraphTheme = {
   interactions: {
     minTouchTarget: 48,          // WCAG AAA for children
     showDragIndicators: true,    // Show emoji on handles
+  },
+
+  // SERP-8: Serpentine layout colors
+  serpentine: {
+    // Alternating row colors (cosmic nebula tints)
+    rowColors: [
+      'rgba(59, 130, 246, 0.08)',   // Row 0: Blue nebula
+      'rgba(139, 92, 246, 0.08)',   // Row 1: Purple nebula
+      'rgba(6, 182, 212, 0.08)',    // Row 2: Cyan nebula
+      'rgba(16, 185, 129, 0.08)',   // Row 3: Emerald nebula
+    ],
+    rowOpacity: 0.08,
+    startBadgeColor: '#22c55e',     // Green for START
+    endBadgeColor: '#ef4444',       // Red for FIN
+    flowArrowColor: '#60a5fa',      // Blue for flow arrows
+    rowTransitionColor: '#8b5cf6',  // Purple for row transitions
   },
 };

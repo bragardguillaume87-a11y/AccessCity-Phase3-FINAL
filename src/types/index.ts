@@ -351,6 +351,36 @@ export interface ValidationMessages {
 // ============================================================================
 
 /**
+ * Serpentine layout metadata for nodes
+ * Added when serpentine mode is enabled to help with visual indicators (badges, colors)
+ *
+ * @example Node at position [1] in serpentine:
+ * Row 0: [0]→[1]→[2]  (ltr)
+ *            ↓
+ * Row 1: [5]←[4]←[3]  (rtl)
+ *
+ * Node [1] would have: { rowIndex: 0, positionInRow: 1, flowDirection: 'ltr', isFirst: false, isLast: false }
+ */
+export interface SerpentineNodeData {
+  /** Index of the row in serpentine layout (0, 1, 2...) */
+  rowIndex: number;
+  /** Position of this node within its row (0 = first in visual order, accounting for flow direction) */
+  positionInRow: number;
+  /** Total number of nodes in this row */
+  rowLength: number;
+  /** Flow direction for this row ('ltr' = even rows left-to-right, 'rtl' = odd rows right-to-left) */
+  flowDirection: 'ltr' | 'rtl';
+  /** Is this the first node in the ENTIRE serpentine flow? (used for START badge) */
+  isFirst: boolean;
+  /** Is this the last node in the ENTIRE serpentine flow? (used for FIN badge) */
+  isLast: boolean;
+  /** Is this the first node in its row? (used for row indicators) */
+  isFirstInRow: boolean;
+  /** Is this the last node in its row? (used for row transition indicators) */
+  isLastInRow: boolean;
+}
+
+/**
  * Data payload for dialogue nodes in ReactFlow graph
  */
 export interface DialogueNodeData extends Record<string, unknown> {
@@ -363,6 +393,8 @@ export interface DialogueNodeData extends Record<string, unknown> {
   stageDirections?: string;
   choices: DialogueChoice[];
   issues: ValidationProblem[];
+  /** Serpentine layout metadata (only present when serpentine mode is active) */
+  serpentine?: SerpentineNodeData;
 }
 
 /**
@@ -372,6 +404,8 @@ export interface TerminalNodeData extends Record<string, unknown> {
   sceneId: string;
   label: string;
   choiceText?: string;
+  /** Serpentine layout metadata (only present when serpentine mode is active) */
+  serpentine?: SerpentineNodeData;
 }
 
 /**

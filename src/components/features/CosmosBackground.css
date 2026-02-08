@@ -16,25 +16,38 @@
   z-index: 0;
 }
 
-/* Animated nebula gradient */
+/* PHASE 8: Enhanced cosmic nebula with richer Perplexity colors */
 .cosmos-nebula {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 30%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 70%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 90%, rgba(236, 72, 153, 0.1) 0%, transparent 40%),
+    /* Perplexity purple nebula (top-left) */
+    radial-gradient(ellipse at 20% 30%, rgba(157, 78, 221, 0.25) 0%, rgba(157, 78, 221, 0.1) 30%, transparent 60%),
+    /* Perplexity blue nebula (bottom-right) */
+    radial-gradient(ellipse at 80% 70%, rgba(58, 134, 255, 0.22) 0%, rgba(58, 134, 255, 0.08) 35%, transparent 65%),
+    /* Perplexity pink nebula (center-bottom) */
+    radial-gradient(ellipse at 50% 90%, rgba(255, 0, 110, 0.18) 0%, rgba(255, 0, 110, 0.06) 25%, transparent 50%),
+    /* Perplexity cyan accent (subtle glow) */
+    radial-gradient(circle at 10% 80%, rgba(6, 255, 240, 0.12) 0%, transparent 40%),
+    /* Deep space background gradient */
     linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a3e 100%);
-  animation: nebula-drift 20s ease-in-out infinite;
+  animation: nebula-drift 25s ease-in-out infinite;
 }
 
+/* Enhanced nebula drift with more movement for children */
 @keyframes nebula-drift {
   0%,
   100% {
     transform: scale(1) translate(0, 0);
+    filter: blur(0);
   }
-  50% {
-    transform: scale(1.05) translate(-2%, 2%);
+  33% {
+    transform: scale(1.08) translate(-3%, 2%);
+    filter: blur(1px);
+  }
+  66% {
+    transform: scale(1.05) translate(2%, -1%);
+    filter: blur(0.5px);
   }
 }
 
@@ -122,18 +135,25 @@
   }
 }
 
-/* Edge animation: flowing glow */
+/* PHASE 8: Enhanced edge animation - flowing particles */
 .cosmos-edge-animated {
   stroke-dasharray: 10 5;
-  animation: cosmos-edge-flow 1s linear infinite;
+  animation: cosmos-edge-flow 1.5s linear infinite;
+  stroke-linecap: round; /* Rounded dash ends = particle effect */
 }
 
 @keyframes cosmos-edge-flow {
   0% {
     stroke-dashoffset: 0;
+    filter: brightness(1);
+  }
+  50% {
+    stroke-dashoffset: -7.5;
+    filter: brightness(1.3); /* Brightness pulse mid-flow */
   }
   100% {
     stroke-dashoffset: -15;
+    filter: brightness(1);
   }
 }
 
@@ -163,8 +183,8 @@
   box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
 }
 
-/* Choice handles pulsing glow */
-.choice-node .react-flow__handle[data-handlepos="bottom"] {
+/* PHASE 9: Choice handles pulsing glow (vertical distribution on right) */
+.choice-node .react-flow__handle[data-handlepos="right"] {
   animation: cosmos-handle-pulse 2s ease-in-out infinite;
 }
 
@@ -178,16 +198,124 @@
 }
 
 /* ============================================
-   PHASE 7: SECONDARY HANDLES (LEFT/RIGHT)
+   PHASE 10: Y-SHAPE INDICATOR & BRANCHING LINES
    ============================================ */
 
-/* Secondary handles are more discrete by default */
+/* Y-shape indicator subtle animation */
+.choice-node .y-shape-indicator {
+  animation: cosmos-y-idle 3s ease-in-out infinite;
+}
+
+/* On hover: Y-indicator spins and glows */
+.choice-node:hover .y-shape-indicator {
+  opacity: 0.9 !important;
+  animation: cosmos-y-spin 0.6s ease-out;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Branching lines subtle pulse */
+.choice-node .choice-branch-lines {
+  animation: cosmos-branch-pulse 2.5s ease-in-out infinite;
+}
+
+/* On hover: branching lines become more visible and glow */
+.choice-node:hover .choice-branch-lines {
+  opacity: 0.6 !important;
+  animation: cosmos-branch-glow 1.5s ease-in-out infinite;
+}
+
+/* Keyframes for Y-indicator idle breathing */
+@keyframes cosmos-y-idle {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* Keyframes for Y-indicator spin on hover */
+@keyframes cosmos-y-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Keyframes for branching lines pulse */
+@keyframes cosmos-branch-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Keyframes for branching lines glow on hover */
+@keyframes cosmos-branch-glow {
+  0%, 100% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor);
+  }
+}
+
+/* ============================================
+   PHASE 10: CHOICE EDGE SPEECH BUBBLES
+   ============================================ */
+
+/* Animated speech bubble appearance */
+@keyframes cosmos-bubble-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(10px);
+  }
+  60% {
+    transform: scale(1.05) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Bubble hover pulse */
+.cosmos-choice-bubble {
+  animation: cosmos-bubble-float 2s ease-in-out infinite;
+}
+
+@keyframes cosmos-bubble-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* ============================================
+   PHASE 7: DEPRECATED - Secondary handles removed in Phase 9
+   ============================================ */
+
+/* DEPRECATED: Secondary handles no longer used after Phase 9 handle position changes
+   All nodes now use primary Left/Right handles instead of Top/Bottom
+
 .cosmos-secondary-handle {
   opacity: 0.5 !important;
   transition: all 0.25s ease !important;
 }
 
-/* On hover: secondary handles become more visible */
 .cosmos-secondary-handle:hover {
   opacity: 0.9 !important;
   transform: scale(1.8) !important;
@@ -196,36 +324,36 @@
   box-shadow: 0 0 12px rgba(6, 255, 240, 0.5), 0 0 24px rgba(6, 255, 240, 0.3) !important;
 }
 
-/* When node is hovered, show secondary handles a bit more */
 .cosmos-node-hover:hover .cosmos-secondary-handle {
   opacity: 0.7 !important;
 }
+*/
 
 /* ============================================
    PHASE 6: CHILD-FRIENDLY PLAYFUL ANIMATIONS
    ============================================ */
 
-/* Wiggle animation on hover - playful for children */
+/* PHASE 8: Enhanced wiggle - more elevation for children */
 .cosmos-node-hover:hover {
-  transform: scale(1.05) translateY(-4px);
+  transform: scale(1.08) translateY(-6px); /* Bigger scale + elevation */
   animation: cosmos-wiggle 0.4s ease-out;
 }
 
 @keyframes cosmos-wiggle {
   0% {
-    transform: scale(1.05) translateY(-4px) rotate(0deg);
+    transform: scale(1.08) translateY(-6px) rotate(0deg);
   }
   25% {
-    transform: scale(1.05) translateY(-4px) rotate(2deg);
+    transform: scale(1.08) translateY(-6px) rotate(3deg); /* Wider rotation */
   }
   50% {
-    transform: scale(1.05) translateY(-4px) rotate(-2deg);
+    transform: scale(1.08) translateY(-6px) rotate(-3deg);
   }
   75% {
-    transform: scale(1.05) translateY(-4px) rotate(1deg);
+    transform: scale(1.08) translateY(-6px) rotate(1.5deg);
   }
   100% {
-    transform: scale(1.05) translateY(-4px) rotate(0deg);
+    transform: scale(1.08) translateY(-6px) rotate(0deg);
   }
 }
 
@@ -317,84 +445,281 @@
    PHASE 7: PERPLEXITY COSMIC EFFECTS
    ============================================ */
 
-/* 7.1 Colored glow by node type */
+/* PHASE 8: Enhanced colored glow by node type - child-friendly vibrant glows */
+/* 4 layers: depth shadow + inner glow + medium glow + outer glow */
 .dialogue-node {
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(58, 134, 255, 0.35),
-    0 0 40px rgba(58, 134, 255, 0.15);
+    /* Depth shadow */
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    /* Inner glow (perplexity blue) */
+    inset 0 0 30px rgba(58, 134, 255, 0.15),
+    /* Medium glow */
+    0 0 25px rgba(58, 134, 255, 0.5),
+    /* Outer glow */
+    0 0 50px rgba(58, 134, 255, 0.25);
 }
 
 .choice-node {
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(157, 78, 221, 0.35),
-    0 0 40px rgba(157, 78, 221, 0.15);
+    /* Depth shadow */
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    /* Inner glow (perplexity purple) */
+    inset 0 0 30px rgba(157, 78, 221, 0.15),
+    /* Medium glow */
+    0 0 25px rgba(157, 78, 221, 0.5),
+    /* Outer glow */
+    0 0 50px rgba(157, 78, 221, 0.25);
 }
 
 .terminal-node {
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(255, 214, 10, 0.35),
-    0 0 40px rgba(255, 214, 10, 0.15);
+    /* Depth shadow */
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    /* Inner glow (perplexity yellow) */
+    inset 0 0 30px rgba(255, 214, 10, 0.15),
+    /* Medium glow */
+    0 0 25px rgba(255, 214, 10, 0.5),
+    /* Outer glow */
+    0 0 50px rgba(255, 214, 10, 0.25);
 }
 
-/* 7.2 Enhanced hover: cyan glow + elevation */
+/* PHASE 8: Enhanced hover - cyan magic glow + elevation */
 .cosmos-node-hover:hover {
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(6, 255, 240, 0.4),
-    0 0 60px rgba(6, 255, 240, 0.2) !important;
+    /* Elevated shadow */
+    0 12px 32px rgba(0, 0, 0, 0.6),
+    /* Cyan inner glow */
+    inset 0 0 40px rgba(6, 255, 240, 0.2),
+    /* Cyan medium glow */
+    0 0 40px rgba(6, 255, 240, 0.6),
+    /* Cyan outer glow */
+    0 0 80px rgba(6, 255, 240, 0.4),
+    /* Pink accent for vibrancy */
+    0 0 120px rgba(255, 0, 110, 0.2) !important;
 }
 
-/* 7.3 Teleportation animation for new nodes */
+/* PHASE 8: Enhanced teleportation - cosmic arrival with glow burst */
 @keyframes cosmos-teleport {
   0% {
     opacity: 0;
-    transform: scale(0.3);
-    filter: blur(10px) brightness(2);
+    transform: scale(0.2) rotate(-15deg);
+    filter: blur(15px) brightness(3) saturate(2);
+    box-shadow:
+      0 0 0 0 rgba(6, 255, 240, 0),
+      0 0 60px rgba(6, 255, 240, 0);
   }
-  40% {
-    opacity: 0.7;
-    transform: scale(1.15);
-    filter: blur(3px) brightness(1.6);
+  20% {
+    opacity: 0.3;
+    transform: scale(0.6) rotate(-5deg);
+    filter: blur(10px) brightness(2.5) saturate(1.8);
+    box-shadow:
+      0 0 0 20px rgba(6, 255, 240, 0.6),
+      0 0 80px rgba(6, 255, 240, 0.8);
   }
-  70% {
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2) rotate(3deg);
+    filter: blur(4px) brightness(1.8) saturate(1.5);
+    box-shadow:
+      0 0 0 40px rgba(6, 255, 240, 0.4),
+      0 0 100px rgba(255, 0, 110, 0.6);
+  }
+  75% {
     opacity: 0.95;
-    transform: scale(0.95);
-    filter: blur(1px) brightness(1.2);
+    transform: scale(0.95) rotate(-1deg);
+    filter: blur(1px) brightness(1.3) saturate(1.2);
+    box-shadow:
+      0 0 0 10px rgba(6, 255, 240, 0.2),
+      0 0 60px rgba(255, 0, 110, 0.3);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
-    filter: blur(0) brightness(1);
+    transform: scale(1) rotate(0deg);
+    filter: blur(0) brightness(1) saturate(1);
+    box-shadow:
+      0 0 0 0 rgba(6, 255, 240, 0),
+      0 0 0 rgba(255, 0, 110, 0);
   }
 }
 
-/* Override cosmos-node-appear with teleportation effect */
+/* Enhanced appear animation - longer for dramatic effect */
 .cosmos-node-appear {
-  animation: cosmos-teleport 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  animation: cosmos-teleport 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
 }
 
-/* 7.4 Subtle pulse animation at rest */
+/* PHASE 8: Enhanced idle pulse - brightness + glow variation */
 @keyframes cosmos-idle-pulse {
   0%, 100% {
-    filter: brightness(1);
+    filter: brightness(1) drop-shadow(0 0 0px transparent);
   }
   50% {
-    filter: brightness(1.05);
+    filter: brightness(1.08) drop-shadow(0 0 8px currentColor);
   }
 }
 
-.dialogue-node,
-.choice-node {
-  animation: cosmos-idle-pulse 4s ease-in-out infinite;
+/* Separate animations for each node type with staggered timing */
+.dialogue-node {
+  animation: cosmos-idle-pulse 4.5s ease-in-out infinite;
 }
 
-/* 7.5 Edge glow effect */
+.choice-node {
+  animation: cosmos-idle-pulse 5s ease-in-out infinite 0.5s; /* Offset by 0.5s */
+}
+
+.terminal-node {
+  animation: cosmos-idle-pulse 3.5s ease-in-out infinite 1s; /* Faster, offset by 1s */
+}
+
+/* PHASE 8: Enhanced edge glow - double shadow for depth */
 .react-flow__edge-path {
   stroke-linecap: round;
-  filter: drop-shadow(0 0 3px currentColor);
+  filter:
+    drop-shadow(0 0 4px currentColor)
+    drop-shadow(0 0 8px currentColor);
+  transition: filter 0.3s ease;
+}
+
+/* Hover effect on edges - brighter glow */
+.react-flow__edge:hover .react-flow__edge-path {
+  filter:
+    drop-shadow(0 0 6px currentColor)
+    drop-shadow(0 0 12px currentColor)
+    drop-shadow(0 0 24px rgba(6, 255, 240, 0.5));
+}
+
+/* ============================================
+   PHASE 8: COSMIC CREATION BUTTONS
+   ============================================ */
+
+/* Base button styles for cosmos palette */
+.cosmos-create-button {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+}
+
+/* Hover effect: levitation + glow */
+.cosmos-create-button:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.4),
+    0 0 20px currentColor,
+    0 0 40px rgba(6, 255, 240, 0.3);
+}
+
+/* Active press: bounce down */
+.cosmos-create-button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s ease;
+}
+
+/* Icon rotation on hover */
+.cosmos-create-button:hover .cosmos-button-icon {
+  animation: cosmos-icon-spin 0.6s ease-out;
+}
+
+@keyframes cosmos-icon-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Larger icons for children (28px instead of 16px) */
+.cosmos-button-icon {
+  width: 28px !important;
+  height: 28px !important;
+  transition: transform 0.3s ease;
+}
+
+/* Glow pulse for palette header */
+.cosmos-palette-header {
+  animation: cosmos-header-glow 3s ease-in-out infinite;
+}
+
+@keyframes cosmos-header-glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(6, 255, 240, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 15px rgba(6, 255, 240, 0.8),
+      0 0 25px rgba(157, 78, 221, 0.5);
+  }
+}
+
+/* ============================================
+   SERP-8: SERPENTINE FLOW INDICATORS
+   ============================================ */
+
+/* Pulsing glow animation for flow direction arrows
+   IMPORTANT: Uses box-shadow instead of transform to avoid conflicting
+   with positioning transforms (translateY, translateX) */
+@keyframes serpentine-pulse {
+  0%, 100% {
+    box-shadow:
+      0 4px 16px rgba(34, 197, 94, 0.5),
+      0 0 24px rgba(34, 197, 94, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 4px 24px rgba(34, 197, 94, 0.8),
+      0 0 40px rgba(34, 197, 94, 0.5),
+      0 0 60px rgba(34, 197, 94, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+}
+
+/* Bouncing animation for row transition indicators */
+@keyframes serpentine-bounce {
+  0%, 100% {
+    box-shadow:
+      0 4px 20px rgba(139, 92, 246, 0.6),
+      0 0 30px rgba(139, 92, 246, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 8px 32px rgba(139, 92, 246, 0.8),
+      0 0 50px rgba(139, 92, 246, 0.5),
+      0 0 70px rgba(139, 92, 246, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Serpentine badge glow effect */
+.serpentine-badge {
+  animation: serpentine-glow 2s ease-in-out infinite;
+}
+
+@keyframes serpentine-glow {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(34, 197, 94, 0.7), 0 0 24px rgba(34, 197, 94, 0.4);
+  }
+}
+
+/* Row transition indicator hover effect */
+.row-transition-indicator:hover {
+  box-shadow:
+    0 8px 32px rgba(139, 92, 246, 0.8),
+    0 0 50px rgba(139, 92, 246, 0.5) !important;
+}
+
+/* Flow arrow indicator hover effect */
+.flow-arrow-indicator:hover {
+  box-shadow:
+    0 4px 24px rgba(34, 197, 94, 0.8),
+    0 0 40px rgba(34, 197, 94, 0.5),
+    0 0 60px rgba(34, 197, 94, 0.3) !important;
 }
 
 /* ============================================
@@ -438,6 +763,20 @@
     animation: none !important;
   }
 
+  /* PHASE 10: Disable Y-indicator and branching lines animations */
+  .y-shape-indicator,
+  .choice-branch-lines {
+    animation: none !important;
+  }
+
+  .choice-node:hover .y-shape-indicator {
+    animation: none !important;
+  }
+
+  .choice-node:hover .choice-branch-lines {
+    animation: none !important;
+  }
+
   @keyframes cosmos-wiggle {
     0%, 100% {
       transform: scale(1.02) translateY(-2px);
@@ -477,7 +816,79 @@
     }
   }
 
+  /* DEPRECATED: Secondary handles removed in Phase 9
   .cosmos-secondary-handle {
     animation: none !important;
+  }
+  */
+
+  /* PHASE 8: Disable new button animations */
+  .cosmos-create-button:hover {
+    transform: none !important;
+  }
+
+  .cosmos-create-button:hover .cosmos-button-icon {
+    animation: none !important;
+  }
+
+  .cosmos-palette-header {
+    animation: none !important;
+    text-shadow: none;
+  }
+
+  @keyframes cosmos-icon-spin {
+    0%, 100% {
+      transform: rotate(0deg) scale(1);
+    }
+  }
+
+  @keyframes cosmos-header-glow {
+    0%, 100% {
+      text-shadow: none;
+    }
+  }
+
+  /* PHASE 8: Disable edge animations */
+  .react-flow__edge-path {
+    animation: none !important;
+  }
+
+  .react-flow__edge:hover .react-flow__edge-path {
+    filter:
+      drop-shadow(0 0 4px currentColor)
+      drop-shadow(0 0 8px currentColor);
+  }
+
+  @keyframes cosmos-edge-flow {
+    0%, 100% {
+      stroke-dashoffset: 0;
+      filter: brightness(1);
+    }
+  }
+
+  /* SERP-8: Disable serpentine animations for reduced motion */
+  .serpentine-badge,
+  .row-transition-indicator,
+  .flow-arrow-indicator,
+  .row-number-badge {
+    animation: none !important;
+  }
+
+  @keyframes serpentine-pulse {
+    0%, 100% {
+      box-shadow: 0 4px 16px rgba(34, 197, 94, 0.5);
+    }
+  }
+
+  @keyframes serpentine-bounce {
+    0%, 100% {
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.6);
+    }
+  }
+
+  @keyframes serpentine-glow {
+    0%, 100% {
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    }
   }
 }

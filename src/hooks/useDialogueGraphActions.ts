@@ -3,6 +3,8 @@ import type { Connection } from '@xyflow/react';
 import { useScenesStore, useUIStore } from '@/stores';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
+import type { ComplexityLevel } from '@/components/dialogue-editor/DialogueWizard/hooks/useDialogueWizardState';
+import { CHOICE_HANDLE_PREFIX } from '@/config/handleConfig';
 
 /**
  * useDialogueGraphActions - Hook centralisant les actions d'édition du graphe de dialogues
@@ -22,6 +24,7 @@ export function useDialogueGraphActions(sceneId: string) {
   const setWizardOpen = useUIStore((state) => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
+  const setDialogueWizardInitialComplexity = useUIStore((state) => state.setDialogueWizardInitialComplexity);
 
   // PHASE 4: Cosmos theme effects
   const isCosmosTheme = useIsCosmosTheme();
@@ -72,17 +75,28 @@ export function useDialogueGraphActions(sceneId: string) {
 
   /**
    * 4. Créer nouveau dialogue via palette → Ouvre wizard en mode création
+   * PHASE 2.3: Direct 1:1 mapping avec 4 niveaux de complexité
    */
   const handleCreateDialogue = useCallback(
-    (complexity: 'simple' | 'choice' | 'magic-dice' | 'expert') => {
+    (paletteComplexity: 'linear' | 'binary' | 'magic-dice' | 'expert') => {
+      // Mapping palette → wizard complexity (PHASE 2.3: Now 1:1 mapping)
+      const complexityMap: Record<string, ComplexityLevel> = {
+        'linear': 'linear',      // Simples → Linear (pas de choix)
+        'binary': 'binary',      // À choisir → Binary (2 choix)
+        'magic-dice': 'dice',    // Dés Magiques → Dice (1-2 tests)
+        'expert': 'expert'       // Expert → Expert (2-4 choix + effets)
+      };
+
+      const wizardComplexity = complexityMap[paletteComplexity];
+
+      // Définir la complexité initiale dans le store
+      setDialogueWizardInitialComplexity(wizardComplexity);
+
+      // Ouvrir le wizard en mode création
       setSelectedSceneForEdit(sceneId);
-      // Ouvre wizard en mode création (editDialogueIndex reste undefined)
-      // Le wizard détectera automatiquement le mode création
       setWizardOpen(true);
-      // TODO PHASE 2.1: Ajouter state pour pré-sélectionner la complexité dans le wizard
-      // Pour l'instant, l'utilisateur choisira la complexité dans le wizard
     },
-    [sceneId, setWizardOpen, setSelectedSceneForEdit]
+    [sceneId, setWizardOpen, setSelectedSceneForEdit, setDialogueWizardInitialComplexity]
   );
 
   /**
@@ -99,7 +113,7 @@ export function useDialogueGraphActions(sceneId: string) {
       const sourceIndex = extractDialogueIndexFromNodeId(source);
 
       // Extraire l'index du choix depuis le handle ID (format: "choice-0", "choice-1")
-      const choiceIndex = parseInt(sourceHandle.split('-')[1] || '0', 10);
+      const choiceIndex = parseInt(sourceHandle.replace(CHOICE_HANDLE_PREFIX, '') || '0', 10);
 
       // Récupérer le dialogue source depuis le store
       const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);

@@ -1,7 +1,5 @@
-import React, { useState, useCallback, Suspense } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { Dialog, DialogContent } from '../ui/dialog';
-import { Button } from '../ui/button';
 import { useUIStore, useScenesStore } from '@/stores';
 import DialogueGraph from '../features/DialogueGraph';
 import { DialogueGraphToolbar } from './components/DialogueGraphToolbar';
@@ -9,6 +7,7 @@ import { DialogueGraphPalette } from './components/DialogueGraphPalette';
 import { DialoguePropertiesPanel } from './components/DialoguePropertiesPanel';
 import { ThemeSelector } from './components/ThemeSelector';
 import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
 
 // PHASE 4 (Option 4): Lazy load CosmosBackground for bundle optimization
@@ -172,6 +171,31 @@ export function DialogueGraphModal() {
     setLayoutVersion((v) => v + 1); // Force Dagre recalculation
   };
 
+  // Undo/Redo
+  const { undo, redo, canUndo, canRedo } = useUndoRedo();
+
+  // Keyboard shortcuts for undo/redo (Ctrl+Z / Ctrl+Y)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handler = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, undo, redo]);
+
   if (!selectedScene) return null;
 
   // PHASE 5: CSS classes for accessibility modes
@@ -196,17 +220,9 @@ export function DialogueGraphModal() {
             </p>
           </div>
 
-          {/* PHASE 4: Theme selector + Close button */}
-          <div className="flex items-center gap-4">
+          {/* PHASE 4: Theme selector (close button is provided by DialogContent) */}
+          <div className="flex items-center gap-4 mr-8">
             <ThemeSelector />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              aria-label="Fermer l'éditeur nodal"
-            >
-              <X className="w-5 h-5" />
-            </Button>
           </div>
         </div>
 
@@ -237,7 +253,10 @@ export function DialogueGraphModal() {
                 onAutoLayout={handleAutoLayout}
                 onToggleLayout={handleToggleLayout}
                 layoutDirection={layoutDirection}
-                onClose={handleClose}
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
                 isPanelOpen={selectedElement !== null && selectedElement.index !== undefined}
               />
 

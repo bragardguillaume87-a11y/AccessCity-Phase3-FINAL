@@ -1,11 +1,13 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { MessageSquare, GitBranch, ExternalLink, AlertCircle, AlertTriangle, User } from 'lucide-react';
 import { getNodeColorTheme } from '../../hooks/useDialogueGraph';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { useCharactersStore } from '@/stores';
-import { COLORS, NODE_COLORS } from '@/config/colors';
+import { COLORS } from '@/config/colors';
 import type { DialogueNodeData, TerminalNodeData, ValidationProblem } from '@/types';
+import { SerpentineBadge, SerpentineRowIndicator } from './SerpentineBadge';
+import { FlowDirectionIndicator } from './FlowDirectionIndicator';
+import { NodeHandles } from './NodeHandles';
 
 // Import cosmos theme CSS for animations
 import './CosmosBackground.css';
@@ -85,19 +87,6 @@ const DragIndicator = () => (
     <span style={{ fontSize: '6px', color: 'white' }}>●</span>
   </div>
 );
-
-/**
- * PHASE 7: Helper to get style for secondary (lateral) handles
- * These handles are smaller and more discrete than the main top/bottom handles
- */
-const getSecondaryHandleStyle = (handleSize: number) => ({
-  width: `${handleSize * 0.5}px`,
-  height: `${handleSize * 0.5}px`,
-  background: 'rgba(255, 255, 255, 0.25)',
-  border: '2px solid rgba(255, 255, 255, 0.4)',
-  opacity: 0.5,
-  transition: 'all 0.2s ease',
-});
 
 /**
  * Helper: Get character avatar URL from store
@@ -183,69 +172,31 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
         minHeight: `${sizes.nodeMinHeight}px`,
         boxShadow: shadow,
         transition: 'all 0.2s ease',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'visible'
       }}
     >
       {/* PHASE 6: Decorative elements for child-friendly themes */}
       {theme.shapes?.decorativeElements && <DecorativeStars position="top-right" />}
       {theme.interactions?.showDragIndicators && <DragIndicator />}
 
-      {/* Top handle - enlarged for children */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="top"
-        style={{
-          background: borderColor,
-          width: `${sizes.handleSize}px`,
-          height: `${sizes.handleSize}px`,
-          border: `3px solid ${themeColors.bg}`,
-          boxShadow: theme.interactions?.showDragIndicators
-            ? `0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)`
-            : '0 2px 4px rgba(0,0,0,0.2)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {/* PHASE 6: Drag indicator emoji for children */}
-        {theme.interactions?.showDragIndicators && (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-22px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '14px',
-              pointerEvents: 'none',
-              opacity: 0.7,
-            }}
-            className="cosmos-handle-indicator"
-          >
-            🔗
-          </span>
-        )}
-      </Handle>
+      {/* SERP-8: Serpentine badges (START/FIN) */}
+      {data.serpentine && <SerpentineBadge serpentine={data.serpentine} />}
 
-      {/* PHASE 7: Left handle (target) - discrete secondary connection */}
-      {theme.shapes?.nodeShape === 'bubble' && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left"
-          className="cosmos-secondary-handle"
-          style={getSecondaryHandleStyle(sizes.handleSize)}
-        />
-      )}
+      {/* SERP-8: Serpentine row indicator (colored bar) */}
+      {data.serpentine && <SerpentineRowIndicator rowIndex={data.serpentine.rowIndex} />}
 
-      {/* PHASE 7: Right handle (source) - discrete secondary connection */}
-      {theme.shapes?.nodeShape === 'bubble' && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right"
-          className="cosmos-secondary-handle"
-          style={getSecondaryHandleStyle(sizes.handleSize)}
-        />
-      )}
+      {/* SERP-8: Serpentine flow direction indicators */}
+      {data.serpentine && <FlowDirectionIndicator serpentine={data.serpentine} />}
+
+      {/* All handles (6 standard) via shared NodeHandles component */}
+      <NodeHandles
+        color={borderColor}
+        bgColor={themeColors.bg}
+        handleSize={sizes.handleSize}
+        showDragIndicators={!!theme.interactions?.showDragIndicators}
+        showLinkEmoji={!!theme.interactions?.showDragIndicators}
+      />
 
       {/* Header: Avatar + Speaker + Index (Articy-inspired) */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
@@ -394,23 +345,6 @@ export const DialogueNode = React.memo(function DialogueNode({ data, selected }:
       {theme.shapes?.speechBubbleTail && (
         <SpeechBubbleTail color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg} />
       )}
-
-      {/* Bottom handle - enlarged for children */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom"
-        style={{
-          background: borderColor,
-          width: `${sizes.handleSize}px`,
-          height: `${sizes.handleSize}px`,
-          border: `3px solid ${themeColors.bg}`,
-          boxShadow: theme.interactions?.showDragIndicators
-            ? `0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)`
-            : '0 2px 4px rgba(0,0,0,0.2)',
-          transition: 'all 0.2s ease',
-        }}
-      />
     </div>
   );
 });
@@ -485,70 +419,32 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
         minHeight: `${sizes.nodeMinHeight}px`,
         boxShadow: shadow,
         transition: 'all 0.2s ease',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'visible'
       }}
     >
       {/* PHASE 6: Decorative elements for child-friendly themes */}
       {theme.shapes?.decorativeElements && <DecorativeStars position="top-left" />}
       {theme.interactions?.showDragIndicators && <DragIndicator />}
 
-      {/* Top handle - enlarged for children */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="top"
-        aria-label="Point de connexion entrant"
-        style={{
-          background: borderColor,
-          width: `${sizes.handleSize}px`,
-          height: `${sizes.handleSize}px`,
-          border: `3px solid ${themeColors.bg}`,
-          boxShadow: theme.interactions?.showDragIndicators
-            ? `0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)`
-            : '0 2px 4px rgba(0,0,0,0.2)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {/* PHASE 6: Drag indicator emoji for children */}
-        {theme.interactions?.showDragIndicators && (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-22px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '14px',
-              pointerEvents: 'none',
-              opacity: 0.7,
-            }}
-            className="cosmos-handle-indicator"
-          >
-            🔗
-          </span>
-        )}
-      </Handle>
+      {/* SERP-8: Serpentine badges (START/FIN) */}
+      {data.serpentine && <SerpentineBadge serpentine={data.serpentine} />}
 
-      {/* PHASE 7: Left handle (target) - discrete secondary connection */}
-      {theme.shapes?.nodeShape === 'bubble' && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left"
-          className="cosmos-secondary-handle"
-          style={getSecondaryHandleStyle(sizes.handleSize)}
-        />
-      )}
+      {/* SERP-8: Serpentine row indicator (colored bar) */}
+      {data.serpentine && <SerpentineRowIndicator rowIndex={data.serpentine.rowIndex} />}
 
-      {/* PHASE 7: Right handle (source) - discrete secondary connection */}
-      {theme.shapes?.nodeShape === 'bubble' && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right"
-          className="cosmos-secondary-handle"
-          style={getSecondaryHandleStyle(sizes.handleSize)}
-        />
-      )}
+      {/* SERP-8: Serpentine flow direction indicators */}
+      {data.serpentine && <FlowDirectionIndicator serpentine={data.serpentine} />}
+
+      {/* All handles (6 standard + choice handles) via shared NodeHandles component */}
+      <NodeHandles
+        color={borderColor}
+        bgColor={themeColors.bg}
+        handleSize={sizes.handleSize}
+        showDragIndicators={!!theme.interactions?.showDragIndicators}
+        showLinkEmoji={!!theme.interactions?.showDragIndicators}
+        choices={choices}
+      />
 
       {/* Header: Avatar + Speaker + Index (Articy-inspired) */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
@@ -741,36 +637,78 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
         <SpeechBubbleTail color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg} />
       )}
 
-      {/* Multi-handles: One handle per choice (PHASE 2) - enlarged for children */}
-      {choices.map((choice, choiceIndex) => {
-        // Colors for handles (repeating pattern)
-        const handleColors = ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6']; // emerald, rose, amber, purple
-        const handleColor = handleColors[choiceIndex % handleColors.length];
-
-        // Position: distribute handles evenly at the bottom
-        const leftPosition = ((choiceIndex + 1) / (choices.length + 1)) * 100;
-
-        return (
-          <Handle
-            key={choice.id}
-            type="source"
-            position={Position.Bottom}
-            id={`choice-${choiceIndex}`}
-            style={{
-              left: `${leftPosition}%`,
-              background: handleColor,
-              width: `${sizes.handleSize}px`,
-              height: `${sizes.handleSize}px`,
-              border: '3px solid white',
-              boxShadow: theme.interactions?.showDragIndicators
-                ? `0 0 0 6px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4)`
-                : '0 2px 6px rgba(0, 0, 0, 0.3)',
-              transition: 'all 0.2s ease',
-            }}
-            aria-label={`Connexion pour le choix "${choice.text}"`}
+      {/* PHASE 10: Y-shape indicator for branching visualization */}
+      <div
+        className="y-shape-indicator"
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: '8px',
+          width: '24px',
+          height: '24px',
+          opacity: 0.5,
+          transition: 'all 0.3s ease',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M12 4 L12 10 M8 16 L12 10 M16 16 L12 10"
+            stroke={borderColor}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-        );
-      })}
+        </svg>
+      </div>
+
+      {/* PHASE 10: Internal branching lines connecting choice handles */}
+      {choices.length > 1 && (
+        <svg
+          className="choice-branch-lines"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            opacity: 0.3,
+            overflow: 'visible',
+          }}
+        >
+          {/* Vertical line along the right edge connecting all handles */}
+          <line
+            x1="95%"
+            y1={`${((0 + 1) / (choices.length + 1)) * 100}%`}
+            x2="95%"
+            y2={`${((choices.length) / (choices.length + 1)) * 100}%`}
+            stroke={borderColor}
+            strokeWidth="2"
+            strokeDasharray="4 2"
+            className="branch-connector"
+          />
+          {/* Horizontal lines from center to each handle */}
+          {choices.map((choice, idx) => {
+            const topPos = ((idx + 1) / (choices.length + 1)) * 100;
+            return (
+              <line
+                key={choice.id}
+                x1="70%"
+                y1={`${topPos}%`}
+                x2="95%"
+                y2={`${topPos}%`}
+                stroke={borderColor}
+                strokeWidth="2"
+                strokeDasharray="4 2"
+                className="branch-line"
+              />
+            );
+          })}
+        </svg>
+      )}
+
     </div>
   );
 });
@@ -836,16 +774,12 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
         gap: '8px'
       }}
     >
-      {/* Top handle (only input) */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        style={{
-          background: themeColors.border,
-          width: `${sizes.handleSize}px`,
-          height: `${sizes.handleSize}px`,
-          border: `2px solid ${themeColors.bg}`
-        }}
+      {/* All handles (6 standard) via shared NodeHandles component */}
+      <NodeHandles
+        color={themeColors.border}
+        bgColor={themeColors.bg}
+        handleSize={sizes.handleSize}
+        borderWidth={2}
       />
 
       {/* Icon: emoji for cosmos, Lucide for default */}

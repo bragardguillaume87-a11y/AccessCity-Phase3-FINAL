@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import dagre from 'dagre';
 import type { Node, Edge } from '@xyflow/react';
-import type { Dialogue, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme } from '@/types';
+import type { Dialogue, ValidationProblem, DialogueNodeData, TerminalNodeData, NodeColorTheme, SerpentineNodeData } from '@/types';
 import { DEFAULTS } from '@/config/constants';
 import type { GraphTheme } from '@/config/graphThemes/types';
+import { useUIStore } from '@/stores/uiStore';
+import { HANDLE_ID, choiceHandleId, buildNodeRowMap, getSerpentineHandles } from '@/config/handleConfig';
 
 /**
  * Union type for all graph node types
@@ -55,6 +57,11 @@ export function useDialogueGraph(
   layoutDirection: 'TB' | 'LR' = 'TB',  // PHASE 3.5: Layout direction parameter
   theme?: GraphTheme  // PHASE 4: Optional theme for dynamic edge styles
 ): UseDialogueGraphReturn {
+  // SERP-5: Read serpentine configuration from uiStore
+  const serpentineEnabled = useUIStore((state) => state.serpentineEnabled);
+  const serpentineMode = useUIStore((state) => state.serpentineMode);
+  const serpentineGroupSize = useUIStore((state) => state.serpentineGroupSize);
+
   return useMemo(() => {
     if (!dialogues || dialogues.length === 0) {
       return { nodes: [], edges: [] };
@@ -108,7 +115,9 @@ export function useDialogueGraph(
           edges.push({
             id: `${sourceId}-converge-to-${sceneId}-d-${targetIdx}`,
             source: sourceId,
+            sourceHandle: HANDLE_ID.RIGHT,
             target: `${sceneId}-d-${targetIdx}`,
+            targetHandle: HANDLE_ID.LEFT,
             type: edgeType,
             animated: edgeStyles.convergence.animated,
             label: '↩ rejoint',
@@ -131,7 +140,9 @@ export function useDialogueGraph(
             edges.push({
               id: `${sourceId}-response-converge-to-${sceneId}-d-${targetIdx}`,
               source: sourceId,
+              sourceHandle: HANDLE_ID.RIGHT,
               target: `${sceneId}-d-${targetIdx}`,
+              targetHandle: HANDLE_ID.LEFT,
               type: edgeType,
               animated: edgeStyles.convergence.animated,
               label: '↩ rejoint',
@@ -154,7 +165,9 @@ export function useDialogueGraph(
         edges.push({
           id: `${sourceId}-to-${sceneId}-d-${index + 1}`,
           source: sourceId,
+          sourceHandle: HANDLE_ID.RIGHT,
           target: `${sceneId}-d-${index + 1}`,
+          targetHandle: HANDLE_ID.LEFT,
           type: edgeType,
           animated: edgeStyles.linear.animated,
           style: {
@@ -179,11 +192,13 @@ export function useDialogueGraph(
               edges.push({
                 id: `${sourceId}-choice-${choiceIdx}-to-${targetId}`,
                 source: sourceId,
-                sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
+                sourceHandle: choiceHandleId(choiceIdx),
                 target: targetId,
-                type: edgeType,
+                targetHandle: HANDLE_ID.LEFT,
+                type: theme.id === 'cosmos' ? 'cosmosChoice' : edgeType, // PHASE 10: Custom edge for cosmos
                 animated: edgeStyles.choice.animated,
                 label: edgeLabel,
+                data: { label: edgeLabel }, // PHASE 10: Pass label to custom edge
                 style: {
                   stroke: edgeStyles.choice.stroke,
                   strokeWidth: edgeStyles.choice.strokeWidth,
@@ -213,14 +228,17 @@ export function useDialogueGraph(
             });
 
             // Add edge to terminal
+            const terminalLabel = choice.text?.substring(0, 20) + '...' || 'Jump to scene';
             edges.push({
               id: `${sourceId}-choice-${choiceIdx}-to-terminal`,
               source: sourceId,
-              sourceHandle: `choice-${choiceIdx}`, // PHASE 2: Multi-handles support
+              sourceHandle: choiceHandleId(choiceIdx),
               target: terminalId,
-              type: edgeType,
+              targetHandle: HANDLE_ID.LEFT,
+              type: theme.id === 'cosmos' ? 'cosmosChoice' : edgeType, // PHASE 10: Custom edge for cosmos
               animated: edgeStyles.sceneJump.animated,
-              label: choice.text?.substring(0, 20) + '...' || 'Jump to scene',
+              label: terminalLabel,
+              data: { label: terminalLabel }, // PHASE 10: Pass label to custom edge
               style: {
                 stroke: edgeStyles.sceneJump.stroke,
                 strokeWidth: edgeStyles.sceneJump.strokeWidth,
@@ -236,13 +254,25 @@ export function useDialogueGraph(
     });
 
     // Step 3: Calculate layout with dagre (pass theme for dynamic node sizes)
-    const layoutedNodes = calculateLayoutWithDagre(nodes, edges, layoutDirection, theme);
+    let layoutedNodes = calculateLayoutWithDagre(nodes, edges, layoutDirection, theme);
+    let layoutedEdges = edges;
+
+    // SERP-5: Apply serpentine layout if enabled in uiStore
+    // Only apply in LR (horizontal) mode for best results
+    const canApplySerpentine = layoutDirection === 'LR' && serpentineEnabled;
+
+    if (canApplySerpentine) {
+      // SERP-4: Apply serpentine node positioning
+      layoutedNodes = applySerpentineLayout(layoutedNodes, serpentineMode, serpentineGroupSize);
+      // SERP-3: Update edge handles for serpentine routing (4-directional)
+      layoutedEdges = applySerpentineEdgeRouting(layoutedEdges, layoutedNodes, serpentineMode, serpentineGroupSize);
+    }
 
     return {
       nodes: layoutedNodes,
-      edges
+      edges: layoutedEdges
     };
-  }, [dialogues, sceneId, validation, layoutDirection, theme]);
+  }, [dialogues, sceneId, validation, layoutDirection, theme, serpentineEnabled, serpentineMode, serpentineGroupSize]);
 }
 
 /**
@@ -265,10 +295,10 @@ function calculateLayoutWithDagre(
   // Configure graph layout
   dagreGraph.setGraph({
     rankdir: layoutDirection, // PHASE 3.5: Dynamic direction (TB=vertical, LR=horizontal)
-    nodesep: layoutDirection === 'TB' ? 80 : 120,   // Reduce horizontal spacing for TB
-    ranksep: layoutDirection === 'TB' ? 220 : 180,  // Increase vertical spacing for TB
-    marginx: 50,
-    marginy: 50
+    nodesep: layoutDirection === 'TB' ? 100 : 160,   // SERP-9: More breathing room between nodes
+    ranksep: layoutDirection === 'TB' ? 260 : 220,  // SERP-9: More vertical spacing
+    marginx: 60,
+    marginy: 60
   });
 
   // Set default edge config
@@ -308,6 +338,206 @@ function calculateLayoutWithDagre(
         y: nodeWithPosition.y - height / 2
       }
     };
+  });
+}
+
+/**
+ * SERP-7 FIX: Apply serpentine (S-shaped) layout transformation
+ *
+ * Takes nodes positioned by Dagre in a left-to-right flow and transforms them
+ * into a serpentine pattern with REAL row separation:
+ *
+ * BEFORE (Dagre LR):  [1]─[2]─[3]─[4]─[5]─[6]─[7]─[8]  (all same Y)
+ *
+ * AFTER (Serpentine):
+ *   [1]─[2]─[3]─[4]
+ *               ↓
+ *   [8]─[7]─[6]─[5]
+ *
+ * @param nodes - Nodes with Dagre-calculated positions
+ * @param mode - Layout mode: 'auto-y' (detect existing rows) or 'by-count' (force grouping)
+ * @param groupSize - For 'by-count' mode: number of nodes per row
+ * @returns Nodes with serpentine-adjusted positions (new X and Y)
+ */
+function applySerpentineLayout(
+  nodes: GraphNode[],
+  mode: 'auto-y' | 'by-scene' | 'by-count' = 'auto-y',
+  groupSize: number = 6
+): GraphNode[] {
+  if (nodes.length === 0) return nodes;
+
+  // Constants for layout - SERP-9: Increased for better readability (children 8+)
+  const ROW_HEIGHT = 400; // Vertical spacing between rows (was 250)
+  const NODE_SPACING = 600; // Horizontal spacing between nodes in a row (was 400)
+  const START_X = 50; // Starting X position
+  const START_Y = 50; // Starting Y position
+
+  // Group nodes into rows based on selected mode
+  let rows: GraphNode[][] = [];
+
+  if (mode === 'auto-y') {
+    // Mode 1: Automatic row detection by Y position
+    // If all nodes are on same Y (LR layout), fall back to by-count with default groupSize
+    const yThreshold = 100;
+    const sortedByY = [...nodes].sort((a, b) => a.position.y - b.position.y);
+
+    // Check if all nodes are on approximately the same Y (typical LR layout)
+    const minY = sortedByY[0].position.y;
+    const maxY = sortedByY[sortedByY.length - 1].position.y;
+    const allSameRow = (maxY - minY) < yThreshold;
+
+    if (allSameRow) {
+      // All nodes on same row - use by-count logic instead
+      const sortedByX = [...nodes].sort((a, b) => a.position.x - b.position.x);
+      for (let i = 0; i < sortedByX.length; i += groupSize) {
+        rows.push(sortedByX.slice(i, i + groupSize));
+      }
+    } else {
+      // Existing rows detected - group by Y position
+      let currentRow: GraphNode[] = [sortedByY[0]];
+      let currentY = sortedByY[0].position.y;
+
+      for (let i = 1; i < sortedByY.length; i++) {
+        const node = sortedByY[i];
+        if (Math.abs(node.position.y - currentY) < yThreshold) {
+          currentRow.push(node);
+        } else {
+          rows.push(currentRow);
+          currentRow = [node];
+          currentY = node.position.y;
+        }
+      }
+      rows.push(currentRow);
+    }
+
+  } else if (mode === 'by-scene') {
+    // Mode 2: Group by scene (extract scene from node ID: "scene1-d-0")
+    const sceneGroups = new Map<string, GraphNode[]>();
+    nodes.forEach(node => {
+      const sceneId = node.id.split('-')[0];
+      if (!sceneGroups.has(sceneId)) {
+        sceneGroups.set(sceneId, []);
+      }
+      sceneGroups.get(sceneId)!.push(node);
+    });
+    rows = Array.from(sceneGroups.values());
+
+  } else if (mode === 'by-count') {
+    // Mode 3: Group every X nodes into a row
+    const sortedByX = [...nodes].sort((a, b) => a.position.x - b.position.x);
+    for (let i = 0; i < sortedByX.length; i += groupSize) {
+      rows.push(sortedByX.slice(i, i + groupSize));
+    }
+  }
+
+  // SERP-7 FIX: Apply serpentine transformation with REAL Y positioning
+  const transformedNodes = new Map<string, GraphNode>();
+
+  // Calculate max row width for proper alignment
+  const maxNodesInRow = Math.max(...rows.map(r => r.length));
+  const maxRowWidth = (maxNodesInRow - 1) * NODE_SPACING;
+
+  // Calculate total number of nodes for isFirst/isLast detection
+  const totalNodes = rows.reduce((sum, row) => sum + row.length, 0);
+  let globalNodeIndex = 0; // Track position across all rows
+
+  rows.forEach((row, rowIndex) => {
+    // Sort row by X position (left to right)
+    const sortedRow = [...row].sort((a, b) => a.position.x - b.position.x);
+
+    // Calculate Y position for this row
+    const rowY = START_Y + (rowIndex * ROW_HEIGHT);
+
+    // Determine if this row flows left-to-right (even) or right-to-left (odd)
+    const isReversedRow = rowIndex % 2 === 1;
+    const flowDirection: 'ltr' | 'rtl' = isReversedRow ? 'rtl' : 'ltr';
+    const rowLength = sortedRow.length;
+
+    sortedRow.forEach((node, positionInRow) => {
+      // Calculate X position based on flow direction
+      let nodeX: number;
+      if (isReversedRow) {
+        // Odd rows: RIGHT-TO-LEFT, aligned to the RIGHT edge
+        // Start from the right side and go left
+        // Position 0 in sortedRow = rightmost position in display
+        const rightEdgeX = START_X + maxRowWidth;
+        nodeX = rightEdgeX - (positionInRow * NODE_SPACING);
+      } else {
+        // Even rows: left-to-right (normal position)
+        nodeX = START_X + (positionInRow * NODE_SPACING);
+      }
+
+      // SERP-8: Build serpentine metadata for this node
+      const serpentineData: SerpentineNodeData = {
+        rowIndex,
+        positionInRow,
+        rowLength,
+        flowDirection,
+        // First node in entire flow = first node of first row
+        isFirst: globalNodeIndex === 0,
+        // Last node in entire flow = last node of last row
+        isLast: globalNodeIndex === totalNodes - 1,
+        // First in row depends on flow direction
+        isFirstInRow: positionInRow === 0,
+        // Last in row depends on flow direction
+        isLastInRow: positionInRow === rowLength - 1,
+      };
+
+      // Create transformed node with serpentine metadata
+      // We need to cast because node.data can be DialogueNodeData or TerminalNodeData
+      const transformedNode = {
+        ...node,
+        position: {
+          x: nodeX,
+          y: rowY
+        },
+        data: {
+          ...node.data,
+          serpentine: serpentineData,
+        } as DialogueNodeData | TerminalNodeData
+      } as GraphNode;
+
+      transformedNodes.set(node.id, transformedNode);
+
+      globalNodeIndex++;
+    });
+  });
+
+  // Return nodes in original order with updated positions
+  return nodes.map(node => transformedNodes.get(node.id) || node);
+}
+
+/**
+ * SERP-7 FIX: Apply serpentine edge routing
+ * Uses shared buildNodeRowMap and getSerpentineHandles from handleConfig.ts
+ *
+ * @param edges - Original edges array
+ * @param nodes - Nodes with serpentine-adjusted positions (AFTER applySerpentineLayout)
+ * @returns Edges with updated handle IDs
+ */
+function applySerpentineEdgeRouting(
+  edges: Edge[],
+  nodes: GraphNode[],
+  _mode?: string,
+  _groupSize?: number
+): Edge[] {
+  if (nodes.length === 0) return edges;
+
+  const nodeRowMap = buildNodeRowMap(nodes);
+
+  return edges.map(edge => {
+    const sourceInfo = nodeRowMap.get(edge.source);
+    const targetInfo = nodeRowMap.get(edge.target);
+
+    if (!sourceInfo || !targetInfo) return edge;
+
+    const { sourceHandle, targetHandle } = getSerpentineHandles(
+      sourceInfo.rowIndex,
+      targetInfo.rowIndex,
+      edge.sourceHandle
+    );
+
+    return { ...edge, sourceHandle, targetHandle };
   });
 }
 

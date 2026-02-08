@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Target, Dices, Settings } from 'lucide-react';
+import { FileText, GitBranch, Dices, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ComplexityLevel } from '../hooks/useDialogueWizardState';
 
@@ -26,55 +26,73 @@ interface ComplexityCard {
 
 const COMPLEXITY_CARDS: ComplexityCard[] = [
   {
-    id: 'simple',
-    emoji: '🎯',
-    icon: Target,
-    title: 'Simple',
+    id: 'linear',
+    emoji: '📝',
+    icon: FileText,
+    title: 'Simples',
     ageLabel: '8+',
-    description: 'Choix Oui/Non - Parfait pour débuter',
+    description: 'Dialogue sans choix, texte uniquement',
     features: [
-      '2 choix seulement',
-      'Navigation simple',
-      'Pas de calculs'
+      'Pas de choix',
+      'Histoire linéaire',
+      'Simple et rapide'
     ],
-    color: 'from-blue-500 to-blue-600',
-    gradient: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10',
+    color: 'from-blue-500 to-cyan-600',
+    gradient: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/10',
     hoverStyles: 'border-blue-500 ring-4 ring-blue-500/40 shadow-[0_0_30px_rgba(59,130,246,0.5)]',
     buttonLabel: 'Commencer - Mode Simple',
-    preview: '💬 → 👍 ou 👎'
+    preview: '💬 → 💬 → 💬'
   },
   {
-    id: 'medium',
+    id: 'binary',
+    emoji: '🔀',
+    icon: GitBranch,
+    title: 'À choisir',
+    ageLabel: '9+',
+    description: 'Dialogue avec 2 choix simples',
+    features: [
+      '2 choix possibles',
+      'Décisions faciles',
+      'Histoires qui bifurquent'
+    ],
+    color: 'from-green-500 to-emerald-600',
+    gradient: 'bg-gradient-to-br from-green-500/20 to-emerald-600/10',
+    hoverStyles: 'border-green-500 ring-4 ring-green-500/40 shadow-[0_0_30px_rgba(34,197,94,0.5)]',
+    buttonLabel: 'Mode Avec Choix',
+    preview: '💬 → 1️⃣ ou 2️⃣'
+  },
+  {
+    id: 'dice',
     emoji: '🎲',
     icon: Dices,
-    title: 'Dés Magiques',
+    title: 'Dés magiques',
     ageLabel: '10+',
-    description: 'Lancers de dés comme Baldur\'s Gate 3',
+    description: 'Tests de caractéristique avec succès/échec (1-2 tests)',
     features: [
       'Dés à 20 faces',
-      'Tests de compétence',
+      '1 ou 2 tests',
       'Succès ou échec'
     ],
-    color: 'from-purple-500 to-purple-600',
-    gradient: 'bg-gradient-to-br from-purple-500/20 to-purple-600/10',
+    color: 'from-purple-500 to-pink-600',
+    gradient: 'bg-gradient-to-br from-purple-500/20 to-pink-600/10',
     hoverStyles: 'border-purple-500 ring-4 ring-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.5)]',
     buttonLabel: 'Lancer les dés !',
     preview: '🎲 → ✅ ou ❌'
   },
   {
-    id: 'complex',
-    emoji: '⚙️',
-    icon: Settings,
-    title: 'Expert',
+    id: 'expert',
+    emoji: '⚡',
+    icon: Sparkles,
+    title: 'Expert (multi-choix)',
     ageLabel: '12+',
-    description: 'Variables multiples et effets avancés',
+    description: 'Choix multiples avec effets sur variables (2-4 choix)',
     features: [
-      'Jusqu\'à 4 choix',
-      'Effets multiples',
-      'Logique complexe'
+      '2 à 4 choix',
+      'Effets sur variables',
+      'Logique avancée'
     ],
-    color: 'from-orange-500 to-orange-600',
-    gradient: 'bg-gradient-to-br from-orange-500/20 to-orange-600/10',
+    color: 'from-orange-500 to-red-600',
+    gradient: 'bg-gradient-to-br from-orange-500/20 to-red-600/10',
     hoverStyles: 'border-orange-500 ring-4 ring-orange-500/40 shadow-[0_0_30px_rgba(249,115,22,0.5)]',
     buttonLabel: 'Mode Expert',
     preview: '🌳 → 1️⃣ 2️⃣ 3️⃣ 4️⃣'
@@ -82,12 +100,13 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
 ];
 
 /**
- * StepComplexity - Choose dialogue complexity level
+ * StepComplexity - Choose dialogue complexity level (PHASE 2.3: 4 complexity cards)
  *
- * Three large gaming cards with animations:
- * - Simple (8+): Binary choices
- * - Medium (10+): Dice mechanics
- * - Complex (12+): Multi-choice with effects
+ * Four large gaming cards with animations:
+ * - Simples (8+): No choices, linear story
+ * - À choisir (9+): 2 simple binary choices
+ * - Dés magiques (10+): Dice mechanics (1-2 tests)
+ * - Expert (12+): Multi-choice with effects (2-4 choices)
  */
 export function StepComplexity({
   selectedLevel,
@@ -111,8 +130,8 @@ export function StepComplexity({
         </p>
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
+      {/* Cards Grid (PHASE 2.3: 4 cards in 2x2 grid on desktop) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
         {COMPLEXITY_CARDS.map((card) => {
           const isSelected = selectedLevel === card.id;
           const isHovered = hoveredCard === card.id;

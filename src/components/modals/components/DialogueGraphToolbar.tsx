@@ -1,5 +1,6 @@
-import { Trash2, Copy, Workflow, X, ArrowDown, ArrowRight } from 'lucide-react';
+import { Trash2, Copy, Workflow, ArrowDown, ArrowRight, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SerpentineControls } from './SerpentineControls'; // SERP-6: Serpentine layout controls
 
 /**
  * DialogueGraphToolbar - Barre d'outils flottante pour l'éditeur nodal
@@ -31,8 +32,14 @@ export interface DialogueGraphToolbarProps {
   onToggleLayout: () => void;
   /** Direction actuelle du layout ('TB' = vertical, 'LR' = horizontal) */
   layoutDirection: 'TB' | 'LR';
-  /** Callback pour fermer l'éditeur nodal */
-  onClose: () => void;
+  /** Undo callback */
+  onUndo: () => void;
+  /** Redo callback */
+  onRedo: () => void;
+  /** Whether undo is available */
+  canUndo: boolean;
+  /** Whether redo is available */
+  canRedo: boolean;
   /** Is the properties panel currently open? Adjusts toolbar position */
   isPanelOpen?: boolean;
 }
@@ -44,7 +51,10 @@ export function DialogueGraphToolbar({
   onAutoLayout,
   onToggleLayout,
   layoutDirection,
-  onClose,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   isPanelOpen = false,
 }: DialogueGraphToolbarProps) {
   return (
@@ -127,18 +137,37 @@ export function DialogueGraphToolbar({
       {/* Séparateur visuel */}
       <div className="h-6 w-px bg-border" aria-hidden="true" />
 
-      {/* Close */}
+      {/* Undo/Redo */}
       <Button
         variant="ghost"
         size="sm"
-        onClick={onClose}
-        title="Fermer l'éditeur (Esc)"
-        aria-label="Fermer l'éditeur nodal et retourner à la vue dialogues"
-        className="hover:bg-accent transition-colors"
+        onClick={onUndo}
+        disabled={!canUndo}
+        title="Annuler (Ctrl+Z)"
+        aria-label="Annuler la dernière action"
+        className="hover:bg-accent transition-colors disabled:opacity-30"
       >
-        <X className="w-4 h-4" aria-hidden="true" />
-        <span className="ml-2 text-xs font-medium">Fermer</span>
+        <Undo2 className="w-4 h-4" aria-hidden="true" />
       </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRedo}
+        disabled={!canRedo}
+        title="Rétablir (Ctrl+Y)"
+        aria-label="Rétablir la dernière action annulée"
+        className="hover:bg-accent transition-colors disabled:opacity-30"
+      >
+        <Redo2 className="w-4 h-4" aria-hidden="true" />
+      </Button>
+
+      {/* Séparateur visuel */}
+      <div className="h-6 w-px bg-border" aria-hidden="true" />
+
+      {/* SERP-6: Serpentine Layout Controls */}
+      <SerpentineControls />
+
     </div>
   );
 }

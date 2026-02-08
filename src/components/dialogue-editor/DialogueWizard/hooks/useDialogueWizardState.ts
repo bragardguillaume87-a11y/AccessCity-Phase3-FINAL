@@ -6,9 +6,13 @@ import { useState, useCallback, useMemo } from 'react';
 export type DialogueWizardStep = 'complexity' | 'basics' | 'choices' | 'responses' | 'review';
 
 /**
- * Complexity level for dialogue creation
+ * Complexity level for dialogue creation (PHASE 2.2: Expanded to 4 levels)
+ * - linear: Dialogue without choices (linear story)
+ * - binary: Dialogue with 2 simple choices
+ * - dice: Dialogue with dice checks (1-2 tests)
+ * - expert: Dialogue with multiple choices and effects (2-4 choices)
  */
-export type ComplexityLevel = 'simple' | 'medium' | 'complex';
+export type ComplexityLevel = 'linear' | 'binary' | 'dice' | 'expert';
 
 /**
  * Step configuration
@@ -90,7 +94,7 @@ const STEP_ORDER: DialogueWizardStep[] = DIALOGUE_WIZARD_STEPS.map(s => s.id);
  * between steps and complexity level tracking.
  *
  * Steps:
- * 1. complexity - Choose Simple/Medium/Complex
+ * 1. complexity - Choose Linear/Binary/Dice/Expert (4 options)
  * 2. basics - Speaker + dialogue text + SFX
  * 3. choices - Create choices (adaptive based on complexity)
  * 4. review - Preview + save

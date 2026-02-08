@@ -1,12 +1,13 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
 import { DEFAULTS } from '@/config/constants';
 import type { Dialogue, Scene } from '@/types';
+import { useUIStore } from '@/stores';
 
 // Wizard hooks
-import { useDialogueWizardState, DIALOGUE_WIZARD_STEPS, type DialogueWizardStep } from './hooks/useDialogueWizardState';
+import { useDialogueWizardState, DIALOGUE_WIZARD_STEPS, type DialogueWizardStep, type ComplexityLevel } from './hooks/useDialogueWizardState';
 import { useDialogueForm } from './hooks/useDialogueForm';
 import { useChoiceValidation } from './hooks/useChoiceValidation';
 
@@ -50,18 +51,35 @@ export function DialogueWizard({
   onSave,
   onClose
 }: DialogueWizardProps) {
+  // PHASE 1.3: Read initial complexity from store (set by palette buttons)
+  const initialComplexity = useUIStore((state) => state.dialogueWizardInitialComplexity);
+  const clearDialogueWizardInitialComplexity = useUIStore((state) => state.clearDialogueWizardInitialComplexity);
+
   // Wizard state management
   const [wizardState, wizardActions] = useDialogueWizardState();
 
-  // Form data management
-  const [formData, formActions] = useDialogueForm(dialogue);
+  // Form data management (pass initialComplexity from palette)
+  const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);
 
   // Validation
   const validation = useChoiceValidation(formData);
 
+  // PHASE 1.3: Cleanup on unmount (ensures complexity is cleared no matter how wizard closes)
+  useEffect(() => {
+    return () => {
+      clearDialogueWizardInitialComplexity();
+    };
+  }, [clearDialogueWizardInitialComplexity]);
+
+  // PHASE 1.3: Handle close with cleanup
+  const handleClose = useCallback(() => {
+    clearDialogueWizardInitialComplexity();
+    onClose();
+  }, [clearDialogueWizardInitialComplexity, onClose]);
+
   // Sync complexity between wizard and form
   const handleComplexityChange = useCallback(
-    (level: 'simple' | 'medium' | 'complex') => {
+    (level: ComplexityLevel) => {
       wizardActions.setComplexity(level);
       formActions.setComplexity(level);
       // Automatically enable "Continue" button when level is selected
@@ -149,12 +167,12 @@ export function DialogueWizard({
 
       // Close after short delay for celebration animation
       setTimeout(() => {
-        onClose();
+        handleClose();
       }, 2000);
     } catch (error) {
       logger.error('[DialogueWizard] Save failed:', error);
     }
-  }, [formData, dialogue, onSave, onClose]);
+  }, [formData, dialogue, onSave, handleClose]);
 
   // Get navigation labels
   const getNextLabel = () => {
@@ -200,13 +218,15 @@ export function DialogueWizard({
       case 'choices':
         return (
           <StepChoices
-            complexityLevel={formData.complexityLevel || 'simple'}
+            complexityLevel={formData.complexityLevel || 'binary'}
             choices={formData.choices}
             scenes={scenes}
             currentSceneId={sceneId}
             onUpdateChoice={(index, updates) => {
               formActions.updateChoice(index, updates);
             }}
+            onAddChoice={formActions.addChoice}
+            onRemoveChoice={formActions.removeChoice}
             onValidChange={handleValidChange}
           />
         );

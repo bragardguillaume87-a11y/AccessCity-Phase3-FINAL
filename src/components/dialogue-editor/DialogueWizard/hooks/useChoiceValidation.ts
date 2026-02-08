@@ -42,9 +42,9 @@ export function useChoiceValidation(
     }
 
     switch (formData.complexityLevel) {
-      case 'simple': {
+      case 'binary': {
         if (formData.choices.length !== 2) {
-          errors.push("Le mode simple nécessite exactement 2 choix");
+          errors.push("Le mode binaire nécessite exactement 2 choix");
         }
 
         formData.choices.forEach((choice, index) => {
@@ -59,49 +59,37 @@ export function useChoiceValidation(
         break;
       }
 
-      case 'medium': {
+      case 'dice': {
         if (formData.choices.length === 0) {
           errors.push("Aucun choix configuré");
           break;
         }
 
-        const choice = formData.choices[0];
-
-        if (!choice.text || choice.text.trim().length < 5) {
-          errors.push("Le texte du choix est trop court (minimum 5 caractères)");
-        }
-
-        if (!choice.diceCheck) {
-          errors.push("Configuration des dés manquante");
-        } else {
-          if (!choice.diceCheck.stat) {
-            errors.push("Choisis une compétence pour le test de dés");
+        formData.choices.forEach((choice, index) => {
+          if (!choice.text || choice.text.trim().length < 5) {
+            errors.push(`Test ${index + 1}: Le texte est trop court (minimum 5 caractères)`);
           }
 
-          if (
-            choice.diceCheck.difficulty === undefined ||
-            choice.diceCheck.difficulty < 1 ||
-            choice.diceCheck.difficulty > 20
-          ) {
-            errors.push("La difficulté doit être entre 1 et 20");
-          }
+          if (!choice.diceCheck) {
+            errors.push(`Test ${index + 1}: Configuration des dés manquante`);
+          } else {
+            if (!choice.diceCheck.stat) {
+              errors.push(`Test ${index + 1}: Choisis une compétence pour le test`);
+            }
 
-          // Validate success branch
-          const success = choice.diceCheck.success;
-          if (success && !success.nextSceneId && !success.nextDialogueId) {
-            errors.push("La branche succès doit mener quelque part");
+            if (
+              choice.diceCheck.difficulty === undefined ||
+              choice.diceCheck.difficulty < 1 ||
+              choice.diceCheck.difficulty > 20
+            ) {
+              errors.push(`Test ${index + 1}: La difficulté doit être entre 1 et 20`);
+            }
           }
-
-          // Validate failure branch
-          const failure = choice.diceCheck.failure;
-          if (failure && !failure.nextSceneId && !failure.nextDialogueId) {
-            errors.push("La branche échec doit mener quelque part");
-          }
-        }
+        });
         break;
       }
 
-      case 'complex': {
+      case 'expert': {
         if (formData.choices.length < 2) {
           errors.push("Le mode expert nécessite au moins 2 choix");
         }
@@ -113,15 +101,6 @@ export function useChoiceValidation(
         formData.choices.forEach((choice, index) => {
           if (!choice.text || choice.text.trim().length < 5) {
             errors.push(`Choix ${index + 1}: Le texte est trop court (minimum 5 caractères)`);
-          }
-
-          const hasEffects = choice.effects && choice.effects.length > 0;
-          const hasNavigation = choice.nextSceneId || choice.nextDialogueId;
-
-          if (!hasEffects && !hasNavigation) {
-            errors.push(
-              `Choix ${index + 1}: Doit avoir au moins un effet ou mener quelque part`
-            );
           }
         });
         break;

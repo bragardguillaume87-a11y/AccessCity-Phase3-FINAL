@@ -151,17 +151,18 @@
   line-height: 1.6;
 }
 
-/* Keyboard hints */
+/* Keyboard hints - centered at bottom, above minimap/controls */
 .keyboard-hints {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 12px;
   background-color: rgba(30, 41, 59, 0.9);
   border: 1px solid #334155;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 10;
 }
@@ -227,6 +228,30 @@
 
 .react-flow__handle-connecting {
   background: #06b6d4 !important;
+}
+
+/* SERP-2: Four-directional handles with hover visibility (Option A) */
+/* Handles semi-transparent by default for clean UI */
+.react-flow__handle-hover {
+  opacity: 0.2 !important;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Handles become fully visible when hovering over parent node */
+.dialogue-node:hover .react-flow__handle-hover,
+.choice-node:hover .react-flow__handle-hover,
+.terminal-node:hover .react-flow__handle-hover {
+  opacity: 1 !important;
+}
+
+/* Handles always visible when connecting */
+.react-flow__handle-hover.react-flow__handle-connecting {
+  opacity: 1 !important;
+}
+
+/* Handles always visible during drag operation */
+.react-flow__handle-hover.react-flow__handle-valid {
+  opacity: 1 !important;
 }
 
 /* Edge animations */

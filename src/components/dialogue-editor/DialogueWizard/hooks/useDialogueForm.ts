@@ -39,34 +39,45 @@ export interface DialogueFormActions {
 }
 
 /**
- * Infer complexity level from dialogue structure
+ * Infer complexity level from dialogue structure (PHASE 2.3: Updated for 4 levels)
  */
 export function inferComplexity(dialogue: Dialogue): ComplexityLevel {
   const choices = dialogue.choices || [];
 
-  // Simple: exactly 2 choices with no effects and no dice
+  // Linear: no choices at all
+  if (choices.length === 0) {
+    return 'linear';
+  }
+
+  // Binary: exactly 2 choices with no effects and no dice
   if (
     choices.length === 2 &&
     choices.every(c => !c.effects?.length && !c.diceCheck)
   ) {
-    return 'simple';
+    return 'binary';
   }
 
-  // Medium: has dice check
+  // Dice: has dice check (1-2 tests)
   if (choices.some(c => c.diceCheck)) {
-    return 'medium';
+    return 'dice';
   }
 
-  // Complex: everything else (multiple choices with effects)
-  return 'complex';
+  // Expert: everything else (multiple choices with effects)
+  return 'expert';
 }
 
 /**
  * Generate default choices structure based on complexity level
+ * PHASE 2.3: Now handles 4 distinct complexity levels
  */
 export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[] {
   switch (level) {
-    case 'simple':
+    case 'linear':
+      // Simples: pas de choix (dialogue linéaire)
+      return [];
+
+    case 'binary':
+      // À choisir: 2 choix simples sans effets
       return [
         {
           id: `choice-${Date.now()}-1`,
@@ -80,7 +91,8 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
         }
       ];
 
-    case 'medium':
+    case 'dice':
+      // Dés magiques: 1 test de dé par défaut
       return [
         {
           id: `choice-${Date.now()}-1`,
@@ -95,7 +107,8 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
         }
       ];
 
-    case 'complex':
+    case 'expert':
+      // Expert (multi-choix): 2 choix avec effets vides
       return [
         {
           id: `choice-${Date.now()}-1`,
@@ -118,28 +131,42 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
  * and sound effects. Handles complexity-based choice generation.
  *
  * @param initialDialogue - Existing dialogue to edit (optional)
+ * @param initialComplexity - Initial complexity from palette (PHASE 1.4)
  * @returns Tuple of [formData, formActions]
  */
 export function useDialogueForm(
-  initialDialogue?: Dialogue
+  initialDialogue?: Dialogue,
+  initialComplexity?: ComplexityLevel | null
 ): [DialogueFormData, DialogueFormActions] {
   const [formData, setFormData] = useState<DialogueFormData>(() => {
+    // PHASE 1.4: Determine initial complexity with priority system
+    let complexity: ComplexityLevel | null = null;
+
     if (initialDialogue) {
+      // Priority 1: If editing existing dialogue, infer from its structure
+      complexity = inferComplexity(initialDialogue);
+
       return {
         speaker: initialDialogue.speaker,
         text: initialDialogue.text,
         sfx: initialDialogue.sfx,
         choices: initialDialogue.choices,
-        complexityLevel: inferComplexity(initialDialogue),
+        complexityLevel: complexity,
         responses: []
       };
     }
+
+    // Priority 2: If creating new dialogue and initialComplexity provided (from palette)
+    if (initialComplexity) {
+      complexity = initialComplexity;
+    }
+    // Priority 3: Default to null (user will choose in wizard)
 
     return {
       speaker: '',
       text: '',
       choices: [],
-      complexityLevel: null,
+      complexityLevel: complexity,
       responses: []
     };
   });
@@ -168,17 +195,31 @@ export function useDialogueForm(
   }, []);
 
   const addChoice = useCallback(() => {
-    setFormData(prev => ({
-      ...prev,
-      choices: [
-        ...prev.choices,
-        {
-          id: `choice-${Date.now()}`,
-          text: '',
-          effects: []
-        }
-      ]
-    }));
+    setFormData(prev => {
+      // Generate choice appropriate for current complexity level
+      const newChoice: DialogueChoice = prev.complexityLevel === 'dice'
+        ? {
+            id: `choice-${Date.now()}`,
+            text: '',
+            effects: [],
+            diceCheck: {
+              stat: DEFAULT_DICE_STAT,
+              difficulty: 12,
+              success: {},
+              failure: {}
+            }
+          }
+        : {
+            id: `choice-${Date.now()}`,
+            text: '',
+            effects: []
+          };
+
+      return {
+        ...prev,
+        choices: [...prev.choices, newChoice]
+      };
+    });
   }, []);
 
   const removeChoice = useCallback((index: number) => {

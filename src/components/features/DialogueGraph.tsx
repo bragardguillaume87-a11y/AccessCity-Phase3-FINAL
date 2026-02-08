@@ -8,6 +8,7 @@ import {
   useReactFlow,
   ReactFlowProvider,
   Node,
+  Edge,
   NodeMouseHandler,
   FitViewOptions,
   Connection,
@@ -19,10 +20,18 @@ import './DialogueGraph.css';
 
 import { useDialogueGraph } from '../../hooks/useDialogueGraph';
 import { useDialogueGraphActions } from '../../hooks/useDialogueGraphActions';
+import { useSerpentineSync } from '../../hooks/useSerpentineSync'; // SERP-7: Dynamic edge recalculation
 import { nodeTypes } from './DialogueGraphNodes.tsx';
 import { useValidation } from '../../hooks/useValidation';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
+import { CosmosEdgeGradients } from './CosmosEdgeGradients'; // PHASE 8: SVG gradients for cosmos edges
+import { CosmosChoiceEdge } from './CosmosChoiceEdge'; // PHASE 10: Custom edge with speech bubble
 import type { Scene, DialogueNodeData, TerminalNodeData } from '@/types';
+
+// PHASE 10: Custom edge types for animated speech bubbles
+const edgeTypes = {
+  cosmosChoice: CosmosChoiceEdge,
+};
 
 /**
  * Props for DialogueGraphInner component
@@ -88,19 +97,25 @@ function DialogueGraphInner({
   // PHASE 2: Actions hook for edit mode
   const actions = useDialogueGraphActions(sceneId);
 
+  // SERP-7: Serpentine sync hook for dynamic edge recalculation
+  const { recalculateEdges, serpentineEnabled } = useSerpentineSync();
+
   // Local state for selected nodes
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // PHASE 4.5: Local state for node positions (enables manual dragging)
   // Store nodes with their positions - only update from Dagre when explicitly requested
   const [localNodes, setLocalNodes] = useState<GraphNode[]>(dagreNodes);
+
+  // SERP-7: Local state for edges (enables dynamic handle updates)
+  const [localEdges, setLocalEdges] = useState<Edge[]>(edges);
+
   const isInitialRender = useRef(true);
   const prevDialoguesLength = useRef(dialogues.length);
 
   // Sync local nodes with Dagre layout when:
   // 1. First render (initial layout)
   // 2. Dialogues count changes (node added/deleted)
-  // 3. Layout direction changes (TB/LR toggle)
   // Note: Auto-layout button triggers re-render via key prop, which resets local state
   useEffect(() => {
     const dialoguesChanged = prevDialoguesLength.current !== dialogues.length;
@@ -112,10 +127,30 @@ function DialogueGraphInner({
     }
   }, [dagreNodes, dialogues.length]);
 
+  // Always sync edges from Dagre (edges don't have user-draggable positions)
+  // This fixes the bug where edges don't appear until a node is interacted with
+  useEffect(() => {
+    setLocalEdges(edges);
+  }, [edges]);
+
   // Handle node changes (position, selection) for manual dragging
   const onNodesChange = useCallback((changes: NodeChange<GraphNode>[]) => {
     setLocalNodes((nds) => applyNodeChanges(changes, nds) as GraphNode[]);
   }, []);
+
+  // SERP-7: Handle node drag stop - recalculate serpentine edge handles
+  // This is the key fix: when user stops dragging a node, we recalculate
+  // which handles to use based on the new node positions
+  const onNodeDragStop = useCallback(
+    (event: React.MouseEvent, node: Node, nodes: Node[]) => {
+      if (serpentineEnabled && editMode) {
+        // Use the updated nodes array (includes the dragged node's new position)
+        const updatedEdges = recalculateEdges(nodes as Node[], localEdges);
+        setLocalEdges(updatedEdges);
+      }
+    },
+    [serpentineEnabled, editMode, localEdges, recalculateEdges]
+  );
 
   // Fit view on mount and when nodes change
   useEffect(() => {
@@ -264,14 +299,19 @@ function DialogueGraphInner({
 
   return (
     <div className="dialogue-graph-container">
+      {/* PHASE 8: SVG gradients for cosmos edges */}
+      {theme.id === 'cosmos' && <CosmosEdgeGradients />}
+
       <ReactFlow
         nodes={localNodes.map((node: GraphNode) => ({
           ...node,
           selected: node.id === selectedNodeId
         }))}
-        edges={edges}
+        edges={localEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
+        onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onConnect={editMode ? onConnect : undefined}
@@ -295,13 +335,15 @@ function DialogueGraphInner({
           color="#475569"
         />
 
-        {/* Controls (zoom, fit view) */}
+        {/* Controls (zoom, fit view) - positioned above accessibility toolbar */}
         <Controls
           showInteractive={false}
           className="dialogue-graph-controls"
+          position="top-left"
+          style={{ top: '60px', left: '16px' }}
         />
 
-        {/* MiniMap */}
+        {/* MiniMap - positioned above keyboard hints */}
         <MiniMap
           nodeColor={(node: GraphNode) => {
             if (node.type === 'choiceNode') return '#8b5cf6';
@@ -310,6 +352,8 @@ function DialogueGraphInner({
           }}
           maskColor="rgba(0, 0, 0, 0.6)"
           className="dialogue-graph-minimap"
+          position="bottom-right"
+          style={{ bottom: '70px', right: '16px' }}
         />
       </ReactFlow>
 

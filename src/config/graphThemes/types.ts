@@ -150,4 +150,20 @@ export interface GraphTheme {
     /** Show drag handle indicators (emoji on handles) */
     showDragIndicators?: boolean;
   };
+
+  /** SERP-8: Serpentine layout colors (for row differentiation) */
+  serpentine?: {
+    /** Colors for alternating rows (will cycle through this array) */
+    rowColors: string[];
+    /** Opacity to apply to row background colors (0-1) */
+    rowOpacity: number;
+    /** Border highlight for START badge */
+    startBadgeColor: string;
+    /** Border highlight for FIN badge */
+    endBadgeColor: string;
+    /** Color for flow direction arrows */
+    flowArrowColor: string;
+    /** Color for row transition indicators */
+    rowTransitionColor: string;
+  };
 }

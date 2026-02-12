@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { Dialogue, DialogueChoice, DialogueAudio, Effect, DiceCheck } from '@/types';
 import type { ComplexityLevel } from './useDialogueWizardState';
+import type { SituationTemplate } from '@/config/dialogueTemplates';
 
-/** Default stat for dice checks. TODO: align with GAME_STATS when i18n is implemented */
-const DEFAULT_DICE_STAT = 'Empathie';
+/** Default stat for dice checks — aligned with GAME_STATS.MENTALE */
+const DEFAULT_DICE_STAT = 'mentale';
 
 /**
  * Response data for branch responses (after player choice)
@@ -35,6 +36,7 @@ export interface DialogueFormActions {
   updateResponse: (index: number, updates: Partial<ResponseData>) => void;
   addChoice: () => void;
   removeChoice: (index: number) => void;
+  applyTemplate: (template: SituationTemplate) => void;
   reset: () => void;
 }
 
@@ -239,6 +241,32 @@ export function useDialogueForm(
     }));
   }, []);
 
+  const applyTemplate = useCallback((template: SituationTemplate) => {
+    setFormData(prev => ({
+      ...prev,
+      speaker: template.prefill.speaker ?? prev.speaker,
+      text: template.prefill.text ?? prev.text,
+      choices: template.prefill.choices
+        ? template.prefill.choices.map((c, i) => ({
+            id: `choice-tpl-${i}-${Date.now()}`,
+            text: c.text,
+            effects: c.effects,
+            ...(c.diceCheck
+              ? {
+                  diceCheck: {
+                    stat: c.diceCheck.stat,
+                    difficulty: c.diceCheck.difficulty,
+                    success: {},
+                    failure: {},
+                  },
+                  actionType: 'diceCheck' as const,
+                }
+              : {}),
+          }))
+        : prev.choices,
+    }));
+  }, []);
+
   const reset = useCallback(() => {
     setFormData({
       speaker: '',
@@ -256,6 +284,7 @@ export function useDialogueForm(
     updateResponse,
     addChoice,
     removeChoice,
+    applyTemplate,
     reset
   };
 

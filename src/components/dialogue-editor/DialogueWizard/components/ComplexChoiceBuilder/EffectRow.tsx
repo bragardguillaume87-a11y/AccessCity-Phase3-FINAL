@@ -25,9 +25,8 @@ const OPERATIONS = [
 ];
 
 const VARIABLES = [
-  { value: GAME_STATS.EMPATHY, label: '💗 Empathie' },
-  { value: GAME_STATS.AUTONOMY, label: '🦅 Autonomie' },
-  { value: GAME_STATS.CONFIDENCE, label: '💪 Confiance' },
+  { value: GAME_STATS.PHYSIQUE, label: '🏥 Physique' },
+  { value: GAME_STATS.MENTALE, label: '🧠 Mentale' },
 ];
 
 export function EffectRow({ effect, onUpdate, onRemove }: EffectRowProps) {

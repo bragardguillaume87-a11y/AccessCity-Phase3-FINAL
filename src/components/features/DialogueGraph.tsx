@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -13,7 +13,8 @@ import {
   FitViewOptions,
   Connection,
   NodeChange,
-  applyNodeChanges
+  applyNodeChanges,
+  reconnectEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './DialogueGraph.css';
@@ -21,17 +22,20 @@ import './DialogueGraph.css';
 import { useDialogueGraph } from '../../hooks/useDialogueGraph';
 import { useDialogueGraphActions } from '../../hooks/useDialogueGraphActions';
 import { useSerpentineSync } from '../../hooks/useSerpentineSync';
-import { nodeTypes } from './DialogueGraphNodes.tsx';
+import { nodeTypes } from './graph-nodes';
 import { useValidation } from '../../hooks/useValidation';
-import { dialogueNodeId } from '@/config/handleConfig';
+import { dialogueNodeId, CHOICE_HANDLE_PREFIX } from '@/config/handleConfig';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
-import { CosmosEdgeGradients } from './CosmosEdgeGradients'; // PHASE 8: SVG gradients for cosmos edges
-import { CosmosChoiceEdge } from './CosmosChoiceEdge'; // PHASE 10: Custom edge with speech bubble
-import type { Scene, DialogueNodeData, TerminalNodeData } from '@/types';
+import { COSMOS_THEME_ID } from '@/config/layoutConfig';
+import { CosmosEdgeGradients } from './CosmosEdgeGradients';
+import { CosmosChoiceEdge } from './CosmosChoiceEdge';
+import { CosmosConvergenceEdge } from './CosmosConvergenceEdge';
+import type { Scene, DialogueNodeData, TerminalNodeData, ValidationProblem } from '@/types';
 
-// PHASE 10: Custom edge types for animated speech bubbles
+// Custom edge types: CosmosChoiceEdge (hover bubbles) + CosmosConvergenceEdge (fan routing)
 const edgeTypes = {
   cosmosChoice: CosmosChoiceEdge,
+  cosmosConvergence: CosmosConvergenceEdge,
 };
 
 /**
@@ -90,7 +94,10 @@ function DialogueGraphInner({
   const { nodes: dagreNodes, edges } = useDialogueGraph(
     dialogues,
     sceneId,
-    validation as { errors?: { dialogues?: Record<string, any[]> } } | null,
+    // A3-FIX: Intentional bridge cast — ValidationError from useValidation
+  // is structurally similar to ValidationProblem (both use 'error'/'warning')
+  // but have different field names. Using unknown as intermediate is explicit.
+  validation as unknown as { errors?: { dialogues?: Record<string, ValidationProblem[]> } } | null,
     layoutDirection,  // PHASE 3.5: Pass layout direction to Dagre
     theme  // PHASE 4: Pass theme for dynamic edge styles
   );
@@ -110,6 +117,8 @@ function DialogueGraphInner({
 
   // SERP-7: Local state for edges (enables dynamic handle updates)
   const [localEdges, setLocalEdges] = useState<Edge[]>(edges);
+  // A1-FIX: Ref to always access the latest localEdges without stale closure
+  const localEdgesRef = useRef<Edge[]>(edges);
 
   const isInitialRender = useRef(true);
   const prevDialoguesLength = useRef(dialogues.length);
@@ -132,6 +141,7 @@ function DialogueGraphInner({
   // This fixes the bug where edges don't appear until a node is interacted with
   useEffect(() => {
     setLocalEdges(edges);
+    localEdgesRef.current = edges;  // A1-FIX: keep ref in sync
   }, [edges]);
 
   // Handle node changes (position, selection) for manual dragging
@@ -145,12 +155,13 @@ function DialogueGraphInner({
   const onNodeDragStop = useCallback(
     (event: React.MouseEvent, node: Node, nodes: Node[]) => {
       if (serpentineEnabled && editMode) {
-        // Use the updated nodes array (includes the dragged node's new position)
-        const updatedEdges = recalculateEdges(nodes as Node[], localEdges);
+        // A1-FIX: Use ref instead of state to avoid stale closure race condition
+        const updatedEdges = recalculateEdges(nodes as Node[], localEdgesRef.current);
         setLocalEdges(updatedEdges);
+        localEdgesRef.current = updatedEdges;
       }
     },
-    [serpentineEnabled, editMode, localEdges, recalculateEdges]
+    [serpentineEnabled, editMode, recalculateEdges]
   );
 
   // Fit view on mount and when nodes change
@@ -198,20 +209,49 @@ function DialogueGraphInner({
     }
   }, [sceneId, onSelectDialogue, editMode, actions]);
 
-  // Handle connections (PHASE 2: edit mode only)
+  // Handle new connections (PHASE 2: edit mode only)
+  // Routes to choice reconnection or dialogue-to-dialogue reconnection based on handle type
   const onConnect = useCallback((params: Connection) => {
-    if (editMode) {
+    if (!editMode) return;
+    const isChoiceHandle = params.sourceHandle?.startsWith(CHOICE_HANDLE_PREFIX);
+    if (isChoiceHandle) {
       actions.handleReconnectChoice(params);
-      // PHASE 4: Cosmos sparkle effect on connection
-      // Use center of viewport as fallback position
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      actions.handleConnectionEffect(centerX, centerY);
+    } else {
+      actions.handleReconnectDialogue(params);
     }
+    actions.handleConnectionEffect(window.innerWidth / 2, window.innerHeight / 2);
   }, [editMode, actions]);
 
-  // Handle keyboard navigation
-  const handleKeyDown = useCallback((event: KeyboardEvent): void => {
+  // Handle drag-to-reconnect on existing edges (VAGUE 4)
+  const onEdgeReconnect = useCallback(
+    (oldEdge: Edge, newConnection: Connection) => {
+      if (!editMode) return;
+      setLocalEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+      localEdgesRef.current = reconnectEdge(oldEdge, newConnection, localEdgesRef.current);
+      const isChoiceEdge = oldEdge.sourceHandle?.startsWith(CHOICE_HANDLE_PREFIX);
+      if (isChoiceEdge) {
+        actions.handleReconnectChoice(newConnection);
+      } else {
+        actions.handleReconnectDialogue(newConnection);
+      }
+    },
+    [editMode, actions]
+  );
+
+  // Validate connection before allowing it (VAGUE 4)
+  const isValidConnection = useCallback(
+    (connection: Connection): boolean => {
+      const { source, target } = connection;
+      if (!source || !target) return false;
+      if (source === target) return false;           // no self-loops
+      if (target.includes('-terminal')) return false; // terminal nodes are only targets for scene jumps
+      return true;
+    },
+    []
+  );
+
+  // Handle keyboard navigation (scoped to graph container, not window)
+  const handleKeyDown = useCallback((event: React.KeyboardEvent): void => {
     if (!selectedNodeId) return;
 
     const currentIndex = localNodes.findIndex((n: GraphNode) => n.id === selectedNodeId);
@@ -270,12 +310,6 @@ function DialogueGraphInner({
     }
   }, [selectedNodeId, localNodes, sceneId, onSelectDialogue, editMode, actions]);
 
-  // Attach keyboard listener
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
   // Check if node is selected
   const getNodeClassName = useCallback((node: GraphNode): string => {
     return node.id === selectedNodeId ? 'selected' : '';
@@ -298,16 +332,21 @@ function DialogueGraphInner({
     );
   }
 
+  const nodesWithSelection = useMemo(
+    () => localNodes.map((node: GraphNode) => ({
+      ...node,
+      selected: node.id === selectedNodeId
+    })),
+    [localNodes, selectedNodeId]
+  );
+
   return (
-    <div className="dialogue-graph-container">
+    <div className="dialogue-graph-container" onKeyDown={handleKeyDown} tabIndex={-1} data-edit-mode={editMode}>
       {/* PHASE 8: SVG gradients for cosmos edges */}
-      {theme.id === 'cosmos' && <CosmosEdgeGradients />}
+      {theme.id === COSMOS_THEME_ID && <CosmosEdgeGradients />}
 
       <ReactFlow
-        nodes={localNodes.map((node: GraphNode) => ({
-          ...node,
-          selected: node.id === selectedNodeId
-        }))}
+        nodes={nodesWithSelection}
         edges={localEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -316,6 +355,9 @@ function DialogueGraphInner({
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onConnect={editMode ? onConnect : undefined}
+        onReconnect={editMode ? onEdgeReconnect : undefined}
+        reconnectRadius={20}
+        isValidConnection={isValidConnection}
         nodesDraggable={editMode}
         fitView
         fitViewOptions={{ padding: 0.2 }}

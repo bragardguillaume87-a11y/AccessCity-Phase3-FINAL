@@ -1,4 +1,5 @@
-import type { SerpentineNodeData } from '@/types';
+import React from 'react';
+import type { NodeLayoutResult } from '@/hooks/useNodeLayout';
 
 /**
  * SerpentineBadge - Visual indicators for serpentine layout
@@ -8,6 +9,8 @@ import type { SerpentineNodeData } from '@/types';
  * - FIN badge on the last node of the serpentine flow
  * - Row indicator showing which row the node is in
  *
+ * All positions come from useNodeLayout — zero directional logic here.
+ *
  * Design choices for children:
  * - Emojis for instant recognition
  * - High contrast colors (WCAG AA compliant)
@@ -16,9 +19,7 @@ import type { SerpentineNodeData } from '@/types';
  */
 
 interface SerpentineBadgeProps {
-  serpentine: SerpentineNodeData;
-  /** Show row number badge (optional, for debugging or advanced view) */
-  showRowNumber?: boolean;
+  layout: NodeLayoutResult;
 }
 
 /**
@@ -97,49 +98,38 @@ function EndBadge() {
 
 /**
  * SerpentineBadge - Main component that renders appropriate badges
+ * Visibility comes from layout hook — no directional checks here.
  */
-export function SerpentineBadge({ serpentine }: SerpentineBadgeProps) {
-  const { isFirst, isLast } = serpentine;
-
+export const SerpentineBadge = React.memo(function SerpentineBadge({ layout }: SerpentineBadgeProps) {
   return (
     <>
       {/* START badge - only on first node of entire flow */}
-      {isFirst && <StartBadge />}
+      {layout.startBadge.visible && <StartBadge />}
 
       {/* FIN badge - only on last node of entire flow */}
-      {isLast && <EndBadge />}
+      {layout.finBadge.visible && <EndBadge />}
     </>
   );
-}
+});
 
 /**
  * SerpentineRowIndicator - Subtle row color indicator
- * Adds a glowing colored bar on the left side of the node to indicate which row it belongs to
- * The color alternates based on the row index for easy visual grouping
+ * Adds a glowing colored bar to indicate which row the node belongs to.
+ * Side and color come from useNodeLayout — no hardcoded positions.
  */
 interface SerpentineRowIndicatorProps {
-  rowIndex: number;
-  /** Optional custom colors from theme (uses defaults if not provided) */
-  rowColors?: string[];
+  layout: NodeLayoutResult;
 }
 
-// Default row colors (cosmic theme - used if theme doesn't provide custom ones)
-const DEFAULT_ROW_COLORS = [
-  'rgba(59, 130, 246, 0.7)',   // Row 0: Blue nebula
-  'rgba(139, 92, 246, 0.7)',   // Row 1: Purple nebula
-  'rgba(6, 182, 212, 0.7)',    // Row 2: Cyan nebula
-  'rgba(16, 185, 129, 0.7)',   // Row 3: Emerald nebula
-];
-
-export function SerpentineRowIndicator({ rowIndex, rowColors = DEFAULT_ROW_COLORS }: SerpentineRowIndicatorProps) {
-  const color = rowColors[rowIndex % rowColors.length];
+export const SerpentineRowIndicator = React.memo(function SerpentineRowIndicator({ layout }: SerpentineRowIndicatorProps) {
+  const { side, color } = layout.rowIndicator;
 
   return (
     <div
       className="serpentine-row-indicator"
       style={{
         position: 'absolute',
-        left: '-2px',
+        [side]: '-2px',
         top: '15%',
         bottom: '15%',
         width: '4px',
@@ -152,9 +142,8 @@ export function SerpentineRowIndicator({ rowIndex, rowColors = DEFAULT_ROW_COLOR
         pointerEvents: 'none',
       }}
       aria-hidden="true"
-      title={`Rangée ${rowIndex + 1}`}
     />
   );
-}
+});
 
 export default SerpentineBadge;

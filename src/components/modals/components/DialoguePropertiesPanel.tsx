@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useScenesStore } from '@/stores';
 import { useCharactersStore } from '@/stores';
-import { useGraphTheme, useIsCosmosTheme } from '@/hooks/useGraphTheme';
+import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import type { Dialogue } from '@/types';
 
@@ -54,7 +54,6 @@ export function DialoguePropertiesPanel({
   const characters = useCharactersStore((state) => state.characters);
 
   // Theme
-  const theme = useGraphTheme();
   const isCosmosTheme = useIsCosmosTheme();
   const { celebrateNodeCreation } = useCosmosEffects();
 

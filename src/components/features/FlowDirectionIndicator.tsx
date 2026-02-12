@@ -1,7 +1,11 @@
-import type { SerpentineNodeData } from '@/types';
+import React from 'react';
+import type { NodeLayoutResult } from '@/hooks/useNodeLayout';
 
 /**
  * FlowDirectionIndicator - Visual cues for serpentine flow direction
+ *
+ * Consumes pre-computed layout from useNodeLayout hook.
+ * Zero directional logic — all positions come from the layout strategy.
  *
  * OPTIMIZED for children (8+):
  * - Large, high-contrast indicators (40px+)
@@ -12,25 +16,19 @@ import type { SerpentineNodeData } from '@/types';
  */
 
 interface FlowDirectionIndicatorProps {
-  serpentine: SerpentineNodeData;
-  /** Optional: show all indicators even if not at row transition */
-  showAll?: boolean;
+  layout: NodeLayoutResult;
 }
 
 /**
  * RowTransitionIndicator - Shown at the end of a row to indicate flow goes down
- * LARGE and VISIBLE for children
  */
-function RowTransitionIndicator({ flowDirection }: { flowDirection: 'ltr' | 'rtl' }) {
-  const isLTR = flowDirection === 'ltr';
-
+function RowTransitionIndicator({ side }: { side: 'left' | 'right' }) {
   return (
     <div
       className="row-transition-indicator"
       style={{
         position: 'absolute',
-        // Position at the side where the row ends (right for LTR, left for RTL)
-        [isLTR ? 'right' : 'left']: '-20px',
+        [side]: '-20px',
         bottom: '-50px',
         display: 'flex',
         flexDirection: 'column',
@@ -51,7 +49,6 @@ function RowTransitionIndicator({ flowDirection }: { flowDirection: 'ltr' | 'rtl
       role="img"
       aria-label="La suite est en dessous"
     >
-      {/* Large arrow emoji */}
       <span
         style={{
           fontSize: '28px',
@@ -62,7 +59,6 @@ function RowTransitionIndicator({ flowDirection }: { flowDirection: 'ltr' | 'rtl
       >
         ⬇️
       </span>
-      {/* Suite label */}
       <span
         style={{
           fontSize: '11px',
@@ -81,22 +77,16 @@ function RowTransitionIndicator({ flowDirection }: { flowDirection: 'ltr' | 'rtl
 
 /**
  * FlowArrowIndicator - Arrow showing flow direction within a row
- * LARGE and HIGH CONTRAST for visibility
  */
-function FlowArrowIndicator({ direction, isLastInRow }: { direction: 'ltr' | 'rtl'; isLastInRow: boolean }) {
-  // Don't show horizontal arrow if this is the last node in row
-  if (isLastInRow) return null;
-
-  const isLTR = direction === 'ltr';
-  const arrowEmoji = isLTR ? '➡️' : '⬅️';
+function FlowArrowIndicator({ side, offset }: { side: 'left' | 'right'; offset: number }) {
+  const arrowEmoji = side === 'right' ? '➡️' : '⬅️';
 
   return (
     <div
       className="flow-arrow-indicator"
       style={{
         position: 'absolute',
-        // Position on the side where the flow continues
-        [isLTR ? 'right' : 'left']: '-45px',
+        [side]: `${-offset}px`,
         top: '50%',
         transform: 'translateY(-50%)',
         display: 'flex',
@@ -116,7 +106,7 @@ function FlowArrowIndicator({ direction, isLastInRow }: { direction: 'ltr' | 'rt
         animation: 'serpentine-pulse 1.2s ease-in-out infinite',
       }}
       role="img"
-      aria-label={`Le flux continue vers la ${isLTR ? 'droite' : 'gauche'}`}
+      aria-label={`Le flux continue vers la ${side === 'right' ? 'droite' : 'gauche'}`}
     >
       <span
         style={{
@@ -133,20 +123,15 @@ function FlowArrowIndicator({ direction, isLastInRow }: { direction: 'ltr' | 'rt
 }
 
 /**
- * RowNumberBadge - Shows the current row number (optional)
- * Helps children understand they're progressing through rows
+ * RowNumberBadge - Shows the current row number
  */
-function RowNumberBadge({ rowIndex, flowDirection }: { rowIndex: number; flowDirection: 'ltr' | 'rtl' }) {
-  const isLTR = flowDirection === 'ltr';
-  const rowNumber = rowIndex + 1;
-
+function RowNumberBadge({ side, number }: { side: 'left' | 'right'; number: number }) {
   return (
     <div
       className="row-number-badge"
       style={{
         position: 'absolute',
-        // Position on the starting side of the flow
-        [isLTR ? 'left' : 'right']: '-12px',
+        [side]: '-12px',
         top: '-12px',
         display: 'flex',
         alignItems: 'center',
@@ -154,7 +139,7 @@ function RowNumberBadge({ rowIndex, flowDirection }: { rowIndex: number; flowDir
         width: '28px',
         height: '28px',
         borderRadius: '50%',
-        background: rowIndex % 2 === 0
+        background: (number - 1) % 2 === 0
           ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
           : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
         border: '2px solid rgba(255, 255, 255, 0.9)',
@@ -165,10 +150,10 @@ function RowNumberBadge({ rowIndex, flowDirection }: { rowIndex: number; flowDir
         color: '#ffffff',
         textShadow: '0 1px 2px rgba(0,0,0,0.3)',
       }}
-      title={`Rangée ${rowNumber}`}
-      aria-label={`Rangée ${rowNumber}`}
+      title={`Rangée ${number}`}
+      aria-label={`Rangée ${number}`}
     >
-      {rowNumber}
+      {number}
     </div>
   );
 }
@@ -176,31 +161,24 @@ function RowNumberBadge({ rowIndex, flowDirection }: { rowIndex: number; flowDir
 /**
  * FlowDirectionIndicator - Main component
  *
- * Shows appropriate flow indicators based on node position:
- * - Flow arrow: on all nodes except last in row (shows direction)
- * - Row transition: at end of row (shows "Suite" down arrow)
- * - Row number: on first node of each row (shows row number)
+ * All positions come from the layout hook — no directional checks here.
  */
-export function FlowDirectionIndicator({ serpentine, showAll = false }: FlowDirectionIndicatorProps) {
-  const { flowDirection, isLastInRow, isLast, isFirstInRow, rowIndex } = serpentine;
-
-  // Don't show any indicator on the very last node of the serpentine
-  if (isLast) return null;
-
+export const FlowDirectionIndicator = React.memo(function FlowDirectionIndicator({ layout }: FlowDirectionIndicatorProps) {
   return (
     <>
-      {/* Row number badge - on first node of each row */}
-      {isFirstInRow && <RowNumberBadge rowIndex={rowIndex} flowDirection={flowDirection} />}
-
-      {/* Flow arrow (horizontal) - only if NOT last in row */}
-      {(showAll || !isLastInRow) && (
-        <FlowArrowIndicator direction={flowDirection} isLastInRow={isLastInRow} />
+      {layout.rowBadge.visible && (
+        <RowNumberBadge side={layout.rowBadge.side} number={layout.rowBadge.number} />
       )}
 
-      {/* Row transition indicator (down arrow) - only at end of row */}
-      {isLastInRow && <RowTransitionIndicator flowDirection={flowDirection} />}
+      {layout.flowArrow.visible && (
+        <FlowArrowIndicator side={layout.flowArrow.side} offset={layout.flowArrow.offset} />
+      )}
+
+      {layout.rowTransition.visible && (
+        <RowTransitionIndicator side={layout.rowTransition.side} />
+      )}
     </>
   );
-}
+});
 
 export default FlowDirectionIndicator;

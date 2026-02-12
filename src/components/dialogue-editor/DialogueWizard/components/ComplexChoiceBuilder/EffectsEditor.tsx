@@ -13,7 +13,7 @@ interface EffectsEditorProps {
 export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
   const handleAddEffect = () => {
     const newEffect: Effect = {
-      variable: GAME_STATS.EMPATHY,
+      variable: GAME_STATS.PHYSIQUE,
       operation: 'add',
       value: 5,
     };

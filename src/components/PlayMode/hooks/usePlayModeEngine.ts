@@ -71,9 +71,8 @@ export function usePlayModeEngine({
   const [currentDialogue, setCurrentDialogue] = useState<Dialogue | null>(null);
   const [isEnded, setIsEnded] = useState(false);
   const [variables, setVariables] = useState<GameStats>({
-    [GAME_STATS.EMPATHY]: GAME_THRESHOLDS.INITIAL_STAT_VALUE,
-    [GAME_STATS.AUTONOMY]: GAME_THRESHOLDS.INITIAL_STAT_VALUE,
-    [GAME_STATS.CONFIDENCE]: GAME_THRESHOLDS.INITIAL_STAT_VALUE,
+    [GAME_STATS.PHYSIQUE]: 100,
+    [GAME_STATS.MENTALE]: 100,
   });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,10 +179,9 @@ export function usePlayModeEngine({
       const ended = director.isGameOver();
       if (ended) {
         const avgScore =
-          (director.gameState[GAME_STATS.EMPATHY] +
-            director.gameState[GAME_STATS.AUTONOMY] +
-            director.gameState[GAME_STATS.CONFIDENCE]) /
-          3;
+          (director.gameState[GAME_STATS.PHYSIQUE] +
+            director.gameState[GAME_STATS.MENTALE]) /
+          2;
 
         if (avgScore >= GAME_THRESHOLDS.VICTORY_SCORE) {
           playSound('/sounds/victory.mp3', 0.6);

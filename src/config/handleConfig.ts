@@ -167,3 +167,41 @@ export function extractDialogueIndex(nodeId: string): number {
   const parts = nodeId.split(NODE_ID_SEPARATOR);
   return parseInt(parts[parts.length - 1], 10);
 }
+
+/** Extract dialogue index with validation. Returns -1 if invalid or negative. */
+export function safeExtractDialogueIndex(nodeId: string): number {
+  const index = extractDialogueIndex(nodeId);
+  return (Number.isNaN(index) || index < 0) ? -1 : index;
+}
+
+/** Extract scene ID from a dialogue node ID (format: "sceneId-d-index") */
+export function extractSceneId(nodeId: string): string {
+  const sepIndex = nodeId.indexOf(NODE_ID_SEPARATOR);
+  return sepIndex === -1 ? nodeId : nodeId.substring(0, sepIndex);
+}
+
+// ─── Serpentine Edge Recalculation (shared pure function) ────
+
+/**
+ * Recalculate edge handles for serpentine routing based on node positions.
+ * Pure function — no React dependencies. Used by both useSerpentineSync hook
+ * and applySerpentineEdgeRouting utility.
+ */
+export function recalculateSerpentineEdges<
+  E extends { source: string; target: string; sourceHandle?: string | null }
+>(
+  nodes: Array<{ id: string; position: { x: number; y: number } }>,
+  edges: E[]
+): E[] {
+  if (nodes.length === 0) return edges;
+  const nodeRowMap = buildNodeRowMap(nodes);
+  return edges.map(edge => {
+    const sourceInfo = nodeRowMap.get(edge.source);
+    const targetInfo = nodeRowMap.get(edge.target);
+    if (!sourceInfo || !targetInfo) return edge;
+    const { sourceHandle, targetHandle } = getSerpentineHandles(
+      sourceInfo.rowIndex, targetInfo.rowIndex, edge.sourceHandle
+    );
+    return { ...edge, sourceHandle, targetHandle };
+  });
+}

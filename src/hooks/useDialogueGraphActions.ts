@@ -4,7 +4,7 @@ import { useScenesStore, useUIStore } from '@/stores';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import type { ComplexityLevel } from '@/components/dialogue-editor/DialogueWizard/hooks/useDialogueWizardState';
-import { CHOICE_HANDLE_PREFIX, extractDialogueIndex } from '@/config/handleConfig';
+import { CHOICE_HANDLE_PREFIX, safeExtractDialogueIndex } from '@/config/handleConfig';
 
 /**
  * useDialogueGraphActions - Hook centralisant les actions d'édition du graphe de dialogues
@@ -35,7 +35,8 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {
-      const index = extractDialogueIndex(nodeId);
+      const index = safeExtractDialogueIndex(nodeId);
+      if (index < 0) return;
       setSelectedSceneForEdit(sceneId);
       setEditDialogueIndex(index);
       setWizardOpen(true);
@@ -48,7 +49,8 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
-      const index = extractDialogueIndex(nodeId);
+      const index = safeExtractDialogueIndex(nodeId);
+      if (index < 0) return;
       deleteDialogue(sceneId, index);
       // PHASE 4: Cosmos flash effect on delete
       if (isCosmosTheme) {
@@ -63,7 +65,8 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleDuplicateNode = useCallback(
     (nodeId: string) => {
-      const index = extractDialogueIndex(nodeId);
+      const index = safeExtractDialogueIndex(nodeId);
+      if (index < 0) return;
       duplicateDialogue(sceneId, index);
       // PHASE 4: Cosmos confetti effect on duplicate (node creation)
       if (isCosmosTheme) {
@@ -110,10 +113,12 @@ export function useDialogueGraphActions(sceneId: string) {
       if (!source || !sourceHandle || !target) return;
 
       // Extraire l'index du dialogue source
-      const sourceIndex = extractDialogueIndex(source);
+      const sourceIndex = safeExtractDialogueIndex(source);
+      if (sourceIndex < 0) return;
 
       // Extraire l'index du choix depuis le handle ID (format: "choice-0", "choice-1")
-      const choiceIndex = parseInt(sourceHandle.replace(CHOICE_HANDLE_PREFIX, '') || '0', 10);
+      const rawChoiceIndex = sourceHandle.replace(CHOICE_HANDLE_PREFIX, '');
+      const choiceIndex = rawChoiceIndex ? parseInt(rawChoiceIndex, 10) : 0;
 
       // Récupérer le dialogue source depuis le store
       const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
@@ -129,7 +134,8 @@ export function useDialogueGraphActions(sceneId: string) {
       }
 
       // Extract target dialogue index from node ID and get actual dialogue ID
-      const targetIndex = extractDialogueIndex(target);
+      const targetIndex = safeExtractDialogueIndex(target);
+      if (targetIndex < 0) return;
       const targetDialogue = scene?.dialogues[targetIndex];
 
       if (!targetDialogue) {
@@ -150,7 +156,29 @@ export function useDialogueGraphActions(sceneId: string) {
   );
 
   /**
-   * 6. Effet sparkle lors d'une connexion (PHASE 4 - Cosmos)
+   * 6. Reconnecter un dialogue direct (drag handle standard → target)
+   * Met à jour dialogue.nextDialogueId pour créer une connexion explicite
+   */
+  const handleReconnectDialogue = useCallback(
+    (params: Connection) => {
+      const { source, target } = params;
+      if (!source || !target || source === target) return;
+
+      const sourceIndex = safeExtractDialogueIndex(source);
+      const targetIndex = safeExtractDialogueIndex(target);
+      if (sourceIndex < 0 || targetIndex < 0) return;
+
+      const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
+      const targetDialogue = scene?.dialogues[targetIndex];
+      if (!targetDialogue) return;
+
+      updateDialogue(sceneId, sourceIndex, { nextDialogueId: targetDialogue.id });
+    },
+    [sceneId, updateDialogue]
+  );
+
+  /**
+   * 7. Effet sparkle lors d'une connexion (PHASE 4 - Cosmos)
    */
   const handleConnectionEffect = useCallback(
     (x: number, y: number) => {
@@ -167,6 +195,7 @@ export function useDialogueGraphActions(sceneId: string) {
     handleDuplicateNode,
     handleCreateDialogue,
     handleReconnectChoice,
+    handleReconnectDialogue,
     handleConnectionEffect,
     // Export for external use
     isCosmosTheme,

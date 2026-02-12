@@ -4,10 +4,10 @@
  * Returns the current theme object based on the theme ID stored in uiStore.
  * Falls back to default theme if the selected theme doesn't exist.
  */
-import { useMemo } from 'react';
 import { useUIStore } from '@/stores';
 import { GRAPH_THEMES, DEFAULT_THEME_ID } from '@/config/graphThemes';
 import type { GraphTheme } from '@/config/graphThemes/types';
+import { COSMOS_THEME_ID } from '@/config/layoutConfig';
 
 /**
  * Hook to get the currently active graph theme
@@ -33,9 +33,7 @@ import type { GraphTheme } from '@/config/graphThemes/types';
 export function useGraphTheme(): GraphTheme {
   const themeId = useUIStore((state) => state.graphThemeId);
 
-  return useMemo(() => {
-    return GRAPH_THEMES[themeId] || GRAPH_THEMES[DEFAULT_THEME_ID];
-  }, [themeId]);
+  return GRAPH_THEMES[themeId] || GRAPH_THEMES[DEFAULT_THEME_ID];
 }
 
 /**
@@ -60,5 +58,5 @@ export function useGraphThemeId(): {
  */
 export function useIsCosmosTheme(): boolean {
   const themeId = useUIStore((state) => state.graphThemeId);
-  return themeId === 'cosmos';
+  return themeId === COSMOS_THEME_ID;
 }

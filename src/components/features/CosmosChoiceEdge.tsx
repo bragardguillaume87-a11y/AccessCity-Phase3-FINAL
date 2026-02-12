@@ -61,6 +61,8 @@ export function CosmosChoiceEdge({
               zIndex: 1000,
             }}
             className="cosmos-choice-bubble"
+            role="tooltip"
+            aria-label={`Choix : ${choiceText}`}
           >
             {/* Speech bubble container */}
             <div
@@ -87,7 +89,7 @@ export function CosmosChoiceEdge({
                   textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                 }}
               >
-                💬 {choiceText}
+                <span aria-hidden="true">💬</span> {choiceText}
               </p>
 
               {/* Speech bubble tail (pointing down to edge) */}

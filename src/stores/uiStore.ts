@@ -41,7 +41,7 @@ function persistThemeId(themeId: string): void {
 /**
  * SERP-5: Serpentine configuration type
  */
-interface SerpentineConfig {
+export interface SerpentineConfig {
   enabled: boolean;
   mode: 'auto-y' | 'by-count';
   groupSize: number;
@@ -52,7 +52,7 @@ interface SerpentineConfig {
  */
 function getPersistedSerpentineConfig(): SerpentineConfig {
   if (typeof window === 'undefined') {
-    return { enabled: false, mode: 'auto-y', groupSize: 6 };
+    return { enabled: false, mode: 'by-count', groupSize: 6 };
   }
   try {
     const stored = localStorage.getItem(SERPENTINE_CONFIG_KEY);
@@ -60,14 +60,16 @@ function getPersistedSerpentineConfig(): SerpentineConfig {
       const parsed = JSON.parse(stored);
       return {
         enabled: parsed.enabled ?? false,
-        mode: parsed.mode ?? 'auto-y',
+        // 'by-count' is the reliable default: narrative index order is always correct
+        // for branching structures. Silently migrate any stored 'auto-y' to 'by-count'.
+        mode: (parsed.mode === 'auto-y' || !parsed.mode) ? 'by-count' : parsed.mode,
         groupSize: parsed.groupSize ?? 6,
       };
     }
   } catch {
     // Ignore parse errors
   }
-  return { enabled: false, mode: 'auto-y', groupSize: 6 };
+  return { enabled: false, mode: 'by-count', groupSize: 6 };
 }
 
 /**
@@ -123,6 +125,7 @@ interface UIState {
   setSerpentineEnabled: (enabled: boolean) => void;
   setSerpentineMode: (mode: 'auto-y' | 'by-count') => void;
   setSerpentineGroupSize: (size: number) => void;
+  updateSerpentineConfig: (updates: Partial<SerpentineConfig>) => void;
 }
 
 // ============================================================================
@@ -209,13 +212,25 @@ export const useUIStore = create<UIState>()(
       },
 
       // SERP-5: Serpentine layout actions
+      updateSerpentineConfig: (updates) => {
+        set((state) => {
+          const newConfig: SerpentineConfig = {
+            enabled: updates.enabled ?? state.serpentineEnabled,
+            mode: updates.mode ?? state.serpentineMode,
+            groupSize: updates.groupSize ?? state.serpentineGroupSize,
+          };
+          persistSerpentineConfig(newConfig);
+          return {
+            serpentineEnabled: newConfig.enabled,
+            serpentineMode: newConfig.mode,
+            serpentineGroupSize: newConfig.groupSize,
+          };
+        }, false, 'ui/updateSerpentineConfig');
+      },
+
       setSerpentineEnabled: (enabled) => {
         set((state) => {
-          const newConfig = {
-            enabled,
-            mode: state.serpentineMode,
-            groupSize: state.serpentineGroupSize,
-          };
+          const newConfig: SerpentineConfig = { enabled, mode: state.serpentineMode, groupSize: state.serpentineGroupSize };
           persistSerpentineConfig(newConfig);
           return { serpentineEnabled: enabled };
         }, false, 'ui/setSerpentineEnabled');
@@ -223,11 +238,7 @@ export const useUIStore = create<UIState>()(
 
       setSerpentineMode: (mode) => {
         set((state) => {
-          const newConfig = {
-            enabled: state.serpentineEnabled,
-            mode,
-            groupSize: state.serpentineGroupSize,
-          };
+          const newConfig: SerpentineConfig = { enabled: state.serpentineEnabled, mode, groupSize: state.serpentineGroupSize };
           persistSerpentineConfig(newConfig);
           return { serpentineMode: mode };
         }, false, 'ui/setSerpentineMode');
@@ -235,11 +246,7 @@ export const useUIStore = create<UIState>()(
 
       setSerpentineGroupSize: (size) => {
         set((state) => {
-          const newConfig = {
-            enabled: state.serpentineEnabled,
-            mode: state.serpentineMode,
-            groupSize: size,
-          };
+          const newConfig: SerpentineConfig = { enabled: state.serpentineEnabled, mode: state.serpentineMode, groupSize: size };
           persistSerpentineConfig(newConfig);
           return { serpentineGroupSize: size };
         }, false, 'ui/setSerpentineGroupSize');

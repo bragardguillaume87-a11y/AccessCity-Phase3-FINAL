@@ -200,11 +200,14 @@ export function useValidation(): ValidationResult {
     let totalErrors = 0;
     let totalWarnings = 0;
 
+    // B1-FIX: Build O(1) lookup Set once instead of O(n×m) characters.some() per dialogue
+    const characterIdSet = new Set(characters.map(c => c.id));
+
     // Check if dialogue speakers exist in characters
     scenes.forEach((scene) => {
       (scene.dialogues || []).forEach((dialogue, dIdx) => {
         if (dialogue.speaker && dialogue.speaker.trim() !== '') {
-          const speakerExists = characters.some(c => c.id === dialogue.speaker);
+          const speakerExists = characterIdSet.has(dialogue.speaker);
           if (!speakerExists) {
             const dialogueKey = `${scene.id}-${dIdx}`;
             if (!errors[dialogueKey]) {

@@ -14,9 +14,8 @@
  * This prevents typos and enables refactoring.
  */
 export const GAME_STATS = {
-  EMPATHY: 'empathy',
-  AUTONOMY: 'autonomy',
-  CONFIDENCE: 'confidence',
+  PHYSIQUE: 'physique',
+  MENTALE: 'mentale',
 } as const;
 
 export type GameStatKey = typeof GAME_STATS[keyof typeof GAME_STATS];
@@ -29,9 +28,8 @@ export type GameStatKey = typeof GAME_STATS[keyof typeof GAME_STATS];
  * Game statistics translations
  */
 export interface GameStatsTranslations {
-  empathy: string;
-  autonomy: string;
-  confidence: string;
+  physique: string;
+  mentale: string;
 }
 
 /**

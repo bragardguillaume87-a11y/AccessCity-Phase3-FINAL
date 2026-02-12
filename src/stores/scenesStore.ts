@@ -68,14 +68,24 @@ interface ScenesState {
 // SAMPLE DATA
 // ============================================================================
 
+// ─── Scene 1 : Rencontre Mairie ──────────────────────────────────────────────
+// Structure linéaire : 10 dialogues illustrant tous les types disponibles.
+//
+// Rangée 0 (→) : d0 narrateur · d1 conseiller · d2 joueur · d3 conseiller(choix binaire) · d4 réponse-A · d5 réponse-B
+// Rangée 1 (←) : d6 conseiller(dés) · d7 succès · d8 échec · d9 narrateur(fin)
+//
+// Types utilisés :
+//   • Dialogue simple   — d0, d1, d2, d7, d8, d9
+//   • Choix binaire     — d3 (2 branches → d4 ou d5, convergent sur d6)
+//   • Réponse (isResponse) — d4, d5
+//   • Dés magiques      — d6 (DiceCheck stat:Mentale, difficulty:50)
 const SAMPLE_SCENES: Scene[] = [
   {
     id: "scenetest01",
     title: "Rencontre Mairie",
-    description: "Première rencontre avec le conseiller municipal pour discuter du projet AccessCity.",
+    description: "Première rencontre avec le conseiller municipal pour le projet AccessCity.",
     backgroundUrl: "",
     characters: [
-      // Player character (left position)
       {
         id: "scene-char-player-01",
         characterId: 'player',
@@ -85,7 +95,6 @@ const SAMPLE_SCENES: Scene[] = [
         entranceAnimation: 'fadeIn',
         exitAnimation: 'none',
       },
-      // Counsellor character (right position)
       {
         id: "scene-char-counsellor-01",
         characterId: 'counsellor',
@@ -99,64 +108,127 @@ const SAMPLE_SCENES: Scene[] = [
     textBoxes: [],
     props: [],
     dialogues: [
+      // ── d0 · Narrateur simple ────────────────────────────────────────────
       {
-        id: "dialogue-01-01",
+        id: "d01-00",
         speaker: "narrator",
-        text: "Vous arrivez devant la mairie pour présenter votre projet AccessCity, une initiative visant à rendre la ville plus accessible aux personnes à mobilité réduite.",
+        text: "Vous arrivez devant la mairie pour présenter AccessCity — une initiative pour rendre la ville accessible à tous.",
         choices: [],
+        stageDirections: "Le joueur s'arrête devant l'entrée principale.",
       },
+      // ── d1 · Conseiller simple ───────────────────────────────────────────
       {
-        id: "dialogue-01-02",
+        id: "d01-01",
         speaker: "counsellor",
-        text: "Bonjour ! Bienvenue à la mairie. J'ai hâte de discuter de votre projet avec vous.",
+        text: "Bonjour ! Je suis le conseiller Dupont. J'ai entendu parler de votre projet — je suis impatient d'en savoir plus.",
         choices: [],
+        speakerMood: "happy",
       },
+      // ── d2 · Joueur simple ───────────────────────────────────────────────
       {
-        id: "dialogue-01-03",
+        id: "d01-02",
         speaker: "player",
-        text: "Bonjour ! Merci de me recevoir.",
+        text: "Merci de me recevoir, monsieur. AccessCity vise à cartographier et corriger tous les obstacles à l'accessibilité dans notre quartier.",
         choices: [],
       },
+      // ── d3 · Choix binaire ───────────────────────────────────────────────
       {
-        id: "dialogue-01-04",
+        id: "d01-03",
         speaker: "counsellor",
-        text: "Alors, parlez-moi de ce projet AccessCity. Comment comptez-vous améliorer l'accessibilité de notre ville ?",
-        choices: [],
-      },
-      {
-        id: "dialogue-01-05",
-        speaker: "player",
-        text: "...",
+        text: "Intéressant. Quelle sera votre première priorité sur le terrain ?",
         choices: [
           {
-            id: "choice-01-05-01",
-            text: "Nous allons cartographier tous les points d'accès problématiques et proposer des solutions concrètes !",
-            effects: [{ variable: "Mentale", value: 5, operation: "add" }],
-            nextDialogueId: "dialogue-01-06",  // PHASE 3.5: Connect to counsellor's response
+            id: "c01-03-A",
+            text: "Les rampes d'accès : elles bloquent les fauteuils roulants.",
+            effects: [{ variable: "mentale", value: 5, operation: "add" }],
+            actionType: "continue",
+            nextDialogueId: "d01-04",
           },
           {
-            id: "choice-01-05-02",
-            text: "Je n'ai pas beaucoup de temps pour les détails, mais c'est un projet important.",
-            effects: [{ variable: "Mentale", value: -5, operation: "add" }],
-            nextDialogueId: "dialogue-01-06",  // PHASE 3.5: Connect to counsellor's response
+            id: "c01-03-B",
+            text: "La signalétique : les personnes malvoyantes sont aussi concernées.",
+            effects: [{ variable: "mentale", value: 3, operation: "add" }],
+            actionType: "continue",
+            nextDialogueId: "d01-05",
           },
         ],
       },
+      // ── d4 · Réponse A (isResponse) ──────────────────────────────────────
       {
-        id: "dialogue-01-06",
+        id: "d01-04",
         speaker: "counsellor",
-        text: "Excellent ! J'approuve votre approche. Tenez-moi au courant de vos progrès.",
+        text: "Excellent choix ! Les rampes sont souvent négligées. Votre approche est très concrète.",
         choices: [],
+        isResponse: true,
+        speakerMood: "happy",
+        nextDialogueId: "d01-06",
+      },
+      // ── d5 · Réponse B (isResponse) ──────────────────────────────────────
+      {
+        id: "d01-05",
+        speaker: "counsellor",
+        text: "Très juste ! La signalétique profite à tout le monde — et c'est souvent peu coûteux à corriger.",
+        choices: [],
+        isResponse: true,
+        speakerMood: "happy",
+        nextDialogueId: "d01-06",
+      },
+      // ── d6 · Dés magiques ─────────────────────────────────────────────────
+      {
+        id: "d01-06",
+        speaker: "counsellor",
+        text: "Avant de vous accorder un budget, je dois m'assurer que vous pouvez défendre ce projet devant le conseil. Êtes-vous prêt ?",
+        choices: [
+          {
+            id: "c01-06-dice",
+            text: "Je tente de convaincre le conseil !",
+            effects: [],
+            actionType: "diceCheck",
+            diceCheck: {
+              stat: "mentale",
+              difficulty: 50,
+              success: { nextDialogueId: "d01-07" },
+              failure: { nextDialogueId: "d01-08" },
+            },
+          },
+        ],
+        stageDirections: "Le jet de dés détermine si le joueur convainc le conseil municipal.",
+      },
+      // ── d7 · Succès dés ───────────────────────────────────────────────────
+      {
+        id: "d01-07",
+        speaker: "counsellor",
+        text: "Remarquable ! Votre discours a convaincu le conseil à l'unanimité. Le budget est accordé !",
+        choices: [],
+        speakerMood: "happy",
+        nextDialogueId: "d01-09",
+      },
+      // ── d8 · Échec dés ────────────────────────────────────────────────────
+      {
+        id: "d01-08",
+        speaker: "counsellor",
+        text: "Le conseil hésite encore. Revenez avec des données de terrain plus précises et nous reconsidérerons.",
+        choices: [],
+        speakerMood: "neutral",
+        nextDialogueId: "d01-09",
+      },
+      // ── d9 · Narrateur fin ────────────────────────────────────────────────
+      {
+        id: "d01-09",
+        speaker: "narrator",
+        text: "La rencontre s'est terminée. Votre aventure pour rendre la ville accessible à tous ne fait que commencer.",
+        choices: [],
+        stageDirections: "Le joueur quitte la salle du conseil avec ses notes.",
       },
     ],
   },
+  // ─── Scene 2 : Exploration du quartier ─────────────────────────────────────
   {
     id: "scenetest02",
     title: "Exploration du quartier",
-    description: "Vous commencez à explorer le quartier pour identifier les zones à problèmes.",
+    description: "Recensez les obstacles à l'accessibilité dans le quartier.",
     backgroundUrl: "",
     characters: [
-      // Player character (default position)
       {
         id: "scene-char-player-02",
         characterId: 'player',
@@ -171,37 +243,39 @@ const SAMPLE_SCENES: Scene[] = [
     props: [],
     dialogues: [
       {
-        id: "dialogue-02-01",
+        id: "d02-00",
         speaker: "narrator",
-        text: "Une nouvelle journée commence. Vous sortez dans le quartier avec votre carnet de notes pour recenser les obstacles à l'accessibilité.",
+        text: "Une nouvelle journée commence. Carnet en main, vous sortez recenser les obstacles à l'accessibilité.",
         choices: [],
       },
       {
-        id: "dialogue-02-02",
+        id: "d02-01",
         speaker: "player",
-        text: "Par où commencer ? Il y a tant à faire...",
+        text: "Par où commencer ? Le quartier est vaste...",
         choices: [],
       },
       {
-        id: "dialogue-02-03",
+        id: "d02-02",
         speaker: "narrator",
-        text: "Vous remarquez un trottoir avec une marche trop haute devant la pharmacie. C'est un bon point de départ.",
+        text: "Devant la pharmacie, une marche de 12 cm bloque les fauteuils roulants. C'est un bon point de départ.",
         choices: [],
       },
       {
-        id: "dialogue-02-04",
+        id: "d02-03",
         speaker: "player",
         text: "...",
         choices: [
           {
-            id: "choice-02-04-01",
-            text: "Je prends une photo et note les dimensions exactes.",
-            effects: [{ variable: "Mentale", value: 3, operation: "add" }],
+            id: "c02-03-A",
+            text: "Je mesure et photographie le problème avec précision.",
+            effects: [{ variable: "mentale", value: 5, operation: "add" }],
+            actionType: "continue",
           },
           {
-            id: "choice-02-04-02",
-            text: "Je note rapidement l'emplacement et continue.",
-            effects: [{ variable: "Mentale", value: 1, operation: "add" }],
+            id: "c02-03-B",
+            text: "Je note l'emplacement et continue rapidement.",
+            effects: [{ variable: "mentale", value: 2, operation: "add" }],
+            actionType: "continue",
           },
         ],
       },
@@ -664,7 +738,7 @@ export const useScenesStore = create<ScenesState>()(
       {
         name: 'scenes-storage',
         storage: createJSONStorage(() => localStorage),
-        version: 1,
+        version: 2, // bump → forces localStorage reset, loads new SAMPLE_SCENES
       }
     ),
     {

@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo } from 'react';
 /**
  * Dialogue wizard step identifiers
  */
-export type DialogueWizardStep = 'complexity' | 'basics' | 'choices' | 'responses' | 'review';
+export type DialogueWizardStep = 'complexity' | 'template' | 'basics' | 'choices' | 'responses' | 'review';
 
 /**
  * Complexity level for dialogue creation (PHASE 2.2: Expanded to 4 levels)
@@ -60,6 +60,12 @@ export const DIALOGUE_WIZARD_STEPS: StepConfig[] = [
     description: 'Choisis le type de dialogue'
   },
   {
+    id: 'template',
+    label: 'Modèle',
+    icon: '📋',
+    description: 'Choisis une situation de départ (optionnel)'
+  },
+  {
     id: 'basics',
     label: 'Dialogue',
     icon: '💬',
@@ -100,13 +106,19 @@ const STEP_ORDER: DialogueWizardStep[] = DIALOGUE_WIZARD_STEPS.map(s => s.id);
  * 4. review - Preview + save
  */
 export function useDialogueWizardState(
-  initialComplexity?: ComplexityLevel
+  initialComplexity?: ComplexityLevel,
+  /** When true (editing mode), skip the complexity step and start at basics */
+  isEditing: boolean = false,
 ): [DialogueWizardState, DialogueWizardActions] {
-  const [currentStep, setCurrentStep] = useState<DialogueWizardStep>('complexity');
-  const [visitedSteps, setVisitedSteps] = useState<Set<DialogueWizardStep>>(
-    new Set(['complexity'])
-  );
-  const [canProceed, setCanProceed] = useState(initialComplexity ? true : false);
+  // When editing an existing dialogue, skip step 0 (complexity already known)
+  const initialStep: DialogueWizardStep = isEditing ? 'basics' : 'complexity';
+  const initialVisited: Set<DialogueWizardStep> = isEditing
+    ? new Set(['complexity', 'basics'])
+    : new Set(['complexity']);
+
+  const [currentStep, setCurrentStep] = useState<DialogueWizardStep>(initialStep);
+  const [visitedSteps, setVisitedSteps] = useState<Set<DialogueWizardStep>>(initialVisited);
+  const [canProceed, setCanProceed] = useState(isEditing || (initialComplexity ? true : false));
   const [complexityLevel, setComplexityLevelState] = useState<ComplexityLevel | null>(
     initialComplexity || null
   );
@@ -143,12 +155,25 @@ export function useDialogueWizardState(
 
     const nextIndex = stepIndex + 1;
     if (nextIndex < STEP_ORDER.length) {
-      const nextStepId = STEP_ORDER[nextIndex];
+      let nextStepId = STEP_ORDER[nextIndex];
+
+      // Skip 'template' step for linear and binary (no templates for those levels)
+      if (
+        nextStepId === 'template' &&
+        (complexityLevel === 'linear' || complexityLevel === 'binary' || complexityLevel === null)
+      ) {
+        const skipIndex = nextIndex + 1;
+        if (skipIndex < STEP_ORDER.length) {
+          nextStepId = STEP_ORDER[skipIndex];
+        }
+      }
+
       setCurrentStep(nextStepId);
       setVisitedSteps(prev => new Set([...prev, nextStepId]));
-      setCanProceed(false); // Reset for next step validation
+      // Template step is optional → always proceed-able (no validation gate)
+      setCanProceed(nextStepId === 'template' ? true : false);
     }
-  }, [stepIndex, canProceed]);
+  }, [stepIndex, canProceed, complexityLevel]);
 
   const previousStep = useCallback(() => {
     const prevIndex = stepIndex - 1;

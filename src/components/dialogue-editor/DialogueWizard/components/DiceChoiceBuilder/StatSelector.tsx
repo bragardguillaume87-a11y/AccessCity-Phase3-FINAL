@@ -15,9 +15,8 @@ interface StatSelectorProps {
 }
 
 const STATS = [
-  { value: GAME_STATS.EMPATHY, label: 'Empathie', emoji: '💗', description: 'Comprendre les autres' },
-  { value: GAME_STATS.AUTONOMY, label: 'Autonomie', emoji: '🦅', description: 'Se débrouiller seul' },
-  { value: GAME_STATS.CONFIDENCE, label: 'Confiance', emoji: '💪', description: 'Croire en soi' },
+  { value: GAME_STATS.PHYSIQUE, label: 'Physique', emoji: '🏥', description: 'Barre de santé' },
+  { value: GAME_STATS.MENTALE, label: 'Mentale', emoji: '🧠', description: 'Barre mentale' },
 ];
 
 export function StatSelector({ value, onChange }: StatSelectorProps) {

@@ -55,9 +55,9 @@ export const COSMOS_GRADIENTS = {
 
 // Cosmos shadows with glow
 export const COSMOS_SHADOWS = {
-  DEFAULT: `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px ${COSMOS_COLORS.GLOW_PURPLE}`,
-  HOVER: `0 8px 24px rgba(0, 0, 0, 0.5), 0 0 40px ${COSMOS_COLORS.GLOW_PINK}, 0 0 60px ${COSMOS_COLORS.GLOW_CYAN}`,
-  SELECTED: `0 0 0 4px ${COSMOS_COLORS.STAR_YELLOW}, 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 50px ${COSMOS_COLORS.GLOW_CYAN}`,
+  DEFAULT: `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 10px rgba(168, 85, 247, 0.25)`,
+  HOVER: `0 8px 24px rgba(0, 0, 0, 0.5), 0 0 20px ${COSMOS_COLORS.GLOW_PINK}, 0 0 30px ${COSMOS_COLORS.GLOW_CYAN}`,
+  SELECTED: `0 0 0 4px ${COSMOS_COLORS.STAR_YELLOW}, 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 30px ${COSMOS_COLORS.GLOW_CYAN}`,
 };
 
 export const cosmosTheme: GraphTheme = {

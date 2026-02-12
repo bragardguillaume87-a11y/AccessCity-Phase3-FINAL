@@ -49,9 +49,8 @@ export default class StageDirector {
 
     // Variables du jeu (using GAME_STATS constants)
     this.variables = {
-      [GAME_STATS.EMPATHY]: 50,
-      [GAME_STATS.AUTONOMY]: 50,
-      [GAME_STATS.CONFIDENCE]: 50,
+      [GAME_STATS.PHYSIQUE]: 100,
+      [GAME_STATS.MENTALE]: 100,
     };
 
     // Initialisation
@@ -243,9 +242,8 @@ export default class StageDirector {
     this.currentDialogueIndex = 0;
     this.gameEnded = false;
     this.variables = {
-      [GAME_STATS.EMPATHY]: 50,
-      [GAME_STATS.AUTONOMY]: 50,
-      [GAME_STATS.CONFIDENCE]: 50,
+      [GAME_STATS.PHYSIQUE]: 100,
+      [GAME_STATS.MENTALE]: 100,
     };
     logger.debug('[StageDirector] Game reset');
   }
@@ -295,10 +293,9 @@ export default class StageDirector {
    */
   getFinalScore(): number {
     const avg = (
-      this.variables[GAME_STATS.EMPATHY] +
-      this.variables[GAME_STATS.AUTONOMY] +
-      this.variables[GAME_STATS.CONFIDENCE]
-    ) / 3;
+      this.variables[GAME_STATS.PHYSIQUE] +
+      this.variables[GAME_STATS.MENTALE]
+    ) / 2;
     return Math.round(avg);
   }
 

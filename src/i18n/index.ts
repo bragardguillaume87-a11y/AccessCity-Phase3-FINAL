@@ -166,9 +166,8 @@ export function getDefaultGameStats(
 ): Record<GameStatKey, { name: string; value: number }> {
   const t = getTranslations(locale);
   return {
-    empathy: { name: t.gameStats.empathy, value: 50 },
-    autonomy: { name: t.gameStats.autonomy, value: 50 },
-    confidence: { name: t.gameStats.confidence, value: 50 },
+    physique: { name: t.gameStats.physique, value: 100 },
+    mentale: { name: t.gameStats.mentale, value: 100 },
   };
 }
 
@@ -177,13 +176,16 @@ export function getDefaultGameStats(
  * Used for migration/compatibility
  */
 export const LEGACY_STAT_MAPPING: Record<string, GameStatKey> = {
-  'Empathie': 'empathy',
-  'Autonomie': 'autonomy',
-  'Confiance': 'confidence',
-  // English variants
-  'Empathy': 'empathy',
-  'Autonomy': 'autonomy',
-  'Confidence': 'confidence',
+  // Former social stats → now physical/mental bars
+  'Empathie': 'mentale',
+  'Autonomie': 'physique',
+  'Confiance': 'mentale',
+  'Empathy': 'mentale',
+  'Autonomy': 'physique',
+  'Confidence': 'mentale',
+  // New stats (for migration of any old uppercase keys)
+  'Physique': 'physique',
+  'Mentale': 'mentale',
 };
 
 /**

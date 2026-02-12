@@ -254,6 +254,35 @@
   opacity: 1 !important;
 }
 
+/* VAGUE 4: Enhanced handle visibility in edit mode */
+.dialogue-graph-container[data-edit-mode="true"] .react-flow__handle {
+  opacity: 0.4;
+}
+
+/* Valid target handle during drag — green glow */
+.react-flow__handle-valid {
+  opacity: 1 !important;
+  transform: scale(1.4) !important;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.5) !important;
+  background: #22c55e !important;
+}
+
+/* Source handle during active connection — cyan glow */
+.react-flow__handle-connecting {
+  opacity: 1 !important;
+  transform: scale(1.3) !important;
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.6) !important;
+}
+
+/* Edge reconnect handle (endpoint drag affordance) */
+.react-flow__edgeupdate-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.react-flow__edge:hover .react-flow__edgeupdate-handle {
+  opacity: 1;
+}
+
 /* Edge animations */
 .react-flow__edge.animated .react-flow__edge-path {
   stroke-dasharray: 5;

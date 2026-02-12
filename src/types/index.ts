@@ -13,9 +13,8 @@
  * Game statistics as key-value pairs
  *
  * Standard stats (use GAME_STATS constants from @/i18n):
- * - empathy: Empathie / Empathy
- * - autonomy: Autonomie / Autonomy
- * - confidence: Confiance / Confidence
+ * - physique: Physique / Physical (health bar)
+ * - mentale: Mentale / Mental (mental bar)
  *
  * @example
  * import { GAME_STATS } from '@/i18n';
@@ -115,16 +114,46 @@ export interface Dialogue {
 }
 
 /**
+ * Type of action triggered by a dialogue choice.
+ * Used as discriminator to clarify which "next" field is active.
+ */
+export type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
+
+/**
  * Dialogue choice with full game mechanics support
+ *
+ * The optional `actionType` discriminates which navigation field is active:
+ * - `'continue'` → uses `nextDialogueId`
+ * - `'sceneJump'` → uses `nextSceneId`
+ * - `'diceCheck'` → uses `diceCheck`
+ *
+ * For backwards compatibility, `actionType` is optional.
+ * Use `getChoiceActionType()` to safely determine the action from existing data.
  */
 export interface DialogueChoice {
   id: string;
   text: string;
   effects: Effect[];
+  /** Discriminator for the active navigation field */
+  actionType?: ChoiceActionType;
   nextSceneId?: string;
   nextDialogueId?: string;
-  // Game mechanic: dice check
+  /** Game mechanic: dice check */
   diceCheck?: DiceCheck;
+}
+
+/**
+ * Determine the action type of a choice from its data.
+ * Works with or without the `actionType` discriminator for backwards compatibility.
+ */
+export function getChoiceActionType(choice: DialogueChoice): ChoiceActionType | 'none' {
+  // Prefer explicit discriminator if set
+  if (choice.actionType) return choice.actionType;
+  // Infer from fields
+  if (choice.diceCheck) return 'diceCheck';
+  if (choice.nextSceneId) return 'sceneJump';
+  if (choice.nextDialogueId) return 'continue';
+  return 'none';
 }
 
 export interface Effect {
@@ -210,7 +239,15 @@ export type SelectedElementType =
 
 export type FullscreenMode = 'graph' | 'canvas' | 'preview' | null;
 
-export type ModalType = 'characters' | 'assets' | 'export' | 'preview' | 'settings' | 'project' | 'addCharacter' | null;
+export type ModalType =
+  | 'characters'
+  | 'assets'
+  | 'export'
+  | 'preview'
+  | 'settings'
+  | 'project'
+  | 'addCharacter'
+  | null;
 
 /**
  * Base props for all modal components
@@ -480,18 +517,9 @@ export interface GameEngine {
  * Type-safe event bus for game engine communication
  */
 export interface EventBus {
-  on<K extends keyof EventBusEvents>(
-    event: K,
-    callback: EventCallback<EventBusEvents[K]>
-  ): void;
-  off<K extends keyof EventBusEvents>(
-    event: K,
-    callback: EventCallback<EventBusEvents[K]>
-  ): void;
-  emit<K extends keyof EventBusEvents>(
-    event: K,
-    data: EventBusEvents[K]
-  ): void;
+  on<K extends keyof EventBusEvents>(event: K, callback: EventCallback<EventBusEvents[K]>): void;
+  off<K extends keyof EventBusEvents>(event: K, callback: EventCallback<EventBusEvents[K]>): void;
+  emit<K extends keyof EventBusEvents>(event: K, data: EventBusEvents[K]): void;
 }
 
 /**

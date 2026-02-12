@@ -2,6 +2,7 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { STANDARD_HANDLES, HANDLE_ID, choiceHandleId } from '@/config/handleConfig';
 import type { DialogueChoice } from '@/types';
+import { CHOICE_COLORS } from './graph-nodes/styles';
 
 /**
  * NodeHandles - Shared handle component for all node types
@@ -9,12 +10,8 @@ import type { DialogueChoice } from '@/types';
  * Eliminates handle JSX duplication across DialogueNode, ChoiceNode, TerminalNode.
  * Renders all 6 standard handles + optional choice handles.
  *
- * Standard handles:
- *   top (target), bottom (source), left (target), right (source),
- *   left-out (source, SERP-FIX), right-in (target, SERP-FIX)
- *
- * Choice handles (optional):
- *   choice-0, choice-1, ... (source, distributed vertically on right side)
+ * Choice handle position is determined by the layout hook (useNodeLayout)
+ * and passed via choiceHandlePosition — no directional logic here.
  */
 
 interface NodeHandlesProps {
@@ -32,6 +29,8 @@ interface NodeHandlesProps {
   choices?: DialogueChoice[];
   /** Child-friendly link emoji on left handle */
   showLinkEmoji?: boolean;
+  /** Position for choice handles (from layout hook) */
+  choiceHandlePosition?: Position;
 }
 
 /** Handle positions for horizontal/vertical centering */
@@ -42,9 +41,6 @@ const POSITION_STYLE: Record<string, React.CSSProperties> = {
   right: { top: '50%', transform: 'translateY(-50%)' },
 };
 
-/** Choice handle colors (repeating pattern) */
-const CHOICE_COLORS = ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6'];
-
 export const NodeHandles = React.memo(function NodeHandles({
   color,
   bgColor,
@@ -53,6 +49,7 @@ export const NodeHandles = React.memo(function NodeHandles({
   showDragIndicators = false,
   choices,
   showLinkEmoji = false,
+  choiceHandlePosition = Position.Right,
 }: NodeHandlesProps) {
   const boxShadow = showDragIndicators
     ? '0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)'
@@ -106,7 +103,7 @@ export const NodeHandles = React.memo(function NodeHandles({
         );
       })}
 
-      {/* Choice handles (ChoiceNode only) */}
+      {/* Choice handles — position comes from layout hook */}
       {choices && choices.map((choice, choiceIndex) => {
         const handleColor = CHOICE_COLORS[choiceIndex % CHOICE_COLORS.length];
         const topPosition = ((choiceIndex + 1) / (choices.length + 1)) * 100;
@@ -115,7 +112,7 @@ export const NodeHandles = React.memo(function NodeHandles({
           <Handle
             key={choice.id}
             type="source"
-            position={Position.Right}
+            position={choiceHandlePosition}
             id={choiceHandleId(choiceIndex)}
             className="react-flow__handle-hover"
             style={{
@@ -147,6 +144,8 @@ function getHandleAriaLabel(handleId: string): string {
     case HANDLE_ID.BOTTOM: return 'Point de connexion sortant (bas)';
     case HANDLE_ID.LEFT: return 'Point de connexion entrant (gauche)';
     case HANDLE_ID.RIGHT: return 'Point de connexion sortant (droite)';
+    case HANDLE_ID.LEFT_OUT: return 'Point de connexion sortant serpentine (gauche)';
+    case HANDLE_ID.RIGHT_IN: return 'Point de connexion entrant serpentine (droite)';
     default: return '';
   }
 }

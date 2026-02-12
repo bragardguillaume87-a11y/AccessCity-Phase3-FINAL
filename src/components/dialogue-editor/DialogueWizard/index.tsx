@@ -15,6 +15,7 @@ import { useChoiceValidation } from './hooks/useChoiceValidation';
 import { WizardProgressBar } from '@/components/ui/WizardProgressBar';
 import { WizardNavigation } from '@/components/ui/WizardNavigation';
 import StepComplexity from './components/StepComplexity';
+import StepTemplate from './components/StepTemplate';
 import StepBasics from './components/StepBasics';
 import StepChoices from './components/StepChoices';
 import StepResponses from './components/StepResponses';
@@ -55,11 +56,15 @@ export function DialogueWizard({
   const initialComplexity = useUIStore((state) => state.dialogueWizardInitialComplexity);
   const clearDialogueWizardInitialComplexity = useUIStore((state) => state.clearDialogueWizardInitialComplexity);
 
-  // Wizard state management
-  const [wizardState, wizardActions] = useDialogueWizardState();
-
-  // Form data management (pass initialComplexity from palette)
+  // Form data management (pass initialComplexity from palette or inferred from existing dialogue)
   const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);
+
+  // When editing an existing dialogue, skip the complexity step (already known)
+  const isEditing = dialogue !== undefined;
+  const [wizardState, wizardActions] = useDialogueWizardState(
+    formData.complexityLevel ?? undefined,
+    isEditing,
+  );
 
   // Validation
   const validation = useChoiceValidation(formData);
@@ -179,6 +184,8 @@ export function DialogueWizard({
     switch (wizardState.currentStep) {
       case 'complexity':
         return 'Continuer';
+      case 'template':
+        return 'Passer';
       case 'basics':
         return 'Créer les choix';
       case 'choices':
@@ -198,6 +205,17 @@ export function DialogueWizard({
           <StepComplexity
             selectedLevel={formData.complexityLevel}
             onSelect={handleComplexityChange}
+          />
+        );
+
+      case 'template':
+        return (
+          <StepTemplate
+            complexityLevel={formData.complexityLevel}
+            onSelect={(template) => {
+              if (template) formActions.applyTemplate(template);
+              wizardActions.nextStep();
+            }}
           />
         );
 

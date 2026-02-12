@@ -6,9 +6,8 @@ import type { Translations } from '../types';
 
 export const en: Translations = {
   gameStats: {
-    empathy: 'Empathy',
-    autonomy: 'Autonomy',
-    confidence: 'Confidence',
+    physique: 'Physical',
+    mentale: 'Mental',
   },
 
   common: {

@@ -90,16 +90,15 @@ const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   },
   game: {
     variables: {
-      [GAME_STATS.EMPATHY]: { initial: 50, min: 0, max: 100 },
-      [GAME_STATS.AUTONOMY]: { initial: 50, min: 0, max: 100 },
-      [GAME_STATS.CONFIDENCE]: { initial: 50, min: 0, max: 100 },
+      [GAME_STATS.PHYSIQUE]: { initial: 100, min: 0, max: 100 },
+      [GAME_STATS.MENTALE]: { initial: 100, min: 0, max: 100 },
     },
   },
 };
 
 const DEFAULT_VARIABLES: GameVariables = {
-  Physique: 100,
-  Mentale: 100,
+  physique: 100,
+  mentale: 100,
 };
 
 // ============================================================================

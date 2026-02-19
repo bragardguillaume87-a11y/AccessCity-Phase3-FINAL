@@ -247,8 +247,12 @@ export default function MainCanvas({
         onFullscreenChange={onFullscreenChange}
       />
 
-      {/* Wrapper flex-1 : le Group vertical requiert une hauteur explicite (identique à EditorShell qui utilise h-full) */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Wrapper flex-1 + position:relative → l'enfant absolute inset-0 a une hauteur EXPLICITE,
+          ce qui permet à Group (height:100% interne) de se résoudre correctement.
+          Sans ça, height:100% sur le Group ne trouve pas de hauteur définie dans son parent
+          flex-1 et reste à sa taille contenu. */}
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+      <div className="absolute inset-0">
       {/* Split vertical : panel canvas (haut) + panel lecteur/timeline (bas) */}
       <Group orientation="vertical" className="h-full">
 
@@ -421,7 +425,8 @@ export default function MainCanvas({
         </Panel>
 
       </Group>
-      </div>{/* fin wrapper flex-1 Group vertical */}
+      </div>{/* fin absolute inset-0 */}
+      </div>{/* fin wrapper flex-1 relative */}
 
       <QuickActionsBar
         sceneId={selectedScene.id}

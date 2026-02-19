@@ -77,6 +77,8 @@ export default defineConfig({
           'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
           // Drag & Drop
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          // Misc vendors extracted from main chunk
+          'vendor-misc': ['canvas-confetti', 'react-resizable-panels'],
         },
         // Naming convention for chunks
         chunkFileNames: 'assets/[name]-[hash].js',

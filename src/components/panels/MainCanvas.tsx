@@ -247,8 +247,10 @@ export default function MainCanvas({
         onFullscreenChange={onFullscreenChange}
       />
 
+      {/* Wrapper flex-1 : le Group vertical requiert une hauteur explicite (identique à EditorShell qui utilise h-full) */}
+      <div className="flex-1 min-h-0 overflow-hidden">
       {/* Split vertical : panel canvas (haut) + panel lecteur/timeline (bas) */}
-      <Group orientation="vertical" className="flex-1 min-h-0">
+      <Group orientation="vertical" className="h-full">
 
         {/* Panel haut — vue des personnages + décor */}
         <Panel defaultSize={65} minSize={30}>
@@ -419,6 +421,7 @@ export default function MainCanvas({
         </Panel>
 
       </Group>
+      </div>{/* fin wrapper flex-1 Group vertical */}
 
       <QuickActionsBar
         sceneId={selectedScene.id}

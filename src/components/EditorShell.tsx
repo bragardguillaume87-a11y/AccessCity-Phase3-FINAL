@@ -114,6 +114,17 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     }
   }, []);
 
+  // === SYNC PANEL 3 ↔ selectedElement ===
+  // Quand un élément canvas est sélectionné (auto-select dialogue, clic perso…)
+  // sans qu'une section soit active, Panel 3 s'ouvre sur PropertiesPanel.
+  // Quand la sélection repasse sur null/scene, Panel 3 se ferme.
+  useEffect(() => {
+    if (fullscreenMode) return;
+    if (activeSection !== null) return; // handleSectionChange gère la taille
+    const hasElement = selectedElement && selectedElement.type !== null && selectedElement.type !== 'scene';
+    contentPanelRef.current?.resize(hasElement ? "280px" : "0px");
+  }, [selectedElement, fullscreenMode, activeSection]);
+
   // === KEYBOARD SHORTCUTS ===
   useKeyboardShortcuts({
     onUndo: undo,
@@ -339,13 +350,14 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             )}
 
             {/* ── Panel 3 : Contenu (Library style Powtoon) ──
-                TOUJOURS visible à 240px par défaut.
+                Démarre fermé (0px). Ouvert par :
+                  handleSectionChange → icône cliquée (256px)
+                  useEffect selectedElement → élément canvas sélectionné (280px)
                 Contenu : SectionContentPanel | PropertiesPanel | état vide.
-                Aucun resize automatique — Panel 3 est stable, son CONTENU change.
                 Pas de Separator à droite → Panel 4 inatteignable par drag. */}
             <Panel
               panelRef={contentPanelRef}
-              defaultSize={240}
+              defaultSize={0}
               minSize={180}
               maxSize={400}
               collapsible={true}
@@ -362,14 +374,13 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
             {/* ── Panel 4 : Barre d'icônes (UnifiedPanel) ──
                 TOUJOURS visible, jamais remplacé.
-                72px fixe, pas de Separator à gauche → inatteignable par drag utilisateur. */}
+                72px fixe, pas de Separator à gauche → inatteignable par drag utilisateur.
+                Pas de collapsible → ne peut JAMAIS disparaître. */}
             <Panel
               panelRef={rightPanelRef}
               defaultSize={72}
               minSize={72}
               maxSize={72}
-              collapsible={true}
-              collapsedSize={0}
               className="bg-card border-l border-border overflow-hidden"
               id="icon-bar-panel"
               role="complementary"

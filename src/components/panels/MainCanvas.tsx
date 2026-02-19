@@ -48,6 +48,25 @@ const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
 
+const CANVAS_ASPECT_RATIO = 16 / 9;
+const CANVAS_CENTER_PADDING = 48; // p-6 = 24px × 2 côtés
+
+/**
+ * Calcule les dimensions explicites du canvas (équivalent "object-fit: contain").
+ * Remplace le combo CSS `width:100% + aspectRatio:16/9 + maxHeight:100%` qui
+ * ne garantit pas un comportement "contain" correct quand la hauteur est contrainte.
+ */
+function computeCanvasSize(centerW: number, centerH: number, zoom: number): { width: number; height: number } {
+  if (centerW === 0 || centerH === 0) {
+    return { width: 320, height: Math.round(320 / CANVAS_ASPECT_RATIO) };
+  }
+  const availableW = centerW - CANVAS_CENTER_PADDING;
+  const availableH = centerH - CANVAS_CENTER_PADDING;
+  const baseW = Math.min(availableW, availableH * CANVAS_ASPECT_RATIO);
+  const zoomedW = Math.max(320, Math.round(baseW * zoom));
+  return { width: zoomedW, height: Math.round(zoomedW / CANVAS_ASPECT_RATIO) };
+}
+
 export interface MainCanvasProps {
   selectedScene: Scene | undefined;
   selectedElement: SelectedElementType;
@@ -68,6 +87,7 @@ export default function MainCanvas({
   const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
   const [canvasNode, setCanvasNode] = useState<HTMLDivElement | null>(null);
   const [canvasRef, canvasDimensions] = useCanvasDimensions();
+  const [centerDivRef, centerSize] = useCanvasDimensions();
   const { currentDialogueText, currentTime, setCurrentTime } = useDialogueSync(selectedElement, selectedScene);
 
   const sceneId = selectedScene?.id;
@@ -88,6 +108,7 @@ export default function MainCanvas({
   const variables = useSettingsStore(s => s.variables) as GameStats;
 
   const viewState = useCanvasViewState({ fullscreenMode, onFullscreenChange });
+  const canvasSize = computeCanvasSize(centerSize.width, centerSize.height, viewState.canvasZoom);
   const actions = useCanvasActions({
     selectedScene,
     sceneCharacters,
@@ -231,15 +252,13 @@ export default function MainCanvas({
           Les marges visibles autour = fond #0f1117 sombre = "scène" Powtoon. */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-[#0f1117]">
 
-        {/* Centre canvas — flex-1 donne une hauteur définie pour que max-height fonctionne */}
-        <div className="flex-1 min-h-0 p-6 flex items-center justify-center">
+        {/* Centre canvas — ref pour mesurer la taille disponible et calculer les dims explicites du canvas */}
+        <div ref={centerDivRef} className="flex-1 min-h-0 p-6 flex items-center justify-center overflow-hidden">
           <div
             className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
             style={{
-              width: '100%',
-              maxWidth: `${viewState.canvasZoom * 100}%`,
-              maxHeight: '100%',
-              aspectRatio: '16/9',
+              width: `${canvasSize.width}px`,
+              height: `${canvasSize.height}px`,
               minWidth: '320px',
             }}
           >

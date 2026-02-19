@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useState, useRef, useEffect } from 'react'
-import { Play, Pause, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { Dialogue } from '@/types'
@@ -29,6 +29,14 @@ export interface TimelinePlayheadProps {
   onPlayPause?: () => void
   /** Whether preview is currently playing */
   isPlaying?: boolean
+  /** Canvas zoom level (1.0 = 100%) */
+  canvasZoom?: number
+  /** Zoom in one step */
+  onZoomIn?: () => void
+  /** Zoom out one step */
+  onZoomOut?: () => void
+  /** Reset zoom to 100% */
+  onResetZoom?: () => void
 }
 
 export default function TimelinePlayhead({
@@ -38,6 +46,10 @@ export default function TimelinePlayhead({
   onSeek = () => {},
   onPlayPause = () => {},
   isPlaying = false,
+  canvasZoom = 1.0,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
 }: TimelinePlayheadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const timelineRef = useRef<HTMLDivElement | null>(null)
@@ -207,6 +219,36 @@ export default function TimelinePlayhead({
       {/* Scene Progress Indicator */}
       <div className="flex-shrink-0 text-xs text-[var(--color-text-muted)]">
         {dialogues.length} dialogue{dialogues.length !== 1 ? 's' : ''}
+      </div>
+
+      {/* Canvas Zoom Controls — style Powtoon */}
+      <div className="flex-shrink-0 flex items-center gap-1 border-l border-[var(--color-border-base)] pl-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onZoomOut}
+          className="h-7 w-7 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
+          aria-label="Zoom arrière canvas"
+        >
+          <ZoomOut className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
+        </Button>
+        <button
+          className="text-xs font-mono w-10 text-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors rounded px-1"
+          onClick={onResetZoom}
+          title="Réinitialiser le zoom à 100%"
+          aria-label={`Zoom canvas : ${Math.round(canvasZoom * 100)}%, cliquer pour réinitialiser`}
+        >
+          {Math.round(canvasZoom * 100)}%
+        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onZoomIn}
+          className="h-7 w-7 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
+          aria-label="Zoom avant canvas"
+        >
+          <ZoomIn className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
+        </Button>
       </div>
     </div>
   )

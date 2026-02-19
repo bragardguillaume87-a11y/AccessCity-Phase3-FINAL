@@ -1,79 +1,61 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { logger } from '@/utils/logger';
 import type { FullscreenMode } from '@/types';
 
-/**
- * View mode type for canvas visualization
- */
 export type ViewMode = 'visual' | 'graph';
 
-/**
- * Return type for useCanvasViewState hook
- */
-export interface UseCanvasViewStateReturn {
-  gridEnabled: boolean;
-  setGridEnabled: React.Dispatch<React.SetStateAction<boolean>>;
-  viewMode: ViewMode;
-  setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>;
-  isPlaying: boolean;
-  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
-}
+/** Discrete zoom steps for the canvas (Powtoon-style) */
+const ZOOM_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
 
-/**
- * Props for useCanvasViewState hook
- */
 export interface UseCanvasViewStateProps {
   fullscreenMode?: FullscreenMode;
   onFullscreenChange?: (mode: FullscreenMode) => void;
 }
 
 /**
- * useCanvasViewState - Manage visual state of the canvas (grid, view mode, playback, fullscreen)
- *
- * This hook centralizes all visual/display states for the MainCanvas component,
- * including grid overlay toggle, view mode switching, playback state, and
- * fullscreen escape handling.
- *
- * @param props - Configuration for fullscreen handling
- * @returns View state values and setters
- *
- * @example
- * ```tsx
- * const { gridEnabled, setGridEnabled, viewMode, setViewMode } = useCanvasViewState({
- *   fullscreenMode,
- *   onFullscreenChange
- * });
- * ```
+ * useCanvasViewState - Grid toggle, view mode, playback state, fullscreen escape, canvas zoom.
  */
 export function useCanvasViewState({
   fullscreenMode,
   onFullscreenChange
-}: UseCanvasViewStateProps = {}): UseCanvasViewStateReturn {
+}: UseCanvasViewStateProps = {}) {
   const [gridEnabled, setGridEnabled] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('visual');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [canvasZoom, setCanvasZoom] = useState(1.0);
 
-  // Stabilize onFullscreenChange with useRef to avoid re-creating event listener
-  const onFullscreenChangeRef = useRef(onFullscreenChange);
-  useEffect(() => {
-    onFullscreenChangeRef.current = onFullscreenChange;
-  }, [onFullscreenChange]);
-
-  // Escape key handler to exit fullscreen mode
+  // Escape key exits fullscreen
   useEffect(() => {
     if (!fullscreenMode) return;
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // Use ref to always get the latest callback
-        onFullscreenChangeRef.current?.(null);
+        onFullscreenChange?.(null);
         logger.debug('[MainCanvas] Exiting fullscreen mode via Escape');
       }
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [fullscreenMode]); // Only re-run when fullscreenMode changes
+  }, [fullscreenMode, onFullscreenChange]);
+
+  const zoomIn = useCallback(() => {
+    setCanvasZoom(prev => {
+      const idx = ZOOM_STEPS.findIndex(z => z > prev);
+      return idx >= 0 ? ZOOM_STEPS[idx] : ZOOM_STEPS[ZOOM_STEPS.length - 1];
+    });
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setCanvasZoom(prev => {
+      const idx = ZOOM_STEPS.findIndex(z => z >= prev);
+      return idx > 0 ? ZOOM_STEPS[idx - 1] : ZOOM_STEPS[0];
+    });
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    setCanvasZoom(1.0);
+  }, []);
 
   return {
     gridEnabled,
@@ -82,5 +64,9 @@ export function useCanvasViewState({
     setViewMode,
     isPlaying,
     setIsPlaying,
+    canvasZoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
   };
 }

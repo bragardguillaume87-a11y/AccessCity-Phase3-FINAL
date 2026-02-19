@@ -6,21 +6,80 @@
  * - Node hover effects
  * - Empty state
  * - Keyboard hints
+ *
+ * All colors are defined as CSS custom properties on .dialogue-graph-container.
+ * Override them on a scoped selector to create alternate themes.
  */
 
-/* Container */
+/* ============================================================================
+   GRAPH COLOR TOKENS
+   All hex values live here — nowhere else in this file.
+   ============================================================================ */
+
+.dialogue-graph-container {
+  /* Backgrounds */
+  --graph-bg:          #0f172a;   /* Slate 900 — main canvas background */
+  --graph-surface:     #1e293b;   /* Slate 800 — controls, minimap panels */
+  --graph-surface-kbd: rgba(30, 41, 59, 0.9); /* Slate 800 at 90% — keyboard hints */
+
+  /* Borders */
+  --graph-border:        #334155; /* Slate 700 */
+  --graph-border-subtle: #475569; /* Slate 600 */
+
+  /* Text */
+  --graph-text:       #e2e8f0;    /* Slate 200 — primary text */
+  --graph-text-muted: #94a3b8;    /* Slate 400 — muted text / icons */
+
+  /* Accents */
+  --graph-accent:       #06b6d4;  /* Cyan 500 — selection, focus, handles */
+  --graph-accent-green: #22c55e;  /* Green 500 — valid drop target */
+  --graph-node-default: #3b82f6;  /* Blue 500 — minimap nodes */
+
+  /* Shadows */
+  --graph-shadow:       rgba(0, 0, 0, 0.4);
+  --graph-shadow-hover: rgba(0, 0, 0, 0.5);
+  --graph-shadow-sm:    rgba(0, 0, 0, 0.2);
+
+  /* Overlays */
+  --graph-minimap-mask:    rgba(0, 0, 0, 0.6);
+  --graph-selection-fill:  rgba(6, 182, 212, 0.1);  /* Cyan 500 at 10% */
+  --graph-handle-valid-glow: rgba(34, 197, 94, 0.5); /* Green 500 at 50% */
+  --graph-handle-conn-glow:  rgba(6, 182, 212, 0.6); /* Cyan 500 at 60% */
+}
+
+/* ============================================================================
+   CONTAINER
+   ============================================================================ */
+
 .dialogue-graph-container {
   width: 100%;
   height: 100%;
-  background-color: #0f172a;
+  background-color: var(--graph-bg);
   position: relative;
 }
 
 .dialogue-reactflow {
-  background-color: #0f172a;
+  background-color: var(--graph-bg);
 }
 
-/* ReactFlow dark theme overrides */
+/* Cosmos theme: transparent backgrounds to reveal animated starfield behind */
+.dialogue-graph-container[data-theme="cosmos"] {
+  background-color: transparent;
+  z-index: 1;
+}
+
+.dialogue-graph-container[data-theme="cosmos"] .dialogue-reactflow {
+  background-color: transparent;
+}
+
+.dialogue-graph-container[data-theme="cosmos"] .react-flow__background {
+  background-color: transparent;
+}
+
+/* ============================================================================
+   REACTFLOW DARK THEME OVERRIDES
+   ============================================================================ */
+
 .react-flow__pane {
   cursor: grab;
 }
@@ -40,7 +99,7 @@
 }
 
 .react-flow__node.selected {
-  box-shadow: 0 0 0 3px #06b6d4;
+  box-shadow: 0 0 0 3px var(--graph-accent);
 }
 
 /* Edges */
@@ -54,34 +113,34 @@
 }
 
 .react-flow__edge-text {
-  fill: #e2e8f0;
+  fill: var(--graph-text);
   font-size: 12px;
   font-weight: 500;
 }
 
 .react-flow__edge-textbg {
-  fill: #1e293b;
+  fill: var(--graph-surface);
   fill-opacity: 0.8;
 }
 
 /* Controls */
 .dialogue-graph-controls {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: var(--graph-surface);
+  border: 1px solid var(--graph-border);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px var(--graph-shadow);
 }
 
 .dialogue-graph-controls button {
-  background-color: #334155;
+  background-color: var(--graph-border);
   border: none;
-  border-bottom: 1px solid #475569;
-  color: #e2e8f0;
+  border-bottom: 1px solid var(--graph-border-subtle);
+  color: var(--graph-text);
   transition: background-color 0.2s ease;
 }
 
 .dialogue-graph-controls button:hover {
-  background-color: #475569;
+  background-color: var(--graph-border-subtle);
 }
 
 .dialogue-graph-controls button:last-child {
@@ -89,39 +148,42 @@
 }
 
 .dialogue-graph-controls svg {
-  fill: #e2e8f0;
+  fill: var(--graph-text);
 }
 
 /* MiniMap */
 .dialogue-graph-minimap {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: var(--graph-surface);
+  border: 1px solid var(--graph-border);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px var(--graph-shadow);
 }
 
 .react-flow__minimap-mask {
-  fill: rgba(0, 0, 0, 0.6);
+  fill: var(--graph-minimap-mask);
 }
 
 .react-flow__minimap-node {
-  fill: #3b82f6;
+  fill: var(--graph-node-default);
   stroke: none;
 }
 
 /* Background */
 .react-flow__background {
-  background-color: #0f172a;
+  background-color: var(--graph-bg);
 }
 
-/* Empty state */
+/* ============================================================================
+   EMPTY STATE
+   ============================================================================ */
+
 .dialogue-graph-empty {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0f172a;
+  background-color: var(--graph-bg);
 }
 
 .empty-state {
@@ -133,25 +195,29 @@
 .empty-icon {
   width: 64px;
   height: 64px;
-  color: #475569;
+  color: var(--graph-border-subtle);
   margin: 0 auto 24px;
 }
 
 .empty-title {
   font-size: 20px;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--graph-text);
   margin: 0 0 12px 0;
 }
 
 .empty-description {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--graph-text-muted);
   margin: 0;
   line-height: 1.6;
 }
 
-/* Keyboard hints - centered at bottom, above minimap/controls */
+/* ============================================================================
+   KEYBOARD HINTS
+   ============================================================================ */
+
+/* Centered at bottom, above minimap/controls */
 .keyboard-hints {
   position: absolute;
   bottom: 12px;
@@ -159,11 +225,11 @@
   transform: translateX(-50%);
   display: flex;
   gap: 12px;
-  background-color: rgba(30, 41, 59, 0.9);
-  border: 1px solid #334155;
+  background-color: var(--graph-surface-kbd);
+  border: 1px solid var(--graph-border);
   border-radius: 8px;
   padding: 10px 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px var(--graph-shadow);
   z-index: 10;
 }
 
@@ -172,39 +238,32 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--graph-text-muted);
   white-space: nowrap;
 }
 
 .hint-item kbd {
-  background-color: #334155;
-  border: 1px solid #475569;
+  background-color: var(--graph-border);
+  border: 1px solid var(--graph-border-subtle);
   border-radius: 4px;
   padding: 2px 6px;
   font-family: ui-monospace, monospace;
   font-size: 11px;
   font-weight: 600;
-  color: #e2e8f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: var(--graph-text);
+  box-shadow: 0 2px 4px var(--graph-shadow-sm);
 }
+
+/* ============================================================================
+   NODE HOVER & TRANSITION EFFECTS
+   ============================================================================ */
 
 /* Node hover effects */
 .dialogue-node:hover,
 .choice-node:hover,
 .terminal-node:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5) !important;
-}
-
-/* Accessibility */
-.react-flow__node:focus {
-  outline: 2px solid #06b6d4;
-  outline-offset: 2px;
-}
-
-.react-flow__node:focus-visible {
-  outline: 2px solid #06b6d4;
-  outline-offset: 2px;
+  box-shadow: 0 8px 16px var(--graph-shadow-hover) !important;
 }
 
 /* Transitions */
@@ -214,7 +273,24 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Handle styles */
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+.react-flow__node:focus {
+  outline: 2px solid var(--graph-accent);
+  outline-offset: 2px;
+}
+
+.react-flow__node:focus-visible {
+  outline: 2px solid var(--graph-accent);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   HANDLES
+   ============================================================================ */
+
 .react-flow__handle {
   width: 12px;
   height: 12px;
@@ -227,7 +303,7 @@
 }
 
 .react-flow__handle-connecting {
-  background: #06b6d4 !important;
+  background: var(--graph-accent) !important;
 }
 
 /* SERP-2: Four-directional handles with hover visibility (Option A) */
@@ -263,16 +339,20 @@
 .react-flow__handle-valid {
   opacity: 1 !important;
   transform: scale(1.4) !important;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.5) !important;
-  background: #22c55e !important;
+  box-shadow: 0 0 0 4px var(--graph-handle-valid-glow) !important;
+  background: var(--graph-accent-green) !important;
 }
 
 /* Source handle during active connection — cyan glow */
 .react-flow__handle-connecting {
   opacity: 1 !important;
   transform: scale(1.3) !important;
-  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.6) !important;
+  box-shadow: 0 0 0 4px var(--graph-handle-conn-glow) !important;
 }
+
+/* ============================================================================
+   EDGE RECONNECT & ANIMATIONS
+   ============================================================================ */
 
 /* Edge reconnect handle (endpoint drag affordance) */
 .react-flow__edgeupdate-handle {
@@ -297,11 +377,14 @@
 
 /* Selection box */
 .react-flow__selection {
-  background-color: rgba(6, 182, 212, 0.1);
-  border: 1px solid #06b6d4;
+  background-color: var(--graph-selection-fill);
+  border: 1px solid var(--graph-accent);
 }
 
-/* Responsive */
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
 @media (max-width: 768px) {
   .keyboard-hints {
     bottom: 10px;
@@ -320,9 +403,9 @@
   }
 }
 
-/* ============================================
+/* ============================================================================
    DEFAULT THEME ANIMATIONS
-   ============================================ */
+   ============================================================================ */
 
 /* Default hover effect: subtle lift */
 .default-node-hover {
@@ -335,7 +418,7 @@
 
 /* Default selected state: cyan outline */
 .default-node-selected {
-  outline: 3px solid #06b6d4;
+  outline: 3px solid var(--graph-accent);
   outline-offset: 2px;
 }
 

@@ -42,13 +42,11 @@ import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
 // import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization'; // masquée — doublon avec graphe Panel 3
 import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
 import { logger } from '../../utils/logger';
+import { CANVAS_PRESENTATION } from '@/config/canvas';
 
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
-
-const CANVAS_ASPECT_RATIO = 16 / 9;
-const CANVAS_CENTER_PADDING = 48; // p-6 = 24px × 2 côtés
 
 /**
  * Calcule les dimensions explicites du canvas (équivalent "object-fit: contain").
@@ -57,13 +55,13 @@ const CANVAS_CENTER_PADDING = 48; // p-6 = 24px × 2 côtés
  */
 function computeCanvasSize(centerW: number, centerH: number, zoom: number): { width: number; height: number } {
   if (centerW === 0 || centerH === 0) {
-    return { width: 320, height: Math.round(320 / CANVAS_ASPECT_RATIO) };
+    return { width: 320, height: Math.round(320 / CANVAS_PRESENTATION.ASPECT_RATIO) };
   }
-  const availableW = centerW - CANVAS_CENTER_PADDING;
-  const availableH = centerH - CANVAS_CENTER_PADDING;
-  const baseW = Math.min(availableW, availableH * CANVAS_ASPECT_RATIO);
+  const availableW = centerW - CANVAS_PRESENTATION.CENTER_PADDING;
+  const availableH = centerH - CANVAS_PRESENTATION.CENTER_PADDING;
+  const baseW = Math.min(availableW, availableH * CANVAS_PRESENTATION.ASPECT_RATIO);
   const zoomedW = Math.max(320, Math.round(baseW * zoom));
-  return { width: zoomedW, height: Math.round(zoomedW / CANVAS_ASPECT_RATIO) };
+  return { width: zoomedW, height: Math.round(zoomedW / CANVAS_PRESENTATION.ASPECT_RATIO) };
 }
 
 export interface MainCanvasProps {
@@ -250,7 +248,7 @@ export default function MainCanvas({
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
         {/* Canvas — flex-1 prend tout l'espace vertical disponible */}
-        <div ref={centerDivRef} className="flex-1 min-h-0 bg-[#0f1117] p-6 flex items-center justify-center overflow-hidden">
+        <div ref={centerDivRef} className="flex-1 min-h-0 p-6 flex items-center justify-center overflow-hidden" style={{ backgroundColor: CANVAS_PRESENTATION.SURROUND_COLOR }}>
           <div
             className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
             style={{

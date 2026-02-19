@@ -20,6 +20,7 @@ import { logger } from '../utils/logger';
 import type { ModalContext, FullscreenMode } from '../types';
 import type { SectionId } from './panels/UnifiedPanel/SectionContentPanel';
 import { SectionContentPanel } from './panels/UnifiedPanel/SectionContentPanel';
+import { PANEL_WIDTHS, PANEL_MIN_WIDTHS } from '../config/panelConfig';
 
 const LeftPanel      = React.lazy(() => import('./panels/LeftPanel'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
@@ -32,7 +33,7 @@ const PreviewModal        = React.lazy(() => import('./modals/PreviewModal'));
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
  *
- *   [Gauche 135px] | [Canvas flex] | [Contenu 240px FIXE] | [Icônes 72px FIXE]
+ *   [Gauche LEFT_DEFAULT] | [Canvas flex] | [Contenu CONTENT_SECTION/PROPERTIES] | [Icônes ICON_BAR]
  *
  * Principes Powtoon :
  * - Panel 3 (Contenu) : TOUJOURS visible à 240px, jamais collapsé par défaut.
@@ -95,7 +96,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
   // === RESET LAYOUT ===
   const handleResetLayout = useCallback(() => {
-    leftPanelRef.current?.resize("135px");
+    leftPanelRef.current?.resize(`${PANEL_WIDTHS.LEFT_DEFAULT}px`);
     setPanel3Width(0);
     setActiveSection(null);
   }, []);
@@ -106,11 +107,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const handleSectionChange = useCallback((section: SectionId | null) => {
     setActiveSection(section);
     if (section) {
-      setPanel3Width(256);
+      setPanel3Width(PANEL_WIDTHS.CONTENT_SECTION);
     } else {
       const el = selectedElementRef.current;
       const hasElement = el && el.type !== null && el.type !== 'scene';
-      setPanel3Width(hasElement ? 280 : 0);
+      setPanel3Width(hasElement ? PANEL_WIDTHS.CONTENT_PROPERTIES : 0);
     }
   }, []);
 
@@ -122,7 +123,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     if (fullscreenMode) return;
     if (activeSection !== null) return; // handleSectionChange gère la taille
     const hasElement = selectedElement && selectedElement.type !== null && selectedElement.type !== 'scene';
-    setPanel3Width(hasElement ? 280 : 0);
+    setPanel3Width(hasElement ? PANEL_WIDTHS.CONTENT_PROPERTIES : 0);
   }, [selectedElement, fullscreenMode, activeSection]);
 
   // === KEYBOARD SHORTCUTS ===
@@ -144,7 +145,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
       setPanel3Width(0);
     } else {
       leftPanelRef.current?.expand();
-      if (activeSection) setPanel3Width(256);
+      if (activeSection) setPanel3Width(PANEL_WIDTHS.CONTENT_SECTION);
       // Cas élément sélectionné : géré par useEffect selectedElement ci-dessus
     }
   }, [fullscreenMode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -171,7 +172,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     setLeftPanelActiveTab(tab);
     editorLogic.handleTabChange(tab);
     if (!fullscreenMode) {
-      leftPanelRef.current?.resize(tab === 'dialogues' ? "280px" : "135px");
+      leftPanelRef.current?.resize(tab === 'dialogues' ? `${PANEL_WIDTHS.CONTENT_PROPERTIES}px` : `${PANEL_WIDTHS.LEFT_DEFAULT}px`);
     }
   };
 
@@ -295,8 +296,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             {/* Panel 1 : Explorateur gauche (filmstrip scènes) */}
             <Panel
               panelRef={leftPanelRef}
-              defaultSize={135}
-              minSize={56}
+              defaultSize={PANEL_WIDTHS.LEFT_DEFAULT}
+              minSize={PANEL_MIN_WIDTHS.LEFT}
               maxSize={200}
               collapsible={true}
               collapsedSize={0}
@@ -371,11 +372,12 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             </div>
           )}
 
-          {/* ── Panel 4 : Barre d'icônes (div CSS fixe 72px) ──
+          {/* ── Panel 4 : Barre d'icônes (div CSS fixe ICON_BAR px) ──
               Toujours visible — indépendant de tout état applicatif. */}
           {!fullscreenMode && (
             <div
-              className="w-[72px] flex-shrink-0 bg-card border-l border-border overflow-hidden"
+              className="flex-shrink-0 bg-card border-l border-border overflow-hidden"
+              style={{ width: `${PANEL_WIDTHS.ICON_BAR}px` }}
               id="icon-bar-panel"
               role="complementary"
               aria-label="Outils d'ajout d'éléments"

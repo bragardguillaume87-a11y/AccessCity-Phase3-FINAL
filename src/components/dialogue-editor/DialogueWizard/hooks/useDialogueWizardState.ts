@@ -1,4 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Gamepad2, ClipboardList, MessageSquare, Target, Lightbulb, PartyPopper } from 'lucide-react';
+import { createElement } from 'react';
+import type { ComplexityLevel } from '@/types';
+
+// Re-export for backward compatibility (components importing from this hook)
+export type { ComplexityLevel };
 
 /**
  * Dialogue wizard step identifiers
@@ -6,21 +12,12 @@ import { useState, useCallback, useMemo } from 'react';
 export type DialogueWizardStep = 'complexity' | 'template' | 'basics' | 'choices' | 'responses' | 'review';
 
 /**
- * Complexity level for dialogue creation (PHASE 2.2: Expanded to 4 levels)
- * - linear: Dialogue without choices (linear story)
- * - binary: Dialogue with 2 simple choices
- * - dice: Dialogue with dice checks (1-2 tests)
- * - expert: Dialogue with multiple choices and effects (2-4 choices)
- */
-export type ComplexityLevel = 'linear' | 'binary' | 'dice' | 'expert';
-
-/**
  * Step configuration
  */
 export interface StepConfig {
   id: DialogueWizardStep;
   label: string;
-  icon: string; // Emoji for kid-friendly display
+  icon: React.ReactNode;
   description: string;
 }
 
@@ -56,37 +53,37 @@ export const DIALOGUE_WIZARD_STEPS: StepConfig[] = [
   {
     id: 'complexity',
     label: 'Niveau',
-    icon: '🎮',
+    icon: createElement(Gamepad2),
     description: 'Choisis le type de dialogue'
   },
   {
     id: 'template',
     label: 'Modèle',
-    icon: '📋',
+    icon: createElement(ClipboardList),
     description: 'Choisis une situation de départ (optionnel)'
   },
   {
     id: 'basics',
     label: 'Dialogue',
-    icon: '💬',
+    icon: createElement(MessageSquare),
     description: 'Qui parle et que dit-il ?'
   },
   {
     id: 'choices',
     label: 'Choix',
-    icon: '🎯',
+    icon: createElement(Target),
     description: 'Crée les options pour le joueur'
   },
   {
     id: 'responses',
     label: 'Réponses',
-    icon: '💡',
+    icon: createElement(Lightbulb),
     description: 'Que se passe-t-il après le choix ?'
   },
   {
     id: 'review',
     label: 'Terminé !',
-    icon: '🎉',
+    icon: createElement(PartyPopper),
     description: 'Vérifie et sauvegarde'
   }
 ];

@@ -53,6 +53,17 @@ interface ElementDefaults {
 // ============================================================================
 
 /**
+ * Reference canvas width used to calibrate element sizes.
+ *
+ * All element scale values (characters) and absolute sizes (props, textboxes)
+ * were authored at this canvas width. Use this constant with canvasDimensions
+ * to compute a responsive scale factor:
+ *
+ *   const canvasScaleFactor = canvasDimensions.width / REFERENCE_CANVAS_WIDTH;
+ */
+export const REFERENCE_CANVAS_WIDTH = 960;
+
+/**
  * Canvas grid and zoom configuration
  */
 export const CANVAS_CONFIG: CanvasConfig = {
@@ -70,6 +81,20 @@ export const ELEMENT_SIZES: ElementSizes = {
   CHARACTER: { width: 128, height: 128 },
   TEXTBOX: { width: 300, height: 100 },
   PROP: { width: 80, height: 80 },
+} as const;
+
+/**
+ * Canvas presentation constants
+ *
+ * Used by MainCanvas.tsx to compute the 16:9 canvas size and its surround.
+ */
+export const CANVAS_PRESENTATION = {
+  /** Width-to-height aspect ratio for the scene canvas (16:9) */
+  ASPECT_RATIO: 16 / 9,
+  /** Padding inside the canvas center div (p-6 = 24px × 2 sides) */
+  CENTER_PADDING: 48,
+  /** Background color of the area surrounding the canvas */
+  SURROUND_COLOR: '#0f1117',
 } as const;
 
 /**

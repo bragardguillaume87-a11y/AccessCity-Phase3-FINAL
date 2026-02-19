@@ -39,7 +39,7 @@ import { PropElement } from './MainCanvas/components/PropElement';
 import { TextBoxElement } from './MainCanvas/components/TextBoxElement';
 import { DialoguePreviewOverlay } from './MainCanvas/components/DialoguePreviewOverlay';
 import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
-import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization';
+// import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization'; // masquée — doublon avec graphe Panel 3
 import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
 import { logger } from '../../utils/logger';
 
@@ -397,6 +397,7 @@ export default function MainCanvas({
             onZoomOut={viewState.zoomOut}
             onResetZoom={viewState.resetZoom}
           />
+          {/* DialogueFlowVisualization masquée — doublon avec le graphe de dialogues (Panel 3)
           {dialoguesCount > 0 && (
             <div className="max-h-48 overflow-y-auto border-t border-border">
               <DialogueFlowVisualization
@@ -409,6 +410,7 @@ export default function MainCanvas({
               />
             </div>
           )}
+          */}
         </div>
 
       </div>

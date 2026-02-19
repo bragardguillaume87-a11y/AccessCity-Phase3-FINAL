@@ -303,7 +303,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             {/* ── Panel 2 : Canvas principal ── */}
             <Panel
               minSize="400px"
-              className="bg-background overflow-auto"
+              className="bg-background overflow-hidden"
               id="canvas-panel"
               role="main"
               aria-label="Canvas de scène"

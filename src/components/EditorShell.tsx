@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useUIStore, useScenesStore, useCharactersStore } from '../stores/index.ts';
 import { useSceneWithElements } from '../stores/selectors/index';
 import { useSelection, toSelectedElementType } from '../hooks/useSelection.ts';
@@ -59,6 +59,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const isSaving = useUIStore((state) => state.isSaving);
 
   const { selectedElement } = useSelection();
+  const selectedElementRef = useRef(selectedElement);
+  useEffect(() => { selectedElementRef.current = selectedElement; }, [selectedElement]);
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
   // === BUSINESS LOGIC LAYER ===
@@ -92,18 +94,24 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   // === RESET LAYOUT ===
   const handleResetLayout = useCallback(() => {
     leftPanelRef.current?.resize("135px");
-    contentPanelRef.current?.resize("240px");
-    // Panel 4 peut se collapsser lors du resize — on force expand pour le maintenir visible
-    rightPanelRef.current?.resize("72px");
-    rightPanelRef.current?.expand();
+    contentPanelRef.current?.resize("0px");
+    // Panel 4 est verrouillé à 72px (maxSize=72) — aucun resize nécessaire
     setActiveSection(null);
   }, []);
 
   // === GESTION SECTION (UnifiedPanel → Panel 3) ===
-  // Panel 3 est TOUJOURS visible à 240px — handleSectionChange ne redimensionne plus.
-  // Il met simplement à jour activeSection pour changer le contenu affiché.
+  // Ouvre/ferme Panel 3 selon la section cliquée.
+  // Si section → expand Panel 3 à 256px.
+  // Si null → collapse Panel 3 (sauf si un élément canvas est sélectionné → PropertiesPanel à 280px).
   const handleSectionChange = useCallback((section: SectionId | null) => {
     setActiveSection(section);
+    if (section) {
+      contentPanelRef.current?.resize("256px");
+    } else {
+      const el = selectedElementRef.current;
+      const hasElement = el && el.type !== null && el.type !== 'scene';
+      contentPanelRef.current?.resize(hasElement ? "280px" : "0px");
+    }
   }, []);
 
   // === KEYBOARD SHORTCUTS ===
@@ -115,19 +123,20 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   });
 
   // === FULLSCREEN — collapse/expand panneaux latéraux ===
-  // En plein écran, on collapse tout pour maximiser le canvas.
-  // À la sortie, on restore Panel 3 à 240px.
+  // En plein écran, on collapse gauche + contenu pour maximiser le canvas.
+  // Panel 4 (barre d'icônes) reste toujours visible.
+  // À la sortie, on restore si une section était active.
   useEffect(() => {
     if (fullscreenMode) {
       leftPanelRef.current?.collapse();
       contentPanelRef.current?.collapse();
-      rightPanelRef.current?.collapse();
+      // Panel 4 (barre d'icônes) : toujours visible, pas de collapse
     } else {
       leftPanelRef.current?.expand();
       rightPanelRef.current?.expand();
-      contentPanelRef.current?.expand();
+      if (activeSection) contentPanelRef.current?.resize("256px");
     }
-  }, [fullscreenMode]);
+  }, [fullscreenMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // === ONE-TIME SETUP ===
   useEffect(() => {

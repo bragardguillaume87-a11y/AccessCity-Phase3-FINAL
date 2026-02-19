@@ -210,7 +210,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen overflow-hidden bg-background flex flex-col">
       <h1 className="sr-only">AccessCity Studio - Éditeur de Visual Novels</h1>
 
       <AnnouncementRegion />

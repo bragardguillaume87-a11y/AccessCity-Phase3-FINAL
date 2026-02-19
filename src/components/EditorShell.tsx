@@ -82,10 +82,12 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   // Section active (icônes UnifiedPanel → contenu Panel 3)
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
 
-  // Panel refs
-  const leftPanelRef    = usePanelRef();
-  const contentPanelRef = usePanelRef(); // Panel 3 : section ou propriétés (240px fixe)
-  const rightPanelRef   = usePanelRef(); // Panel 4 : barre d'icônes (72px fixe)
+  // Panel 3 width — 0 = fermé, 256 = section active, 280 = élément sélectionné
+  // Contrôlé par CSS directement (pas via react-resizable-panels) pour fiabilité.
+  const [panel3Width, setPanel3Width] = useState(0);
+
+  // Panel refs (Panel 1 uniquement — Panel 3 et 4 sont des divs CSS)
+  const leftPanelRef = usePanelRef();
 
   // Graph modal state
   const setGraphModalOpen     = useUIStore((state) => state.setDialogueGraphModalOpen);
@@ -94,23 +96,21 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   // === RESET LAYOUT ===
   const handleResetLayout = useCallback(() => {
     leftPanelRef.current?.resize("135px");
-    contentPanelRef.current?.resize("0px");
-    // Panel 4 est verrouillé à 72px (maxSize=72) — aucun resize nécessaire
+    setPanel3Width(0);
     setActiveSection(null);
   }, []);
 
   // === GESTION SECTION (UnifiedPanel → Panel 3) ===
   // Ouvre/ferme Panel 3 selon la section cliquée.
-  // Si section → expand Panel 3 à 256px.
-  // Si null → collapse Panel 3 (sauf si un élément canvas est sélectionné → PropertiesPanel à 280px).
+  // Utilise panel3Width (état CSS) — fiable même quand Panel 3 est à 0px.
   const handleSectionChange = useCallback((section: SectionId | null) => {
     setActiveSection(section);
     if (section) {
-      contentPanelRef.current?.resize("256px");
+      setPanel3Width(256);
     } else {
       const el = selectedElementRef.current;
       const hasElement = el && el.type !== null && el.type !== 'scene';
-      contentPanelRef.current?.resize(hasElement ? "280px" : "0px");
+      setPanel3Width(hasElement ? 280 : 0);
     }
   }, []);
 
@@ -122,7 +122,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     if (fullscreenMode) return;
     if (activeSection !== null) return; // handleSectionChange gère la taille
     const hasElement = selectedElement && selectedElement.type !== null && selectedElement.type !== 'scene';
-    contentPanelRef.current?.resize(hasElement ? "280px" : "0px");
+    setPanel3Width(hasElement ? 280 : 0);
   }, [selectedElement, fullscreenMode, activeSection]);
 
   // === KEYBOARD SHORTCUTS ===
@@ -134,18 +134,18 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   });
 
   // === FULLSCREEN — collapse/expand panneaux latéraux ===
-  // En plein écran, on collapse gauche + contenu pour maximiser le canvas.
-  // Panel 4 (barre d'icônes) reste toujours visible.
-  // À la sortie, on restore si une section était active.
+  // En plein écran : Panel 1 collapse, Panel 3 se ferme (max canvas).
+  // Panel 4 (icônes) : toujours visible (div CSS, pas de collapse).
+  // À la sortie : Panel 1 expand ; Panel 3 restauré par le useEffect selectedElement
+  //               (qui se re-déclenche car fullscreenMode est dans ses deps).
   useEffect(() => {
     if (fullscreenMode) {
       leftPanelRef.current?.collapse();
-      contentPanelRef.current?.collapse();
-      // Panel 4 (barre d'icônes) : toujours visible, pas de collapse
+      setPanel3Width(0);
     } else {
       leftPanelRef.current?.expand();
-      rightPanelRef.current?.expand();
-      if (activeSection) contentPanelRef.current?.resize("256px");
+      if (activeSection) setPanel3Width(256);
+      // Cas élément sélectionné : géré par useEffect selectedElement ci-dessus
     }
   }, [fullscreenMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -270,8 +270,12 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         </div>
       )}
 
-      {/* Layout 4-panneaux style Powtoon */}
-      <main className="flex-1 overflow-hidden relative" id="main-content" tabIndex={-1}>
+      {/* Layout 4-panneaux style Powtoon
+          Structure :  [Group: Panel1 + Panel2]  [Panel3 CSS]  [Panel4 CSS]
+          Panel 3 et 4 sont des divs CSS — width contrôlée par état React.
+          Cela évite les limitations de react-resizable-panels (resize() ignoré
+          sur un panel collapsed), et donne des transitions CSS fluides. */}
+      <main className="flex-1 overflow-hidden relative flex" id="main-content" tabIndex={-1}>
         <h2 className="sr-only">Zone d'édition principale</h2>
 
         <React.Suspense
@@ -284,9 +288,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             </div>
           }
         >
-          <Group id="editor-layout-v4" className="h-full">
+          {/* ── Group : Panel 1 (explorer) + Panel 2 (canvas) ──
+              flex-1 min-w-0 : prend tout l'espace restant après Panel 3 et Panel 4. */}
+          <Group id="editor-layout-v4" className="flex-1 min-w-0 h-full">
 
-            {/* ── Panel 1 : Explorateur gauche (filmstrip scènes) ── */}
+            {/* Panel 1 : Explorateur gauche (filmstrip scènes) */}
             <Panel
               panelRef={leftPanelRef}
               defaultSize={135}
@@ -320,7 +326,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               />
             )}
 
-            {/* ── Panel 2 : Canvas principal ── */}
+            {/* Panel 2 : Canvas principal */}
             <Panel
               minSize="400px"
               className="bg-background overflow-hidden"
@@ -341,47 +347,35 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               </ErrorBoundary>
             </Panel>
 
-            {!fullscreenMode && (
-              <Separator
-                id="center-content-separator"
-                className="w-1 bg-muted hover:bg-blue-500 active:bg-blue-400 transition-colors cursor-col-resize"
-                aria-label="Redimensionner panneaux canvas et contenu"
-              />
-            )}
+          </Group>
 
-            {/* ── Panel 3 : Contenu (Library style Powtoon) ──
-                Démarre fermé (0px). Ouvert par :
-                  handleSectionChange → icône cliquée (256px)
-                  useEffect selectedElement → élément canvas sélectionné (280px)
-                Contenu : SectionContentPanel | PropertiesPanel | état vide.
-                Pas de Separator à droite → Panel 4 inatteignable par drag. */}
-            <Panel
-              panelRef={contentPanelRef}
-              defaultSize={0}
-              minSize={180}
-              maxSize={400}
-              collapsible={true}
-              collapsedSize={0}
-              className="bg-card overflow-hidden border-l border-border"
+          {/* ── Panel 3 : Section/Propriétés (div CSS, width contrôlée par état) ──
+              panel3Width = 0 → fermé (overflow-hidden masque tout)
+              panel3Width = 256 → section active (SectionContentPanel)
+              panel3Width = 280 → élément canvas sélectionné (PropertiesPanel)
+              transition-[width] : animation fluide à l'ouverture/fermeture. */}
+          {!fullscreenMode && (
+            <div
+              className="flex-shrink-0 bg-card border-l border-border overflow-hidden transition-[width] duration-150"
+              style={{ width: `${panel3Width}px` }}
               id="section-content-panel"
               role="complementary"
               aria-label="Contenu de la section ou propriétés de l'élément"
+              aria-hidden={panel3Width === 0}
             >
-              <ErrorBoundary name="ContentPanel">
-                {panel3Content}
-              </ErrorBoundary>
-            </Panel>
+              <div className="h-full w-full overflow-hidden">
+                <ErrorBoundary name="ContentPanel">
+                  {panel3Content}
+                </ErrorBoundary>
+              </div>
+            </div>
+          )}
 
-            {/* ── Panel 4 : Barre d'icônes (UnifiedPanel) ──
-                TOUJOURS visible, jamais remplacé.
-                72px fixe, pas de Separator à gauche → inatteignable par drag utilisateur.
-                Pas de collapsible → ne peut JAMAIS disparaître. */}
-            <Panel
-              panelRef={rightPanelRef}
-              defaultSize={72}
-              minSize={72}
-              maxSize={72}
-              className="bg-card border-l border-border overflow-hidden"
+          {/* ── Panel 4 : Barre d'icônes (div CSS fixe 72px) ──
+              Toujours visible — indépendant de tout état applicatif. */}
+          {!fullscreenMode && (
+            <div
+              className="w-[72px] flex-shrink-0 bg-card border-l border-border overflow-hidden"
               id="icon-bar-panel"
               role="complementary"
               aria-label="Outils d'ajout d'éléments"
@@ -396,9 +390,9 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                   />
                 </ErrorBoundary>
               </Inspector>
-            </Panel>
+            </div>
+          )}
 
-          </Group>
         </React.Suspense>
       </main>
 

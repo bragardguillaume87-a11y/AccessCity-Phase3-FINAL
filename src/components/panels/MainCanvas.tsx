@@ -3,7 +3,6 @@ import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { GAME_STATS } from '@/i18n/types';
-import { Panel, Group, Separator } from 'react-resizable-panels';
 import { BarChart3 } from 'lucide-react';
 import { StatBar } from '@/components/ui/stat-bar';
 import type { GameStats } from '@/types';
@@ -247,186 +246,172 @@ export default function MainCanvas({
         onFullscreenChange={onFullscreenChange}
       />
 
-      {/* Wrapper flex-1 + position:relative → l'enfant absolute inset-0 a une hauteur EXPLICITE,
-          ce qui permet à Group (height:100% interne) de se résoudre correctement.
-          Sans ça, height:100% sur le Group ne trouve pas de hauteur définie dans son parent
-          flex-1 et reste à sa taille contenu. */}
-      <div className="flex-1 min-h-0 relative overflow-hidden">
-      <div className="absolute inset-0">
-      {/* Split vertical : panel canvas (haut) + panel lecteur/timeline (bas) */}
-      <Group orientation="vertical" className="h-full">
+      {/* Zone canvas + lecteur — flex-col simple, pas de librairie tierce */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
-        {/* Panel haut — vue des personnages + décor */}
-        <Panel defaultSize={65} minSize={30}>
-          <div ref={centerDivRef} className="h-full bg-[#0f1117] p-6 flex items-center justify-center overflow-hidden">
+        {/* Canvas — flex-1 prend tout l'espace vertical disponible */}
+        <div ref={centerDivRef} className="flex-1 min-h-0 bg-[#0f1117] p-6 flex items-center justify-center overflow-hidden">
+          <div
+            className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
+            style={{
+              width: `${canvasSize.width}px`,
+              height: `${canvasSize.height}px`,
+              minWidth: '320px',
+            }}
+          >
             <div
-              className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
+              ref={composedCanvasRef}
+              className={`relative w-full h-full bg-background transition-all ${
+                dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
+              } ${
+                dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''
+              }`}
               style={{
-                width: `${canvasSize.width}px`,
-                height: `${canvasSize.height}px`,
-                minWidth: '320px',
+                backgroundImage: selectedScene.backgroundUrl ? `url(${selectedScene.backgroundUrl})` : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
               }}
+              onDragOver={dragDrop.handleDragOver}
+              onDragLeave={dragDrop.handleDragLeave}
+              onDrop={dragDrop.handleDrop}
             >
-              <div
-                ref={composedCanvasRef}
-                className={`relative w-full h-full bg-background transition-all ${
-                  dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
-                } ${
-                  dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''
-                }`}
-                style={{
-                  backgroundImage: selectedScene.backgroundUrl ? `url(${selectedScene.backgroundUrl})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-                onDragOver={dragDrop.handleDragOver}
-                onDragLeave={dragDrop.handleDragLeave}
-                onDrop={dragDrop.handleDrop}
-              >
-                <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
+              <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
 
-                <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
+              <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
 
-                {!selectedScene.backgroundUrl && (
-                  <NoBackgroundPlaceholder onSetBackground={actions.handleSetBackground} />
-                )}
+              {!selectedScene.backgroundUrl && (
+                <NoBackgroundPlaceholder onSetBackground={actions.handleSetBackground} />
+              )}
 
-                {canvasDimensions.width > 0 && sceneCharacters.map((sceneChar) => {
-                  const character = actions.characters.find(c => c.id === sceneChar.characterId);
-                  if (!character) return null;
+              {canvasDimensions.width > 0 && sceneCharacters.map((sceneChar) => {
+                const character = actions.characters.find(c => c.id === sceneChar.characterId);
+                if (!character) return null;
 
-                  return (
-                    <CharacterSprite
-                      key={sceneChar.id}
-                      sceneChar={sceneChar}
-                      character={character}
-                      canvasDimensions={canvasDimensions}
-                      gridEnabled={viewState.gridEnabled}
-                      selectedCharacterId={selection.selectedCharacterId ?? undefined}
-                      onCharacterClick={selection.handleCharacterClick}
-                      onContextMenu={contextMenu.handleCharacterRightClick}
-                      onUpdatePosition={handleUpdateCharacterPosition}
-                    />
-                  );
-                })}
+                return (
+                  <CharacterSprite
+                    key={sceneChar.id}
+                    sceneChar={sceneChar}
+                    character={character}
+                    canvasDimensions={canvasDimensions}
+                    gridEnabled={viewState.gridEnabled}
+                    selectedCharacterId={selection.selectedCharacterId ?? undefined}
+                    onCharacterClick={selection.handleCharacterClick}
+                    onContextMenu={contextMenu.handleCharacterRightClick}
+                    onUpdatePosition={handleUpdateCharacterPosition}
+                  />
+                );
+              })}
 
-                {canvasDimensions.width > 0 && sceneProps.map((prop) => {
-                  const canvasProp: CanvasProp = {
-                    id: prop.id,
-                    emoji: prop.assetUrl,
-                    position: prop.position,
-                    size: prop.size
-                  };
-                  return (
-                    <PropElement
-                      key={prop.id}
-                      prop={canvasProp}
-                      canvasDimensions={canvasDimensions}
-                      gridEnabled={viewState.gridEnabled}
-                      onUpdateProp={handleUpdateProp}
-                      onRemoveProp={handleRemoveProp}
-                    />
-                  );
-                })}
+              {canvasDimensions.width > 0 && sceneProps.map((prop) => {
+                const canvasProp: CanvasProp = {
+                  id: prop.id,
+                  emoji: prop.assetUrl,
+                  position: prop.position,
+                  size: prop.size
+                };
+                return (
+                  <PropElement
+                    key={prop.id}
+                    prop={canvasProp}
+                    canvasDimensions={canvasDimensions}
+                    gridEnabled={viewState.gridEnabled}
+                    onUpdateProp={handleUpdateProp}
+                    onRemoveProp={handleRemoveProp}
+                  />
+                );
+              })}
 
-                {canvasDimensions.width > 0 && sceneTextBoxes.map((textBox) => {
-                  const canvasTextBox: CanvasTextBox = {
-                    id: textBox.id,
-                    text: textBox.content,
-                    fontSize: textBox.style?.fontSize as number | undefined,
-                    fontWeight: textBox.style?.fontWeight as string | undefined,
-                    color: textBox.style?.color as string | undefined,
-                    textAlign: textBox.style?.textAlign as string | undefined,
-                    position: textBox.position,
-                    size: textBox.size
-                  };
-                  return (
-                    <TextBoxElement
-                      key={textBox.id}
-                      textBox={canvasTextBox}
-                      canvasDimensions={canvasDimensions}
-                      gridEnabled={viewState.gridEnabled}
-                      onUpdateTextBox={handleUpdateTextBox}
-                      onRemoveTextBox={handleRemoveTextBox}
-                    />
-                  );
-                })}
+              {canvasDimensions.width > 0 && sceneTextBoxes.map((textBox) => {
+                const canvasTextBox: CanvasTextBox = {
+                  id: textBox.id,
+                  text: textBox.content,
+                  fontSize: textBox.style?.fontSize as number | undefined,
+                  fontWeight: textBox.style?.fontWeight as string | undefined,
+                  color: textBox.style?.color as string | undefined,
+                  textAlign: textBox.style?.textAlign as string | undefined,
+                  position: textBox.position,
+                  size: textBox.size
+                };
+                return (
+                  <TextBoxElement
+                    key={textBox.id}
+                    textBox={canvasTextBox}
+                    canvasDimensions={canvasDimensions}
+                    gridEnabled={viewState.gridEnabled}
+                    onUpdateTextBox={handleUpdateTextBox}
+                    onRemoveTextBox={handleRemoveTextBox}
+                  />
+                );
+              })}
 
-                <CanvasFloatingControls
-                  gridEnabled={viewState.gridEnabled}
-                  onToggleGrid={viewState.setGridEnabled}
-                />
+              <CanvasFloatingControls
+                gridEnabled={viewState.gridEnabled}
+                onToggleGrid={viewState.setGridEnabled}
+              />
 
-                {enableStatsHUD && (
-                  <div className="absolute top-4 left-4 z-10 bg-card/85 backdrop-blur-sm rounded-lg border border-border p-3 w-48 space-y-2 shadow-lg">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1">
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      Stats HUD
-                    </div>
-                    <StatBar label="Physique" icon="💪" value={variables[GAME_STATS.PHYSIQUE] ?? 100} size="sm" />
-                    <StatBar label="Mentale" icon="🧠" value={variables[GAME_STATS.MENTALE] ?? 100} size="sm" />
+              {enableStatsHUD && (
+                <div className="absolute top-4 left-4 z-10 bg-card/85 backdrop-blur-sm rounded-lg border border-border p-3 w-48 space-y-2 shadow-lg">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    Stats HUD
                   </div>
-                )}
+                  <StatBar label="Physique" icon="💪" value={variables[GAME_STATS.PHYSIQUE] ?? 100} size="sm" />
+                  <StatBar label="Mentale" icon="🧠" value={variables[GAME_STATS.MENTALE] ?? 100} size="sm" />
+                </div>
+              )}
 
-                {selectedElement?.type === 'dialogue' && selectedElement?.sceneId === selectedScene.id && (() => {
-                  const dialogue = selectedScene.dialogues[selectedElement.index];
-                  if (!dialogue) return null;
+              {selectedElement?.type === 'dialogue' && selectedElement?.sceneId === selectedScene.id && (() => {
+                const dialogue = selectedScene.dialogues[selectedElement.index];
+                if (!dialogue) return null;
 
-                  const speaker = actions.characters.find(c => c.id === dialogue.speaker);
-                  const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
+                const speaker = actions.characters.find(c => c.id === dialogue.speaker);
+                const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
 
-                  return (
-                    <DialoguePreviewOverlay
-                      dialogue={dialogue}
-                      dialogueIndex={selectedElement.index}
-                      totalDialogues={selectedScene.dialogues.length}
-                      speakerName={speakerName}
-                      currentDialogueText={currentDialogueText}
-                      onNavigate={selection.handleDialogueNavigate}
-                    />
-                  );
-                })()}
-              </div>
+                return (
+                  <DialoguePreviewOverlay
+                    dialogue={dialogue}
+                    dialogueIndex={selectedElement.index}
+                    totalDialogues={selectedScene.dialogues.length}
+                    speakerName={speakerName}
+                    currentDialogueText={currentDialogueText}
+                    onNavigate={selection.handleDialogueNavigate}
+                  />
+                );
+              })()}
             </div>
           </div>
-        </Panel>
+        </div>
 
-        <Separator className="h-1.5 bg-border hover:bg-primary/40 cursor-row-resize transition-colors" />
+        {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
+        <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
+          <SceneInfoBar charactersCount={sceneCharacters.length} dialoguesCount={dialoguesCount} />
+          <TimelinePlayhead
+            currentTime={currentTime}
+            duration={Math.max(60, dialoguesCount * 5)}
+            dialogues={selectedScene?.dialogues || []}
+            onSeek={handleSeek}
+            onPlayPause={handlePlayPause}
+            isPlaying={viewState.isPlaying}
+            canvasZoom={viewState.canvasZoom}
+            onZoomIn={viewState.zoomIn}
+            onZoomOut={viewState.zoomOut}
+            onResetZoom={viewState.resetZoom}
+          />
+          {dialoguesCount > 0 && (
+            <div className="max-h-48 overflow-y-auto border-t border-border">
+              <DialogueFlowVisualization
+                selectedScene={selectedScene}
+                selectedElement={selectedElement}
+                viewMode={viewState.viewMode}
+                onViewModeChange={viewState.setViewMode}
+                onDialogueClick={selection.handleDialogueClick}
+                onOpenModal={onOpenModal}
+              />
+            </div>
+          )}
+        </div>
 
-        {/* Panel bas — lecteur : SceneInfoBar + Timeline + Déroulement */}
-        <Panel defaultSize={35} minSize={15}>
-          <div className="h-full flex flex-col bg-background overflow-hidden">
-            <SceneInfoBar charactersCount={sceneCharacters.length} dialoguesCount={dialoguesCount} />
-            <TimelinePlayhead
-              currentTime={currentTime}
-              duration={Math.max(60, dialoguesCount * 5)}
-              dialogues={selectedScene?.dialogues || []}
-              onSeek={handleSeek}
-              onPlayPause={handlePlayPause}
-              isPlaying={viewState.isPlaying}
-              canvasZoom={viewState.canvasZoom}
-              onZoomIn={viewState.zoomIn}
-              onZoomOut={viewState.zoomOut}
-              onResetZoom={viewState.resetZoom}
-            />
-            {dialoguesCount > 0 && (
-              <div className="flex-1 overflow-y-auto border-t border-border">
-                <DialogueFlowVisualization
-                  selectedScene={selectedScene}
-                  selectedElement={selectedElement}
-                  viewMode={viewState.viewMode}
-                  onViewModeChange={viewState.setViewMode}
-                  onDialogueClick={selection.handleDialogueClick}
-                  onOpenModal={onOpenModal}
-                />
-              </div>
-            )}
-          </div>
-        </Panel>
-
-      </Group>
-      </div>{/* fin absolute inset-0 */}
-      </div>{/* fin wrapper flex-1 relative */}
+      </div>
 
       <QuickActionsBar
         sceneId={selectedScene.id}

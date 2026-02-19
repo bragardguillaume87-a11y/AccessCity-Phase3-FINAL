@@ -4,6 +4,8 @@
 import { logger } from '../utils/logger';
 import { GAME_STATS, type GameStatKey } from '../i18n';
 import type { Scene, Dialogue, Character, DialogueChoice } from '@/types';
+import { STAT_BOUNDS, DICE } from '@/config/gameConstants';
+import { GRADE_THRESHOLDS } from '@/config/constants';
 
 /**
  * Game variables tracking player progress
@@ -35,7 +37,7 @@ export default class StageDirector {
 
   constructor(
     scenes: Scene[],
-    dialogues: Dialogue[], // Kept for backward compatibility but not used
+    _dialogues: Dialogue[], // Kept for backward compatibility but not used
     characters: Character[],
     initialSceneIndex: number = 0
   ) {
@@ -125,26 +127,33 @@ export default class StageDirector {
       choice.effects.forEach(effect => {
         const key = effect.variable as GameStatKey;
         if (key in this.variables) {
-          this.variables[key] = Math.max(0, Math.min(100, this.variables[key] + effect.value));
+          this.variables[key] = Math.max(STAT_BOUNDS.MIN, Math.min(STAT_BOUNDS.MAX, this.variables[key] + effect.value));
           logger.debug(`[StageDirector] Variable ${key}: ${this.variables[key]}`);
         }
       });
     }
 
-    // Gérer le risque (lancer de dé) via diceCheck
+    // Gérer le risque (lancer de dé d20) via diceCheck
     if (choice.diceCheck) {
-      const diceRoll = Math.floor(Math.random() * 6) + 1;
-      const threshold = choice.diceCheck.difficulty || 4;
+      const diceRoll = Math.floor(Math.random() * DICE.D20_MAX) + 1;
+      const threshold = choice.diceCheck.difficulty || DICE.DEFAULT_DIFFICULTY;
+      const targetStat = choice.diceCheck.stat as GameStatKey | undefined;
 
-      logger.debug(`[StageDirector] Dice roll: ${diceRoll}, threshold: ${threshold}`);
+      logger.debug(`[StageDirector] Dice roll (d20): ${diceRoll}, threshold: ${threshold}, stat: ${targetStat || 'all'}`);
 
       if (diceRoll < threshold) {
-        // Échec : pénalité sur les variables
-        (Object.keys(this.variables) as GameStatKey[]).forEach(key => {
-          this.variables[key] = Math.max(0, this.variables[key] - 5);
-        });
+        if (targetStat && targetStat in this.variables) {
+          this.variables[targetStat] = Math.max(STAT_BOUNDS.MIN, this.variables[targetStat] - DICE.FAIL_TARGET_PENALTY);
+        } else {
+          (Object.keys(this.variables) as GameStatKey[]).forEach(key => {
+            this.variables[key] = Math.max(STAT_BOUNDS.MIN, this.variables[key] - DICE.FAIL_ALL_PENALTY);
+          });
+        }
         logger.debug('[StageDirector] Risk failed! Variables reduced.');
       } else {
+        if (targetStat && targetStat in this.variables) {
+          this.variables[targetStat] = Math.min(STAT_BOUNDS.MAX, this.variables[targetStat] + DICE.SUCCESS_BONUS);
+        }
         logger.debug('[StageDirector] Risk succeeded!');
       }
     }
@@ -306,19 +315,19 @@ export default class StageDirector {
   getEndingMessage(): EndingMessage {
     const score = this.getFinalScore();
 
-    if (score >= 80) {
+    if (score >= GRADE_THRESHOLDS.EXCEPTIONAL) {
       return {
         title: "Parcours exceptionnel !",
         message: "Vous avez démontré une maîtrise exemplaire de toutes les compétences.",
         grade: "A+"
       };
-    } else if (score >= 60) {
+    } else if (score >= GRADE_THRESHOLDS.GOOD) {
       return {
         title: "Bon parcours !",
         message: "Vous avez bien géré la plupart des situations.",
         grade: "B"
       };
-    } else if (score >= 40) {
+    } else if (score >= GRADE_THRESHOLDS.AVERAGE) {
       return {
         title: "Parcours moyen",
         message: "Vous avez encore des compétences à développer.",

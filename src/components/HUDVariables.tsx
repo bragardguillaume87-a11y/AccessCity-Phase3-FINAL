@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TIMING } from '@/config/timing';
-import { HUD_THRESHOLDS } from '@/config/constants';
+import { STAT_THRESHOLDS } from '@/config/gameConstants';
+import { GAME_STATS } from '@/i18n';
 
 /**
  * Props for HUDVariables component
@@ -105,10 +106,10 @@ export default function HUDVariables({ variables }: HUDVariablesProps) {
           </h3>
           <div className="space-y-3">
             {entries.map(([key, value]) => {
-              const icon = key === 'Physique' ? '💪' : key === 'Mentale' ? '🧠' : '📊';
+              const icon = key === GAME_STATS.PHYSIQUE ? '💪' : key === GAME_STATS.MENTALE ? '🧠' : '📊';
               const color =
-                value > HUD_THRESHOLDS.HIGH ? 'from-green-500 to-green-600' :
-                value > HUD_THRESHOLDS.MEDIUM ? 'from-yellow-500 to-yellow-600' :
+                value > STAT_THRESHOLDS.HEALTHY ? 'from-green-500 to-green-600' :
+                value > STAT_THRESHOLDS.WARNING ? 'from-yellow-500 to-yellow-600' :
                 'from-red-500 to-red-600';
 
               return (

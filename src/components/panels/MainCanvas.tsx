@@ -3,6 +3,7 @@ import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { GAME_STATS } from '@/i18n/types';
+import { LAYOUT } from '@/config/constants';
 import { BarChart3 } from 'lucide-react';
 import { StatBar } from '@/components/ui/stat-bar';
 import type { GameStats } from '@/types';
@@ -385,7 +386,7 @@ export default function MainCanvas({
 
       {/* Déroulement — section scrollable sous la zone stage (toujours après la timeline) */}
       {dialoguesCount > 0 && (
-        <div className="flex-shrink-0 border-t border-border overflow-y-auto" style={{ maxHeight: '200px' }}>
+        <div className="flex-shrink-0 border-t border-border overflow-y-auto" style={{ maxHeight: `${LAYOUT.DIALOGUE_FLOW_MAX_HEIGHT}px` }}>
           <DialogueFlowVisualization
             selectedScene={selectedScene}
             selectedElement={selectedElement}

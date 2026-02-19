@@ -4,6 +4,8 @@ import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { COLORS } from '@/config/colors';
 import type { TerminalNodeData } from '@/types';
 import { NodeHandles } from '../NodeHandles';
+import { truncateTerminalChoice } from '@/utils/textHelpers';
+import { COSMOS_DIMENSIONS, COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
 
 interface TerminalNodeProps {
   data: TerminalNodeData;
@@ -44,10 +46,10 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
         borderStyle: 'dashed',
         borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',
-        width: '200px',
-        minHeight: '60px',
+        width: `${COSMOS_DIMENSIONS.terminal.width}px`,
+        minHeight: `${COSMOS_DIMENSIONS.terminal.minHeight}px`,
         boxShadow: shadow,
-        transition: 'all 0.2s ease',
+        transition: COSMOS_ANIMATIONS.transitionFast,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -62,7 +64,7 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
       />
 
       {theme.icons?.useEmoji ? (
-        <span style={{ fontSize: '24px', lineHeight: 1 }}>
+        <span style={{ fontSize: `${NODE_FONT.icon}px`, lineHeight: 1 }}>
           {theme.icons.terminal}
         </span>
       ) : (
@@ -82,14 +84,14 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
         {choiceText && (
           <p
             style={{
-              fontSize: '11px',
+              fontSize: `${NODE_FONT.badge}px`,
               color: themeColors.text,
               opacity: 0.8,
               margin: '4px 0 0 0',
               fontStyle: 'italic'
             }}
           >
-            "{choiceText.substring(0, 30)}..."
+            "{truncateTerminalChoice(choiceText)}"
           </p>
         )}
       </div>

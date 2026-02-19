@@ -6,7 +6,9 @@ import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { COLORS } from '@/config/colors';
 import type { DialogueNodeData, DialogueChoice, ValidationProblem } from '@/types';
 import type { Position } from '@xyflow/react';
-import { SerpentineBadge, SerpentineRowIndicator } from '../SerpentineBadge';
+import { truncateNodeText, truncateStageDirections, getIssueStatus } from '@/utils/textHelpers';
+import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
+import { SerpentineBadge } from '../SerpentineBadge';
 import { FlowDirectionIndicator } from '../FlowDirectionIndicator';
 import { NodeHandles } from '../NodeHandles';
 import { useNodeLayout } from '@/hooks/useNodeLayout';
@@ -81,16 +83,15 @@ export const BaseNode = React.memo(function BaseNode({
 
   const avatarUrl = useCharacterAvatar(speaker, speakerMood || 'neutral');
 
-  const hasErrors = issues.some((issue: ValidationProblem) => issue.type === 'error');
-  const hasWarnings = issues.some((issue: ValidationProblem) => issue.type === 'warning');
+  const { hasErrors, hasWarnings } = getIssueStatus(issues);
 
   const bgColor = hasErrors || hasWarnings ? colors.bg : (themeColors.bgGradient || themeColors.bg);
   const borderColor = hasErrors || hasWarnings ? colors.border : themeColors.border;
   const textColor = hasErrors || hasWarnings ? colors.text : themeColors.text;
   const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
 
-  const displayText = text ? (text.length > 80 ? text.substring(0, 80) + '...' : text) : '(Empty dialogue)';
-  const displayStageDirections = stageDirections ? (stageDirections.length > 50 ? stageDirections.substring(0, 50) + '...' : stageDirections) : null;
+  const displayText = truncateNodeText(text);
+  const displayStageDirections = truncateStageDirections(stageDirections) || null;
 
   const ariaLabel = `Dialogue ${index + 1}${ariaLabelExtra}: ${speaker || 'Narrator'} dit "${displayText}"`;
 
@@ -118,16 +119,18 @@ export const BaseNode = React.memo(function BaseNode({
         width: `${sizes.nodeWidth}px`,
         minHeight: `${sizes.nodeMinHeight}px`,
         boxShadow: shadow,
-        transition: 'all 0.2s ease',
+        transition: COSMOS_ANIMATIONS.transitionFast,
         position: 'relative',
         overflow: 'visible'
       }}
     >
-      {theme.shapes?.decorativeElements && <DecorativeStars position={layout.decorativePosition} />}
+      {theme.shapes?.decorativeElements && (
+        // In serpentine mode, only show stars on first/last node to reduce visual noise
+        !data.serpentine || data.serpentine.isFirst || data.serpentine.isLast
+      ) && <DecorativeStars position={layout.decorativePosition} />}
       {theme.interactions?.showDragIndicators && <DragIndicator />}
 
       {data.serpentine && <SerpentineBadge layout={layout} />}
-      {data.serpentine && <SerpentineRowIndicator layout={layout} />}
       {data.serpentine && <FlowDirectionIndicator layout={layout} />}
 
       <NodeHandles
@@ -164,7 +167,7 @@ export const BaseNode = React.memo(function BaseNode({
                 {speaker || 'Narrator'}
               </span>
               {speakerMood && speakerMood !== 'neutral' && (
-                <span style={{ fontSize: '10px', color: textColor, opacity: 0.7, fontStyle: 'italic' }}>
+                <span style={{ fontSize: `${NODE_FONT.meta}px`, color: textColor, opacity: 0.7, fontStyle: 'italic' }}>
                   ({speakerMood})
                 </span>
               )}

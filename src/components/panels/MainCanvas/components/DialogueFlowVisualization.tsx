@@ -1,8 +1,9 @@
-import React from 'react';
+
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { List, Network } from 'lucide-react';
 import DialogueGraph from '../../../features/DialogueGraph';
 import type { Scene, SelectedElementType } from '@/types';
+import { LAYOUT } from '@/config/constants';
 
 export interface DialogueFlowVisualizationProps {
   selectedScene: Scene;
@@ -55,7 +56,7 @@ export function DialogueFlowVisualization({
       {/* Conditional rendering: Visual list or Graph view */}
       {viewMode === 'graph' ? (
         // Graph view with ReactFlow
-        <div className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background" style={{ height: '600px' }}>
+        <div className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background" style={{ height: `${LAYOUT.DIALOGUE_FLOW_MODAL_HEIGHT}px` }}>
           <DialogueGraph
             selectedScene={selectedScene}
             selectedElement={selectedElement}

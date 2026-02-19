@@ -3,6 +3,9 @@ import { GitBranch } from 'lucide-react';
 import type { DialogueNodeData } from '@/types';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { useNodeLayout } from '@/hooks/useNodeLayout';
+import { truncateChoicePreview, getIssueStatus } from '@/utils/textHelpers';
+import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
+import { COLORS } from '@/config/colors';
 import { BaseNode } from './BaseNode';
 import {
   CHOICE_PREVIEW_CONTAINER_STYLE,
@@ -26,13 +29,12 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
   const layout = useNodeLayout(data.serpentine, theme);
 
   const themeColors = theme.nodes.choice;
-  const hasErrors = issues.some(i => i.type === 'error');
-  const hasWarnings = issues.some(i => i.type === 'warning');
+  const { hasErrors, hasWarnings } = getIssueStatus(issues);
   const borderColor = hasErrors || hasWarnings
-    ? (hasErrors ? '#ef4444' : '#f59e0b')
+    ? (hasErrors ? COLORS.ERROR : COLORS.WARNING)
     : themeColors.border;
   const textColor = hasErrors || hasWarnings
-    ? '#ffffff'
+    ? COLORS.TEXT_WHITE
     : themeColors.text;
 
   return (
@@ -64,11 +66,11 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
             }}
           >
             {theme.icons?.useEmoji && <span>✨</span>}
-            {choice.text?.substring(0, 12) || `Choix ${i + 1}`}
+            {truncateChoicePreview(choice.text, `Choix ${i + 1}`)}
           </span>
         ))}
         {choices.length > 3 && (
-          <span style={{ fontSize: '11px', color: textColor, opacity: 0.7, padding: '4px 8px' }}>
+          <span style={{ fontSize: `${NODE_FONT.badge}px`, color: textColor, opacity: 0.7, padding: '4px 8px' }}>
             +{choices.length - 3}
           </span>
         )}
@@ -81,10 +83,10 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
           position: 'absolute',
           top: '8px',
           [layout.branchLines.indicatorSide]: '8px',
-          width: '24px',
-          height: '24px',
+          width: `${NODE_FONT.icon}px`,
+          height: `${NODE_FONT.icon}px`,
           opacity: 0.5,
-          transition: 'all 0.3s ease',
+          transition: COSMOS_ANIMATIONS.transitionNormal,
           pointerEvents: 'none',
           zIndex: 10,
         }}

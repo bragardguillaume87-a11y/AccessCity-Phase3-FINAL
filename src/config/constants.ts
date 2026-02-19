@@ -53,6 +53,8 @@ interface Layout {
   readonly DIALOG_SMALL_WIDTH: number;
   readonly DIALOG_MEDIUM_WIDTH: number;
   readonly DIALOG_LARGE_WIDTH: number;
+  readonly DIALOGUE_FLOW_MODAL_HEIGHT: number;
+  readonly DIALOGUE_FLOW_MAX_HEIGHT: number;
 }
 
 interface ApiConfig {
@@ -146,6 +148,8 @@ export const LAYOUT: Layout = {
   DIALOG_SMALL_WIDTH: 500,
   DIALOG_MEDIUM_WIDTH: 600,
   DIALOG_LARGE_WIDTH: 800,
+  DIALOGUE_FLOW_MODAL_HEIGHT: 600,   // DialogueFlowVisualization inside graph modal
+  DIALOGUE_FLOW_MAX_HEIGHT: 200,     // Dialogue flow section below canvas in MainCanvas
 } as const;
 
 // API Configuration
@@ -159,17 +163,18 @@ export const API: ApiConfig = {
 export const SYSTEM_CHARACTERS = ['player', 'narrator', 'counsellor'] as const;
 export type SystemCharacter = typeof SYSTEM_CHARACTERS[number];
 
-// HUD Display Thresholds (for color-coded progress bars)
-export const HUD_THRESHOLDS = {
-  HIGH: 66,    // Green zone (value > 66)
-  MEDIUM: 33,  // Yellow zone (value > 33)
-  // Below MEDIUM is Red zone
-} as const;
-
 // Game Engine Thresholds
+// NOTE: Stat color thresholds (66/33) live in gameConstants.ts → STAT_THRESHOLDS
 export const GAME_THRESHOLDS = {
   VICTORY_SCORE: 60,        // Average score needed for victory (confetti)
   INITIAL_STAT_VALUE: 50,   // Default starting value for game stats
+} as const;
+
+// Grade system thresholds for getEndingMessage()
+export const GRADE_THRESHOLDS = {
+  EXCEPTIONAL: 80,  // A+ — exemplary performance
+  GOOD: 60,         // B  — good performance
+  AVERAGE: 40,      // C  — below AVERAGE → D
 } as const;
 
 // Asset Categories

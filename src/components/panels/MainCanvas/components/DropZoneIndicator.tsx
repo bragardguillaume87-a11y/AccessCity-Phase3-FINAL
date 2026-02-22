@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 /**
  * Supported drag types for visual feedback

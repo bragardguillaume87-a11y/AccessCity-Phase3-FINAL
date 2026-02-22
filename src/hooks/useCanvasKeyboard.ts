@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import type { Scene, Character, SceneCharacter } from '@/types';
 
+/** Keyboard nudge amounts (percentage of canvas) */
+const NUDGE = { NORMAL: 0.5, SHIFT: 1 } as const;
+const POSITION_BOUNDS = { MIN: 0, MAX: 100 } as const;
+
 /**
  * Options for useCanvasKeyboard hook
  */
@@ -63,26 +67,26 @@ export function useCanvasKeyboard({
       }
 
       // Arrow keys - nudge character position
-      const nudgeAmount = e.shiftKey ? 1 : 0.5; // 1% with Shift, 0.5% without
+      const nudgeAmount = e.shiftKey ? NUDGE.SHIFT : NUDGE.NORMAL;
       const currentPosition = selectedChar.position || { x: 50, y: 50 };
-      let newPosition = { ...currentPosition };
+      const newPosition = { ...currentPosition };
 
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          newPosition.x = Math.max(0, currentPosition.x - nudgeAmount);
+          newPosition.x = Math.max(POSITION_BOUNDS.MIN, currentPosition.x - nudgeAmount);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          newPosition.x = Math.min(100, currentPosition.x + nudgeAmount);
+          newPosition.x = Math.min(POSITION_BOUNDS.MAX, currentPosition.x + nudgeAmount);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          newPosition.y = Math.max(0, currentPosition.y - nudgeAmount);
+          newPosition.y = Math.max(POSITION_BOUNDS.MIN, currentPosition.y - nudgeAmount);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          newPosition.y = Math.min(100, currentPosition.y + nudgeAmount);
+          newPosition.y = Math.min(POSITION_BOUNDS.MAX, currentPosition.y + nudgeAmount);
           break;
         default:
           return;

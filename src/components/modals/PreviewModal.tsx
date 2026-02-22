@@ -1,14 +1,11 @@
-import React from 'react';
+
 import PreviewPlayer from '../panels/PreviewPlayer';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 
 /**
  * Props for PreviewModal component
@@ -41,30 +38,23 @@ export default function PreviewModal({ isOpen, onClose, initialSceneId }: Previe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 dark bg-background border-border"
+        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 dark bg-background border-border overflow-hidden"
         onEscapeKeyDown={onClose}
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Aperçu du projet</DialogTitle>
         </DialogHeader>
 
-        <div className="relative h-full w-full flex items-center justify-center">
+        {/*
+          absolute inset-0 : contourne le layout `grid` de DialogContent (shadcn default).
+          Sans ça, h-full sur l'enfant = hauteur du contenu (auto), pas 95vh.
+          Positionné relativement au DialogContent (position: fixed → crée un contexte).
+        */}
+        <div className="absolute inset-0">
           <PreviewPlayer
             initialSceneId={initialSceneId}
             onClose={onClose}
           />
-
-          <DialogClose asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 z-10 bg-background/80 hover:bg-card text-foreground border border-border"
-              onClick={onClose}
-            >
-              <X className="h-5 w-5" />
-              <span className="sr-only">Fermer</span>
-            </Button>
-          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>

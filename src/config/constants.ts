@@ -68,6 +68,7 @@ interface AssetCategories {
   readonly CHARACTER: string;
   readonly PROP: string;
   readonly AUDIO: string;
+  readonly ATMOSPHERE: string;
   readonly OTHER: string;
 }
 
@@ -183,6 +184,8 @@ export const ASSET_CATEGORIES: AssetCategories = {
   CHARACTER: 'character',
   PROP: 'prop',
   AUDIO: 'audio',
+  /** Sons d'ambiance environnementaux (vent, pluie, foule…) */
+  ATMOSPHERE: 'atmosphere',
   OTHER: 'other',
 } as const;
 
@@ -196,6 +199,16 @@ export const FILE_TYPES: FileTypes = {
     accept: 'audio/*',
     extensions: ['.mp3', '.wav', '.ogg', '.m4a'],
   },
+} as const;
+
+// Audio Default Volumes
+export const AUDIO_DEFAULTS = {
+  /** Default volume for background music (0-1) */
+  MUSIC_VOLUME: 0.5,
+  /** Default volume for dialogue sound effects (0-1) */
+  SFX_VOLUME: 0.7,
+  /** Default volume for ambient environmental tracks (0-1) */
+  AMBIENT_VOLUME: 0.4,
 } as const;
 
 // App Metadata

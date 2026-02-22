@@ -20,13 +20,13 @@ import { useDialoguesStore } from '@/stores/dialoguesStore'
 import { useSceneElementsStore } from '@/stores/sceneElementsStore'
 import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2 } from 'lucide-react'
-import type { Scene } from '@/types'
+import type { SceneMetadata } from '@/types'
 
 /**
  * SceneCard Props Interface
  */
 interface SceneCardProps {
-  scene: Scene
+  scene: SceneMetadata
   index: number
   isSelected: boolean
   charactersCount: number
@@ -131,7 +131,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
         )}
 
         {/* Scene number — top-left overlay */}
-        <span className="absolute top-1 left-1 text-[10px] font-bold leading-none px-1 py-0.5 rounded bg-black/60 text-white tabular-nums">
+        <span className="absolute top-1 left-1 text-xs font-bold leading-none px-1 py-0.5 rounded bg-black/60 text-white tabular-nums">
           {index + 1}
         </span>
 
@@ -144,7 +144,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
             onClick={(e) => { e.stopPropagation(); onDuplicate(scene.id) }}
             onKeyDown={(e) => e.stopPropagation()}
           >
-            <Copy className="w-2.5 h-2.5" />
+            <Copy className="w-3 h-3" />
           </button>
           <button
             className="w-5 h-5 rounded bg-black/60 hover:bg-red-600/90 text-white flex items-center justify-center"
@@ -153,7 +153,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
             onClick={(e) => { e.stopPropagation(); onDelete(scene.id) }}
             onKeyDown={(e) => e.stopPropagation()}
           >
-            <Trash2 className="w-2.5 h-2.5" />
+            <Trash2 className="w-3 h-3" />
           </button>
         </div>
 
@@ -170,7 +170,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
  * ScenesSidebar Props Interface
  */
 export interface ScenesSidebarProps {
-  scenes: Scene[]
+  scenes: SceneMetadata[]
   selectedSceneId?: string | null
   onSceneSelect: (sceneId: string) => void
 }
@@ -221,16 +221,28 @@ export default function ScenesSidebar({
   const handleDuplicateScene = (sceneId: string) => {
     const scene = scenes.find(s => s.id === sceneId)
     if (!scene) return
+
     const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId)
     const elements = useSceneElementsStore.getState().getElementsForScene(sceneId)
     const newId = addScene()
+
+    // Copier les métadonnées via scenesStore
     updateScene(newId, {
       title: `${scene.title} (copie)`,
       description: scene.description,
       backgroundUrl: scene.backgroundUrl,
-      dialogues: [...dialogues],
-      characters: [...elements.characters],
     })
+
+    // Copier les dialogues via dialoguesStore (Post-Phase 3)
+    if (dialogues.length > 0) {
+      useDialoguesStore.getState().addDialogues(newId, dialogues)
+    }
+
+    // Copier les personnages via sceneElementsStore (Post-Phase 3)
+    elements.characters.forEach(char => {
+      useSceneElementsStore.getState().addCharacterToScene(newId, char.characterId, char.mood, char.position)
+    })
+
     onSceneSelect(newId)
   }
 
@@ -253,10 +265,10 @@ export default function ScenesSidebar({
           variant="token-primary"
           size="sm"
           onClick={handleAddScene}
-          className="w-full h-7 text-xs justify-center focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
+          className="w-full h-9 text-[13px] font-semibold justify-center focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
           aria-label="Ajouter une scène"
         >
-          <Plus className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+          <Plus className="w-4 h-4 mr-1.5" aria-hidden="true" />
           Scène
         </Button>
       </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '@/utils/logger';
 
 /**
  * Settings form data structure
@@ -85,7 +86,7 @@ export function useSettingsImportExport(
       // Clean up URL object
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export settings:', error);
+      logger.error('[Settings] Failed to export:', error);
       alert('Échec de l\'exportation des paramètres');
     }
   };
@@ -128,7 +129,7 @@ export function useSettingsImportExport(
 
         alert('Paramètres importés avec succès !');
       } catch (error) {
-        console.error('Import error:', error);
+        logger.error('[Settings] Import error:', error);
         alert('Échec de l\'importation : fichier JSON invalide');
       }
     };

@@ -16,10 +16,10 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
 
-    // Type Checking - Ready for STRICT MODE (activate in next phase)
-    "strict": false, // TODO Phase 7: Activate strict mode + fix 100 type errors
-    "noUnusedLocals": false, // TODO Phase 7: Enable after strict mode
-    "noUnusedParameters": false, // TODO Phase 7: Enable after strict mode
+    // Type Checking
+    "strict": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": false, // TODO Phase 7: Enable with strict mode
     "exactOptionalPropertyTypes": false,

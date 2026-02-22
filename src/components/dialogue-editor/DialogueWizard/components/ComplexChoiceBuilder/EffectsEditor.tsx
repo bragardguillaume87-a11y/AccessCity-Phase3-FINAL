@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Plus, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GAME_STATS } from '@/i18n';

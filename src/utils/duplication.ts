@@ -50,7 +50,7 @@ function generateUniqueId(prefix = 'item'): string {
  * @param existingSceneTitles - List of existing scene titles
  * @returns Duplicated scene
  */
-export function duplicateScene(scene: Scene, existingSceneIds: string[], existingSceneTitles: string[]): Scene {
+export function duplicateScene(scene: Scene, _existingSceneIds: string[], existingSceneTitles: string[]): Scene {
   const newSceneId = generateUniqueId('scene');
   const newTitle = generateCopyName(scene.title || 'Scene sans titre', existingSceneTitles);
 
@@ -65,7 +65,7 @@ export function duplicateScene(scene: Scene, existingSceneIds: string[], existin
       id: generateUniqueId('dialogue'),
       choices: (dialogue.choices || []).map(choice => {
         const clean = { ...choice };
-        delete (clean as any).diceCheck;
+        delete clean.diceCheck;
         return clean;
       })
     }))
@@ -86,7 +86,7 @@ export function duplicateDialogue(dialogue: Dialogue): Dialogue {
     text: cloned.text || 'Dialogue duplique',
     choices: (cloned.choices || []).map(choice => {
       const clean = { ...choice };
-      delete (clean as any).diceCheck;
+      delete clean.diceCheck;
       return clean;
     })
   };
@@ -110,7 +110,7 @@ export function duplicateChoice(choice: DialogueChoice): Omit<DialogueChoice, 'd
  * @param existingCharacterNames - List of existing character names
  * @returns Duplicated character
  */
-export function duplicateCharacter(character: Character, existingCharacterIds: string[], existingCharacterNames: string[]): Character {
+export function duplicateCharacter(character: Character, _existingCharacterIds: string[], existingCharacterNames: string[]): Character {
   const newCharacterId = generateUniqueId('char');
   const newName = generateCopyName(character.name || 'Personnage sans nom', existingCharacterNames);
 

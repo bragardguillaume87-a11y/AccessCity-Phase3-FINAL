@@ -1,28 +1,28 @@
-import React from 'react';
 
-/**
- * Decorative Components for Child-Friendly Themes
- * These components add playful visual elements when shapes config is enabled
- */
+import { COSMOS_COLORS, COSMOS_DIMENSIONS, COSMOS_ANIMATIONS } from '@/config/cosmosConstants';
+
+const tailDim = COSMOS_DIMENSIONS.speechBubbleTail;
+const starDim = COSMOS_DIMENSIONS.decorativeStars;
+const dragDim = COSMOS_DIMENSIONS.dragIndicator;
 
 /** SpeechBubbleTail - SVG tail for bubble-shaped nodes */
 export const SpeechBubbleTail = ({ color }: { color: string }) => (
   <svg
     style={{
       position: 'absolute',
-      bottom: '-14px',
-      left: '20%',
-      width: '28px',
-      height: '16px',
+      bottom: `-${tailDim.bottomOffset}px`,
+      left: tailDim.leftPercent,
+      width: `${tailDim.width}px`,
+      height: `${tailDim.height}px`,
       overflow: 'visible',
       pointerEvents: 'none',
       filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
     }}
-    viewBox="0 0 28 16"
+    viewBox={`0 0 ${tailDim.width} ${tailDim.height}`}
     aria-hidden="true"
   >
     <path
-      d="M0 0 C6 0 10 12 14 16 C18 12 22 0 28 0"
+      d={`M0 0 C6 0 10 12 14 ${tailDim.height} C18 12 22 0 ${tailDim.width} 0`}
       fill={color}
       stroke="none"
     />
@@ -34,12 +34,12 @@ export const DecorativeStars = ({ position = 'top-right' }: { position?: 'top-ri
   <span
     style={{
       position: 'absolute',
-      top: '-10px',
-      [position === 'top-right' ? 'right' : 'left']: '-10px',
-      fontSize: '20px',
+      top: `-${starDim.offset}px`,
+      [position === 'top-right' ? 'right' : 'left']: `-${starDim.offset}px`,
+      fontSize: `${starDim.fontSize}px`,
       pointerEvents: 'none',
-      filter: 'drop-shadow(0 0 4px rgba(255, 215, 0, 0.8))',
-      animation: 'cosmos-sparkle 2s ease-in-out infinite',
+      filter: COSMOS_COLORS.stars.glow,
+      animation: COSMOS_ANIMATIONS.sparkle,
     }}
     aria-hidden="true"
   >
@@ -52,17 +52,17 @@ export const DragIndicator = () => (
   <div
     style={{
       position: 'absolute',
-      top: '10px',
-      left: '10px',
+      top: `${dragDim.top}px`,
+      left: `${dragDim.left}px`,
       display: 'flex',
-      gap: '3px',
-      opacity: 0.4,
+      gap: `${dragDim.gap}px`,
+      opacity: dragDim.opacity,
       pointerEvents: 'none',
     }}
     className="cosmos-drag-indicator"
     aria-hidden="true"
   >
-    <span style={{ fontSize: '6px', color: 'white' }}>●</span>
-    <span style={{ fontSize: '6px', color: 'white' }}>●</span>
+    <span style={{ fontSize: `${dragDim.dotSize}px`, color: 'white' }}>●</span>
+    <span style={{ fontSize: `${dragDim.dotSize}px`, color: 'white' }}>●</span>
   </div>
 );

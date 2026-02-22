@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUIStore, useScenesStore, useCharactersStore } from '../stores/index.ts';
 import { useSceneWithElements } from '../stores/selectors/index';
 import { useSelection, toSelectedElementType } from '../hooks/useSelection.ts';
@@ -17,8 +17,7 @@ import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/Announceme
 import MainCanvas from './panels/MainCanvas';
 import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
-import type { ModalContext, FullscreenMode } from '../types';
-import type { SectionId } from './panels/UnifiedPanel/SectionContentPanel';
+import type { ModalContext } from '../types';
 import { SectionContentPanel } from './panels/UnifiedPanel/SectionContentPanel';
 import { PANEL_WIDTHS, PANEL_MIN_WIDTHS } from '../config/panelConfig';
 
@@ -45,6 +44,9 @@ const PreviewModal        = React.lazy(() => import('./modals/PreviewModal'));
  *   activeSection ≠ null → SectionContentPanel (Fond, Texte, Persos…)
  *   élément sélectionné  → PropertiesPanel (propriétés dialogue/personnage)
  *   sinon                → état vide (instruction "cliquez sur un outil")
+ *
+ * État UI (fullscreenMode, activeSection, activeModal, etc.) centralisé dans uiStore.
+ * EditorShell garde uniquement la gestion impérative du leftPanelRef.
  */
 interface EditorShellProps {
   onBack?: (() => void) | null;
@@ -60,8 +62,6 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const isSaving = useUIStore((state) => state.isSaving);
 
   const { selectedElement } = useSelection();
-  const selectedElementRef = useRef(selectedElement);
-  useEffect(() => { selectedElementRef.current = selectedElement; }, [selectedElement]);
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
   // === BUSINESS LOGIC LAYER ===
@@ -71,21 +71,22 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     setSelectedSceneForEdit,
   });
 
-  // === UI STATE ===
+  // === UI STATE (depuis uiStore — plus de local state) ===
   const validation = useValidation();
-  const [showProblemsPanel, setShowProblemsPanel] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const showProblemsPanel = useUIStore(s => s.showProblemsPanel);
+  const setShowProblemsPanel = useUIStore(s => s.setShowProblemsPanel);
+  const commandPaletteOpen = useUIStore(s => s.commandPaletteOpen);
+  const setCommandPaletteOpen = useUIStore(s => s.setCommandPaletteOpen);
+  const fullscreenMode = useUIStore(s => s.fullscreenMode);
+  const activeModal = useUIStore(s => s.activeModal);
+  const setActiveModal = useUIStore(s => s.setActiveModal);
+  const modalContext = useUIStore(s => s.modalContext);
+  const setModalContext = useUIStore(s => s.setModalContext);
+  const activeSection = useUIStore(s => s.activeSection);
+  const setActiveSection = useUIStore(s => s.setActiveSection);
+
+  // État local résiduel (pas de gain à globaliser)
   const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
-  const [fullscreenMode, setFullscreenMode] = useState<FullscreenMode>(null);
-  const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [modalContext, setModalContext] = useState<ModalContext>({});
-
-  // Section active (icônes UnifiedPanel → contenu Panel 3)
-  const [activeSection, setActiveSection] = useState<SectionId | null>(null);
-
-  // Panel 3 width — 0 = fermé, 256 = section active, 280 = élément sélectionné
-  // Contrôlé par CSS directement (pas via react-resizable-panels) pour fiabilité.
-  const [panel3Width, setPanel3Width] = useState(0);
 
   // Panel refs (Panel 1 uniquement — Panel 3 et 4 sont des divs CSS)
   const leftPanelRef = usePanelRef();
@@ -94,37 +95,29 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const setGraphModalOpen     = useUIStore((state) => state.setDialogueGraphModalOpen);
   const setGraphSelectedScene = useUIStore((state) => state.setDialogueGraphSelectedScene);
 
+  // === PANEL 3 WIDTH — dérivé via useMemo (remplace useState + handleSectionChange + useEffect) ===
+  //
+  // panel3Width = 0             → fermé (aucune section active, aucun élément canvas)
+  // panel3Width = CONTENT_SECTION   → section active (SectionContentPanel)
+  // panel3Width = CONTENT_PROPERTIES → élément canvas sélectionné (PropertiesPanel)
+  //
+  // Ce useMemo réagit à fullscreenMode, activeSection et selectedElement.
+  // Il remplace : handleSectionChange + selectedElementRef + useEffect sync + setPanel3Width.
+  const panel3Width = useMemo(() => {
+    if (fullscreenMode) return 0;
+    if (activeSection !== null) return PANEL_WIDTHS.CONTENT_SECTION;
+    // Panel 3 toujours visible (≥ 240px) conformément au design Powtoon.
+    // Quand aucun élément n'est sélectionné, le contenu affiche l'état vide
+    // (instruction « cliquez sur un outil »), ce qui évite que le panneau
+    // disparaisse après fermeture d'une section.
+    return PANEL_WIDTHS.CONTENT_PROPERTIES;
+  }, [fullscreenMode, activeSection]);
+
   // === RESET LAYOUT ===
   const handleResetLayout = useCallback(() => {
     leftPanelRef.current?.resize(`${PANEL_WIDTHS.LEFT_DEFAULT}px`);
-    setPanel3Width(0);
     setActiveSection(null);
-  }, []);
-
-  // === GESTION SECTION (UnifiedPanel → Panel 3) ===
-  // Ouvre/ferme Panel 3 selon la section cliquée.
-  // Utilise panel3Width (état CSS) — fiable même quand Panel 3 est à 0px.
-  const handleSectionChange = useCallback((section: SectionId | null) => {
-    setActiveSection(section);
-    if (section) {
-      setPanel3Width(PANEL_WIDTHS.CONTENT_SECTION);
-    } else {
-      const el = selectedElementRef.current;
-      const hasElement = el && el.type !== null && el.type !== 'scene';
-      setPanel3Width(hasElement ? PANEL_WIDTHS.CONTENT_PROPERTIES : 0);
-    }
-  }, []);
-
-  // === SYNC PANEL 3 ↔ selectedElement ===
-  // Quand un élément canvas est sélectionné (auto-select dialogue, clic perso…)
-  // sans qu'une section soit active, Panel 3 s'ouvre sur PropertiesPanel.
-  // Quand la sélection repasse sur null/scene, Panel 3 se ferme.
-  useEffect(() => {
-    if (fullscreenMode) return;
-    if (activeSection !== null) return; // handleSectionChange gère la taille
-    const hasElement = selectedElement && selectedElement.type !== null && selectedElement.type !== 'scene';
-    setPanel3Width(hasElement ? PANEL_WIDTHS.CONTENT_PROPERTIES : 0);
-  }, [selectedElement, fullscreenMode, activeSection]);
+  }, [setActiveSection]);
 
   // === KEYBOARD SHORTCUTS ===
   useKeyboardShortcuts({
@@ -135,18 +128,14 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   });
 
   // === FULLSCREEN — collapse/expand panneaux latéraux ===
-  // En plein écran : Panel 1 collapse, Panel 3 se ferme (max canvas).
+  // En plein écran : Panel 1 collapse, Panel 3 se ferme via useMemo (max canvas).
   // Panel 4 (icônes) : toujours visible (div CSS, pas de collapse).
-  // À la sortie : Panel 1 expand ; Panel 3 restauré par le useEffect selectedElement
-  //               (qui se re-déclenche car fullscreenMode est dans ses deps).
+  // À la sortie : Panel 1 expand ; Panel 3 restauré automatiquement par useMemo.
   useEffect(() => {
     if (fullscreenMode) {
       leftPanelRef.current?.collapse();
-      setPanel3Width(0);
     } else {
       leftPanelRef.current?.expand();
-      if (activeSection) setPanel3Width(PANEL_WIDTHS.CONTENT_SECTION);
-      // Cas élément sélectionné : géré par useEffect selectedElement ci-dessus
     }
   }, [fullscreenMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,6 +165,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     }
   };
 
+  // handleOpenModal reste nécessaire pour PropertiesPanel (prop) et le cas graph (spécial)
   const handleOpenModal = useCallback((modal: string, context: unknown = {}) => {
     logger.debug('[EditorShell] handleOpenModal called:', { modal, context });
     if (modal === 'graph') {
@@ -187,7 +177,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     }
     setActiveModal(modal);
     setModalContext(context as ModalContext);
-  }, [selectedSceneForEdit, setGraphModalOpen, setGraphSelectedScene]);
+  }, [selectedSceneForEdit, setGraphModalOpen, setGraphSelectedScene, setActiveModal, setModalContext]);
 
   // Compose full Scene from all 3 stores
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
@@ -200,15 +190,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const isSceneSelected = !selectedElement || selectedElement.type === null || selectedElement.type === 'scene';
 
   // Contenu Panel 3 :
-  //   activeSection → SectionContentPanel (Fond, Texte, Persos…)
+  //   activeSection → SectionContentPanel (lit depuis uiStore — aucune prop)
   //   élément canvas → PropertiesPanel
   //   sinon → état vide (instruction)
   const panel3Content = activeSection !== null ? (
-    <SectionContentPanel
-      activeSection={activeSection}
-      onClose={() => handleSectionChange(null)}
-      onOpenModal={handleOpenModal}
-    />
+    <SectionContentPanel />
   ) : !isSceneSelected ? (
     <PropertiesPanel
       selectedElement={selectedElementLegacy}
@@ -237,30 +223,27 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
       <AnnouncementRegion />
       <AssertiveAnnouncementRegion />
 
+      {/* KeyboardShortcuts lit commandPaletteOpen + activeModal depuis uiStore directement */}
       <KeyboardShortcuts
         activeTab="editor"
         setActiveTab={() => {}}
-        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-        onOpenModal={(modal) => setActiveModal(modal)}
       />
 
       <CommandPalette
         isOpen={!!commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
-        mode={typeof commandPaletteOpen === 'string' ? commandPaletteOpen : 'commands'}
+        mode={typeof commandPaletteOpen === 'string' ? (commandPaletteOpen as 'commands' | 'quick-open') : 'commands'}
         setActiveTab={() => {}}
       />
 
+      {/* TopBar lit showProblemsPanel + setShowProblemsPanel depuis uiStore directement */}
       <TopBar
         onBack={onBack}
-        onOpenModal={(modal) => handleOpenModal(modal, {})}
         undo={undo}
         redo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
         validation={validation}
-        showProblemsPanel={showProblemsPanel}
-        onToggleProblemsPanel={() => setShowProblemsPanel(!showProblemsPanel)}
         isSaving={isSaving}
         lastSaved={lastSaved}
       />
@@ -273,7 +256,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
       {/* Layout 4-panneaux style Powtoon
           Structure :  [Group: Panel1 + Panel2]  [Panel3 CSS]  [Panel4 CSS]
-          Panel 3 et 4 sont des divs CSS — width contrôlée par état React.
+          Panel 3 et 4 sont des divs CSS — width contrôlée par useMemo.
           Cela évite les limitations de react-resizable-panels (resize() ignoré
           sur un panel collapsed), et donne des transitions CSS fluides. */}
       <main className="flex-1 overflow-hidden relative flex" id="main-content" tabIndex={-1}>
@@ -327,7 +310,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               />
             )}
 
-            {/* Panel 2 : Canvas principal */}
+            {/* Panel 2 : Canvas principal — lit fullscreenMode depuis uiStore directement */}
             <Panel
               minSize="400px"
               className="bg-background overflow-hidden"
@@ -341,16 +324,13 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
                   selectedScene={selectedScene}
                   selectedElement={selectedElementLegacy}
                   onSelectDialogue={editorLogic.handleDialogueSelect}
-                  onOpenModal={handleOpenModal}
-                  fullscreenMode={fullscreenMode}
-                  onFullscreenChange={setFullscreenMode}
                 />
               </ErrorBoundary>
             </Panel>
 
           </Group>
 
-          {/* ── Panel 3 : Section/Propriétés (div CSS, width contrôlée par état) ──
+          {/* ── Panel 3 : Section/Propriétés (div CSS, width contrôlée par useMemo) ──
               panel3Width = 0 → fermé (overflow-hidden masque tout)
               panel3Width = 256 → section active (SectionContentPanel)
               panel3Width = 280 → élément canvas sélectionné (PropertiesPanel)
@@ -373,6 +353,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
           )}
 
           {/* ── Panel 4 : Barre d'icônes (div CSS fixe ICON_BAR px) ──
+              UnifiedPanel lit activeSection depuis uiStore directement.
               Toujours visible — indépendant de tout état applicatif. */}
           {!fullscreenMode && (
             <div
@@ -386,8 +367,6 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               <Inspector>
                 <ErrorBoundary name="UnifiedPanel">
                   <UnifiedPanel
-                    activeSection={activeSection}
-                    onSectionChange={handleSectionChange}
                     onResetLayout={handleResetLayout}
                   />
                 </ErrorBoundary>
@@ -404,7 +383,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         </div>
       </footer>
 
-      {/* Modales */}
+      {/* Modales — activeModal et modalContext lus depuis uiStore */}
       <React.Suspense fallback={null}>
         {activeModal === 'project' && (
           <ErrorBoundary name="SettingsModal">
@@ -427,6 +406,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               onClose={() => setActiveModal(null)}
               initialCategory={modalContext.category}
               targetSceneId={modalContext.targetSceneId}
+              selectionPurpose={modalContext.purpose}
+              selectionSlot={modalContext.slot}
             />
           </ErrorBoundary>
         )}

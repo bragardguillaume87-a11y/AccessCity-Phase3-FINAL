@@ -16,7 +16,7 @@ interface AvatarPickerProps {
  * - Fallback to all assets when 'characters' category is empty
  * - Harmonized with Midnight Bloom theme (slate → semantic classes)
  */
-export const AvatarPicker: React.FC<AvatarPickerProps> = ({ currentSprites = {}, onSelect, mood, labels = {} }) => {
+export const AvatarPicker: React.FC<AvatarPickerProps> = ({ currentSprites = {}, onSelect, mood, labels: _labels = {} }) => {
   // Try characters first, fallback to all assets if empty
   const { assets: characterAssets, loading: loadingChars } = useAssets({ category: 'characters' });
   const { assets: allAssets, loading: loadingAll, error } = useAssets({});

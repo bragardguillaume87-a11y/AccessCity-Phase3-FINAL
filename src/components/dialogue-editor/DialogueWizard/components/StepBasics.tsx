@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, User, Volume2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';

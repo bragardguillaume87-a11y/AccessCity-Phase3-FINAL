@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 import type { Connection } from '@xyflow/react';
-import { useScenesStore, useUIStore } from '@/stores';
+import { useUIStore } from '@/stores';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import type { ComplexityLevel } from '@/components/dialogue-editor/DialogueWizard/hooks/useDialogueWizardState';
 import { CHOICE_HANDLE_PREFIX, safeExtractDialogueIndex } from '@/config/handleConfig';
+import { logger } from '@/utils/logger';
 
 /**
  * useDialogueGraphActions - Hook centralisant les actions d'édition du graphe de dialogues
@@ -18,9 +20,9 @@ import { CHOICE_HANDLE_PREFIX, safeExtractDialogueIndex } from '@/config/handleC
  */
 export function useDialogueGraphActions(sceneId: string) {
   // Zustand stores
-  const deleteDialogue = useScenesStore((state) => state.deleteDialogue);
-  const duplicateDialogue = useScenesStore((state) => state.duplicateDialogue);
-  const updateDialogue = useScenesStore((state) => state.updateDialogue);
+  const deleteDialogue = useDialoguesStore((state) => state.deleteDialogue);
+  const duplicateDialogue = useDialoguesStore((state) => state.duplicateDialogue);
+  const updateDialogue = useDialoguesStore((state) => state.updateDialogue);
   const setWizardOpen = useUIStore((state) => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
@@ -120,12 +122,12 @@ export function useDialogueGraphActions(sceneId: string) {
       const rawChoiceIndex = sourceHandle.replace(CHOICE_HANDLE_PREFIX, '');
       const choiceIndex = rawChoiceIndex ? parseInt(rawChoiceIndex, 10) : 0;
 
-      // Récupérer le dialogue source depuis le store
-      const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
-      const dialogue = scene?.dialogues[sourceIndex];
+      // Récupérer le dialogue source depuis dialoguesStore (not scenesStore — see CLAUDE.md §6.6)
+      const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
+      const dialogue = dialogues[sourceIndex];
 
       if (!dialogue || !dialogue.choices || !dialogue.choices[choiceIndex]) {
-        console.warn('[useDialogueGraphActions] Invalid dialogue or choice index', {
+        logger.warn('[useDialogueGraphActions] Invalid dialogue or choice index', {
           sourceIndex,
           choiceIndex,
           dialogue,
@@ -136,10 +138,10 @@ export function useDialogueGraphActions(sceneId: string) {
       // Extract target dialogue index from node ID and get actual dialogue ID
       const targetIndex = safeExtractDialogueIndex(target);
       if (targetIndex < 0) return;
-      const targetDialogue = scene?.dialogues[targetIndex];
+      const targetDialogue = dialogues[targetIndex];
 
       if (!targetDialogue) {
-        console.warn('[useDialogueGraphActions] Invalid target dialogue', { target, targetIndex });
+        logger.warn('[useDialogueGraphActions] Invalid target dialogue', { target, targetIndex });
         return;
       }
 
@@ -168,8 +170,8 @@ export function useDialogueGraphActions(sceneId: string) {
       const targetIndex = safeExtractDialogueIndex(target);
       if (sourceIndex < 0 || targetIndex < 0) return;
 
-      const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
-      const targetDialogue = scene?.dialogues[targetIndex];
+      const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
+      const targetDialogue = dialogues[targetIndex];
       if (!targetDialogue) return;
 
       updateDialogue(sceneId, sourceIndex, { nextDialogueId: targetDialogue.id });

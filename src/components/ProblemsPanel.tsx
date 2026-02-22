@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
-import { shallow } from 'zustand/shallow';
 import { useValidation } from '../hooks/useValidation';
 import { useScenesStore, useCharactersStore } from '../stores/index';
-import type { Scene, Character } from '@/types';
+import type { SceneMetadata, Character } from '@/types';
 
 /**
  * Problem severity type
@@ -73,7 +72,7 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
 
   // OPTIMIZATION: Use Map selectors for O(1) lookups (instead of array.find)
   const sceneMap = useScenesStore(
-    useCallback((state) => new Map<string, Scene>(state.scenes.map(s => [s.id, s])), [])
+    useCallback((state) => new Map<string, SceneMetadata>(state.scenes.map(s => [s.id, s])), [])
   );
 
   const characterMap = useCharactersStore(

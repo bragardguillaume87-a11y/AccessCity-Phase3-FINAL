@@ -1,5 +1,6 @@
-import React from 'react';
+
 import { Z_INDEX } from '@/utils/zIndexLayers';
+import { CANVAS_CONFIG } from '@/config/canvas';
 
 export interface CanvasGridOverlayProps {
   enabled: boolean;
@@ -11,6 +12,8 @@ export interface CanvasGridOverlayProps {
 export function CanvasGridOverlay({ enabled }: CanvasGridOverlayProps) {
   if (!enabled) return null;
 
+  const g = CANVAS_CONFIG.GRID_SIZE;
+
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
@@ -19,16 +22,16 @@ export function CanvasGridOverlay({ enabled }: CanvasGridOverlayProps) {
       <defs>
         <pattern
           id="grid"
-          width={24}
-          height={24}
+          width={g}
+          height={g}
           patternUnits="userSpaceOnUse"
         >
           <path
-            d="M 24 0 L 0 0 0 24"
+            d={`M ${g} 0 L 0 0 0 ${g}`}
             fill="none"
             stroke="var(--color-border-base)"
             strokeWidth="1"
-            opacity="0.3"
+            opacity={CANVAS_CONFIG.GRID_OPACITY}
           />
         </pattern>
       </defs>

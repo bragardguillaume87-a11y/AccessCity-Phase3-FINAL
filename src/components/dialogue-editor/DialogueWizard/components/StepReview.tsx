@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { TIMING } from '@/config/timing';
 import { Button } from '@/components/ui/button';
 import { SummaryCard } from '@/components/ui/SummaryCard';
 import { cn } from '@/lib/utils';
@@ -53,7 +54,7 @@ export function StepReview({
     setShowConfetti(true);
     setTimeout(() => {
       onSave();
-    }, 1500);
+    }, TIMING.ANIMATION_CREATE);
   };
 
   return (

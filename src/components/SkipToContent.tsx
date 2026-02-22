@@ -38,7 +38,7 @@ export interface SkipToContentProps {
  * <SkipToContent targetId="main-content" />
  * ```
  */
-export default function SkipToContent({ targetId = 'main-content' }: SkipToContentProps) {
+export default function SkipToContent({ targetId: _targetId = 'main-content' }: SkipToContentProps) {
   const skipLinks: SkipLink[] = [
     { id: 'main-content', label: 'Aller au contenu principal' },
     { id: 'editor-canvas', label: 'Aller au canvas d\'édition' },

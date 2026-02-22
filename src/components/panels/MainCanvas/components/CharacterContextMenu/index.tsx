@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Edit2, Smile, Sparkles, Layers, Trash2, X, FlipHorizontal } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Edit2, Sparkles, Layers, Trash2, X, FlipHorizontal, ChevronRight } from 'lucide-react';
 import { t } from '@/lib/translations';
 import { useMoodPresets } from '@/hooks/useMoodPresets';
 import type { Character, SceneCharacter } from '@/types';
+import { logger } from '@/utils/logger';
 import MoodPickerPanel from './MoodPickerPanel';
 import AnimationPickerPanel from './AnimationPickerPanel';
 import LayerPickerPanel from './LayerPickerPanel';
@@ -25,11 +26,22 @@ export interface CharacterContextMenuProps {
   onRemove: (sceneCharId: string) => void;
 }
 
+interface MenuItemData {
+  id: string;
+  icon?: React.ElementType;
+  emoji?: string;
+  label: string;
+  desc: string;
+  onClick: () => void;
+  danger?: boolean;
+  hasSubPanel?: boolean;
+}
+
 /**
- * CharacterContextMenu - Kid-friendly context menu
+ * CharacterContextMenu — Menu contextuel compact, cohérent avec le design system de l'éditeur.
  *
- * Large touch targets (56px), colorful icons, smooth animations.
- * Designed for children 8+ with clear visual feedback.
+ * Design : 260px, CSS variables, semi-compact (44px/item)
+ * Animations : spring open, stagger items, slide panels, hover highlight glissant
  */
 export function CharacterContextMenu({
   x,
@@ -42,291 +54,282 @@ export function CharacterContextMenu({
   onChangeAnimation,
   onChangeLayer,
   onFlipHorizontal,
-  onRemove
+  onRemove,
 }: CharacterContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
   const [activePanel, setActivePanel] = useState<PanelType>('menu');
-  const [isAnimating, setIsAnimating] = useState(true);
+  const [panelDirection, setPanelDirection] = useState(1);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const moodPresets = useMoodPresets();
   const characterName = character.name;
 
-  // Auto-adjust position to stay on screen
-  useEffect(() => {
-    if (!menuRef.current) return;
-
-    const rect = menuRef.current.getBoundingClientRect();
-    const padding = 16;
-    let adjustedX = x;
-    let adjustedY = y;
-
-    if (x + rect.width > window.innerWidth - padding) {
-      adjustedX = window.innerWidth - rect.width - padding;
-    }
-    if (y + rect.height > window.innerHeight - padding) {
-      adjustedY = window.innerHeight - rect.height - padding;
-    }
-
-    adjustedX = Math.max(padding, adjustedX);
-    adjustedY = Math.max(padding, adjustedY);
-
-    setPosition({ x: adjustedX, y: adjustedY });
-
-    // Entrance animation
-    setTimeout(() => setIsAnimating(false), 50);
-  }, [x, y]);
-
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
-    // Add listener immediately (no delay)
-    // Small timeout to prevent immediate close from the same click that opened the menu
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 10);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [onClose]);
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (activePanel !== 'menu') {
-          setActivePanel('menu');
-        } else {
-          onClose();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activePanel, onClose]);
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const goToPanel = (panel: PanelType) => { setPanelDirection(1); setActivePanel(panel); };
+  const goBack    = ()                  => { setPanelDirection(-1); setActivePanel('menu'); };
 
   const handleEdit = () => {
-    console.log('[CharacterContextMenu] handleEdit called for character:', character.id, character.name);
+    logger.debug('[CharacterContextMenu] edit:', character.id, character.name);
     onEdit(character.id);
     onClose();
   };
+  const handleMoodSelect      = (mood: string)      => { onChangeMood(sceneChar.id, mood); onClose(); };
+  const handleAnimationSelect = (anim: string)      => { onChangeAnimation(sceneChar.id, anim); onClose(); };
+  const handleLayerChange     = (zIndex: number)    => { onChangeLayer(sceneChar.id, zIndex); onClose(); };
+  const handleFlipHorizontal  = ()                  => { onFlipHorizontal(sceneChar.id); onClose(); };
+  const handleConfirmDelete   = ()                  => { onRemove(sceneChar.id); onClose(); };
 
-  const handleMoodSelect = (mood: string) => {
-    onChangeMood(sceneChar.id, mood);
-    onClose();
-  };
+  // ── Menu items data ───────────────────────────────────────────────────────
+  const menuItems: MenuItemData[] = [
+    { id: 'edit',   icon: Edit2,          label: t('contextMenu.editCharacter', { name: characterName }), desc: t('contextMenu.editCharacter.desc'),  onClick: handleEdit },
+    { id: 'mood',   emoji: '😊',           label: t('contextMenu.changeMood'),                             desc: t('contextMenu.changeMood.desc'),       onClick: () => goToPanel('mood'),      hasSubPanel: true },
+    { id: 'anim',   icon: Sparkles,        label: t('contextMenu.changeAnimation'),                        desc: t('contextMenu.changeAnimation.desc'),  onClick: () => goToPanel('animation'), hasSubPanel: true },
+    { id: 'layer',  icon: Layers,          label: t('contextMenu.changeLayer'),                            desc: t('contextMenu.changeLayer.desc'),      onClick: () => goToPanel('layer'),     hasSubPanel: true },
+    { id: 'flip',   icon: FlipHorizontal,  label: t('contextMenu.flipHorizontal'),                         desc: t('contextMenu.flipHorizontal.desc'),   onClick: handleFlipHorizontal },
+    { id: 'delete', icon: Trash2,          label: t('contextMenu.removeFromScene'),                        desc: t('contextMenu.removeFromScene.desc'),  onClick: () => goToPanel('delete'),    danger: true },
+  ];
 
-  const handleAnimationSelect = (animation: string) => {
-    onChangeAnimation(sceneChar.id, animation);
-    onClose();
-  };
+  // ── Auto-position to stay on screen ──────────────────────────────────────
+  useEffect(() => {
+    if (!menuRef.current) return;
+    const rect    = menuRef.current.getBoundingClientRect();
+    const padding = 16;
+    let ax = x;
+    let ay = y;
+    if (x + rect.width  > window.innerWidth  - padding) ax = window.innerWidth  - rect.width  - padding;
+    if (y + rect.height > window.innerHeight - padding) ay = window.innerHeight - rect.height - padding;
+    setPosition({ x: Math.max(padding, ax), y: Math.max(padding, ay) });
+  }, [x, y]);
 
-  const handleLayerChange = (zIndex: number) => {
-    onChangeLayer(sceneChar.id, zIndex);
-    onClose();
-  };
+  // ── Close on outside click ────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
+    };
+    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 10);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
+  }, [onClose]);
 
-  const handleFlipHorizontal = () => {
-    onFlipHorizontal(sceneChar.id);
-    onClose();
-  };
+  // ── Keyboard navigation ───────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { activePanel !== 'menu' ? goBack() : onClose(); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [activePanel, onClose]);
 
-  const handleConfirmDelete = () => {
-    onRemove(sceneChar.id);
-    onClose();
-  };
-
-  // Menu item component
-  const MenuItem = ({
-    icon: Icon,
-    emoji,
-    label,
-    description,
-    onClick,
-    variant = 'default'
-  }: {
-    icon?: React.ElementType;
-    emoji?: string;
-    label: string;
-    description: string;
-    onClick: () => void;
-    variant?: 'default' | 'danger';
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200",
-        "hover:scale-[1.02] active:scale-[0.98]",
-        "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
-        variant === 'danger'
-          ? "bg-red-500/10 hover:bg-red-500/20 border-2 border-red-500/30 text-red-400"
-          : "bg-card hover:bg-muted border-2 border-border hover:border-primary/50"
-      )}
-    >
-      {/* Icon */}
-      <div
-        className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0",
-          variant === 'danger'
-            ? "bg-red-500/20"
-            : "bg-primary/10"
-        )}
-      >
-        {emoji || (Icon && <Icon className="w-6 h-6" />)}
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 text-left">
-        <div className="font-semibold text-base">{label}</div>
-        <div className="text-xs text-muted-foreground">{description}</div>
-      </div>
-
-      {/* Arrow */}
-      <div className="text-muted-foreground">
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </button>
-  );
+  const currentMoodLabel = moodPresets.find(p => p.id === (sceneChar.mood || 'neutral'))?.label
+    ?? sceneChar.mood ?? 'Neutre';
+  const portraitSrc = character.sprites?.[sceneChar.mood || 'neutral'];
 
   return (
-    <div
+    <motion.div
       ref={menuRef}
-      className={cn(
-        "fixed z-tooltip-v2 bg-background/95 backdrop-blur-sm border-2 border-border rounded-2xl shadow-2xl p-3",
-        "transition-all duration-200",
-        isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"
-      )}
+      initial={{ opacity: 0, scale: 0.92, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -2 }}
+      transition={{ type: 'spring', damping: 20, stiffness: 320 }}
+      className="fixed border rounded-xl shadow-2xl overflow-hidden"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        minWidth: '320px',
-        maxWidth: '380px'
+        width: '316px',
+        zIndex: 9999,
+        background: 'var(--color-bg-elevated)',
+        borderColor: 'var(--color-border-base)',
       }}
       role="menu"
       aria-label="Menu personnage"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-2 mb-3">
-        <div className="flex items-center gap-3">
-          {character.sprites?.[sceneChar.mood || 'neutral'] ? (
-            <img
-              src={character.sprites[sceneChar.mood || 'neutral']}
-              alt={characterName}
-              className="w-10 h-10 rounded-lg object-contain bg-muted"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-xl">
-              {moodPresets.find(p => p.id === (sceneChar.mood || 'neutral'))?.emoji || '😐'}
-            </div>
-          )}
-          <div>
-            <h3 className="font-bold text-base">{characterName}</h3>
-            <p className="text-xs text-muted-foreground capitalize">
-              {moodPresets.find(p => p.id === (sceneChar.mood || 'neutral'))?.label || sceneChar.mood || 'Neutre'}
-            </p>
+      {/* ── Header ── */}
+      <div
+        className="flex items-center gap-2.5 px-3 py-2.5"
+        style={{ borderBottom: '1px solid var(--color-border-base)' }}
+      >
+        {portraitSrc ? (
+          <img
+            src={portraitSrc}
+            alt={characterName}
+            className="w-10 h-10 rounded-md object-contain flex-shrink-0"
+            style={{ background: 'var(--color-bg-hover)' }}
+          />
+        ) : (
+          <div
+            className="w-10 h-10 rounded-md flex items-center justify-center text-lg flex-shrink-0"
+            style={{ background: 'var(--color-bg-hover)' }}
+          >
+            {moodPresets.find(p => p.id === (sceneChar.mood || 'neutral'))?.emoji ?? '😐'}
           </div>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <h3
+            className="text-base font-semibold leading-tight truncate"
+            style={{ color: 'rgba(255,255,255,0.95)' }}
+          >
+            {characterName}
+          </h3>
+          <p
+            className="text-xs leading-tight capitalize truncate"
+            style={{ color: 'rgba(255,255,255,0.45)' }}
+          >
+            {currentMoodLabel}
+          </p>
         </div>
+
         <button
           type="button"
           onClick={onClose}
-          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          className="p-1 rounded-md transition-colors flex-shrink-0"
+          style={{ color: 'var(--color-text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           aria-label="Fermer"
         >
-          <X className="w-5 h-5 text-muted-foreground" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Content - Panels */}
-      {activePanel === 'menu' && (
-        <div className="space-y-2 animate-step-slide">
-          <MenuItem
-            icon={Edit2}
-            label={t('contextMenu.editCharacter', { name: characterName })}
-            description={t('contextMenu.editCharacter.desc')}
-            onClick={handleEdit}
-          />
-          <MenuItem
-            emoji="😊"
-            label={t('contextMenu.changeMood')}
-            description={t('contextMenu.changeMood.desc')}
-            onClick={() => setActivePanel('mood')}
-          />
-          <MenuItem
-            icon={Sparkles}
-            label={t('contextMenu.changeAnimation')}
-            description={t('contextMenu.changeAnimation.desc')}
-            onClick={() => setActivePanel('animation')}
-          />
-          <MenuItem
-            icon={Layers}
-            label={t('contextMenu.changeLayer')}
-            description={t('contextMenu.changeLayer.desc')}
-            onClick={() => setActivePanel('layer')}
-          />
-          <MenuItem
-            icon={FlipHorizontal}
-            label={t('contextMenu.flipHorizontal')}
-            description={t('contextMenu.flipHorizontal.desc')}
-            onClick={handleFlipHorizontal}
-          />
-          <MenuItem
-            icon={Trash2}
-            label={t('contextMenu.removeFromScene')}
-            description={t('contextMenu.removeFromScene.desc')}
-            onClick={() => setActivePanel('delete')}
-            variant="danger"
-          />
-        </div>
-      )}
+      {/* ── Panels ── */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activePanel}
+          initial={{ opacity: 0, x: panelDirection * 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: panelDirection * -24 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
 
-      {activePanel === 'mood' && (
-        <MoodPickerPanel
-          characterName={characterName}
-          currentMood={sceneChar.mood || 'neutral'}
-          characterSprites={character.sprites || {}}
-          availableMoods={character.moods || ['neutral']}
-          onSelect={handleMoodSelect}
-          onBack={() => setActivePanel('menu')}
-        />
-      )}
+          {/* ── Menu principal ── */}
+          {activePanel === 'menu' && (
+            <div className="p-1.5 space-y-0.5">
+              {menuItems.map((item, idx) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.04, duration: 0.12 }}
+                >
+                  <button
+                    type="button"
+                    onClick={item.onClick}
+                    onMouseEnter={() => setHoveredIdx(idx)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                    className="relative w-full flex items-center text-left rounded-lg"
+                    style={{ padding: '9px 10px' }}
+                    role="menuitem"
+                  >
+                    {/* Hover highlight glissant */}
+                    {hoveredIdx === idx && (
+                      <motion.div
+                        layoutId="ctx-hover"
+                        className="absolute inset-0 rounded-lg"
+                        style={{
+                          background: item.danger
+                            ? 'rgba(239,68,68,0.08)'
+                            : 'var(--color-bg-hover)',
+                        }}
+                        transition={{ type: 'spring', bounce: 0.15, duration: 0.25 }}
+                      />
+                    )}
 
-      {activePanel === 'animation' && (
-        <AnimationPickerPanel
-          characterName={characterName}
-          currentAnimation={sceneChar.entranceAnimation || 'none'}
-          onSelect={handleAnimationSelect}
-          onBack={() => setActivePanel('menu')}
-        />
-      )}
+                    {/* Contenu */}
+                    <div className="relative z-10 flex items-center gap-2.5 w-full">
+                      {/* Icône */}
+                      <div
+                        className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${item.danger ? 'bg-red-500/10' : 'bg-primary/10'}`}
+                      >
+                        {item.emoji
+                          ? <span className="text-base leading-none">{item.emoji}</span>
+                          : item.icon && (
+                            <item.icon
+                              className={`w-4 h-4 ${item.danger ? 'text-red-400' : 'text-primary'}`}
+                            />
+                          )
+                        }
+                      </div>
 
-      {activePanel === 'layer' && (
-        <LayerPickerPanel
-          characterName={characterName}
-          currentLayer={sceneChar.zIndex || 1}
-          onSelect={handleLayerChange}
-          onBack={() => setActivePanel('menu')}
-        />
-      )}
+                      {/* Texte */}
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="text-sm font-medium leading-tight truncate"
+                          style={{ color: item.danger ? 'rgb(248 113 113)' : 'rgba(255,255,255,0.9)' }}
+                        >
+                          {item.label}
+                        </div>
+                        <div
+                          className="text-xs leading-tight truncate"
+                          style={{ color: 'rgba(255,255,255,0.45)' }}
+                        >
+                          {item.desc}
+                        </div>
+                      </div>
 
-      {activePanel === 'delete' && (
-        <ConfirmDeletePanel
-          characterName={characterName}
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setActivePanel('menu')}
-        />
-      )}
-    </div>
+                      {/* Chevron si sous-panel */}
+                      {item.hasSubPanel && (
+                        <ChevronRight
+                          className="w-3.5 h-3.5 flex-shrink-0"
+                          style={{ color: 'rgba(255,255,255,0.35)' }}
+                        />
+                      )}
+                    </div>
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Sous-panels ── */}
+          {activePanel === 'mood' && (
+            <div className="p-2">
+              <MoodPickerPanel
+                characterName={characterName}
+                currentMood={sceneChar.mood || 'neutral'}
+                characterSprites={character.sprites || {}}
+                availableMoods={character.moods || ['neutral']}
+                onSelect={handleMoodSelect}
+                onBack={goBack}
+              />
+            </div>
+          )}
+
+          {activePanel === 'animation' && (
+            <div className="p-2">
+              <AnimationPickerPanel
+                characterName={characterName}
+                currentAnimation={sceneChar.entranceAnimation || 'none'}
+                onSelect={handleAnimationSelect}
+                onBack={goBack}
+              />
+            </div>
+          )}
+
+          {activePanel === 'layer' && (
+            <div className="p-2">
+              <LayerPickerPanel
+                characterName={characterName}
+                currentLayer={sceneChar.zIndex || 1}
+                onSelect={handleLayerChange}
+                onBack={goBack}
+              />
+            </div>
+          )}
+
+          {activePanel === 'delete' && (
+            <div className="p-2">
+              <ConfirmDeletePanel
+                characterName={characterName}
+                onConfirm={handleConfirmDelete}
+                onCancel={goBack}
+              />
+            </div>
+          )}
+
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

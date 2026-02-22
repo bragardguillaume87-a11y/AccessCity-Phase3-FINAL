@@ -1,7 +1,8 @@
-import React from 'react';
+
 import { Rnd } from 'react-rnd';
 import { percentToPixels, pixelsToPercent, RESIZING_CONFIG } from '@/utils/canvasPositioning';
 import { Z_INDEX } from '@/utils/zIndexLayers';
+import { CANVAS_CONFIG, ELEMENT_SIZES, ELEMENT_DEFAULTS, REFERENCE_CANVAS_WIDTH } from '@/config/canvas';
 import type { Position, Size } from '@/types';
 
 // Extended TextBox interface for canvas text boxes
@@ -26,28 +27,43 @@ export interface TextBoxElementProps {
 
 /**
  * TextBoxElement - Draggable/resizable text box with editable content
+ *
+ * Sizes and fontSize are stored as "reference pixels" (at REFERENCE_CANVAS_WIDTH).
+ * A canvasScaleFactor is applied at render time so the box and its text scale
+ * proportionally with the canvas, matching the background's responsive behaviour.
  */
 export function TextBoxElement({ textBox, canvasDimensions, gridEnabled, onUpdateTextBox, onRemoveTextBox }: TextBoxElementProps) {
   const position = textBox.position || { x: 50, y: 50 };
-  const size = textBox.size || { width: 300, height: 100 };
+
+  // Stored size is in reference-canvas pixels (at REFERENCE_CANVAS_WIDTH).
+  // Scale to actual canvas dimensions so the textbox follows the background.
+  const storedSize = textBox.size || { width: ELEMENT_SIZES.TEXTBOX.width, height: ELEMENT_SIZES.TEXTBOX.height };
+  const canvasScaleFactor = canvasDimensions.width > 0
+    ? canvasDimensions.width / REFERENCE_CANVAS_WIDTH
+    : 1;
+  const displayWidth  = storedSize.width  * canvasScaleFactor;
+  const displayHeight = storedSize.height * canvasScaleFactor;
+
+  // Font size also stored in reference pixels — scale to canvas
+  const displayFontSize = (textBox.fontSize || ELEMENT_DEFAULTS.FONT_SIZE) * canvasScaleFactor;
 
   // Convert percentage position to pixels (accounting for center transform)
-  const pixelX = percentToPixels(position.x, canvasDimensions.width) - (size.width / 2);
-  const pixelY = percentToPixels(position.y, canvasDimensions.height) - (size.height / 2);
+  const pixelX = percentToPixels(position.x, canvasDimensions.width) - (displayWidth / 2);
+  const pixelY = percentToPixels(position.y, canvasDimensions.height) - (displayHeight / 2);
 
   // Grid settings - snap to grid when grid is enabled
-  const gridSize = 24;
+  const gridSize = CANVAS_CONFIG.GRID_SIZE;
   const dragGrid = gridEnabled ? [gridSize, gridSize] : [1, 1];
 
   return (
     <Rnd
       key={textBox.id}
-      size={{ width: size.width, height: size.height }}
+      size={{ width: displayWidth, height: displayHeight }}
       position={{ x: pixelX, y: pixelY }}
-      onDragStop={(e, d) => {
+      onDragStop={(_e, d) => {
         // Convert pixel position back to percentage (accounting for center transform)
-        const centerX = d.x + (size.width / 2);
-        const centerY = d.y + (size.height / 2);
+        const centerX = d.x + (displayWidth / 2);
+        const centerY = d.y + (displayHeight / 2);
         const newPercentX = pixelsToPercent(centerX, canvasDimensions.width);
         const newPercentY = pixelsToPercent(centerY, canvasDimensions.height);
 
@@ -55,19 +71,23 @@ export function TextBoxElement({ textBox, canvasDimensions, gridEnabled, onUpdat
           position: { x: newPercentX, y: newPercentY }
         });
       }}
-      onResizeStop={(e, direction, ref, delta, position) => {
-        const newWidth = parseInt(ref.style.width);
-        const newHeight = parseInt(ref.style.height);
+      onResizeStop={(_e, _direction, ref, _delta, position) => {
+        const newDisplayWidth  = parseInt(ref.style.width);
+        const newDisplayHeight = parseInt(ref.style.height);
+
+        // Divide by canvasScaleFactor to store canvas-independent reference pixels
+        const newStoredWidth  = newDisplayWidth  / canvasScaleFactor;
+        const newStoredHeight = newDisplayHeight / canvasScaleFactor;
 
         // Convert pixel position back to percentage
-        const centerX = position.x + (newWidth / 2);
-        const centerY = position.y + (newHeight / 2);
+        const centerX = position.x + (newDisplayWidth / 2);
+        const centerY = position.y + (newDisplayHeight / 2);
         const newPercentX = pixelsToPercent(centerX, canvasDimensions.width);
         const newPercentY = pixelsToPercent(centerY, canvasDimensions.height);
 
         onUpdateTextBox(textBox.id, {
           position: { x: newPercentX, y: newPercentY },
-          size: { width: newWidth, height: newHeight }
+          size: { width: newStoredWidth, height: newStoredHeight }
         });
       }}
       dragGrid={dragGrid as [number, number]}
@@ -89,7 +109,7 @@ export function TextBoxElement({ textBox, canvasDimensions, gridEnabled, onUpdat
           }}
           className="w-full h-full outline-none overflow-auto"
           style={{
-            fontSize: `${textBox.fontSize || 16}px`,
+            fontSize: `${displayFontSize}px`,
             fontWeight: textBox.fontWeight || 'normal',
             color: textBox.color || '#1e293b',
             textAlign: (textBox.textAlign || 'left') as 'left' | 'center' | 'right' | 'justify'

@@ -44,8 +44,8 @@ interface PanelMinWidths {
  */
 export const PANEL_WIDTHS: PanelWidths = {
   LEFT_DEFAULT: 135,
-  CONTENT_SECTION: 256,
-  CONTENT_PROPERTIES: 280,
+  CONTENT_SECTION: 320,
+  CONTENT_PROPERTIES: 300,
   ICON_BAR: 72,
 } as const;
 

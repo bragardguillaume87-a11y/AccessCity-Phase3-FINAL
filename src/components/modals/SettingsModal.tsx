@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/index';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { TIMING } from '@/config/timing';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   FileText,
@@ -42,7 +43,7 @@ export interface SettingsModalProps {
  * VS Code-style sidebar navigation with sections:
  * - Project: Project metadata (title, author, description, version)
  * - Editor: Editor preferences (theme, autosave, grid settings)
- * - Game: Game variables configuration (Empathie, Autonomie, Confiance)
+ * - Game: Game variables configuration (Physique, Mentale) + Stats HUD toggle
  * - Shortcuts: Keyboard shortcuts (Phase 5)
  * - A11Y: Accessibility settings (Phase 5)
  *
@@ -92,7 +93,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
       id: 'game',
       label: 'Jeu',
       icon: Gamepad2,
-      keywords: ['variables', 'empathie', 'autonomie', 'confiance', 'moral']
+      keywords: ['variables', 'physique', 'mentale', 'stats', 'hud', 'moral']
     },
     {
       id: 'shortcuts',
@@ -170,16 +171,15 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
         editor: {
           theme: 'dark',
           autosave: true,
-          autosaveInterval: 30000,
+          autosaveInterval: TIMING.AUTOSAVE_INTERVAL_MS,
           gridSize: 20,
           snapToGrid: false,
           showGrid: true
         },
         game: {
           variables: {
-            Empathie: { initial: 50, min: 0, max: 100 },
-            Autonomie: { initial: 50, min: 0, max: 100 },
-            Confiance: { initial: 50, min: 0, max: 100 }
+            physique: { initial: 100, min: 0, max: 100 },
+            mentale: { initial: 100, min: 0, max: 100 }
           }
         }
       };
@@ -195,6 +195,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
       <DialogContent className="max-w-[90vw] h-[90vh] p-0 gap-0">
+        <DialogTitle className="sr-only">Paramètres du projet</DialogTitle>
         {/* Header */}
         <SettingsHeader
           onResetDefaults={handleResetDefaults}

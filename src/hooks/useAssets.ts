@@ -302,7 +302,7 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
  * @param maxItems - Maximum number of items to retrieve
  * @returns Array of recent asset paths
  */
-export function getRecentAssets(type: string, maxItems: number = 6): string[] {
+export function getRecentAssets(type: string, _maxItems: number = 6): string[] {
   try {
     const stored = localStorage.getItem(`accesscity-recent-${type}`);
     return stored ? JSON.parse(stored) : [];

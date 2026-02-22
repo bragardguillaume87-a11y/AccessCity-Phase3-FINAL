@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, Suspense } from 'react';
-import { Dialog, DialogContent } from '../ui/dialog';
-import { useUIStore, useScenesStore } from '@/stores';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
+import { useUIStore } from '@/stores';
+import { useSceneWithElements } from '@/stores/selectors';
 import DialogueGraph from '../features/DialogueGraph';
 import { DialogueGraphToolbar } from './components/DialogueGraphToolbar';
 import { DialogueGraphPalette } from './components/DialogueGraphPalette';
@@ -10,6 +11,7 @@ import { useDialogueGraphActions } from '@/hooks/useDialogueGraphActions';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
 import { dialogueNodeId, extractDialogueIndex } from '@/config/handleConfig';
+import { GraphPagination } from './components/GraphPagination';
 
 // PHASE 4 (Option 4): Lazy load CosmosBackground for bundle optimization
 // Only loaded when Cosmos theme is active (~117KB with canvas-confetti)
@@ -58,12 +60,19 @@ export function DialogueGraphModal() {
   const selectedSceneId = useUIStore((state) => state.dialogueGraphSelectedScene);
   const setSelectedSceneId = useUIStore((state) => state.setDialogueGraphSelectedScene);
 
-  // Scenes Store
-  const scenes = useScenesStore((state) => state.scenes);
-  const selectedScene = scenes.find((s) => s.id === selectedSceneId);
+  // Pro mode: override layoutDirection when enabled
+  const proModeEnabled = useUIStore((state) => state.proModeEnabled);
+  const proModeDirection = useUIStore((state) => state.proModeDirection);
+  const proPaginationEnabled = useUIStore((state) => state.proPaginationEnabled);
+
+  // Scene with full data from all 3 stores (see CLAUDE.md §6.6)
+  const selectedScene = useSceneWithElements(selectedSceneId ?? undefined);
 
   // PHASE 2: Actions for interactive editing
   const actions = useDialogueGraphActions(selectedScene?.id || '');
+
+  // Effective layout direction: Pro mode overrides the local toggle
+  const effectiveLayoutDirection = proModeEnabled ? proModeDirection : layoutDirection;
 
   // Define handleClose early (needed by keyboard nav hook)
   const handleClose = useCallback(() => {
@@ -74,7 +83,7 @@ export function DialogueGraphModal() {
 
   // PHASE 5: Accessibility hooks
   // Get nodes from scene for keyboard navigation (simplified type for navigation only)
-  const graphNodes = selectedScene?.dialogues.map((d, i) => ({
+  const graphNodes = selectedScene?.dialogues.map((_d, i) => ({
     id: dialogueNodeId(selectedScene.id, i),
     position: { x: i * 400, y: 0 }, // Approximate positions for navigation
     data: {} as Record<string, unknown> // Type-safe for Node interface
@@ -209,6 +218,7 @@ export function DialogueGraphModal() {
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className={`!w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 gap-0 bg-[var(--color-bg-base)] flex flex-col ${a11yClasses}`}>
+        <DialogTitle className="sr-only">Éditeur Nodal</DialogTitle>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[var(--color-border-base)] bg-[var(--color-bg-elevated)] flex-shrink-0">
           <div>
@@ -252,7 +262,7 @@ export function DialogueGraphModal() {
                 onDuplicate={handleDuplicate}
                 onAutoLayout={handleAutoLayout}
                 onToggleLayout={handleToggleLayout}
-                layoutDirection={layoutDirection}
+                layoutDirection={effectiveLayoutDirection}
                 onUndo={undo}
                 onRedo={redo}
                 canUndo={canUndo}
@@ -285,8 +295,13 @@ export function DialogueGraphModal() {
                   selectedElement={selectedElement}
                   onSelectDialogue={handleSelectDialogue}
                   editMode={true}
-                  layoutDirection={layoutDirection}
+                  layoutDirection={effectiveLayoutDirection}
                 />
+
+                {/* Pro mode: Pagination bar */}
+                {proModeEnabled && proPaginationEnabled && (
+                  <GraphPagination totalDialogues={selectedScene.dialogues.length} />
+                )}
               </div>
             </>
           )}

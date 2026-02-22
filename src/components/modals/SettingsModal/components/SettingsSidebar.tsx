@@ -50,7 +50,7 @@ export interface SettingsSidebarProps {
  * ```
  */
 export function SettingsSidebar({
-  sections,
+  sections: _sections,
   activeSection,
   onSectionChange,
   searchQuery,

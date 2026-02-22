@@ -3,6 +3,7 @@ import { AvatarPicker } from '../components/AvatarPicker';
 import { useCharacterValidation } from '@/hooks/useCharacterValidation';
 import type { Character } from '@/types';
 import type { CharactersTabLabels } from '../CharactersTab';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 /**
  * Props for CharacterEditor component
@@ -30,7 +31,7 @@ const modalStyles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000
+    zIndex: Z_INDEX.DIALOG_NESTED
   },
   dialog: {
     background: 'white',

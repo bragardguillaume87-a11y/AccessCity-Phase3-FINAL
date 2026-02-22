@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { Upload, X, Image as ImageIcon, Music, Volume2, Repeat, ArrowRight } from 'lucide-react';
+import { AUDIO_DEFAULTS } from '@/config/constants';
 
 export interface ScenePropertiesFormProps {
   scene: Scene;
@@ -173,7 +174,7 @@ export function ScenePropertiesForm({
                     {scene.audio.url.split('/').pop()}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    Volume: {Math.round((scene.audio.volume || 0.5) * 100)}%
+                    Volume: {Math.round((scene.audio.volume || AUDIO_DEFAULTS.MUSIC_VOLUME) * 100)}%
                   </p>
                 </div>
                 <Button
@@ -194,11 +195,11 @@ export function ScenePropertiesForm({
                     Volume
                   </span>
                   <span className="text-xs text-foreground font-medium">
-                    {Math.round((scene.audio.volume || 0.5) * 100)}%
+                    {Math.round((scene.audio.volume || AUDIO_DEFAULTS.MUSIC_VOLUME) * 100)}%
                   </span>
                 </div>
                 <Slider
-                  value={[(scene.audio.volume || 0.5) * 100]}
+                  value={[(scene.audio.volume || AUDIO_DEFAULTS.MUSIC_VOLUME) * 100]}
                   onValueChange={([v]) => handleUpdate({
                     audio: { ...scene.audio, volume: v / 100 } as SceneAudio
                   })}

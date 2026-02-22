@@ -23,7 +23,7 @@ interface UseCharacterValidationOptions {
  */
 interface UseCharacterValidationReturn {
   validateAll: (formData: Partial<Character>) => ValidationResult;
-  validateField: (field: string, value: any) => string[];
+  validateField: (field: string, value: string | string[]) => string[];
   validateName: (value: string) => string[];
   validateDescription: (value: string) => string[];
   validateMoods: (value: string[]) => string[];
@@ -186,14 +186,14 @@ export function useCharacterValidation(
    * @returns Array of error messages (empty if valid)
    */
   const validateField = useMemo(() => {
-    return (field: string, value: any): string[] => {
+    return (field: string, value: string | string[]): string[] => {
       switch (field) {
         case 'name':
-          return validateName(value);
+          return validateName(value as string);
         case 'description':
-          return validateDescription(value);
+          return validateDescription(value as string);
         case 'moods':
-          return validateMoods(value);
+          return validateMoods(value as string[]);
         default:
           return [];
       }

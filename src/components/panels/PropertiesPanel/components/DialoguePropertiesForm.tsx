@@ -1,19 +1,21 @@
 import * as React from 'react';
 import { useState } from 'react';
-import type { Dialogue, Scene, Character, ModalType, DialogueAudio } from '@/types';
+import type { Dialogue, Scene, SceneMetadata, Character, ModalType, DialogueAudio } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { ChoiceEditor } from './ChoiceEditor';
 import { Copy, Plus, Volume2, X, Sparkles } from 'lucide-react';
 import { useUIStore } from '@/stores';
+import { AUDIO_DEFAULTS } from '@/config/constants';
+import { useTranslation } from '@/i18n';
 
 export interface DialoguePropertiesFormProps {
   dialogue: Dialogue;
   dialogueIndex: number;
   scene: Scene;
   characters: Character[];
-  scenes: Scene[];  // NEW: All scenes for dropdown navigation
+  scenes: SceneMetadata[];  // Metadata uniquement (title/id pour navigation)
   onUpdate: (sceneId: string, dialogueIndex: number, updates: Partial<Dialogue>) => void;
   onDuplicate: () => void;
   onOpenModal?: (modalType: ModalType, config?: { category?: string; targetSceneId?: string }) => void;
@@ -30,8 +32,8 @@ type TabType = 'properties' | 'choices';
  * - Speaker selection
  * - Dialogue text
  * - Choices (with add/delete)
- * - Choice details (text, next scene, dice rolls)
- * - Duplicate dialogue button
+ * - Character moods per dialogue
+ * - Sound effect (SFX)
  */
 export function DialoguePropertiesForm({
   dialogue,
@@ -48,6 +50,7 @@ export function DialoguePropertiesForm({
   const [activeTab, setActiveTab] = useState<TabType>('properties');
   const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore(state => state.setDialogueWizardEditIndex);
+  const { t } = useTranslation();
 
   const handleUpdate = (updates: Partial<Dialogue>) => {
     onUpdate(scene.id, dialogueIndex, updates);
@@ -79,15 +82,15 @@ export function DialoguePropertiesForm({
     <div className="h-full flex flex-col bg-card">
       {/* Header with duplicate button */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wide">Dialogue Properties</h3>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wide">{t('dialogueEditor.title')}</h3>
         <Button
           variant="outline"
           size="sm"
           onClick={onDuplicate}
-          title="Duplicate this dialogue"
+          title={t('dialogueEditor.duplicate')}
         >
           <Copy className="h-3 w-3" />
-          Duplicate
+          {t('dialogueEditor.duplicate')}
         </Button>
       </div>
 
@@ -104,7 +107,7 @@ export function DialoguePropertiesForm({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Properties
+            {t('dialogueEditor.propertiesTab')}
           </button>
           <button
             role="tab"
@@ -116,7 +119,7 @@ export function DialoguePropertiesForm({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Choices ({dialogue.choices?.length || 0})
+            {t('dialogueEditor.choicesTab')} ({dialogue.choices?.length || 0})
           </button>
         </div>
       </div>
@@ -127,7 +130,7 @@ export function DialoguePropertiesForm({
           {/* Speaker */}
           <div>
             <label htmlFor="dialogue-speaker" className="block text-xs font-semibold text-muted-foreground mb-1.5">
-              Speaker
+              {t('dialogueEditor.speaker')}
             </label>
             <select
               id="dialogue-speaker"
@@ -135,7 +138,7 @@ export function DialoguePropertiesForm({
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleUpdate({ speaker: e.target.value })}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">-- Select speaker --</option>
+              <option value="">--</option>
               {characters.map(char => (
                 <option key={char.id} value={char.id}>
                   {char.name}
@@ -147,7 +150,7 @@ export function DialoguePropertiesForm({
           {/* Text */}
           <div>
             <label htmlFor="dialogue-text" className="block text-xs font-semibold text-muted-foreground mb-1.5">
-              Text
+              {t('dialogueEditor.text')}
             </label>
             <textarea
               id="dialogue-text"
@@ -155,7 +158,7 @@ export function DialoguePropertiesForm({
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleUpdate({ text: e.target.value })}
               rows={4}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="Enter dialogue text"
+              placeholder={t('dialogueEditor.text')}
             />
           </div>
 
@@ -163,7 +166,7 @@ export function DialoguePropertiesForm({
           <div className="pt-4 border-t border-border">
             <label className="text-xs font-semibold text-muted-foreground mb-2 uppercase flex items-center gap-1.5">
               <Volume2 className="h-3.5 w-3.5" />
-              Effet sonore
+              {t('dialogueEditor.sfxLabel')}
             </label>
 
             {dialogue.sfx?.url ? (
@@ -178,7 +181,7 @@ export function DialoguePropertiesForm({
                       {dialogue.sfx.url.split('/').pop()}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      Volume: {Math.round((dialogue.sfx.volume || 0.7) * 100)}%
+                      {t('dialogueEditor.sfxVolume')}: {Math.round((dialogue.sfx.volume || AUDIO_DEFAULTS.SFX_VOLUME) * 100)}%
                     </p>
                   </div>
                   <Button
@@ -186,6 +189,7 @@ export function DialoguePropertiesForm({
                     size="sm"
                     className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() => handleUpdate({ sfx: undefined })}
+                    aria-label={t('common.delete')}
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -194,13 +198,13 @@ export function DialoguePropertiesForm({
                 {/* Volume slider */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Volume</span>
+                    <span className="text-xs text-muted-foreground">{t('dialogueEditor.sfxVolume')}</span>
                     <span className="text-xs text-foreground font-medium">
-                      {Math.round((dialogue.sfx.volume || 0.7) * 100)}%
+                      {Math.round((dialogue.sfx.volume || AUDIO_DEFAULTS.SFX_VOLUME) * 100)}%
                     </span>
                   </div>
                   <Slider
-                    value={[(dialogue.sfx.volume || 0.7) * 100]}
+                    value={[(dialogue.sfx.volume || AUDIO_DEFAULTS.SFX_VOLUME) * 100]}
                     onValueChange={([v]) => handleUpdate({
                       sfx: { ...dialogue.sfx, volume: v / 100 } as DialogueAudio
                     })}
@@ -221,7 +225,7 @@ export function DialoguePropertiesForm({
                     }
                   }}
                 >
-                  Changer l'effet
+                  {t('dialogueEditor.sfxChange')}
                 </Button>
               </div>
             ) : (
@@ -235,21 +239,63 @@ export function DialoguePropertiesForm({
                 className="w-full h-16 mt-2 border-2 border-dashed border-border hover:border-accent hover:bg-background/50 flex flex-col gap-1 text-muted-foreground hover:text-accent"
               >
                 <Volume2 className="w-5 h-5" />
-                <span className="text-xs font-medium">Ajouter un effet sonore</span>
+                <span className="text-xs font-medium">{t('dialogueEditor.sfxAdd')}</span>
               </Button>
             )}
           </div>
 
-          {/* Stats */}
+          {/* Character moods for this dialogue */}
+          {scene.characters && scene.characters.length > 0 && (
+            <div className="pt-4 border-t border-border">
+              <label className="block text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                😊 {t('dialogueEditor.moodsLabel')}
+              </label>
+              <div className="space-y-2">
+                {scene.characters.map(sceneChar => {
+                  const character = characters.find(c => c.id === sceneChar.characterId);
+                  if (!character) return null;
+                  const overrideMood = dialogue.characterMoods?.[sceneChar.id] ?? '';
+                  const availableMoods: string[] = character.moods || ['neutral'];
+                  return (
+                    <div key={sceneChar.id} className="flex items-center gap-2">
+                      <span className="text-xs text-foreground flex-1 truncate">{character.name}</span>
+                      <select
+                        value={overrideMood}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const next = { ...(dialogue.characterMoods || {}) };
+                          if (val) {
+                            next[sceneChar.id] = val;
+                          } else {
+                            delete next[sceneChar.id];
+                          }
+                          handleUpdate({ characterMoods: Object.keys(next).length > 0 ? next : undefined });
+                        }}
+                        className="w-32 px-2 py-1 bg-background border border-border rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        aria-label={`Humeur de ${character.name} pour ce dialogue`}
+                      >
+                        <option value="">{t('dialogueEditor.moodDefault')}</option>
+                        {availableMoods.map(mood => (
+                          <option key={mood} value={mood}>{mood}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Info */}
           <div className="pt-4 border-t border-border">
-            <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Info</h4>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">{t('dialogueEditor.infoLabel')}</h4>
             <div className="space-y-2 text-xs text-muted-foreground">
               <div className="flex justify-between">
-                <span>Index:</span>
+                <span>Index :</span>
                 <span className="text-foreground font-semibold">{dialogueIndex}</span>
               </div>
               <div className="flex justify-between">
-                <span>Choices:</span>
+                <span>{t('dialogueEditor.choicesTab')} :</span>
                 <span className="text-foreground font-semibold">{dialogue.choices?.length || 0}</span>
               </div>
             </div>
@@ -260,7 +306,7 @@ export function DialoguePropertiesForm({
       {/* Choices tab */}
       {activeTab === 'choices' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* Modifier avec l'assistant magique */}
+          {/* Edit with assistant */}
           <Button
             variant="gaming-primary"
             size="default"
@@ -271,7 +317,7 @@ export function DialoguePropertiesForm({
             className="w-full"
           >
             <Sparkles className="h-4 w-4" />
-            Modifier avec l'Assistant
+            {t('dialogueEditor.editWithAssistant')}
           </Button>
 
           {/* Add Choice button */}
@@ -282,7 +328,7 @@ export function DialoguePropertiesForm({
             className="w-full"
           >
             <Plus className="h-4 w-4" />
-            Add Choice
+            {t('dialogueEditor.addChoice')}
           </Button>
 
           {dialogue.choices && dialogue.choices.length > 0 ? (
@@ -299,8 +345,8 @@ export function DialoguePropertiesForm({
             ))
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">No choices for this dialogue</p>
-              <p className="text-xs mt-1">Click "+ Add Choice" to create branching</p>
+              <p className="text-sm">{t('dialogueEditor.noChoices')}</p>
+              <p className="text-xs mt-1">{t('dialogueEditor.noChoicesHint')}</p>
             </div>
           )}
         </div>

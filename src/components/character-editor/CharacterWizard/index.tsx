@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useCharacterForm } from '@/hooks/useCharacterForm';
 import { useCharacterCompleteness } from '../CharacterEditorModal/hooks/useCharacterCompleteness';
 import { ScrollArea } from '@/components/ui/scroll-area';

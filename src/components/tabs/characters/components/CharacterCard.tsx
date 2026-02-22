@@ -31,7 +31,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   onSelect,
   onDuplicate,
   onDelete,
-  labels = {}
+  labels: _labels = {}
 }) => {
   const isSystemCharacter = (SYSTEM_CHARACTERS as readonly string[]).includes(character.id);
 

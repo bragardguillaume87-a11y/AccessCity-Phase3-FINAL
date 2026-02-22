@@ -1,24 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import {
-  Users,
-  Sparkles,
-  AlertCircle,
-  Star,
-  Film,
-  Eye,
-  Edit,
-  Copy,
-  Trash2
-} from 'lucide-react';
+import { Users, Star, Copy, Trash2 } from 'lucide-react';
 import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
-import type { ViewMode } from './CharacterGallery';
 
 /**
- * Validation error structure from useValidation hook
+ * Validation error interface (compatible with V1)
  */
 export interface ValidationError {
   field: string;
@@ -27,74 +14,81 @@ export interface ValidationError {
 }
 
 /**
- * Character validation errors with separated arrays
- */
-export interface CharacterValidationErrors {
-  /** All validation problems */
-  errors?: ValidationError[];
-  /** Only warning-level problems */
-  warnings?: ValidationError[];
-}
-
-/**
  * Props for CharacterCard component
  */
 export interface CharacterCardProps {
-  /** Character data to display */
+  /** Character to display */
   character: Character;
-  /** Character statistics (completeness, mood count, sprite count) */
+  /** Character statistics */
   stats: CharacterStats;
   /** Validation errors for this character */
   errors?: ValidationError[];
-  /** Whether this character is marked as favorite */
+  /** Whether this character is favorited */
   isFavorite: boolean;
-  /** Callback when favorite star is toggled */
-  onToggleFavorite: (characterId: string) => void;
-  /** Callback when edit button is clicked */
-  onEdit: (character: Character) => void;
-  /** Callback when duplicate button is clicked */
+  /** Callback when favorite is toggled */
+  onToggleFavorite: (id: string) => void;
+  /** Callback when card is clicked (opens preview) */
+  onClick: (character: Character) => void;
+  /** Callback when duplicate is clicked */
   onDuplicate: (characterId: string) => void;
-  /** Callback when delete button is clicked */
+  /** Callback when delete is clicked */
   onDelete: (character: Character) => void;
-  /** View mode (grid or list) */
-  viewMode?: ViewMode;
 }
 
 /**
- * CharacterCard - Individual character card display (grid or list mode)
+ * Get preview image URL for character
+ * Returns first available sprite or undefined
+ */
+function getPreviewImage(character: Character): string | undefined {
+  if (!character.sprites || !character.moods || character.moods.length === 0) {
+    return undefined;
+  }
+
+  // Try to find sprite for first mood
+  const firstMood = character.moods[0];
+  return character.sprites[firstMood];
+}
+
+/**
+ * CharacterCard - Character card for Library tab (AMÉLIORATION UI/UX)
  *
- * Displays a character with preview, stats, and action buttons. Supports both
- * grid and list view modes with appropriate layouts and interactions.
+ * **Pattern:** Inspired by AssetsLibraryModal SimpleAssetCard
  *
- * Inspired by Nintendo UX Guide: Pokémon Card style with visual hierarchy
+ * Interactive card displaying character preview, stats, and quick actions.
+ * Used in Library tab for browsing and selecting characters.
+ *
+ * ## ✨ AMÉLIORATIONS APPLIQUÉES :
+ * - **Gradient overlay** sur images (from-black/70 via-black/20 to-transparent)
+ * - **Hover dramatique** : scale-[1.02] + shadow-xl + border-primary glow
+ * - **Badges vivants** : Couleurs semi-transparentes avec backdrop-blur
+ * - **Transitions smooth** : duration-300 partout
+ * - **Image zoom** : scale-105 sur hover
+ * - **Icônes dans footer** : Meilleure hiérarchie visuelle
  *
  * ## Features
- * - Large avatar preview with fallback icon
- * - Completeness badge showing sprite coverage
- * - Error/warning indicator badge
- * - Favorite star toggle with localStorage persistence
- * - Stats display (moods and sprites)
- * - Quick action buttons (Edit, Duplicate, Delete)
+ * - **Preview image:** Shows first available sprite or Users icon fallback
+ * - **Completeness badge:** Top-right, shows percentage with color coding
+ * - **Favorite star:** Top-left, animated toggle with backdrop blur
+ * - **Stats footer:** Moods count + sprites count with icons
+ * - **Hover actions:** Duplicate and Delete buttons appear on hover with blur
+ * - **Click to preview:** Opens preview panel with full details
  *
- * ## UX Enhancements
- * - Hover lift effect (translateY -4px + scale 1.05)
- * - Smooth transitions on all interactive elements
- * - Visual avatar preview with scale animation on hover
- * - Accessible buttons with ARIA labels
- * - Error and warning visual indicators
+ * ## Layout
+ * - Aspect ratio: Square (aspect-square)
+ * - Hover effect: Lift + shadow + border glow (hover:-translate-y-1)
+ * - Image scale: Zoom on hover (hover:scale-105)
+ * - Badge positioning: Absolute with padding + backdrop-blur
  *
  * @example
  * ```tsx
  * <CharacterCard
  *   character={character}
- *   stats={{ completeness: 100, moodCount: 5, spriteCount: 5, hasSpriteForAllMoods: true }}
- *   errors={validationErrors}
- *   isFavorite={false}
- *   onToggleFavorite={handleToggleFavorite}
- *   onEdit={handleEdit}
+ *   stats={stats}
+ *   isFavorite={isFavorite(character.id)}
+ *   onToggleFavorite={toggleFavorite}
+ *   onClick={(char) => setPreviewCharacter(char)}
  *   onDuplicate={handleDuplicate}
  *   onDelete={handleDelete}
- *   viewMode="grid"
  * />
  * ```
  */
@@ -104,166 +98,132 @@ export function CharacterCard({
   errors,
   isFavorite,
   onToggleFavorite,
-  onEdit,
+  onClick,
   onDuplicate,
   onDelete,
-  viewMode = 'grid'
 }: CharacterCardProps) {
-  const hasErrors = errors && errors.some(e => e.severity === 'error');
-  const hasWarnings = errors && errors.some(e => e.severity === 'warning');
+  const previewImage = getPreviewImage(character);
+  const hasErrors = errors && errors.some((e) => e.severity === 'error');
+  const hasWarnings = errors && errors.some((e) => e.severity === 'warning');
 
   return (
-    <Card
-      className={`
-        group
-        hover:shadow-xl
-        transition-all
-        duration-300
-        ${viewMode === 'grid' ? 'hover:-translate-y-1 hover:scale-[1.02]' : ''}
-        cursor-pointer
-        overflow-hidden
-      `}
-      onClick={() => onEdit(character)}
+    <div
+      className="group relative rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 bg-slate-800/50 border border-slate-700/50 hover:border-primary/30"
+      onClick={() => onClick(character)}
     >
-      {/* Preview Section */}
-      <div className="relative h-48 bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center overflow-hidden">
-        {/* Avatar Preview */}
-        {character.sprites?.neutral ? (
+      {/* Preview Image Section */}
+      <div className="relative aspect-[4/3] bg-black/20 overflow-hidden">
+        {/* ✨ NOUVEAU : Gradient overlay pour meilleure lisibilité */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none z-10" />
+
+        {previewImage ? (
           <img
-            src={character.sprites.neutral}
+            src={previewImage}
             alt={character.name}
-            className="h-40 w-40 object-contain transition-transform duration-300 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
         ) : (
-          <div className="p-6 rounded-full bg-primary/10 text-primary">
-            <Users className="h-16 w-16" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800/80 to-slate-900/80">
+            <Users className="h-12 w-12 text-slate-500" />
           </div>
         )}
 
-        {/* Completeness Badge */}
-        <div className="absolute top-3 right-3">
+        {/* ✨ AMÉLIORÉ : Favorite Star avec backdrop-blur et scale sur hover */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(character.id);
+          }}
+          className={`absolute top-2 left-2 p-1.5 rounded-full transition-all duration-200 z-20 ${
+            isFavorite
+              ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-400 hover:scale-110'
+              : 'bg-black/50 backdrop-blur-sm text-white/80 hover:bg-black/70 hover:text-white hover:scale-110'
+          }`}
+          aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        >
+          <Star
+            className={`h-3.5 w-3.5 ${isFavorite ? 'fill-current' : ''}`}
+            strokeWidth={isFavorite ? 0 : 2}
+          />
+        </button>
+
+        {/* ✨ AMÉLIORÉ : Completeness Badge avec couleurs vives et backdrop-blur */}
+        <div className="absolute top-2 right-2 z-20">
           <Badge
-            variant={stats.completeness === 100 ? "default" : "secondary"}
-            className="shadow-lg"
+            variant="outline"
+            className={`text-[10px] h-6 px-2 font-semibold border-2 backdrop-blur-sm shadow-lg ${
+              stats.completeness === 100
+                ? 'bg-green-500/20 border-green-400/60 text-green-200'
+                : hasErrors
+                ? 'bg-red-500/20 border-red-400/60 text-red-200'
+                : hasWarnings
+                ? 'bg-amber-500/20 border-amber-400/60 text-amber-200'
+                : 'bg-slate-500/20 border-slate-400/60 text-slate-200'
+            }`}
           >
-            {stats.completeness === 100 ? (
-              <>
-                <Sparkles className="h-3 w-3 mr-1" />
-                Complet
-              </>
-            ) : (
-              `${stats.completeness}%`
-            )}
+            {stats.completeness}%
+            {stats.completeness === 100 && ' ✓'}
           </Badge>
         </div>
 
-        {/* Error Badge + Favorite Star */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          {(hasErrors || hasWarnings) && (
-            <Badge
-              variant={hasErrors ? "destructive" : "outline"}
-              className="shadow-lg"
-            >
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {hasErrors ? 'Erreur' : 'Attention'}
-            </Badge>
-          )}
+        {/* ✨ AMÉLIORÉ : Hover Actions avec gradient overlay et backdrop-blur */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2 z-20">
           <Button
-            variant="ghost"
             size="icon"
-            className="h-8 w-8 bg-background/80 hover:bg-background transition-transform hover:scale-110"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(character.id);
-            }}
-            aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-          >
-            <Star
-              className={`h-4 w-4 transition-colors ${
-                isFavorite
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-muted-foreground'
-              }`}
-            />
-          </Button>
-        </div>
-      </div>
-
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl truncate" title={character.name}>
-          {character.name}
-        </CardTitle>
-        {character.description && (
-          <CardDescription className="line-clamp-2 min-h-[2.5rem]">
-            {character.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Stats Row */}
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-1.5">
-            <Film className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{stats.moodCount}</span>
-            <span className="text-muted-foreground">
-              mood{stats.moodCount > 1 ? 's' : ''}
-            </span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{stats.spriteCount}</span>
-            <span className="text-muted-foreground">
-              sprite{stats.spriteCount > 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Actions - Nintendo UX: Hover feedback on all buttons */}
-        <div className="flex gap-2">
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(character);
-            }}
-            variant="default"
-            size="sm"
-            className="flex-1 transition-transform hover:scale-105 active:scale-95"
-            aria-label="Éditer le personnage"
-          >
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            Éditer
-          </Button>
-          <Button
+            variant="ghost"
+            className="h-9 w-9 bg-white/10 backdrop-blur-sm hover:bg-white/20 hover:scale-110 text-white transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onDuplicate(character.id);
             }}
-            variant="outline"
-            size="sm"
-            className="transition-transform hover:scale-105 active:scale-95"
+            title="Dupliquer"
             aria-label="Dupliquer le personnage"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-4 w-4" />
           </Button>
           <Button
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 bg-red-500/30 backdrop-blur-sm hover:bg-red-500/50 hover:scale-110 text-red-200 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(character);
             }}
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground transition-transform hover:scale-105 active:scale-95"
+            title="Supprimer"
             aria-label="Supprimer le personnage"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* ✨ AMÉLIORÉ : Footer avec gradient background et icônes */}
+      <div className="p-3 space-y-1 bg-gradient-to-b from-slate-800/80 to-slate-800/60">
+        <h3 className="font-semibold text-sm text-slate-100 truncate group-hover:text-white transition-colors duration-200" title={character.name}>
+          {character.name}
+        </h3>
+        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <span className="flex items-center gap-1">
+            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"></path>
+            </svg>
+            {stats.moodCount} humeur{stats.moodCount > 1 ? 's' : ''}
+          </span>
+          <span className="text-slate-600">•</span>
+          <span className="flex items-center gap-1">
+            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path>
+            </svg>
+            {stats.spriteCount} sprite{stats.spriteCount > 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 

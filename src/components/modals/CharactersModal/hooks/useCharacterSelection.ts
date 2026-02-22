@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 
 /**
  * Return type for useCharacterSelection hook
@@ -8,49 +8,61 @@ export interface UseCharacterSelectionReturn {
   selectedIds: Set<string>;
   /** Check if a character is selected */
   isSelected: (id: string) => boolean;
-  /** Toggle selection of a single character */
+  /** Toggle selection for a single character */
   toggleSelection: (id: string) => void;
-  /** Select all provided character IDs */
-  selectAll: (characterIds: string[]) => void;
+  /** Select all characters with given IDs */
+  selectAll: (ids: string[]) => void;
   /** Clear all selections */
   clearSelection: () => void;
-  /** Toggle between select all and clear all */
-  toggleSelectAll: (characterIds: string[]) => void;
+  /** Toggle between select all and clear selection */
+  toggleSelectAll: (ids: string[]) => void;
   /** Number of selected characters */
   selectionCount: number;
-  /** Whether all provided IDs are selected */
-  isAllSelected: (characterIds: string[]) => boolean;
+  /** Check if all given IDs are selected */
+  isAllSelected: (ids: string[]) => boolean;
 }
 
 /**
- * Hook for managing bulk selection state in Management tab
+ * useCharacterSelection - Bulk selection state management
  *
- * Provides a complete interface for selecting multiple characters
- * for bulk operations (duplicate, delete, etc.)
+ * **Pattern:** AssetsLibraryModal ManagementTab Set-based selection pattern
  *
- * @returns Selection state and methods
+ * Manages multi-selection state for bulk operations (duplicate, delete).
+ * Uses Set for O(1) lookup, add, and delete operations.
  *
- * @example
- * ```typescript
+ * ## Features
+ * - **Set-based storage:** O(1) operations vs O(n) for arrays
+ * - **Immutable updates:** Creates new Set on each change
+ * - **Select all/none:** Toggle between full selection and empty
+ * - **Individual toggle:** Click to select/deselect single characters
+ * - **Selection count:** Efficient count for badges
+ *
+ * ## Usage
+ * ```tsx
  * const selection = useCharacterSelection();
  *
  * // Check if selected
- * const selected = selection.isSelected(characterId);
+ * {selection.isSelected(character.id) && <Badge>Selected</Badge>}
  *
  * // Toggle selection
- * selection.toggleSelection(characterId);
+ * <Checkbox
+ *   checked={selection.isSelected(character.id)}
+ *   onCheckedChange={() => selection.toggleSelection(character.id)}
+ * />
  *
- * // Select all
- * selection.selectAll(filteredCharacters.map(c => c.id));
- *
- * // Clear selection
- * selection.clearSelection();
+ * // Select all/none
+ * <Checkbox
+ *   checked={selection.isAllSelected(filteredIds)}
+ *   onCheckedChange={() => selection.toggleSelectAll(filteredIds)}
+ * />
  *
  * // Bulk operations
- * if (selection.selectionCount > 0) {
- *   handleBulkDelete(Array.from(selection.selectedIds));
- * }
+ * <Button disabled={selection.selectionCount === 0}>
+ *   Supprimer ({selection.selectionCount})
+ * </Button>
  * ```
+ *
+ * @returns Selection state and methods
  */
 export function useCharacterSelection(): UseCharacterSelectionReturn {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -66,7 +78,8 @@ export function useCharacterSelection(): UseCharacterSelectionReturn {
   );
 
   /**
-   * Toggle selection of a single character
+   * Toggle selection for a single character
+   * Uses immutable pattern with new Set
    */
   const toggleSelection = useCallback((id: string): void => {
     setSelectedIds((prev) => {
@@ -81,10 +94,10 @@ export function useCharacterSelection(): UseCharacterSelectionReturn {
   }, []);
 
   /**
-   * Select all provided character IDs
+   * Select all characters with given IDs
    */
-  const selectAll = useCallback((characterIds: string[]): void => {
-    setSelectedIds(new Set(characterIds));
+  const selectAll = useCallback((ids: string[]): void => {
+    setSelectedIds(new Set(ids));
   }, []);
 
   /**
@@ -95,35 +108,40 @@ export function useCharacterSelection(): UseCharacterSelectionReturn {
   }, []);
 
   /**
-   * Check if all provided IDs are selected
+   * Toggle between select all and clear selection
+   * If all given IDs are selected, clear. Otherwise, select all.
    */
-  const isAllSelected = useCallback(
-    (characterIds: string[]): boolean => {
-      if (characterIds.length === 0) return false;
-      return characterIds.every((id) => selectedIds.has(id));
+  const toggleSelectAll = useCallback(
+    (ids: string[]): void => {
+      // Check if all IDs are already selected
+      const allSelected = ids.length > 0 && ids.every((id) => selectedIds.has(id));
+
+      if (allSelected) {
+        // Clear selection
+        setSelectedIds(new Set());
+      } else {
+        // Select all
+        setSelectedIds(new Set(ids));
+      }
     },
     [selectedIds]
   );
 
   /**
-   * Toggle between select all and clear all
-   * If all are selected, clear. Otherwise, select all.
+   * Check if all given IDs are selected
    */
-  const toggleSelectAll = useCallback(
-    (characterIds: string[]): void => {
-      if (isAllSelected(characterIds)) {
-        clearSelection();
-      } else {
-        selectAll(characterIds);
-      }
+  const isAllSelected = useCallback(
+    (ids: string[]): boolean => {
+      if (ids.length === 0) return false;
+      return ids.every((id) => selectedIds.has(id));
     },
-    [isAllSelected, clearSelection, selectAll]
+    [selectedIds]
   );
 
   /**
-   * Number of selected characters
+   * Get selection count (more efficient than converting Set to Array)
    */
-  const selectionCount = useMemo(() => selectedIds.size, [selectedIds]);
+  const selectionCount = selectedIds.size;
 
   return {
     selectedIds,
@@ -136,3 +154,5 @@ export function useCharacterSelection(): UseCharacterSelectionReturn {
     isAllSelected,
   };
 }
+
+export default useCharacterSelection;

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Dialogue, DialogueChoice, DialogueAudio, Effect, DiceCheck } from '@/types';
+import type { Dialogue, DialogueChoice, DialogueAudio } from '@/types';
 import type { ComplexityLevel } from './useDialogueWizardState';
 import type { SituationTemplate } from '@/config/dialogueTemplates';
 
@@ -30,7 +30,7 @@ export interface DialogueFormData {
  * Actions for dialogue form
  */
 export interface DialogueFormActions {
-  updateField: (field: keyof DialogueFormData, value: any) => void;
+  updateField: (field: keyof DialogueFormData, value: DialogueFormData[keyof DialogueFormData]) => void;
   setComplexity: (level: ComplexityLevel) => void;
   updateChoice: (index: number, updates: Partial<DialogueChoice>) => void;
   updateResponse: (index: number, updates: Partial<ResponseData>) => void;
@@ -173,7 +173,7 @@ export function useDialogueForm(
     };
   });
 
-  const updateField = useCallback((field: keyof DialogueFormData, value: any) => {
+  const updateField = useCallback((field: keyof DialogueFormData, value: DialogueFormData[keyof DialogueFormData]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 

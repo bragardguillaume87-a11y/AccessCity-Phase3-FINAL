@@ -1,15 +1,12 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useScenesStore } from '@/stores/scenesStore';
 import { useCharactersStore } from '@/stores/charactersStore';
+import { useUIStore } from '@/stores';
 
 /**
  * Props for KeyboardShortcuts component
  */
 export interface KeyboardShortcutsProps {
-  /** Callback to open command palette (Ctrl/Cmd+K) */
-  onOpenCommandPalette?: () => void;
-  /** Callback to open specific modals with modal name parameter */
-  onOpenModal?: (modalName: string) => void;
   /** Currently active tab in the editor */
   activeTab?: string;
   /** Callback to change active tab */
@@ -43,8 +40,6 @@ export interface KeyboardShortcutsProps {
  * ```
  */
 export default function KeyboardShortcuts({
-  onOpenCommandPalette,
-  onOpenModal,
   activeTab,
   setActiveTab
 }: KeyboardShortcutsProps) {
@@ -71,7 +66,7 @@ export default function KeyboardShortcuts({
         }
         if (modifier && e.key.toLowerCase() === 'k') {
           e.preventDefault();
-          if (onOpenCommandPalette) onOpenCommandPalette();
+          useUIStore.getState().setCommandPaletteOpen(true);
           return;
         }
         return;
@@ -80,7 +75,7 @@ export default function KeyboardShortcuts({
       // Command Palette: Ctrl/Cmd+K
       if (modifier && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        if (onOpenCommandPalette) onOpenCommandPalette();
+        useUIStore.getState().setCommandPaletteOpen(true);
         return;
       }
 
@@ -94,7 +89,7 @@ export default function KeyboardShortcuts({
       // Preview: Ctrl/Cmd+P
       if (modifier && !e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        if (onOpenModal) onOpenModal('preview');
+        useUIStore.getState().setActiveModal('preview');
         return;
       }
 
@@ -136,14 +131,14 @@ export default function KeyboardShortcuts({
       // Open Assets Library: Ctrl/Cmd+Shift+A
       if (modifier && e.shiftKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
-        if (onOpenModal) onOpenModal('assets');
+        useUIStore.getState().setActiveModal('assets');
         return;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [addScene, addCharacter, onOpenCommandPalette, onOpenModal, activeTab, setActiveTab]);
+  }, [addScene, addCharacter, activeTab, setActiveTab]);
 
   return null;
 }

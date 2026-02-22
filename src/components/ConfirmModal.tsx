@@ -1,4 +1,4 @@
-import React from 'react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getZIndexClass } from '../utils/zIndexLayers';
-import { AlertTriangle, Info, CheckCircle, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Info, type LucideIcon } from 'lucide-react';
 
 /**
  * Variant types for ConfirmModal

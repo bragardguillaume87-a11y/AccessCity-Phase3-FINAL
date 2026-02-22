@@ -13,10 +13,17 @@ import { cn } from '@/lib/utils'
  * - Custom icon support
  * - Preview text in header when collapsed
  * - Open/Collapsed state management
+ * - variant="flat" : style section plate (AudioSection, BackgroundsSection)
+ * - badge prop : texte d'info à côté du titre (ex: "2 pistes")
  *
  * Usage:
  * <CollapsibleSection title="Basic Info" defaultOpen={true}>
  *   <input ... />
+ * </CollapsibleSection>
+ *
+ * // Flat variant for panel sections
+ * <CollapsibleSection title="Ambiance" variant="flat" badge="2 pistes" icon={<Wind />}>
+ *   ...
  * </CollapsibleSection>
  */
 export interface CollapsibleSectionProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onToggle'> {
@@ -25,6 +32,10 @@ export interface CollapsibleSectionProps extends Omit<React.HTMLAttributes<HTMLD
   defaultOpen?: boolean
   icon?: React.ReactNode
   preview?: string
+  /** Badge informatif affiché à côté du titre (ex : "2 pistes") */
+  badge?: string
+  /** 'card' (défaut) : bordure + fond. 'flat' : en-tête texte simple pour les panneaux latéraux. */
+  variant?: 'card' | 'flat'
   headerClassName?: string
   contentClassName?: string
   onToggle?: (isOpen: boolean) => void
@@ -36,6 +47,8 @@ export function CollapsibleSection({
   defaultOpen = false,
   icon,
   preview,
+  badge,
+  variant = 'card',
   className,
   headerClassName,
   contentClassName,
@@ -57,6 +70,60 @@ export function CollapsibleSection({
     }
   }
 
+  const sectionId = `section-${title.replace(/\s+/g, '-').toLowerCase()}`
+
+  // ── Variante "flat" (panneaux latéraux AudioSection, BackgroundsSection) ─────
+  if (variant === 'flat') {
+    return (
+      <section className={className} {...(props as React.HTMLAttributes<HTMLElement>)}>
+        <button
+          type="button"
+          onClick={handleToggle}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            "w-full flex items-center justify-between py-2.5",
+            "text-[13px] font-semibold text-[var(--color-text-secondary)]",
+            "hover:text-[var(--color-text-primary)] transition-colors",
+            headerClassName,
+          )}
+          aria-expanded={isOpen}
+          aria-controls={sectionId}
+        >
+          <span className="flex items-center gap-2">
+            {icon}
+            {title}
+            {badge && (
+              <span className="normal-case font-normal text-[var(--color-text-muted)]">
+                {badge}
+              </span>
+            )}
+          </span>
+          {/* Chevron */}
+          <svg
+            className={cn('w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200', isOpen && 'rotate-180')}
+            fill="none" stroke="currentColor" strokeWidth={2}
+            viewBox="0 0 24 24" aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <div
+          id={sectionId}
+          className={cn(
+            "grid transition-all duration-200 ease-in-out",
+            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          )}
+        >
+          <div className={cn("overflow-hidden", contentClassName)}>
+            {children}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  // ── Variante "card" (défaut — Inspector style) ─────────────────────────────
   return (
     <div
       className={cn(
@@ -76,7 +143,7 @@ export function CollapsibleSection({
           headerClassName
         )}
         aria-expanded={isOpen}
-        aria-controls={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        aria-controls={sectionId}
       >
         {/* Expand/Collapse indicator */}
         <span
@@ -101,6 +168,13 @@ export function CollapsibleSection({
           {title}
         </span>
 
+        {/* Badge */}
+        {badge && (
+          <span className="flex-shrink-0 text-xs text-muted-foreground">
+            {badge}
+          </span>
+        )}
+
         {/* Preview text when collapsed */}
         {!isOpen && preview && (
           <span className="flex-shrink-0 text-xs text-muted-foreground truncate max-w-[150px]">
@@ -111,7 +185,7 @@ export function CollapsibleSection({
 
       {/* Content (collapsible) */}
       <div
-        id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        id={sectionId}
         className={cn(
           "grid transition-all duration-200 ease-in-out",
           isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"

@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Music, Volume2, Mic, Play, Pause, Trash2 } from 'lucide-react';
+import { logger } from '@/utils/logger';
 import type { Asset } from '@/types';
 
 export interface AudioAssetCardProps {
@@ -85,7 +86,7 @@ export function AudioAssetCard({
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play().catch(console.error);
+      audio.play().catch((e) => logger.error('[AudioAssetCard] Playback failed:', e));
     }
     setIsPlaying(!isPlaying);
   };
@@ -177,15 +178,6 @@ export function AudioAssetCard({
           />
         </div>
 
-        {/* Selection Mode Overlay */}
-        {isSelectionMode && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white font-medium">
-              <Volume2 className="h-4 w-4 mr-1.5" />
-              Utiliser
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Footer - Name + Actions */}
@@ -194,8 +186,17 @@ export function AudioAssetCard({
           {asset.name}
         </p>
 
-        {/* Action Buttons */}
-        {!isSelectionMode && (
+        {/* Selection mode : bouton Utiliser dans le footer (pas d'overlay) */}
+        {isSelectionMode ? (
+          <Button
+            size="sm"
+            className="w-full h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleSelect}
+          >
+            <Volume2 className="h-3.5 w-3.5 mr-1.5" />
+            Utiliser cette musique
+          </Button>
+        ) : (
           <div className="flex gap-1.5">
             <Button
               size="sm"

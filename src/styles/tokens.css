@@ -42,10 +42,10 @@
 
   /* ========== TEXT - WCAG AA CONTRAST RATIOS ========== */
 
-  --color-text-primary: #e5e5e5;      /* Light gray - Primary text */
-  --color-text-secondary: #c0c0c0;    /* Secondary text */
-  --color-text-muted: #a3a3a3;        /* Muted text */
-  --color-text-disabled: #6e6e6e;     /* Disabled text */
+  --color-text-primary: #ffffff;                   /* White - Primary text */
+  --color-text-secondary: rgb(255 255 255 / 0.85); /* White 85% - Section headers */
+  --color-text-muted: rgb(255 255 255 / 0.60);     /* White 60% - Inactive icons, secondary labels */
+  --color-text-disabled: #6e6e6e;                  /* Disabled text */
 
   /* ========== BORDERS ========== */
 

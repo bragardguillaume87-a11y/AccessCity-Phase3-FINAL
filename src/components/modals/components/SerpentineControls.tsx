@@ -22,9 +22,11 @@ import { Slider } from '@/components/ui/slider';
 export function SerpentineControls() {
   const serpentineEnabled = useUIStore((state) => state.serpentineEnabled);
   const serpentineMode = useUIStore((state) => state.serpentineMode);
+  const serpentineDirection = useUIStore((state) => state.serpentineDirection);
   const serpentineGroupSize = useUIStore((state) => state.serpentineGroupSize);
   const setSerpentineEnabled = useUIStore((state) => state.setSerpentineEnabled);
   const setSerpentineMode = useUIStore((state) => state.setSerpentineMode);
+  const setSerpentineDirection = useUIStore((state) => state.setSerpentineDirection);
   const setSerpentineGroupSize = useUIStore((state) => state.setSerpentineGroupSize);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -33,7 +35,7 @@ export function SerpentineControls() {
     setSerpentineEnabled(!serpentineEnabled);
   };
 
-  const handleModeChange = (newMode: 'auto-y' | 'by-count') => {
+  const handleModeChange = (newMode: 'auto-y' | 'by-count' | 'branch-aware') => {
     setSerpentineMode(newMode);
   };
 
@@ -89,23 +91,23 @@ export function SerpentineControls() {
                   Mode d'organisation
                 </div>
                 <div className="space-y-2">
-                  {/* Auto-detect option */}
+                  {/* Branch-aware option (recommended) */}
                   <button
-                    onClick={() => handleModeChange('auto-y')}
+                    onClick={() => handleModeChange('branch-aware')}
                     className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                      serpentineMode === 'auto-y'
+                      serpentineMode === 'branch-aware'
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50'
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       <div className="w-4 h-4 mt-0.5 flex-shrink-0">
-                        {serpentineMode === 'auto-y' && <Check className="w-4 h-4 text-primary" />}
+                        {serpentineMode === 'branch-aware' && <Check className="w-4 h-4 text-primary" />}
                       </div>
                       <div>
-                        <div className="font-medium text-sm">✨ Auto-détection</div>
+                        <div className="font-medium text-sm">🧩 Intelligent</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Détecte les rangées automatiquement par position verticale
+                          Regroupe les choix avec leurs réponses (recommandé)
                         </div>
                       </div>
                     </div>
@@ -132,14 +134,77 @@ export function SerpentineControls() {
                       </div>
                     </div>
                   </button>
+
+                  {/* Auto-detect option */}
+                  <button
+                    onClick={() => handleModeChange('auto-y')}
+                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                      serpentineMode === 'auto-y'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="w-4 h-4 mt-0.5 flex-shrink-0">
+                        {serpentineMode === 'auto-y' && <Check className="w-4 h-4 text-primary" />}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">✨ Auto-détection</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Détecte les rangées par position verticale (avancé)
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
 
-              {/* Group Size Slider (only for 'by-count' mode) */}
-              {serpentineMode === 'by-count' && (
+              {/* Direction Selection */}
+              <div className="pt-2 border-t">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  Direction de lecture
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSerpentineDirection('grid')}
+                    className={`flex-1 p-2 rounded-lg border-2 text-center transition-all ${
+                      serpentineDirection === 'grid'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">
+                      {serpentineDirection === 'grid' && <Check className="w-3 h-3 inline mr-1 text-primary" />}
+                      Grille
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Toujours gauche à droite
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setSerpentineDirection('zigzag')}
+                    className={`flex-1 p-2 rounded-lg border-2 text-center transition-all ${
+                      serpentineDirection === 'zigzag'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">
+                      {serpentineDirection === 'zigzag' && <Check className="w-3 h-3 inline mr-1 text-primary" />}
+                      Zigzag
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Alternance gauche/droite
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Group Size Slider (for 'by-count' and 'branch-aware' modes) */}
+              {(serpentineMode === 'by-count' || serpentineMode === 'branch-aware') && (
                 <div className="pt-2 border-t">
                   <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Dialogues par rangée
+                    Max par rangée
                   </div>
                   <div className="flex items-center gap-3">
                     <Slider
@@ -163,7 +228,7 @@ export function SerpentineControls() {
 
               {/* Help text */}
               <div className="text-xs text-muted-foreground pt-2 border-t">
-                💡 Le mode serpent organise les dialogues en zigzag comme un serpent ! 🐍
+                💡 Le mode serpent organise les dialogues en rangées ! 🐍
               </div>
             </div>
           </PopoverContent>

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Lightbulb, Sparkles } from 'lucide-react';
 

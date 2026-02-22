@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { AlignLeft, AlignCenter, AlignRight, Minimize2, Maximize2 } from 'lucide-react';
 import { Button } from '../../ui/button';
-import { useScenesStore } from '@/stores/scenesStore';
+import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 
 /**
  * CharacterPositioningTools - Outils de positionnement rapide (PHASE 8)
@@ -34,7 +34,7 @@ type PositionKey = 'left' | 'center' | 'right';
 type SizeKey = 'small' | 'medium' | 'large';
 
 export function CharacterPositioningTools({ characterId, sceneId }: CharacterPositioningToolsProps) {
-  const updateCharacterPosition = useScenesStore(state => state.updateCharacterPosition);
+  const updateCharacterPosition = useSceneElementsStore(state => state.updateCharacterPosition);
 
   // Positions prédéfinies (% de la largeur du canvas)
   const POSITIONS: Record<PositionKey, PositionPreset> = {
@@ -52,8 +52,8 @@ export function CharacterPositioningTools({ characterId, sceneId }: CharacterPos
 
   const handlePositionChange = (positionKey: PositionKey) => {
     if (!characterId || !sceneId) return;
-    const position = POSITIONS[positionKey];
-    updateCharacterPosition(sceneId, characterId, { x: position.x, y: 50 }); // y=50 = verticalement centré
+    const pos = POSITIONS[positionKey];
+    updateCharacterPosition(sceneId, characterId, { position: { x: pos.x, y: 50 } }); // y=50 = verticalement centré
   };
 
   const handleSizeChange = (sizeKey: SizeKey) => {

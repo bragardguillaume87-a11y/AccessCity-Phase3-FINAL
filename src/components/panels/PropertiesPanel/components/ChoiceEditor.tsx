@@ -1,8 +1,9 @@
 import * as React from 'react';
-import type { DialogueChoice, Effect, Scene, Dialogue } from '@/types';
+import type { DialogueChoice, Effect, SceneMetadata, Dialogue } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
 
 // Extended DialogueChoice with diceRoll support (game mechanic)
 interface DiceRollOutcome {
@@ -28,8 +29,8 @@ export interface ChoiceEditorProps {
   choiceIndex: number;
   onUpdate: (choiceIndex: number, updatedChoice: DialogueChoiceWithDiceRoll) => void;
   onDelete: (choiceIndex: number) => void;
-  // NEW: Data for dropdowns
-  scenes: Scene[];
+  // Metadata uniquement (title/id pour les dropdowns de navigation)
+  scenes: SceneMetadata[];
   currentSceneId: string;
 }
 
@@ -48,10 +49,8 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
     onUpdate(choiceIndex, { ...choice, ...updates });
   };
 
-  // NEW: Memoize dialogues from current scene for performance
-  const currentSceneDialogues = React.useMemo(() => {
-    return scenes.find(s => s.id === currentSceneId)?.dialogues || [];
-  }, [scenes, currentSceneId]);
+  // Dialogues from current scene (via dialoguesStore, not scenes prop)
+  const currentSceneDialogues = useDialoguesStore((s) => s.getDialoguesByScene(currentSceneId));
 
   // NEW: Helper function to format dialogue preview
   const getDialoguePreview = React.useCallback((dialogue: Dialogue, index: number) => {

@@ -1,8 +1,9 @@
 import * as React from "react"
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { getDialogueCumulativeTimes } from '@/utils/dialogueDuration'
 import type { Dialogue } from '@/types'
 
 /**
@@ -106,12 +107,18 @@ export default function TimelinePlayhead({
     }
   }, [isDragging, duration, onSeek])
 
-  // Calculate dialogue marker positions
-  const dialogueMarkers = dialogues.map((dialogue, idx) => {
-    const dialogueTime = idx * (duration / Math.max(1, dialogues.length))
-    const position = (dialogueTime / duration) * 100
-    return { id: dialogue.id || idx, position, dialogue }
-  })
+  // Calculate dialogue marker positions based on estimated reading duration
+  const dialogueMarkers = useMemo(() => {
+    if (dialogues.length === 0 || duration <= 0) return []
+    const times = getDialogueCumulativeTimes(dialogues)
+    return dialogues.map((dialogue, idx) => ({
+      id: dialogue.id || idx,
+      idx,
+      time: times[idx] ?? 0,
+      position: Math.min(99, (times[idx] ?? 0) / duration * 100),
+      preview: dialogue.text?.substring(0, 60) || 'Dialogue',
+    }))
+  }, [dialogues, duration])
 
   return (
     <div
@@ -181,14 +188,24 @@ export default function TimelinePlayhead({
           aria-hidden="true"
         />
 
-        {/* Dialogue Markers */}
+        {/* Dialogue Markers — click = seek + select, double-click = seek + play */}
         {dialogueMarkers.map((marker) => (
-          <div
+          <button
             key={marker.id}
-            className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-text-muted)] hover:bg-white hover:scale-150 transition-all cursor-pointer"
+            type="button"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] hover:bg-white hover:scale-150 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             style={{ left: `${marker.position}%` }}
-            title={marker.dialogue.text?.substring(0, 50) || 'Dialogue'}
-            aria-label={`Dialogue at ${formatTime((marker.position / 100) * duration)}`}
+            title={`#${marker.idx + 1} — ${marker.preview}`}
+            aria-label={`Dialogue ${marker.idx + 1} à ${formatTime(marker.time)}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSeek(marker.time)
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              onSeek(marker.time)
+              if (!isPlaying) onPlayPause()
+            }}
           />
         ))}
 

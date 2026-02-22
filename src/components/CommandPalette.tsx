@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useScenesStore, useCharactersStore, useUIStore } from '../stores/index.ts';
+import { useCharactersStore, useUIStore } from '../stores/index.ts';
+import { useScenesStore } from '../stores/scenesStore';
+import { useAllScenesWithElements } from '../stores/selectors/index';
+import { useSelectionStore } from '../stores/selectionStore';
 
 /**
  * Command item in the palette
@@ -37,7 +40,8 @@ export default function CommandPalette({
   mode = 'commands',
   setActiveTab
 }: CommandPaletteProps): React.JSX.Element | null {
-  const scenes = useScenesStore(state => state.scenes);
+  // useAllScenesWithElements pour avoir le vrai count de dialogues dans les résultats
+  const scenes = useAllScenesWithElements();
   const addScene = useScenesStore(state => state.addScene);
   const characters = useCharactersStore(state => state.characters);
   const addCharacter = useCharactersStore(state => state.addCharacter);
@@ -179,8 +183,8 @@ export default function CommandPalette({
     description: `Personnage | ID: ${char.id}`,
     icon: '👤',
     action: () => {
+      useSelectionStore.getState().selectCharacter(char.id);
       setActiveTab('characters');
-      // TODO: Sélectionner le personnage spécifique
       onClose();
     }
   }));

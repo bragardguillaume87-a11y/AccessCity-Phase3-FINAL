@@ -121,11 +121,11 @@ export function useAssetUpload({
       // Success toast with undo action
       toast.success(`${uploaded.length} fichier(s) uploadé(s) !`, {
         description: uploaded.map(f => f.filename).join(', '),
-        duration: 5000,
+        duration: TIMING.TOAST_DURATION_LONG,
         action: {
           label: 'Annuler',
           onClick: () => {
-            // TODO: Implement undo (DELETE request)
+            // Note: undo requires DELETE endpoint (future)
             toast.info('Undo non implémenté');
           },
         },

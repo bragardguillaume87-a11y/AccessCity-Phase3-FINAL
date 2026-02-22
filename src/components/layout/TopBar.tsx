@@ -1,7 +1,8 @@
-import * as React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Users, Image, Settings, Download, Play, Network } from "lucide-react"
 import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
+import { useUIStore } from "@/stores"
 
 /**
  * Validation data for TopBar
@@ -16,18 +17,11 @@ export interface TopBarValidation {
 }
 
 /**
- * Modal types that can be opened from TopBar
- */
-export type TopBarModalType = "characters" | "assets" | "graph" | "project" | "export" | "preview"
-
-/**
  * Props for TopBar component
  */
 export interface TopBarProps {
   /** Callback for back button click */
   onBack?: (() => void) | null
-  /** Callback to open a modal by type */
-  onOpenModal: (modalType: TopBarModalType) => void
   /** Callback for undo action */
   undo: () => void
   /** Callback for redo action */
@@ -38,10 +32,6 @@ export interface TopBarProps {
   canRedo: boolean
   /** Validation state and issues */
   validation?: TopBarValidation
-  /** Whether the problems panel is shown */
-  showProblemsPanel: boolean
-  /** Callback to toggle problems panel visibility */
-  onToggleProblemsPanel: () => void
   /** Whether a save operation is in progress */
   isSaving: boolean
   /** Timestamp of last save, or null if never saved */
@@ -58,20 +48,35 @@ export interface TopBarProps {
  * - Undo/Redo buttons
  * - Validation badge (errors/warnings)
  * - Auto-save indicator
+ *
+ * Modal open + problems panel toggle are read/set directly from uiStore.
  */
 export default function TopBar({
   onBack,
-  onOpenModal,
   undo,
   redo,
   canUndo,
   canRedo,
   validation,
-  showProblemsPanel,
-  onToggleProblemsPanel,
   isSaving,
   lastSaved
 }: TopBarProps) {
+  const showProblemsPanel = useUIStore(s => s.showProblemsPanel);
+  const setShowProblemsPanel = useUIStore(s => s.setShowProblemsPanel);
+
+  const handleOpenCharacters = () => useUIStore.getState().setActiveModal('characters');
+  const handleOpenAssets     = () => useUIStore.getState().setActiveModal('assets');
+  const handleOpenProject    = () => useUIStore.getState().setActiveModal('project');
+  const handleOpenExport     = () => useUIStore.getState().setActiveModal('export');
+  const handleOpenPreview    = () => useUIStore.getState().setActiveModal('preview');
+  const handleOpenGraph      = () => {
+    const store = useUIStore.getState();
+    if (store.selectedSceneForEdit) {
+      store.setDialogueGraphSelectedScene(store.selectedSceneForEdit);
+      store.setDialogueGraphModalOpen(true);
+    }
+  };
+
   return (
     <header
       className="sticky top-0 z-fixed-v2 bg-card border-b border-border shadow-lg flex-shrink-0"
@@ -112,7 +117,7 @@ export default function TopBar({
               <Button
                 variant="toolbar"
                 size="sm"
-                onClick={() => onOpenModal("characters")}
+                onClick={handleOpenCharacters}
                 title="Gérer les personnages | Raccourci: Ctrl+Shift+C"
                 aria-label="Gérer les personnages (Ctrl+Shift+C)"
               >
@@ -122,7 +127,7 @@ export default function TopBar({
               <Button
                 variant="toolbar"
                 size="sm"
-                onClick={() => onOpenModal("assets")}
+                onClick={handleOpenAssets}
                 title="Bibliothèque de ressources | Raccourci: Ctrl+Shift+A"
                 aria-label="Bibliothèque de ressources (Ctrl+Shift+A)"
               >
@@ -132,7 +137,7 @@ export default function TopBar({
               <Button
                 variant="gaming-accent"
                 size="sm"
-                onClick={() => onOpenModal("graph")}
+                onClick={handleOpenGraph}
                 title="Vue Graphe - Éditeur nodal des dialogues | Raccourci: Ctrl+Shift+G"
                 aria-label="Vue Graphe - Éditeur nodal (Ctrl+Shift+G)"
                 className="shadow-md"
@@ -150,7 +155,7 @@ export default function TopBar({
               <Button
                 variant="toolbar"
                 size="sm"
-                onClick={() => onOpenModal("project")}
+                onClick={handleOpenProject}
                 title="Paramètres du projet"
                 aria-label="Paramètres du projet"
               >
@@ -160,7 +165,7 @@ export default function TopBar({
               <Button
                 variant="toolbar"
                 size="sm"
-                onClick={() => onOpenModal("export")}
+                onClick={handleOpenExport}
                 title="Exporter le projet"
                 aria-label="Exporter le projet"
               >
@@ -170,7 +175,7 @@ export default function TopBar({
               <Button
                 variant="gaming-accent"
                 size="sm"
-                onClick={() => onOpenModal("preview")}
+                onClick={handleOpenPreview}
                 title="Prévisualiser le jeu | Raccourci: Ctrl+R"
                 aria-label="Prévisualiser le jeu (Ctrl+R)"
                 className="shadow-md"
@@ -218,7 +223,7 @@ export default function TopBar({
             {/* Validation badge (clickable) */}
             {validation?.hasIssues && (
               <button
-                onClick={onToggleProblemsPanel}
+                onClick={() => setShowProblemsPanel(!showProblemsPanel)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all hover:shadow-md ${
                   validation.totalErrors > 0
                     ? "bg-red-900/30 border-red-600 text-red-300 hover:bg-red-900/50"

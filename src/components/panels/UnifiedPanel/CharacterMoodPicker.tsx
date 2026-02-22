@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCharactersStore } from '@/stores';
+import { useUIStore } from '@/stores';
+import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 
 /**
  * CharacterMoodPicker - Gallery avatars with mood preview
@@ -20,6 +22,22 @@ export interface CharacterMoodPickerProps {
 export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
   const characters = useCharactersStore(state => state.characters);
   const [hoveredCharacterId, setHoveredCharacterId] = useState<string | null>(null);
+
+  // Lecture du contexte scène pour mettre à jour les personnages sur le canvas
+  const selectedSceneId = useUIStore(s => s.selectedSceneForEdit);
+  const sceneCharacters = useSceneElementsStore(s =>
+    selectedSceneId ? (s.elementsByScene[selectedSceneId]?.characters || []) : []
+  );
+  const updateSceneCharacter = useSceneElementsStore(s => s.updateSceneCharacter);
+
+  // Quand on clique un mood dans la galerie : met à jour toutes les instances
+  // de ce personnage dans la scène courante (cas nominal = 1 instance)
+  const handleMoodClick = useCallback((characterId: string, mood: string) => {
+    if (!selectedSceneId) return;
+    sceneCharacters
+      .filter(sc => sc.characterId === characterId)
+      .forEach(sc => updateSceneCharacter(selectedSceneId, sc.id, { mood }));
+  }, [selectedSceneId, sceneCharacters, updateSceneCharacter]);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement | HTMLButtonElement>, characterId: string, mood: string) => {
     // Set drag data for MainCanvas drop handler
@@ -112,7 +130,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                       className="flex flex-col items-center gap-1 px-2 py-1.5 bg-[var(--color-bg-elevated)] hover:bg-[var(--color-primary)] border border-[var(--color-border-base)] hover:border-[var(--color-primary)] rounded-md transition-colors cursor-grab active:cursor-grabbing group"
                       whileHover={{ scale: 1.1, rotate: 3 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); handleMoodClick(character.id, mood); }}
                       aria-label={`${character.name} - ${mood}`}
                     >
                       {/* Mood Avatar */}

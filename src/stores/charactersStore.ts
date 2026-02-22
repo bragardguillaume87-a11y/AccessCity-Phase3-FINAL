@@ -40,7 +40,7 @@ const SAMPLE_CHARACTERS: Character[] = [
   },
   {
     id: "counsellor",
-    name: "Conseiller municipal",
+    name: "Maire",
     description: "",
     sprites: { neutral: "assets/characters/counsellor/neutral.svg" },
     moods: ["neutral", "professional", "helpful"],

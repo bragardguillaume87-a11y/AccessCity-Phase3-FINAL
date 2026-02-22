@@ -93,7 +93,6 @@ const SERPENTINE_STRATEGY: LayoutStrategy = {
       flowDirection,
       isFirst,
       isLast,
-      isFirstInRow,
       isLastInRow,
       rowIndex,
     } = serpentine;
@@ -118,7 +117,9 @@ const SERPENTINE_STRATEGY: LayoutStrategy = {
       flowArrow: {
         side: flowEndSide,
         offset: flowArrowOffset,
-        visible: !isLastInRow && !isLast,
+        // Disabled: edges already show flow direction. Removing inter-node arrows
+        // reduces visual noise significantly (was 5 pulsing arrows per row of 6).
+        visible: false,
       },
       rowTransition: {
         side: flowEndSide,
@@ -126,7 +127,9 @@ const SERPENTINE_STRATEGY: LayoutStrategy = {
       },
       rowBadge: {
         side: flowStartSide,
-        visible: isFirstInRow,
+        // Disabled: row separators ("Ligne 2 🚀") now indicate row numbers.
+        // Keeping both was redundant.
+        visible: false,
         number: rowIndex + 1,
       },
       choiceHandles: {

@@ -1,6 +1,7 @@
 import { Trash2, Copy, Workflow, ArrowDown, ArrowRight, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SerpentineControls } from './SerpentineControls'; // SERP-6: Serpentine layout controls
+import { ProModeControls } from './ProModeControls';
 
 /**
  * DialogueGraphToolbar - Barre d'outils flottante pour l'éditeur nodal
@@ -167,6 +168,12 @@ export function DialogueGraphToolbar({
 
       {/* SERP-6: Serpentine Layout Controls */}
       <SerpentineControls />
+
+      {/* Séparateur visuel */}
+      <div className="h-6 w-px bg-border" aria-hidden="true" />
+
+      {/* Pro Mode Controls */}
+      <ProModeControls />
 
     </div>
   );

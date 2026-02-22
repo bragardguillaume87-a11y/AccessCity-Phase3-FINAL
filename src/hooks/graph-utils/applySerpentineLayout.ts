@@ -2,6 +2,9 @@ import type { Edge, MarkerType } from '@xyflow/react';
 import type { SerpentineNodeData, DialogueNodeData, TerminalNodeData } from '@/types';
 import { SERPENTINE_Y_THRESHOLD, extractSceneId, recalculateSerpentineEdges, buildNodeRowMap } from '@/config/handleConfig';
 import { SERPENTINE_LAYOUT } from '@/config/layoutConfig';
+import { COSMOS_COLORS, COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
+import { isTerminalNode, isRowSeparatorNode } from '@/utils/textHelpers';
+import type { RowSeparatorNodeData } from '@/components/features/graph-nodes/RowSeparatorNode';
 import type { GraphNode } from './types';
 
 /**
@@ -15,24 +18,26 @@ import type { GraphNode } from './types';
  *   [8]─[7]─[6]─[5]
  *
  * @param nodes - Nodes with Dagre-calculated positions
- * @param mode - Layout mode: 'auto-y' | 'by-scene' | 'by-count'
- * @param groupSize - For 'by-count' mode: number of nodes per row
+ * @param mode - Layout mode: 'auto-y' | 'by-scene' | 'by-count' | 'branch-aware'
+ * @param groupSize - Max nodes per row (used by 'by-count' and 'branch-aware')
  * @returns Nodes with serpentine-adjusted positions
  */
 export function applySerpentineLayout(
   nodes: GraphNode[],
-  mode: 'auto-y' | 'by-scene' | 'by-count' = 'auto-y',
-  groupSize: number = 6
+  mode: 'auto-y' | 'by-scene' | 'by-count' | 'branch-aware' = 'branch-aware',
+  groupSize: number = 6,
+  direction: 'zigzag' | 'grid' = 'grid'
 ): GraphNode[] {
   if (nodes.length === 0) return nodes;
 
   const { ROW_HEIGHT, NODE_SPACING, START_X, START_Y } = SERPENTINE_LAYOUT;
 
-  // Separate dialogue nodes from terminal nodes.
+  // Separate dialogue nodes from terminal/separator nodes.
   // Terminal nodes are injected by buildGraphEdges (scene-jump placeholders) and must
   // NOT participate in row grouping — including them corrupts isLastInRow/isFirstInRow
   // flags and causes turn-connectors to be drawn diagonally.
-  const dialogueNodes = nodes.filter(n => n.type !== 'terminalNode');
+  // Separator nodes from a previous layout pass are discarded and regenerated.
+  const dialogueNodes = nodes.filter(n => !isTerminalNode(n) && !isRowSeparatorNode(n));
   const terminalNodes  = nodes.filter(n => n.type === 'terminalNode');
 
   // Group only dialogue nodes into rows
@@ -51,7 +56,7 @@ export function applySerpentineLayout(
     // regardless of mode, and to avoid the old position.x sort which broke RTL rows.
     const sortedRow = sortByDialogueIndex(row);
     const rowY = START_Y + (rowIndex * ROW_HEIGHT);
-    const isReversedRow = rowIndex % 2 === 1;
+    const isReversedRow = direction === 'zigzag' ? rowIndex % 2 === 1 : false;
     const flowDirection: 'ltr' | 'rtl' = isReversedRow ? 'rtl' : 'ltr';
     const rowLength = sortedRow.length;
 
@@ -93,7 +98,7 @@ export function applySerpentineLayout(
   // Terminal IDs follow the pattern "<sourceNodeId>-terminal-<choiceIdx>".
   // After serpentine repositions the source, we place the terminal below-right so
   // the connecting edge stays short and readable.
-  const NODE_WIDTH_APPROX = 200;
+  const NODE_WIDTH_APPROX = COSMOS_DIMENSIONS.terminal.widthApprox;
   const terminalTransformed = terminalNodes.map(terminal => {
     const sourceId = terminal.id.replace(/-terminal-\d+$/, '');
     const sourceNode = transformedNodes.get(sourceId);
@@ -104,16 +109,23 @@ export function applySerpentineLayout(
       position: {
         // Place terminal below the source node so it doesn't intrude on the row
         x: sourceNode.position.x + NODE_WIDTH_APPROX / 4,
-        y: sourceNode.position.y + 100 + terminalIndex * 70,
+        y: sourceNode.position.y + COSMOS_DIMENSIONS.terminal.yOffsetFromSource + terminalIndex * COSMOS_DIMENSIONS.terminal.yMultiplierPerIndex,
       },
     } as GraphNode;
   });
 
-  return nodes.map(node =>
-    transformedNodes.get(node.id) ??
-    terminalTransformed.find(t => t.id === node.id) ??
-    node
-  );
+  // Generate row separator nodes between each pair of rows
+  const separatorNodes = buildRowSeparatorNodes(rows.length, maxRowWidth, START_X, START_Y, ROW_HEIGHT, NODE_SPACING);
+
+  const result = nodes
+    .filter(n => !isRowSeparatorNode(n)) // remove stale separators
+    .map(node =>
+      transformedNodes.get(node.id) ??
+      terminalTransformed.find(t => t.id === node.id) ??
+      node
+    );
+
+  return [...result, ...separatorNodes];
 }
 
 /**
@@ -137,12 +149,14 @@ function sortByDialogueIndex(nodes: GraphNode[]): GraphNode[] {
  */
 function groupNodesIntoRows(
   nodes: GraphNode[],
-  mode: 'auto-y' | 'by-scene' | 'by-count',
+  mode: 'auto-y' | 'by-scene' | 'by-count' | 'branch-aware',
   groupSize: number
 ): GraphNode[][] {
   const rows: GraphNode[][] = [];
 
-  if (mode === 'auto-y') {
+  if (mode === 'branch-aware') {
+    return groupNodesWithBranchAwareness(nodes, groupSize);
+  } else if (mode === 'auto-y') {
     const yThreshold = SERPENTINE_Y_THRESHOLD;
     const sortedByY = [...nodes].sort((a, b) => a.position.y - b.position.y);
     const minY = sortedByY[0].position.y;
@@ -194,6 +208,138 @@ function groupNodesIntoRows(
 }
 
 /**
+ * Branch-aware grouping: builds clusters from choice+response groups,
+ * then bin-packs clusters into rows without ever splitting a cluster.
+ *
+ * A cluster is either:
+ *   - A single linear dialogue (no choices, not a response)
+ *   - A choice dialogue + all its immediately following isResponse dialogues
+ *
+ * Example with maxPerRow=5:
+ *   [Linear] [Choice + 2 responses = 3] = 4 nodes → row 1
+ *   [Linear] [Choice + 3 responses = 4] = 5 nodes → row 2
+ */
+function groupNodesWithBranchAwareness(
+  nodes: GraphNode[],
+  maxPerRow: number
+): GraphNode[][] {
+  const sorted = sortByDialogueIndex(nodes);
+
+  // Step 1: Build clusters (groups of related nodes)
+  const clusters: GraphNode[][] = [];
+  let i = 0;
+
+  while (i < sorted.length) {
+    const node = sorted[i];
+    const data = node.data as DialogueNodeData;
+    const hasChoices = data.choices && data.choices.length > 0;
+
+    if (hasChoices) {
+      // Choice node: consume it + all following isResponse nodes
+      const cluster: GraphNode[] = [node];
+      let j = i + 1;
+      while (j < sorted.length) {
+        const nextData = sorted[j].data as DialogueNodeData;
+        if (nextData.dialogue?.isResponse) {
+          cluster.push(sorted[j]);
+          j++;
+        } else {
+          break;
+        }
+      }
+      clusters.push(cluster);
+      i = j;
+    } else if (data.dialogue?.isResponse) {
+      // Orphan response (shouldn't happen, but handle gracefully):
+      // attach to previous cluster if possible, else make standalone
+      if (clusters.length > 0) {
+        clusters[clusters.length - 1].push(node);
+      } else {
+        clusters.push([node]);
+      }
+      i++;
+    } else {
+      // Linear dialogue: cluster of 1
+      clusters.push([node]);
+      i++;
+    }
+  }
+
+  // Step 2: Bin-pack clusters into rows (never split a cluster)
+  const rows: GraphNode[][] = [];
+  let currentRow: GraphNode[] = [];
+
+  for (const cluster of clusters) {
+    // If cluster alone exceeds maxPerRow, give it its own row
+    if (cluster.length >= maxPerRow) {
+      if (currentRow.length > 0) {
+        rows.push(currentRow);
+        currentRow = [];
+      }
+      rows.push(cluster);
+      continue;
+    }
+
+    // If adding this cluster would exceed maxPerRow, start a new row
+    if (currentRow.length + cluster.length > maxPerRow) {
+      rows.push(currentRow);
+      currentRow = [];
+    }
+
+    currentRow.push(...cluster);
+  }
+
+  // Don't forget the last row
+  if (currentRow.length > 0) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+}
+
+/**
+ * Generate non-interactive row separator nodes placed between serpentine rows.
+ * Each separator is a horizontal divider with a fun badge ("Ligne 2 🚀").
+ */
+function buildRowSeparatorNodes(
+  rowCount: number,
+  maxRowWidth: number,
+  startX: number,
+  startY: number,
+  rowHeight: number,
+  nodeSpacing: number,
+): GraphNode[] {
+  if (rowCount <= 1) return [];
+
+  const separatorHeight = COSMOS_DIMENSIONS.rowSeparator.height;
+  const separatorWidth = maxRowWidth + nodeSpacing; // span wider than nodes
+
+  const separators: GraphNode[] = [];
+
+  for (let i = 0; i < rowCount - 1; i++) {
+    const rowBottomY = startY + (i * rowHeight);
+    const nextRowTopY = startY + ((i + 1) * rowHeight);
+    // Center the separator vertically between rows
+    const sepY = (rowBottomY + nextRowTopY) / 2 - separatorHeight / 2 + 40; // +40 offset for node height
+
+    separators.push({
+      id: `row-separator-${i}`,
+      type: 'rowSeparatorNode',
+      position: { x: startX - nodeSpacing / 4, y: sepY },
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      data: {
+        afterRowIndex: i,
+        separatorWidth,
+      } as RowSeparatorNodeData,
+    } as GraphNode);
+  }
+
+  return separators;
+}
+
+/**
  * Apply serpentine edge routing using shared handle config
  *
  * @param edges - Original edges
@@ -204,10 +350,10 @@ export function applySerpentineEdgeRouting(
   edges: Edge[],
   nodes: GraphNode[]
 ): Edge[] {
-  // Exclude terminal nodes: they sit between rows (y = sourceRow.y + 100) and
-  // would create phantom intermediate rows in buildNodeRowMap, corrupting the
-  // row-index comparison inside getSerpentineHandles → diagonal convergence arrows.
-  const dialogueNodesOnly = nodes.filter(n => n.type !== 'terminalNode');
+  // Exclude terminal + separator nodes: they sit between rows and would create
+  // phantom intermediate rows in buildNodeRowMap, corrupting the row-index
+  // comparison inside getSerpentineHandles → diagonal convergence arrows.
+  const dialogueNodesOnly = nodes.filter(n => !isTerminalNode(n) && !isRowSeparatorNode(n));
   const routedEdges = recalculateSerpentineEdges(dialogueNodesOnly, edges);
 
   // Fix cross-row edge types: 'straight' draws a diagonal line between
@@ -265,16 +411,16 @@ export function buildSerpentineTurnEdges(nodes: GraphNode[], edges: Edge[]): Edg
           targetHandle: 'top',
           type: 'straight',
           style: {
-            stroke: '#94a3b8',
-            strokeWidth: 2.5,
-            strokeDasharray: '6,4',
-            opacity: 0.55,
+            stroke: COSMOS_COLORS.turnConnector.stroke,
+            strokeWidth: COSMOS_DIMENSIONS.turnConnector.strokeWidth,
+            strokeDasharray: COSMOS_DIMENSIONS.turnConnector.strokeDasharray,
+            opacity: COSMOS_DIMENSIONS.turnConnector.opacity,
           },
           markerEnd: {
             type: 'arrowclosed' as unknown as MarkerType,
-            color: '#94a3b8',
-            width: 14,
-            height: 14,
+            color: COSMOS_COLORS.turnConnector.stroke,
+            width: COSMOS_DIMENSIONS.turnConnector.arrowWidth,
+            height: COSMOS_DIMENSIONS.turnConnector.arrowHeight,
           },
           animated: false,
           data: { isTurnConnector: true },

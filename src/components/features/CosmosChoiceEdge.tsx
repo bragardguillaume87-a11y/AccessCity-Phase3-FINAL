@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { BaseEdge, Edge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from '@xyflow/react';
+import { COSMOS_COLORS, COSMOS_DIMENSIONS, COSMOS_ANIMATIONS } from '@/config/cosmosConstants';
 
 /** Data passed to CosmosChoiceEdge via edge.data */
 type CosmosEdgeData = { label?: string };
+
+const bubble = COSMOS_COLORS.choiceBubble;
+const dim = COSMOS_DIMENSIONS.choiceBubble;
 
 /**
  * CosmosChoiceEdge - Custom edge component for choice connections
@@ -10,7 +14,6 @@ type CosmosEdgeData = { label?: string };
  * Features:
  * - Animated speech bubble label on hover
  * - Cosmic gradient styling
- * - Child-friendly design
  * - Shows full choice text in bubble
  */
 export function CosmosChoiceEdge({
@@ -28,7 +31,6 @@ export function CosmosChoiceEdge({
   const [isHovered, setIsHovered] = useState(false);
   const choiceText = data?.label ?? '';
 
-  // Calculate edge path and label position
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -40,7 +42,6 @@ export function CosmosChoiceEdge({
 
   return (
     <>
-      {/* Base edge path */}
       <BaseEdge
         id={id}
         path={edgePath}
@@ -50,7 +51,6 @@ export function CosmosChoiceEdge({
         onMouseLeave={() => setIsHovered(false)}
       />
 
-      {/* Animated speech bubble label */}
       <EdgeLabelRenderer>
         {isHovered && choiceText && (
           <div
@@ -58,58 +58,55 @@ export function CosmosChoiceEdge({
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: 'none',
-              zIndex: 1000,
+              zIndex: dim.zIndex,
             }}
             className="cosmos-choice-bubble"
             role="tooltip"
             aria-label={`Choix : ${choiceText}`}
           >
-            {/* Speech bubble container */}
             <div
               style={{
-                background: 'linear-gradient(135deg, #9D4EDD 0%, #FF006E 100%)',
-                border: '3px solid #e9d5ff',
-                borderRadius: '20px',
-                padding: '12px 16px',
-                boxShadow: '0 0 20px rgba(157, 78, 221, 0.6), 0 0 40px rgba(255, 0, 110, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3)',
-                maxWidth: '250px',
+                background: bubble.gradient,
+                border: `${bubble.borderWidth}px solid ${bubble.border}`,
+                borderRadius: `${dim.borderRadius}px`,
+                padding: dim.padding,
+                boxShadow: bubble.shadow,
+                maxWidth: `${dim.maxWidth}px`,
                 position: 'relative',
-                animation: 'cosmos-bubble-appear 0.3s ease-out',
+                animation: COSMOS_ANIMATIONS.bubbleAppear,
               }}
             >
-              {/* Choice text */}
               <p
                 style={{
                   margin: 0,
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 600,
+                  color: bubble.text,
+                  fontSize: `${dim.fontSize}px`,
+                  fontWeight: dim.fontWeight,
                   textAlign: 'center',
-                  lineHeight: 1.4,
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                  lineHeight: dim.lineHeight,
+                  textShadow: bubble.textShadow,
                 }}
               >
                 <span aria-hidden="true">💬</span> {choiceText}
               </p>
 
-              {/* Speech bubble tail (pointing down to edge) */}
               <svg
                 style={{
                   position: 'absolute',
-                  bottom: '-12px',
+                  bottom: `-${dim.tailOffset}px`,
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '24px',
-                  height: '12px',
+                  width: `${dim.tailWidth}px`,
+                  height: `${dim.tailHeight}px`,
                 }}
-                viewBox="0 0 24 12"
+                viewBox={`0 0 ${dim.tailWidth} ${dim.tailHeight}`}
                 fill="none"
               >
                 <path
-                  d="M0 0 L12 12 L24 0 Z"
-                  fill="#9D4EDD"
-                  stroke="#e9d5ff"
-                  strokeWidth="3"
+                  d={`M0 0 L${dim.tailWidth / 2} ${dim.tailHeight} L${dim.tailWidth} 0 Z`}
+                  fill={bubble.tailFill}
+                  stroke={bubble.border}
+                  strokeWidth={`${bubble.borderWidth}`}
                   strokeLinejoin="round"
                 />
               </svg>

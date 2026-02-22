@@ -1,24 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useUIStore } from '@/stores';
 import { logger } from '@/utils/logger';
-import type { FullscreenMode } from '@/types';
 
 export type ViewMode = 'visual' | 'graph';
 
 /** Discrete zoom steps for the canvas (Powtoon-style) */
 const ZOOM_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
 
-export interface UseCanvasViewStateProps {
-  fullscreenMode?: FullscreenMode;
-  onFullscreenChange?: (mode: FullscreenMode) => void;
-}
-
 /**
  * useCanvasViewState - Grid toggle, view mode, playback state, fullscreen escape, canvas zoom.
  */
-export function useCanvasViewState({
-  fullscreenMode,
-  onFullscreenChange
-}: UseCanvasViewStateProps = {}) {
+export function useCanvasViewState() {
+  const fullscreenMode = useUIStore(s => s.fullscreenMode);
+  const setFullscreenMode = useUIStore(s => s.setFullscreenMode);
+
   const [gridEnabled, setGridEnabled] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('visual');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -30,14 +25,14 @@ export function useCanvasViewState({
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onFullscreenChange?.(null);
+        setFullscreenMode(null);
         logger.debug('[MainCanvas] Exiting fullscreen mode via Escape');
       }
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [fullscreenMode, onFullscreenChange]);
+  }, [fullscreenMode, setFullscreenMode]);
 
   const zoomIn = useCallback(() => {
     setCanvasZoom(prev => {

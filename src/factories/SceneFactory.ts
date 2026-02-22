@@ -29,6 +29,7 @@
  */
 
 import type { Scene, SceneCharacter, Dialogue, Prop, TextBox, SceneAudio } from '@/types';
+import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { SceneSchema, validate } from '@/schemas/validation';
 import { z } from 'zod';
@@ -177,7 +178,7 @@ export class SceneFactory {
       backgroundUrl,
       audio: {
         url: audioUrl,
-        volume: audioOptions?.volume ?? 0.5,
+        volume: audioOptions?.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME,
         loop: audioOptions?.loop ?? true,
         continueToNextScene: audioOptions?.continueToNextScene ?? false,
       },

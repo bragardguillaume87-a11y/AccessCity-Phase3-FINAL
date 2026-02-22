@@ -14,6 +14,7 @@
  */
 
 import { z } from 'zod';
+import { AUDIO_DEFAULTS } from '@/config/constants';
 
 // ============================================================================
 // PRIMITIVE VALIDATIONS
@@ -108,7 +109,7 @@ export const DiceCheckSchema = z.object({
  */
 export const SceneAudioSchema = z.object({
   url: UrlString,
-  volume: z.number().min(0).max(1).optional().default(0.5),
+  volume: z.number().min(0).max(1).optional().default(AUDIO_DEFAULTS.MUSIC_VOLUME),
   loop: z.boolean().optional().default(true),
   continueToNextScene: z.boolean().optional().default(false),
 });
@@ -118,7 +119,7 @@ export const SceneAudioSchema = z.object({
  */
 export const DialogueAudioSchema = z.object({
   url: UrlString,
-  volume: z.number().min(0).max(1).optional().default(0.7),
+  volume: z.number().min(0).max(1).optional().default(AUDIO_DEFAULTS.SFX_VOLUME),
 });
 
 // ============================================================================
@@ -226,7 +227,7 @@ export const TextBoxSchema = z.object({
   content: NonEmptyString,
   position: PositionSchema,
   size: SizeSchema,
-  style: z.any().optional(), // React.CSSProperties - hard to validate
+  style: z.record(z.string(), z.unknown()).optional(), // React.CSSProperties subset
 });
 
 // ============================================================================

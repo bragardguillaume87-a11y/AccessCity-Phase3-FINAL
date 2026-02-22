@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SkipToContent from './components/SkipToContent';
 import HomePage from './components/HomePage';
@@ -25,7 +25,6 @@ function App() {
   const [newQuestName, setNewQuestName] = useState("");
   // Check URL for demo mode (?demo=true) and tokens mode (?tokens=true)
   const urlParams = new URLSearchParams(window.location.search);
-  const isDemoMode = urlParams.get('demo') === 'true';
   const isTokensMode = urlParams.get('tokens') === 'true';
   const [currentView, setCurrentView] = useState(
     isTokensMode ? "tokens-demo" :

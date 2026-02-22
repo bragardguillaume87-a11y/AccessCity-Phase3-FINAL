@@ -1,8 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Users, Sparkles, Film, Eye } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Users } from 'lucide-react';
 import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
 
@@ -10,49 +8,48 @@ import type { CharacterStats } from '../hooks/useCharacterStats';
  * Props for SelectableCharacterCard component
  */
 export interface SelectableCharacterCardProps {
-  /** Character data to display */
+  /** Character to display */
   character: Character;
-  /** Character statistics (completeness, mood count, sprite count) */
+  /** Character statistics */
   stats: CharacterStats;
   /** Whether this character is selected */
   isSelected: boolean;
   /** Callback when selection is toggled */
   onToggle: () => void;
-  /** Optional: usage badge text (e.g., "Utilisé dans 3 scènes") */
+  /** Optional usage badge text (e.g., "Utilisé dans 3 scènes") */
   usageBadge?: string;
 }
 
 /**
- * SelectableCharacterCard - Character card with selection checkbox for bulk operations
+ * Get preview image URL for character
+ * Returns first available sprite or undefined
+ */
+function getPreviewImage(character: Character): string | undefined {
+  if (!character.sprites || !character.moods || character.moods.length === 0) {
+    return undefined;
+  }
+
+  // Try to find sprite for first mood
+  const firstMood = character.moods[0];
+  return character.sprites[firstMood];
+}
+
+/**
+ * SelectableCharacterCard - Selectable character card for Management tab
  *
- * Simplified version of CharacterCard designed for the Management tab where
- * users can select multiple characters for bulk operations (duplicate, delete).
+ * Pattern: Exact copy of AssetsLibraryModal SelectableAssetCard pattern
  *
- * ## Features
- * - Checkbox overlay in top-left corner
- * - Visual selection ring (blue border) when selected
- * - Completeness badge showing sprite coverage
- * - Optional usage badge for used characters
- * - Stats display (moods and sprites)
- * - Hover effects and transitions
+ * Card with checkbox for bulk selection in Management tab. Uses label wrapper
+ * to prevent event propagation issues.
  *
- * ## Design Pattern
- * Follows Material Design 3 guidelines for multi-select cards:
- * - Prominent checkbox for clear selection affordance
- * - Visual feedback with border color change
- * - Entire card clickable to toggle selection
- * - Reduced complexity compared to full CharacterCard (no action buttons)
- *
- * @example
- * ```tsx
- * <SelectableCharacterCard
- *   character={character}
- *   stats={stats}
- *   isSelected={selection.isSelected(character.id)}
- *   onToggle={() => selection.toggleSelection(character.id)}
- *   usageBadge="Utilisé dans 2 scènes"
- * />
- * ```
+ * Features:
+ * - Checkbox selection: Top-left, white bg with shadow
+ * - Selection ring: Blue ring when selected
+ * - Selection overlay: Subtle blue tint when selected
+ * - Completeness badge: Bottom-left corner
+ * - Usage badge: Shows if character is used in scenes
+ * - Preview image: First sprite or Users icon fallback
+ * - Label wrapper: Prevents click event issues with checkbox
  */
 export function SelectableCharacterCard({
   character,
@@ -61,124 +58,88 @@ export function SelectableCharacterCard({
   onToggle,
   usageBadge,
 }: SelectableCharacterCardProps) {
+  const previewImage = getPreviewImage(character);
+
   return (
-    <Card
-      className={`
-        group
-        relative
-        hover:shadow-lg
-        transition-all
-        duration-200
-        cursor-pointer
-        overflow-hidden
-        ${
-          isSelected
-            ? 'ring-2 ring-primary ring-offset-2 shadow-md'
-            : 'hover:-translate-y-0.5'
-        }
-      `}
-      onClick={onToggle}
+    <div
+      className={`rounded-lg overflow-hidden transition-all duration-150 bg-slate-800/50 border ${
+        isSelected
+          ? 'ring-2 ring-primary border-primary/50 bg-primary/5'
+          : 'border-slate-700/50 hover:border-slate-600'
+      }`}
     >
-      {/* Selection Checkbox Overlay */}
-      <div className="absolute top-3 left-3 z-10">
-        <div
-          className={`
-            rounded-md
-            bg-background/95
-            backdrop-blur-sm
-            shadow-lg
-            p-1.5
-            transition-all
-            ${isSelected ? 'scale-110' : 'group-hover:scale-105'}
-          `}
-        >
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={onToggle}
-            aria-label={`Sélectionner ${character.name}`}
-            className="h-5 w-5"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      </div>
+      {/* Label wrapper prevents event propagation issues */}
+      <label htmlFor={`select-character-${character.id}`} className="block cursor-pointer">
+        {/* Preview Image Section - Compact */}
+        <div className="relative aspect-[4/3] bg-black/20 overflow-hidden">
+          {previewImage ? (
+            <img
+              src={previewImage}
+              alt={character.name}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-slate-800/50">
+              <Users className="h-8 w-8 text-slate-600" />
+            </div>
+          )}
 
-      {/* Preview Section */}
-      <div className="relative h-40 bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center overflow-hidden">
-        {/* Avatar Preview */}
-        {character.sprites?.neutral ? (
-          <img
-            src={character.sprites.neutral}
-            alt={character.name}
-            className="h-32 w-32 object-contain transition-transform duration-300 group-hover:scale-110"
-          />
-        ) : (
-          <div className="p-4 rounded-full bg-primary/10 text-primary">
-            <Users className="h-12 w-12" />
+          {/* Checkbox (Top-Left) - Dark theme */}
+          <div className="absolute top-1.5 left-1.5 bg-slate-900/80 rounded p-0.5 shadow">
+            <Checkbox
+              id={`select-character-${character.id}`}
+              checked={isSelected}
+              onCheckedChange={onToggle}
+              className="h-4 w-4 border-slate-500"
+              aria-label={`Sélectionner ${character.name}`}
+            />
           </div>
-        )}
 
-        {/* Completeness Badge */}
-        <div className="absolute top-3 right-3">
-          <Badge
-            variant={stats.completeness === 100 ? 'default' : 'secondary'}
-            className="shadow-lg text-xs"
-          >
-            {stats.completeness === 100 ? (
-              <>
-                <Sparkles className="h-3 w-3 mr-1" />
-                Complet
-              </>
-            ) : (
-              `${stats.completeness}%`
-            )}
-          </Badge>
-        </div>
-
-        {/* Usage Badge (if provided) */}
-        {usageBadge && (
-          <div className="absolute bottom-3 left-3 right-3">
+          {/* Completeness Badge (Top-Right) - Compact */}
+          <div className="absolute top-1.5 right-1.5">
             <Badge
               variant="outline"
-              className="shadow-md bg-background/90 backdrop-blur-sm text-xs w-full justify-center"
+              className={`text-[10px] h-4 px-1 font-medium border ${
+                stats.completeness === 100
+                  ? 'bg-green-900/80 border-green-700 text-green-300'
+                  : stats.hasErrors
+                  ? 'bg-red-900/80 border-red-700 text-red-300'
+                  : stats.hasWarnings
+                  ? 'bg-yellow-900/80 border-yellow-700 text-yellow-300'
+                  : 'bg-slate-900/80 border-slate-600 text-slate-300'
+              }`}
             >
-              {usageBadge}
+              {stats.completeness}%
             </Badge>
           </div>
-        )}
-      </div>
 
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base truncate" title={character.name}>
-          {character.name}
-        </CardTitle>
-        {character.description && (
-          <CardDescription className="line-clamp-1 text-xs">
-            {character.description}
-          </CardDescription>
-        )}
-      </CardHeader>
+          {/* Usage Badge (Bottom-Right) */}
+          {usageBadge && (
+            <div className="absolute bottom-1.5 right-1.5">
+              <Badge variant="outline" className="text-[9px] h-4 px-1 bg-blue-900/80 border-blue-700 text-blue-300">
+                {usageBadge}
+              </Badge>
+            </div>
+          )}
+        </div>
 
-      <CardContent className="pb-4">
-        {/* Stats Row */}
-        <div className="flex items-center gap-3 text-xs">
-          <div className="flex items-center gap-1">
-            <Film className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{stats.moodCount}</span>
-            <span className="text-muted-foreground">
-              mood{stats.moodCount > 1 ? 's' : ''}
-            </span>
-          </div>
-          <Separator orientation="vertical" className="h-3" />
-          <div className="flex items-center gap-1">
-            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{stats.spriteCount}</span>
-            <span className="text-muted-foreground">
-              sprite{stats.spriteCount > 1 ? 's' : ''}
-            </span>
+        {/* Footer: Name + Stats - Compact */}
+        <div className="p-2 space-y-0.5">
+          <h3 className="font-medium text-xs text-slate-200 truncate" title={character.name}>
+            {character.name}
+          </h3>
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+            <span>{stats.moodCount}h</span>
+            <span>•</span>
+            <span>{stats.spriteCount}s</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </label>
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { logger } from '@/utils/logger';
 import { TIMING } from '@/config/timing';
+import { getDialogueCumulativeTimes } from '@/utils/dialogueDuration';
 import type { Scene } from '@/types';
 
 /**
@@ -59,15 +60,14 @@ export function useDialogueSync(
     }
   }, [selectedElementType, selectedSceneId, dialogueText]);
 
-  // Update timeline playhead when dialogue selection changes
+  // Update timeline playhead using real cumulative durations (not uniform spacing)
   useEffect(() => {
     if (selectedElementType === 'dialogue' && selectedSceneId && dialoguesLength > 0) {
-      const duration = Math.max(60, dialoguesLength * 5);
-      const dialogueDuration = duration / Math.max(1, dialoguesLength);
-      const dialogueTime = (selectedElementIndex ?? 0) * dialogueDuration;
-      setCurrentTime(dialogueTime);
+      const dialogues = selectedScene?.dialogues || [];
+      const times = getDialogueCumulativeTimes(dialogues);
+      setCurrentTime(times[selectedElementIndex ?? 0] ?? 0);
     }
-  }, [selectedElementType, selectedElementIndex, selectedSceneId, dialoguesLength]);
+  }, [selectedElementType, selectedElementIndex, selectedSceneId, dialoguesLength, selectedScene]);
 
   // Auto-scroll to dialogue in DialoguesPanel when selected
   useEffect(() => {

@@ -119,10 +119,11 @@ describe('useEditorLogic', () => {
     });
 
     it('should handle character selection', () => {
+      // selectedSceneForEdit non-null pour éviter l'auto-sélection du useEffect au mount
       const { result } = renderHook(() =>
         useEditorLogic({
           scenes: mockScenes,
-          selectedSceneForEdit: null,
+          selectedSceneForEdit: 'scene-1',
           setSelectedSceneForEdit: mockSetSelectedSceneForEdit,
         })
       );
@@ -200,10 +201,11 @@ describe('useEditorLogic', () => {
     });
 
     it('should handle navigation without sceneId', () => {
+      // selectedSceneForEdit non-null pour éviter l'auto-sélection du useEffect au mount
       const { result } = renderHook(() =>
         useEditorLogic({
           scenes: mockScenes,
-          selectedSceneForEdit: null,
+          selectedSceneForEdit: 'scene-1',
           setSelectedSceneForEdit: mockSetSelectedSceneForEdit,
         })
       );
@@ -212,7 +214,7 @@ describe('useEditorLogic', () => {
         result.current.handleNavigateTo('scenes');
       });
 
-      // Should not crash
+      // Should not crash and not set scene (no sceneId param)
       expect(mockSetSelectedSceneForEdit).not.toHaveBeenCalled();
     });
   });

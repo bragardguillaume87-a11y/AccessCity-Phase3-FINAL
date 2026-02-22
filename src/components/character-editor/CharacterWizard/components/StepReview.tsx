@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { TIMING } from '@/config/timing';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SummaryCard } from '@/components/ui/SummaryCard';
@@ -54,7 +55,7 @@ export function StepReview({
     // Delay actual save to show celebration
     setTimeout(() => {
       onSave();
-    }, 1500);
+    }, TIMING.ANIMATION_CREATE);
   };
 
   const nextMood = () => {

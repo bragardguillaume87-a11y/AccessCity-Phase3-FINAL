@@ -1,10 +1,11 @@
 import * as React from 'react';
-import type { Character, Scene } from '@/types';
+import type { Character } from '@/types';
 import type { SelectedElementType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { AvatarPicker } from '../../../tabs/characters/components/AvatarPicker';
 import { useMoodManagement } from '@/hooks/useMoodManagement';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { Copy, Plus } from 'lucide-react';
 import { SYSTEM_CHARACTERS } from '@/config/constants';
 
@@ -12,7 +13,6 @@ export interface CharacterPropertiesFormProps {
   character: Character;
   characters: Character[];
   selectedElement: SelectedElementType;
-  scenes: Scene[];
   onUpdate: (character: Character) => void;
   onDuplicate: () => void;
   lastSaved?: number;
@@ -34,7 +34,6 @@ export function CharacterPropertiesForm({
   character,
   characters,
   selectedElement,
-  scenes,
   onUpdate,
   onDuplicate,
   lastSaved,
@@ -42,14 +41,20 @@ export function CharacterPropertiesForm({
 }: CharacterPropertiesFormProps) {
   const isSystemCharacter = (SYSTEM_CHARACTERS as readonly string[]).includes(character.id);
 
-  // Calculate usage statistics
-  const appearancesCount = scenes.filter(scene =>
-    scene.dialogues?.some(d => d.speaker === character.id)
-  ).length;
-  const linesCount = scenes.reduce((total, scene) => {
-    const sceneLines = scene.dialogues?.filter(d => d.speaker === character.id).length || 0;
-    return total + sceneLines;
-  }, 0);
+  // Calculate usage statistics (from dialoguesStore, not scenes prop)
+  const allDialoguesByScene = useDialoguesStore((s) => s.dialoguesByScene);
+  const { appearancesCount, linesCount } = React.useMemo(() => {
+    let appearances = 0;
+    let lines = 0;
+    for (const sceneDialogues of Object.values(allDialoguesByScene)) {
+      const speakerLines = sceneDialogues.filter(d => d.speaker === character.id);
+      if (speakerLines.length > 0) {
+        appearances++;
+        lines += speakerLines.length;
+      }
+    }
+    return { appearancesCount: appearances, linesCount: lines };
+  }, [allDialoguesByScene, character.id]);
 
   // Mood management
   const {

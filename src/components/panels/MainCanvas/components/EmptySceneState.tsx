@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 /**
  * EmptySceneState - Displayed when no scene is selected

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AnimatedDice } from '@/components/ui/animated-dice';
 import { Confetti } from '@/components/ui/confetti';
@@ -116,6 +116,7 @@ export default function DiceResultModal({
         className="max-w-md bg-gradient-to-br from-background via-card to-background border-2"
         onKeyDown={handleKeyDown}
       >
+        <DialogTitle className="sr-only">Résultat du lancer de dé</DialogTitle>
         <div className="py-8 space-y-6">
           {/* Dice animation */}
           <div className="flex justify-center">

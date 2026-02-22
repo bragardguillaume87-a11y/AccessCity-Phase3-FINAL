@@ -1,22 +1,4 @@
-/* ============================================================================
-   FICHIER : src/styles/home.css
-   
-   INSTRUCTIONS POUR COPILOT :
-   1. Crée ce fichier dans src/styles/home.css
-   2. Importe-le dans src/main.jsx APRÈS theme.css :
-      import './styles/home.css';
-   3. Applique les classes CSS dans HomePage.jsx (ou Dashboard.jsx)
-   
-   STRUCTURE HTML ATTENDUE (TODO COPILOT: applique ces classes) :
-   
-   <div className="home-container">
-     ...
-   </div>
-   ============================================================================ */
-
-/* ==============================================================================
-   CONTAINER PRINCIPAL
-   ============================================================================== */
+/* CONTAINER PRINCIPAL */
 .home-container {
   min-height: 100vh;
   background: var(--bg-primary);

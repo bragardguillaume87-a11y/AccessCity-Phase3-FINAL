@@ -1,49 +1,42 @@
-/**
- * Character favorites hook
- *
- * Thin wrapper around useLocalStorageFavorites for backward compatibility.
- * Use useLocalStorageFavorites directly for new code.
- *
- * @module components/modals/CharactersModal/hooks/useCharacterFavorites
- */
-
 import { useLocalStorageFavorites } from '@/hooks/useLocalStorageFavorites';
 import { STORAGE_KEYS } from '@/config/storageKeys';
 
 /**
  * Return type for useCharacterFavorites hook
  */
-export interface UseCharacterFavoritesReturn {
-  /** Set of character IDs that are favorited */
+export interface UseCharacterFavoritesV2Return {
+  /** Set of favorite character IDs */
   favorites: Set<string>;
-  /** Toggle favorite status for a character */
-  toggleFavorite: (characterId: string) => void;
   /** Check if a character is favorited */
-  isFavorite: (characterId: string) => boolean;
+  isFavorite: (id: string) => boolean;
+  /** Toggle favorite status for a character */
+  toggleFavorite: (id: string) => void;
 }
 
 /**
- * Custom hook for managing character favorites with localStorage persistence
+ * useCharacterFavorites - Character favorites with localStorage persistence
  *
- * Thin wrapper around useLocalStorageFavorites for backward compatibility.
+ * Pattern: AssetsLibraryModal useFavorites pattern
  *
- * @deprecated Use useLocalStorageFavorites from '@/hooks/useLocalStorageFavorites' directly
+ * Thin wrapper around useLocalStorageFavorites that provides character-specific
+ * favorites management with automatic localStorage persistence.
  *
- * @returns Object containing favorites Set, toggleFavorite function, and isFavorite checker
- *
- * @example
- * ```tsx
- * const { favorites, toggleFavorite, isFavorite } = useCharacterFavorites();
- * ```
+ * Features:
+ * - localStorage persistence: Favorites persist across sessions
+ * - Set-based storage: O(1) lookup for favorite checks
+ * - Automatic sync: Changes immediately saved to localStorage
+ * - Type-safe: Scoped to character favorites specifically
  */
-export function useCharacterFavorites(): UseCharacterFavoritesReturn {
-  const { favorites, toggle, isFavorite } = useLocalStorageFavorites<string>(
+export function useCharacterFavorites(): UseCharacterFavoritesV2Return {
+  const { favorites, isFavorite, toggle } = useLocalStorageFavorites(
     STORAGE_KEYS.FAVORITES_CHARACTERS
   );
 
   return {
     favorites,
-    toggleFavorite: toggle,
     isFavorite,
+    toggleFavorite: toggle,
   };
 }
+
+export default useCharacterFavorites;

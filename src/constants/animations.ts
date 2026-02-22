@@ -105,3 +105,31 @@ export const CHARACTER_ANIMATION_VARIANTS: Record<CharacterAnimationVariantName,
     exit: { y: 50, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
   }
 } as const;
+
+// ============================================================================
+// WIZARD CARD ANIMATION PRESETS
+// ============================================================================
+
+/** Card slide-up entrance / exit animation (DiceChoiceCard, ComplexChoiceCard) */
+export const CARD_SLIDE_UP = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+  transition: { duration: 0.3 },
+} as const;
+
+/** Collapse / expand animation (advanced options panel) */
+export const COLLAPSE_ANIM = {
+  initial: { height: 0, opacity: 0 },
+  animate: { height: 'auto' as const, opacity: 1 },
+  exit: { height: 0, opacity: 0 },
+  transition: { duration: 0.2 },
+} as const;
+
+/** Star celebration spring animation (ChoiceCard validation star) */
+export const STAR_SPRING = {
+  initial: { scale: 0, rotate: -180 },
+  animate: { scale: 1, rotate: 0 },
+  exit: { scale: 0 },
+  transition: { type: 'spring' as const, stiffness: 260, damping: 20 },
+} as const;

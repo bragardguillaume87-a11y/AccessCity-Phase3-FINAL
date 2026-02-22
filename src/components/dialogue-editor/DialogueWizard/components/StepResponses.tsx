@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';

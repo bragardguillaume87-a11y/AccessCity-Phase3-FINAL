@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useScenesStore, useCharactersStore, useSettingsStore } from '../stores/index';
+import { useCharactersStore, useSettingsStore } from '../stores/index';
+import { useAllScenesWithElements } from '@/stores/selectors';
 
 /**
  * Optimized Real-time Validation Hook
@@ -37,18 +38,12 @@ interface ValidationResult {
   hasIssues: boolean;
 }
 
-interface DomainValidationResult {
-  errors: Record<string, ValidationError[]>;
-  totalErrors: number;
-  totalWarnings: number;
-}
-
 // ============================================================================
 // INCREMENTAL VALIDATION HOOK
 // ============================================================================
 
 export function useValidation(): ValidationResult {
-  const scenes = useScenesStore(state => state.scenes);
+  const scenes = useAllScenesWithElements();
   const characters = useCharactersStore(state => state.characters);
   const variables = useSettingsStore(state => state.variables);
 
@@ -174,7 +169,7 @@ export function useValidation(): ValidationResult {
   // ========== DOMAIN 3: Variables (Memoized separately) ==========
   const variablesValidation = useMemo(() => {
     const errors: Record<string, ValidationError[]> = {};
-    let totalErrors = 0;
+    const totalErrors = 0;
     let totalWarnings = 0;
 
     Object.entries(variables).forEach(([name, value]) => {
@@ -197,7 +192,7 @@ export function useValidation(): ValidationResult {
   // ========== CROSS-DOMAIN VALIDATION (Memoized on all dependencies) ==========
   const crossDomainValidation = useMemo(() => {
     const errors: Record<string, ValidationError[]> = {};
-    let totalErrors = 0;
+    const totalErrors = 0;
     let totalWarnings = 0;
 
     // B1-FIX: Build O(1) lookup Set once instead of O(n×m) characters.some() per dialogue

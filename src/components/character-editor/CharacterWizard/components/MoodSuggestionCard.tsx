@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Check, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MoodPreset } from '@/types';

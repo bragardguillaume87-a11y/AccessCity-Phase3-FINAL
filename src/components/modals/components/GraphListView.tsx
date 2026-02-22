@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronRight, ChevronDown, MessageSquare, GitBranch, ExternalLink } from 'lucide-react';
-import { useScenesStore } from '@/stores';
-import type { Scene, Dialogue } from '@/types';
+import { useSceneWithElements } from '@/stores/selectors';
+import type { Dialogue } from '@/types';
 
 /**
  * GraphListView - Accessible tree view alternative to visual graph
@@ -26,9 +26,7 @@ export function GraphListView({
   onSelectDialogue,
   onEditDialogue
 }: GraphListViewProps) {
-  const scene = useScenesStore((state) =>
-    state.scenes.find((s) => s.id === sceneId)
-  );
+  const scene = useSceneWithElements(sceneId);
 
   if (!scene) {
     return (
@@ -223,6 +221,7 @@ function DialogueTreeItem({
               key={choice.id}
               role="treeitem"
               aria-level={2}
+              aria-selected={false}
               tabIndex={-1}
               className="flex items-start gap-2 p-2 rounded-lg hover:bg-accent/50 text-sm"
             >

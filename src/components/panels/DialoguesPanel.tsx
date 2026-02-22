@@ -3,7 +3,9 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus, MessageSquare, Sparkles, Network } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useScenesStore, useUIStore } from '@/stores';
+import { useUIStore } from '@/stores';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useSceneWithElements } from '@/stores/selectors';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { DEFAULTS } from '@/config/constants';
 import { DialogueCard } from './DialoguesPanel/DialogueCard';
@@ -27,10 +29,9 @@ export function DialoguesPanel({
   onDialogueSelect,
 }: DialoguesPanelProps) {
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
-  const scenes = useScenesStore(state => state.scenes);
-  const selectedScene = scenes.find(s => s.id === selectedSceneForEdit);
-  const reorderDialogues = useScenesStore(state => state.reorderDialogues);
-  const addDialogue = useScenesStore(state => state.addDialogue);
+  const selectedScene = useSceneWithElements(selectedSceneForEdit);
+  const reorderDialogues = useDialoguesStore(state => state.reorderDialogues);
+  const addDialogue = useDialoguesStore(state => state.addDialogue);
 
   // DialogueWizard state from UIStore
   const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);

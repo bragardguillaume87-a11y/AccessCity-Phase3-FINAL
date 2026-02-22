@@ -1,11 +1,12 @@
-import React from 'react';
+
 import { motion } from 'framer-motion';
-import { Trash2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { DialogueChoice, Effect } from '@/types';
+import { ChoiceCardHeader } from '../ChoiceCardHeader';
+import { CARD_SLIDE_UP } from '@/constants/animations';
 import { EffectsEditor } from './EffectsEditor';
 
 interface ComplexChoiceCardProps {
@@ -34,39 +35,21 @@ export function ComplexChoiceCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
+      {...CARD_SLIDE_UP}
       className={cn(
         "rounded-2xl border-2 p-6 space-y-4 relative",
         colors.border,
         `bg-gradient-to-br ${colors.bg}`
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br",
-            colors.accent
-          )}>
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <h4 className="text-lg font-bold">Choix #{index + 1}</h4>
-        </div>
-        {canRemove && (
-          <Button
-            onClick={onRemove}
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
-            aria-label={`Supprimer le choix #${index + 1}`}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+      <ChoiceCardHeader
+        icon={<Sparkles className="w-5 h-5 text-white" />}
+        iconGradient={colors.accent}
+        title={`Choix #${index + 1}`}
+        canRemove={canRemove}
+        onRemove={onRemove}
+        removeAriaLabel={`Supprimer le choix #${index + 1}`}
+      />
 
       {/* Choice text */}
       <div className="space-y-2">

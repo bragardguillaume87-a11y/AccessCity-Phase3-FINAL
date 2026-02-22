@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
@@ -7,7 +7,7 @@ import type { Dialogue, Scene } from '@/types';
 import { useUIStore } from '@/stores';
 
 // Wizard hooks
-import { useDialogueWizardState, DIALOGUE_WIZARD_STEPS, type DialogueWizardStep, type ComplexityLevel } from './hooks/useDialogueWizardState';
+import { useDialogueWizardState, DIALOGUE_WIZARD_STEPS, type ComplexityLevel } from './hooks/useDialogueWizardState';
 import { useDialogueForm } from './hooks/useDialogueForm';
 import { useChoiceValidation } from './hooks/useChoiceValidation';
 
@@ -46,7 +46,7 @@ interface DialogueWizardProps {
  */
 export function DialogueWizard({
   sceneId,
-  dialogueIndex,
+  dialogueIndex: _dialogueIndex,
   dialogue,
   scenes,
   onSave,
@@ -66,8 +66,8 @@ export function DialogueWizard({
     isEditing,
   );
 
-  // Validation
-  const validation = useChoiceValidation(formData);
+  // Validation (hook may have side effects)
+  useChoiceValidation(formData);
 
   // PHASE 1.3: Cleanup on unmount (ensures complexity is cleared no matter how wizard closes)
   useEffect(() => {
@@ -291,8 +291,8 @@ export function DialogueWizard({
 
       {/* Step content - scrollable, takes remaining space */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollArea className="h-full px-8 py-6">
-          <div className={wizardState.currentStep === 'complexity' ? 'pb-4' : 'max-w-2xl mx-auto pb-4'}>
+        <ScrollArea className="h-full px-6 py-3">
+          <div className={wizardState.currentStep === 'complexity' ? 'pb-2' : 'max-w-2xl mx-auto pb-2'}>
             {renderStepContent()}
           </div>
         </ScrollArea>
@@ -300,7 +300,7 @@ export function DialogueWizard({
 
       {/* Navigation - fixed at bottom, always visible */}
       {wizardState.currentStep !== 'review' && (
-        <div className="flex-shrink-0 px-8 py-4 border-t bg-background">
+        <div className="flex-shrink-0 px-6 py-3 border-t bg-background">
           <div className="max-w-2xl mx-auto">
             <WizardNavigation
               showBack={wizardState.canGoBack}

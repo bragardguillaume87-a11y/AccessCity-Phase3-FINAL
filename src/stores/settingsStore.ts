@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
 import { GAME_STATS, type SupportedLocale } from '../i18n';
+import { STAT_BOUNDS } from '@/config/gameConstants';
+import { TIMING } from '@/config/timing';
+import type { DialogueBoxStyle } from '@/types/scenes';
 
 /**
  * Settings Store
@@ -39,6 +42,8 @@ interface ProjectSettings {
       min: number;
       max: number;
     }>;
+    /** Global dialogue box visual defaults. Per-dialogue boxStyle overrides these. */
+    dialogueBoxDefaults?: DialogueBoxStyle;
   };
 }
 
@@ -52,6 +57,7 @@ interface SettingsState {
   projectSettings: ProjectSettings;
   variables: GameVariables;
   language: SupportedLocale;
+  enableStatsHUD: boolean;
 
   // Actions
   setContextField: (key: keyof ProjectData, value: string) => void;
@@ -60,6 +66,8 @@ interface SettingsState {
   setVariable: (name: string, value: number) => void;
   modifyVariable: (name: string, delta: number) => void;
   setLanguage: (lang: SupportedLocale) => void;
+  setEnableStatsHUD: (enabled: boolean) => void;
+  updateDialogueBoxDefaults: (style: Partial<DialogueBoxStyle>) => void;
 }
 
 // ============================================================================
@@ -83,22 +91,22 @@ const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   editor: {
     theme: "dark",
     autosave: true,
-    autosaveInterval: 30000,
+    autosaveInterval: TIMING.AUTOSAVE_INTERVAL_MS,
     gridSize: 20,
     snapToGrid: true,
     showGrid: true,
   },
   game: {
     variables: {
-      [GAME_STATS.PHYSIQUE]: { initial: 100, min: 0, max: 100 },
-      [GAME_STATS.MENTALE]: { initial: 100, min: 0, max: 100 },
+      [GAME_STATS.PHYSIQUE]: { initial: STAT_BOUNDS.MAX, min: STAT_BOUNDS.MIN, max: STAT_BOUNDS.MAX },
+      [GAME_STATS.MENTALE]: { initial: STAT_BOUNDS.MAX, min: STAT_BOUNDS.MIN, max: STAT_BOUNDS.MAX },
     },
   },
 };
 
 const DEFAULT_VARIABLES: GameVariables = {
-  physique: 100,
-  mentale: 100,
+  [GAME_STATS.PHYSIQUE]: STAT_BOUNDS.MAX,
+  [GAME_STATS.MENTALE]: STAT_BOUNDS.MAX,
 };
 
 // ============================================================================
@@ -114,6 +122,7 @@ export const useSettingsStore = create<SettingsState>()(
         projectSettings: DEFAULT_PROJECT_SETTINGS,
         variables: DEFAULT_VARIABLES,
         language: 'fr' as SupportedLocale,
+        enableStatsHUD: false,
 
         // Actions: Project Data (context)
         setContextField: (key, value) => {
@@ -162,7 +171,7 @@ export const useSettingsStore = create<SettingsState>()(
             const current = typeof state.variables[name] === 'number'
               ? state.variables[name]
               : 0;
-            const clamped = Math.max(0, Math.min(100, current + delta));
+            const clamped = Math.max(STAT_BOUNDS.MIN, Math.min(STAT_BOUNDS.MAX, current + delta));
             return {
               variables: { ...state.variables, [name]: clamped },
             };
@@ -173,6 +182,27 @@ export const useSettingsStore = create<SettingsState>()(
         setLanguage: (lang) => {
           set({ language: lang }, false, 'settings/setLanguage');
         },
+
+        // Actions: Stats HUD
+        setEnableStatsHUD: (enabled) => {
+          set({ enableStatsHUD: enabled }, false, 'settings/setEnableStatsHUD');
+        },
+
+        // Actions: Dialogue Box Defaults
+        updateDialogueBoxDefaults: (style) => {
+          set((state) => ({
+            projectSettings: {
+              ...state.projectSettings,
+              game: {
+                ...state.projectSettings.game,
+                dialogueBoxDefaults: {
+                  ...state.projectSettings.game.dialogueBoxDefaults,
+                  ...style,
+                },
+              },
+            },
+          }), false, 'settings/updateDialogueBoxDefaults');
+        },
       })),
       {
         name: 'accesscity-settings',
@@ -180,6 +210,7 @@ export const useSettingsStore = create<SettingsState>()(
           projectData: state.projectData,
           projectSettings: state.projectSettings,
           language: state.language,
+          enableStatsHUD: state.enableStatsHUD,
         }),
       }
     ),

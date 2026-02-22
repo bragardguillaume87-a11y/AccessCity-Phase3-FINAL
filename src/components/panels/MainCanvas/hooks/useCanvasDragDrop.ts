@@ -193,27 +193,15 @@ export function useCanvasDragDrop({
         break;
       }
 
-      case 'prop': {
-        const propUrl = data.emoji || data.url || '';
+      case 'prop':
+      case 'emoji': {
         const prop: Prop = {
           id: `prop-${Date.now()}`,
-          assetUrl: propUrl,
+          assetUrl: data.emoji || data.url || '',
           position,
           size: { ...ELEMENT_SIZES.PROP }
         };
         actions.addPropToScene(selectedScene.id, prop);
-        break;
-      }
-
-      case 'emoji': {
-        // Emoji is a special case of prop
-        const emojiProp: Prop = {
-          id: `prop-${Date.now()}`,
-          assetUrl: data.emoji || '',
-          position,
-          size: { ...ELEMENT_SIZES.PROP }
-        };
-        actions.addPropToScene(selectedScene.id, emojiProp);
         break;
       }
 

@@ -76,18 +76,18 @@ export const NODE_COLORS = {
     text: '#94a3b8',
   },
 
-  // Error state (overlays normal colors)
+  // Error state (solid bg for graph nodes)
   error: {
-    bg: 'rgba(220, 38, 38, 0.15)',  // red-600/15
+    bg: '#7f1d1d',                  // red-900
     border: '#dc2626',              // red-600
-    text: '#fca5a5',                // red-300
+    text: '#fecaca',                // red-200
   },
 
-  // Warning state
+  // Warning state (solid bg for graph nodes)
   warning: {
-    bg: 'rgba(245, 158, 11, 0.15)', // amber-500/15
+    bg: '#78350f',                  // amber-900
     border: '#f59e0b',              // amber-500
-    text: '#fcd34d',                // amber-300
+    text: '#fde68a',                // amber-200
   },
 } as const;
 
@@ -110,4 +110,18 @@ export const EDGE_COLORS = {
   SUCCESS: '#22c55e',         // green-500
   FAILURE: '#ef4444',         // red-500
   SELECTED: '#06b6d4',        // cyan-500
+} as const;
+
+// ============================================================================
+// GRAPH VIEWPORT COLORS (Background, MiniMap)
+// ============================================================================
+
+export const GRAPH_COLORS = {
+  backgroundGrid: '#475569',   // slate-600 - dot grid color
+  minimap: {
+    choiceNode: '#8b5cf6',     // violet-500
+    terminalNode: '#f59e0b',   // amber-500
+    dialogueNode: '#3b82f6',   // blue-500
+  },
+  minimapMask: 'rgba(0, 0, 0, 0.6)',
 } as const;

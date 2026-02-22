@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAssets, getRecentAssets, addToRecentAssets } from '@/hooks/useAssets';
 import { Palette, Search, Clock, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';

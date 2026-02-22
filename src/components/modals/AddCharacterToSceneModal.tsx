@@ -18,50 +18,17 @@ import { Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Character, Position } from '@/types';
 
-/**
- * Position data for character placement
- */
 interface CharacterPosition {
   x: number;
   y: number;
 }
 
-/**
- * Props for AddCharacterToSceneModal component
- */
 export interface AddCharacterToSceneModalProps {
-  /** Whether the modal is open */
   isOpen: boolean;
-  /** Callback when modal should close */
   onClose: () => void;
-  /** Array of available characters */
   characters: Character[];
-  /** Callback when character is added to scene */
   onAddCharacter: (characterId: string, mood: string, position: Position | null) => void;
 }
-
-/**
- * AddCharacterToSceneModal - AAA Character Picker
- *
- * Premium character selection modal with:
- * - Split-view: 40% character list | 60% live preview
- * - Search & filter (Tous/Favoris tabs)
- * - Large sprite preview with mood thumbnails
- * - Position sliders (X/Y) for pre-positioning
- * - Completeness badges
- * - Keyboard navigation (Arrow keys, Enter)
- * - Smooth animations with Framer Motion
- *
- * @example
- * ```tsx
- * <AddCharacterToSceneModal
- *   isOpen={showModal}
- *   onClose={() => setShowModal(false)}
- *   characters={allCharacters}
- *   onAddCharacter={(charId, mood, position) => addToScene(charId, mood, position)}
- * />
- * ```
- */
 export default function AddCharacterToSceneModal({
   isOpen,
   onClose,
@@ -70,17 +37,13 @@ export default function AddCharacterToSceneModal({
 }: AddCharacterToSceneModalProps) {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [mood, setMood] = useState<string>('neutral');
-  // Position null par défaut = laisse MainCanvas appliquer la logique intelligente (player à gauche, etc.)
   const [position, setPosition] = useState<CharacterPosition | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all');
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  // Filtered characters
   const filteredCharacters = useMemo(() => {
     let filtered = characters;
-
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,10 +51,9 @@ export default function AddCharacterToSceneModal({
       );
     }
 
-    // Favorites filter
     if (activeTab === 'favorites') {
-      // TODO: Add favorite field to Character interface in future phase
-      filtered = filtered.filter(c => (c as any).favorite);
+      // Note: favorite field planned for future phase
+      filtered = filtered.filter(c => ('favorite' in c && c.favorite));
     }
 
     return filtered;
@@ -105,15 +67,13 @@ export default function AddCharacterToSceneModal({
     if (!selectedCharacterId) return;
     onAddCharacter(selectedCharacterId, mood, position);
     onClose();
-    // Reset state
     setSelectedCharacterId(null);
     setMood('neutral');
-    setPosition(null); // Reset à null pour logique intelligente
+    setPosition(null);
     setSearchTerm('');
     setActiveTab('all');
   };
 
-  // Keyboard handler for Enter
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && selectedCharacterId) {
       handleAdd();
@@ -126,8 +86,7 @@ export default function AddCharacterToSceneModal({
         <DialogHeader>
           <DialogTitle>Ajouter un personnage à la scène</DialogTitle>
 
-          {/* Search bar */}
-          <div className="relative mt-4">
+            <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher un personnage..."
@@ -138,19 +97,16 @@ export default function AddCharacterToSceneModal({
           </div>
         </DialogHeader>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'favorites')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="all">Tous ({characters.length})</TabsTrigger>
             <TabsTrigger value="favorites">
-              Favoris ({characters.filter(c => (c as any).favorite).length})
+              Favoris ({characters.filter(c => ('favorite' in c && c.favorite)).length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Split-view */}
         <div className="flex gap-6 min-h-[500px]">
-          {/* LEFT: Character List (40%) */}
           <div className="w-2/5">
             <ScrollArea className="h-[450px] pr-4">
               {filteredCharacters.length === 0 ? (
@@ -189,7 +145,6 @@ export default function AddCharacterToSceneModal({
                           }}
                         >
                           <div className="flex items-center gap-3">
-                            {/* Avatar */}
                             <div className="w-16 h-16 rounded-full bg-muted flex-shrink-0 overflow-hidden">
                               {character.sprites?.neutral ? (
                                 <img
@@ -204,7 +159,6 @@ export default function AddCharacterToSceneModal({
                               )}
                             </div>
 
-                            {/* Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-semibold truncate">{character.name}</span>
@@ -233,7 +187,6 @@ export default function AddCharacterToSceneModal({
             </ScrollArea>
           </div>
 
-          {/* RIGHT: Live Preview (60%) */}
           <div className="w-3/5 border-l pl-6">
             {!selectedCharacter ? (
               <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -244,7 +197,6 @@ export default function AddCharacterToSceneModal({
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Sprite preview LARGE - Draggable */}
                 <div className="bg-gradient-to-br from-card to-background rounded-xl p-8 flex items-center justify-center min-h-[256px]">
                   {currentSprite ? (
                     <motion.img
@@ -257,19 +209,15 @@ export default function AddCharacterToSceneModal({
                       transition={{ duration: 0.3 }}
                       draggable="true"
                       onDragStart={(e) => {
-                        // Type assertion for native DragEvent
                         const dragEvent = e as unknown as React.DragEvent<HTMLImageElement>;
                         setIsDragging(true);
                         dragEvent.dataTransfer.effectAllowed = 'copy';
-                        // Set drag type for visual feedback (accessible in dragOver)
                         dragEvent.dataTransfer.setData('text/x-drag-type', 'character');
-                        // Set full data for drop handling
                         dragEvent.dataTransfer.setData('application/json', JSON.stringify({
                           characterId: selectedCharacterId,
                           mood: mood,
                           type: 'character'
                         }));
-                        // Optional: set drag image
                         const img = (dragEvent.target as HTMLImageElement).cloneNode() as HTMLImageElement;
                         img.style.opacity = '0.5';
                         document.body.appendChild(img);
@@ -283,12 +231,10 @@ export default function AddCharacterToSceneModal({
                   )}
                 </div>
 
-                {/* Character name */}
                 <h2 className="text-2xl font-bold text-center">
                   {selectedCharacter.name.toUpperCase()}
                 </h2>
 
-                {/* Mood selection */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Humeur / Expression
@@ -336,7 +282,6 @@ export default function AddCharacterToSceneModal({
                   </div>
                 </div>
 
-                {/* Position sliders - OPTIONNEL (null = position auto intelligente) */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium">Position personnalisée</label>
@@ -391,7 +336,6 @@ export default function AddCharacterToSceneModal({
                   )}
                 </div>
 
-                {/* Tooltip hint - Dynamic based on drag state */}
                 <div className={`border rounded-lg p-3 text-sm transition-all ${
                   isDragging
                     ? 'bg-green-500/10 border-green-500/20 animate-pulse'
@@ -421,23 +365,6 @@ export default function AddCharacterToSceneModal({
   );
 }
 
-/**
- * Calculate character completeness percentage
- *
- * Calculates the percentage of moods that have associated sprites.
- *
- * @param character - Character to calculate completeness for
- * @returns Completeness percentage (0-100)
- *
- * @example
- * ```typescript
- * const character = {
- *   moods: ['neutral', 'happy', 'sad'],
- *   sprites: { neutral: 'url1.png', happy: 'url2.png' }
- * };
- * calculateCompleteness(character); // Returns 66 (2/3 moods have sprites)
- * ```
- */
 function calculateCompleteness(character: Character): number {
   if (!character.moods || character.moods.length === 0) return 0;
   const totalMoods = character.moods.length;

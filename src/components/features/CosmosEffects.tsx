@@ -5,85 +5,64 @@
  * - Star confetti on node creation
  * - Sparkle particles on connection
  * - Flash effect on deletion
- *
- * Uses canvas-confetti library (already installed in the project)
  */
 import { useCallback } from 'react';
 import confetti from 'canvas-confetti';
+import { COSMOS_COLORS, COSMOS_DIMENSIONS, COSMOS_ANIMATIONS } from '@/config/cosmosConstants';
 
-/**
- * Hook providing cosmos-themed visual effects
- */
+const fx = COSMOS_DIMENSIONS.effects;
+const colors = COSMOS_COLORS.effects;
+
 export function useCosmosEffects() {
-  /**
-   * Star confetti effect when creating a new node
-   */
   const celebrateNodeCreation = useCallback(() => {
-    // Check if user prefers reduced motion
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return;
-    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    // Star shape using text
-    const starShape = confetti.shapeFromText({ text: '⭐', scalar: 2 });
+    const starShape = confetti.shapeFromText({ text: '⭐', scalar: fx.shapeScalar });
 
     confetti({
-      particleCount: 30,
-      spread: 60,
+      particleCount: fx.creationParticles,
+      spread: fx.creationSpread,
       origin: { y: 0.6, x: 0.5 },
-      colors: ['#fef08a', '#93c5fd', '#f9a8d4', '#a855f7'],
+      colors: [...colors.creationColors],
       shapes: [starShape],
-      scalar: 1.5,
-      ticks: 100,
+      scalar: fx.creationScalar,
+      ticks: fx.creationTicks,
       disableForReducedMotion: true,
     });
   }, []);
 
-  /**
-   * Sparkle effect at a specific position (e.g., on connection)
-   */
   const sparkleOnConnection = useCallback((x: number, y: number) => {
-    // Check if user prefers reduced motion
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return;
-    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    // Normalize coordinates for confetti (0-1 range)
     const normalizedX = x / window.innerWidth;
     const normalizedY = y / window.innerHeight;
 
     confetti({
-      particleCount: 15,
-      spread: 40,
+      particleCount: fx.connectionParticles,
+      spread: fx.connectionSpread,
       origin: { x: normalizedX, y: normalizedY },
-      colors: ['#10b981', '#34d399', '#6ee7b7'],
-      scalar: 0.8,
-      ticks: 60,
-      gravity: 0.5,
+      colors: [...colors.connectionColors],
+      scalar: fx.connectionScalar,
+      ticks: fx.connectionTicks,
+      gravity: fx.connectionGravity,
       disableForReducedMotion: true,
     });
   }, []);
 
-  /**
-   * Red flash effect when deleting a node
-   */
   const flashOnDelete = useCallback(() => {
-    // Check if user prefers reduced motion
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return;
-    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const flash = document.createElement('div');
     flash.style.cssText = `
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%);
+      background: ${colors.deleteGradient};
       pointer-events: none;
-      z-index: 9999;
-      animation: cosmos-delete-flash 0.3s ease-out forwards;
+      z-index: ${fx.flashZIndex};
+      animation: ${COSMOS_ANIMATIONS.deleteFlash};
     `;
     document.body.appendChild(flash);
-    setTimeout(() => flash.remove(), 300);
+    setTimeout(() => flash.remove(), fx.flashDuration);
   }, []);
 
   return {

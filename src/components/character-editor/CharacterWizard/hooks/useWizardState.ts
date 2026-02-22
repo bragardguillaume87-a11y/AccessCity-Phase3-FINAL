@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, createElement } from 'react';
+import { Pencil, Palette, Smile, PartyPopper } from 'lucide-react';
 
 /**
  * Wizard step identifiers
@@ -11,7 +12,7 @@ export type WizardStep = 'identity' | 'appearance' | 'expressions' | 'review';
 export interface StepConfig {
   id: WizardStep;
   label: string;
-  icon: string; // Emoji for kid-friendly display
+  icon: React.ReactNode;
   description: string;
 }
 
@@ -45,25 +46,25 @@ export const WIZARD_STEPS: StepConfig[] = [
   {
     id: 'identity',
     label: 'Identité',
-    icon: '✏️',
+    icon: createElement(Pencil),
     description: 'Donne un nom à ton personnage'
   },
   {
     id: 'appearance',
     label: 'Apparence',
-    icon: '🎨',
+    icon: createElement(Palette),
     description: 'Choisis son apparence'
   },
   {
     id: 'expressions',
     label: 'Expressions',
-    icon: '😊',
+    icon: createElement(Smile),
     description: 'Ajoute des humeurs'
   },
   {
     id: 'review',
     label: 'Terminé !',
-    icon: '🎉',
+    icon: createElement(PartyPopper),
     description: 'Vérifie et sauvegarde'
   }
 ];

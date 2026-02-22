@@ -9,22 +9,28 @@
 
 import { useCallback, useMemo } from 'react';
 import { useScenesStore } from '../scenesStore';
-import type { Scene, Dialogue, SceneCharacter } from '../../types';
+import { useDialoguesStore } from '../dialoguesStore';
+import { useSceneElementsStore } from '../sceneElementsStore';
+import type { SceneMetadata } from '../../types';
 
 // ============================================================================
 // SCENE SELECTORS
 // ============================================================================
 
 /**
- * Select a single scene by ID.
+ * Select a single scene by ID — métadonnées uniquement.
  * Memoized to prevent re-renders when other scenes change.
+ *
+ * ⚠️ Retourne SceneMetadata (pas Scene) — dialogues/characters ABSENTS.
+ * Pour une scène complète → useSceneWithElements(sceneId)
  *
  * @example
  * ```typescript
- * const scene = useSceneById('scene-123');
+ * const meta = useSceneById('scene-123'); // SceneMetadata | undefined
+ * const scene = useSceneWithElements('scene-123'); // Scene | undefined (avec dialogues)
  * ```
  */
-export function useSceneById(sceneId: string | null | undefined): Scene | undefined {
+export function useSceneById(sceneId: string | null | undefined): SceneMetadata | undefined {
   return useScenesStore(
     useCallback(
       (state) => (sceneId ? state.scenes.find((s) => s.id === sceneId) : undefined),
@@ -34,10 +40,12 @@ export function useSceneById(sceneId: string | null | undefined): Scene | undefi
 }
 
 /**
- * Select all scenes (stable reference).
- * Use this instead of inline selectors for better performance.
+ * Select all scenes — métadonnées uniquement (stable reference).
+ *
+ * ⚠️ Retourne SceneMetadata[] (pas Scene[]) — dialogues/characters ABSENTS.
+ * Pour toutes les scènes complètes → useAllScenesWithElements()
  */
-export function useScenes(): Scene[] {
+export function useScenes(): SceneMetadata[] {
   return useScenesStore((state) => state.scenes);
 }
 
@@ -58,107 +66,15 @@ export function useSceneIds(): string[] {
 }
 
 // ============================================================================
-// DIALOGUE SELECTORS
-// ============================================================================
-
-/**
- * Select dialogues for a specific scene.
- * Memoized to prevent re-renders when other scenes change.
- */
-export function useDialoguesBySceneId(sceneId: string | null | undefined): Dialogue[] {
-  return useScenesStore(
-    useCallback(
-      (state) => {
-        if (!sceneId) return [];
-        const scene = state.scenes.find((s) => s.id === sceneId);
-        return scene?.dialogues ?? [];
-      },
-      [sceneId]
-    )
-  );
-}
-
-/**
- * Select a single dialogue by scene ID and index.
- */
-export function useDialogueByIndex(
-  sceneId: string | null | undefined,
-  index: number | undefined
-): Dialogue | undefined {
-  return useScenesStore(
-    useCallback(
-      (state) => {
-        if (!sceneId || index === undefined || index < 0) return undefined;
-        const scene = state.scenes.find((s) => s.id === sceneId);
-        return scene?.dialogues?.[index];
-      },
-      [sceneId, index]
-    )
-  );
-}
-
-/**
- * Select dialogues count for a scene.
- */
-export function useDialoguesCount(sceneId: string | null | undefined): number {
-  return useScenesStore(
-    useCallback(
-      (state) => {
-        if (!sceneId) return 0;
-        const scene = state.scenes.find((s) => s.id === sceneId);
-        return scene?.dialogues?.length ?? 0;
-      },
-      [sceneId]
-    )
-  );
-}
-
-// ============================================================================
-// SCENE CHARACTERS SELECTORS
-// ============================================================================
-
-/**
- * Select characters placed in a specific scene.
- */
-export function useSceneCharacters(sceneId: string | null | undefined): SceneCharacter[] {
-  return useScenesStore(
-    useCallback(
-      (state) => {
-        if (!sceneId) return [];
-        const scene = state.scenes.find((s) => s.id === sceneId);
-        return scene?.characters ?? [];
-      },
-      [sceneId]
-    )
-  );
-}
-
-/**
- * Select a scene character by its instance ID.
- */
-export function useSceneCharacterById(
-  sceneId: string | null | undefined,
-  sceneCharId: string | null | undefined
-): SceneCharacter | undefined {
-  return useScenesStore(
-    useCallback(
-      (state) => {
-        if (!sceneId || !sceneCharId) return undefined;
-        const scene = state.scenes.find((s) => s.id === sceneId);
-        return scene?.characters?.find((c) => c.id === sceneCharId);
-      },
-      [sceneId, sceneCharId]
-    )
-  );
-}
-
-// ============================================================================
 // ACTIONS SELECTORS (stable references)
 // ============================================================================
 
 /**
  * Select scene actions (stable references).
  * Use object destructuring for specific actions.
+ *
+ * Note: updateScene et reorderScenes acceptent SceneMetadata (plus Partial<Scene>).
+ * Pour modifier dialogues → dialoguesStore | Pour characters → sceneElementsStore
  */
 export function useSceneActions() {
   const addScene = useScenesStore((state) => state.addScene);
@@ -183,12 +99,12 @@ export function useSceneActions() {
  * Select dialogue actions (stable references).
  */
 export function useDialogueActions() {
-  const addDialogue = useScenesStore((state) => state.addDialogue);
-  const addDialogues = useScenesStore((state) => state.addDialogues);
-  const updateDialogue = useScenesStore((state) => state.updateDialogue);
-  const deleteDialogue = useScenesStore((state) => state.deleteDialogue);
-  const reorderDialogues = useScenesStore((state) => state.reorderDialogues);
-  const duplicateDialogue = useScenesStore((state) => state.duplicateDialogue);
+  const addDialogue = useDialoguesStore((state) => state.addDialogue);
+  const addDialogues = useDialoguesStore((state) => state.addDialogues);
+  const updateDialogue = useDialoguesStore((state) => state.updateDialogue);
+  const deleteDialogue = useDialoguesStore((state) => state.deleteDialogue);
+  const reorderDialogues = useDialoguesStore((state) => state.reorderDialogues);
+  const duplicateDialogue = useDialoguesStore((state) => state.duplicateDialogue);
 
   return useMemo(
     () => ({
@@ -207,11 +123,11 @@ export function useDialogueActions() {
  * Select scene character actions (stable references).
  */
 export function useSceneCharacterActions() {
-  const addCharacterToScene = useScenesStore((state) => state.addCharacterToScene);
-  const removeCharacterFromScene = useScenesStore((state) => state.removeCharacterFromScene);
-  const updateSceneCharacter = useScenesStore((state) => state.updateSceneCharacter);
-  const updateCharacterAnimation = useScenesStore((state) => state.updateCharacterAnimation);
-  const updateCharacterPosition = useScenesStore((state) => state.updateCharacterPosition);
+  const addCharacterToScene = useSceneElementsStore((state) => state.addCharacterToScene);
+  const removeCharacterFromScene = useSceneElementsStore((state) => state.removeCharacterFromScene);
+  const updateSceneCharacter = useSceneElementsStore((state) => state.updateSceneCharacter);
+  const updateCharacterAnimation = useSceneElementsStore((state) => state.updateCharacterAnimation);
+  const updateCharacterPosition = useSceneElementsStore((state) => state.updateCharacterPosition);
 
   return useMemo(
     () => ({

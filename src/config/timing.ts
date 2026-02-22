@@ -42,12 +42,15 @@ interface TimingConstants {
   readonly DICE_ANIMATION_DURATION: number;
   readonly DEBOUNCE_SEARCH: number;
   readonly DEBOUNCE_AUTOSAVE: number;
+  readonly AUTOSAVE_INTERVAL_MS: number;
   readonly THROTTLE_RESIZE: number;
   readonly UPDATE_INTERVAL: number;
   readonly SOUND_TEST_INTERVAL: number;
   readonly LOADING_MIN_DISPLAY: number;
   readonly LOADING_TIMEOUT: number;
   readonly ARIA_ANNOUNCEMENT_CLEAR: number;
+  readonly EXIT_DELAY: number;
+  readonly MICRO_DELAY: number;
 }
 
 // ============================================================================
@@ -84,6 +87,7 @@ export const TIMING: TimingConstants = {
   // Debounce & Throttle
   DEBOUNCE_SEARCH: 300,         // Search input debounce
   DEBOUNCE_AUTOSAVE: 1000,      // Auto-save debounce
+  AUTOSAVE_INTERVAL_MS: 30000,  // Auto-save interval (30 seconds)
   THROTTLE_RESIZE: 200,         // Window resize throttle
 
   // Update & Polling
@@ -96,6 +100,10 @@ export const TIMING: TimingConstants = {
 
   // Accessibility
   ARIA_ANNOUNCEMENT_CLEAR: 1500, // Delay before clearing ARIA live region announcements
+
+  // Navigation & State
+  EXIT_DELAY: 100,              // Delay before exiting a mode (let state propagate)
+  MICRO_DELAY: 50,              // Micro-delay for animation resets
 } as const;
 
 // ============================================================================

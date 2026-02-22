@@ -2,7 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, X, Package, ImageIcon, Users as UsersIcon, Palette, Star, ArrowUpDown, Music, Volume2, Mic } from 'lucide-react';
+import { Search, X, Package, ImageIcon, Users as UsersIcon, Palette, Star, ArrowUpDown, Music, Volume2, Mic, Wind } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,8 +14,8 @@ import { SimpleAssetCard } from './SimpleAssetCard';
 import { AudioAssetCard } from './AudioAssetCard';
 import type { Asset } from '@/types';
 
-// Audio category IDs for conditional rendering
-const AUDIO_CATEGORIES = ['music', 'sfx', 'voices'];
+// Audio category IDs — uses AudioAssetCard (player + waveform)
+const AUDIO_CATEGORIES = ['music', 'sfx', 'voices', 'atmosphere'];
 
 export type SortOrder = 'name-asc' | 'name-desc' | 'recent' | 'oldest';
 
@@ -69,6 +69,7 @@ export function LibraryTab({
     { id: 'music', label: 'Musique', icon: Music, count: categoryCount.music || 0 },
     { id: 'sfx', label: 'SFX', icon: Volume2, count: categoryCount.sfx || 0 },
     { id: 'voices', label: 'Voix', icon: Mic, count: categoryCount.voices || 0 },
+    { id: 'atmosphere', label: 'Ambiance', icon: Wind, count: categoryCount.atmosphere || 0 },
   ];
 
   return (

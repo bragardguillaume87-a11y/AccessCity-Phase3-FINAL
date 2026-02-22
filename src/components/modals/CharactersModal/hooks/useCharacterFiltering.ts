@@ -1,12 +1,7 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Character } from '@/types';
 import type { CharacterStats } from './useCharacterStats';
 import type { CharacterUsageData } from './useCharacterUsage';
-
-/**
- * Sort options for character filtering
- */
-export type CharacterSortBy = 'name' | 'name-desc' | 'completeness';
 
 /**
  * Completeness filter options
@@ -19,30 +14,31 @@ export type CompletenessFilter = 'all' | 'complete' | 'incomplete';
 export type UsageFilter = 'all' | 'used' | 'unused';
 
 /**
+ * Character sort options
+ */
+export type CharacterSortBy = 'name' | 'name-desc' | 'completeness';
+
+/**
  * Return type for useCharacterFiltering hook
  */
-export interface UseCharacterFilteringReturn {
+export interface UseCharacterFilteringV2Return {
   /** Filtered and sorted characters */
   filtered: Character[];
-  /** Debounced search query (for display purposes) */
+  /** Debounced search query (actual value used for filtering) */
   debouncedQuery: string;
 }
 
 /**
- * Debouncing helper hook
+ * Custom hook for debouncing a value
  *
- * Returns a debounced version of the input value after the specified delay.
- * Useful for search inputs to reduce filtering operations.
+ * **Pattern:** Standard debouncing pattern
+ *
+ * Delays updating the returned value until the input value has stopped
+ * changing for the specified delay period.
  *
  * @param value - Value to debounce
- * @param delay - Delay in milliseconds (default: 300ms)
+ * @param delay - Debounce delay in milliseconds (default: 300ms)
  * @returns Debounced value
- *
- * @example
- * ```tsx
- * const debouncedSearch = useDebouncedValue(searchQuery, 300);
- * // debouncedSearch updates 300ms after user stops typing
- * ```
  */
 export function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -61,44 +57,50 @@ export function useDebouncedValue<T>(value: T, delay: number = 300): T {
 }
 
 /**
- * Custom hook for filtering and sorting characters with debouncing
+ * useCharacterFiltering - Debounced character filtering and sorting
  *
- * Provides comprehensive filtering by:
- * - Search query (debounced 300ms) - filters by name, description, or ID
- * - Mood - filter by specific mood or show all
- * - Completeness - filter complete/incomplete/all characters
- * - Usage - filter used/unused/all characters
+ * **Pattern:** AssetsLibraryModal filtering + memoization pattern
  *
- * Sorting options:
- * - By name (A-Z or Z-A)
- * - By completeness percentage
+ * Provides comprehensive filtering and sorting for characters with debounced
+ * search to reduce expensive operations during user typing.
  *
- * All filtering logic is memoized for optimal performance.
- * Search query is debounced to reduce operations by ~70% during typing.
+ * ## Features
+ * - **Debounced search:** 300ms delay reduces operations by ~70%
+ * - **Multiple filters:** Search, mood, completeness, usage
+ * - **Sorting:** Name (A-Z, Z-A), completeness percentage
+ * - **Memoization:** Recalculates only when dependencies change
+ * - **Dynamic filtering:** All filters work together seamlessly
  *
- * @param characters - Array of character objects to filter
- * @param searchQuery - Search query string (debounced internally)
- * @param filterMood - Mood to filter by ('all' shows all moods, or specific mood name)
- * @param filterCompleteness - Completeness filter ('all', 'complete', 'incomplete')
- * @param filterUsage - Usage filter ('all', 'used', 'unused')
- * @param sortBy - Sort criteria ('name', 'name-desc', 'completeness')
- * @param getCharacterStats - Function to calculate character stats (for completeness sorting)
- * @param usageMap - Map of character usage data (for usage filtering)
- * @returns Object with filtered characters and debounced query
+ * ## Filter Logic
+ * 1. **Search (debounced):** Name, description, or ID contains query
+ * 2. **Mood:** Character has the specified mood
+ * 3. **Completeness:** Complete (100%), incomplete (<100%), or all
+ * 4. **Usage:** Used in scenes, unused, or all
+ * 5. **Sort:** Apply sorting after all filters
  *
- * @example
+ * ## Usage
  * ```tsx
  * const { filtered, debouncedQuery } = useCharacterFiltering(
  *   characters,
  *   searchQuery,
- *   'all',
- *   'all',
- *   'all',
- *   'name',
+ *   filterMood,
+ *   filterCompleteness,
+ *   filterUsage,
+ *   sortBy,
  *   getCharacterStats,
  *   usageMap
  * );
  * ```
+ *
+ * @param characters - All characters to filter
+ * @param searchQuery - Raw search query (will be debounced)
+ * @param filterMood - Mood to filter by ('all' or mood name)
+ * @param filterCompleteness - Completeness filter
+ * @param filterUsage - Usage filter
+ * @param sortBy - Sort option
+ * @param getCharacterStats - Function to get character stats
+ * @param usageMap - Map of character usage data
+ * @returns Filtered characters and debounced query
  */
 export function useCharacterFiltering(
   characters: Character[],
@@ -109,17 +111,19 @@ export function useCharacterFiltering(
   sortBy: CharacterSortBy,
   getCharacterStats: (character: Character) => CharacterStats,
   usageMap: Map<string, CharacterUsageData>
-): UseCharacterFilteringReturn {
-  // Debounce search query to reduce operations by ~70%
+): UseCharacterFilteringV2Return {
+  // Debounce search query (300ms delay)
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
 
-  const filteredCharacters = useMemo(() => {
-    let filtered = [...characters];
+  // Memoized filtering and sorting
+  const filtered = useMemo(() => {
+    // Start with all characters
+    let result = [...characters];
 
-    // Search filter (debounced)
+    // Filter 1: Search (debounced)
     if (debouncedQuery.trim()) {
       const query = debouncedQuery.toLowerCase();
-      filtered = filtered.filter(
+      result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
           c.description?.toLowerCase().includes(query) ||
@@ -127,53 +131,57 @@ export function useCharacterFiltering(
       );
     }
 
-    // Mood filter
-    if (filterMood && filterMood !== 'all') {
-      filtered = filtered.filter((c) => c.moods && c.moods.includes(filterMood));
+    // Filter 2: Mood
+    if (filterMood !== 'all') {
+      result = result.filter((c) => c.moods?.includes(filterMood));
     }
 
-    // Completeness filter
+    // Filter 3: Completeness
     if (filterCompleteness !== 'all') {
-      filtered = filtered.filter((c) => {
+      result = result.filter((c) => {
         const stats = getCharacterStats(c);
         if (filterCompleteness === 'complete') {
           return stats.completeness === 100;
-        } else if (filterCompleteness === 'incomplete') {
+        } else {
+          // incomplete
           return stats.completeness < 100;
         }
-        return true;
       });
     }
 
-    // Usage filter
+    // Filter 4: Usage
     if (filterUsage !== 'all') {
-      filtered = filtered.filter((c) => {
+      result = result.filter((c) => {
         const usage = usageMap.get(c.id);
-        const isUsed = !!usage && usage.sceneCount > 0;
+        const isUsed = usage && usage.sceneCount > 0;
         if (filterUsage === 'used') {
           return isUsed;
-        } else if (filterUsage === 'unused') {
+        } else {
+          // unused
           return !isUsed;
         }
-        return true;
       });
     }
 
     // Sort
-    filtered.sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      } else if (sortBy === 'name-desc') {
-        return b.name.localeCompare(a.name);
-      } else if (sortBy === 'completeness') {
-        const statsA = getCharacterStats(a);
-        const statsB = getCharacterStats(b);
-        return statsB.completeness - statsA.completeness;
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'completeness': {
+          const statsA = getCharacterStats(a);
+          const statsB = getCharacterStats(b);
+          // Sort by completeness descending (most complete first)
+          return statsB.completeness - statsA.completeness;
+        }
+        default:
+          return 0;
       }
-      return 0;
     });
 
-    return filtered;
+    return result;
   }, [
     characters,
     debouncedQuery,
@@ -186,7 +194,9 @@ export function useCharacterFiltering(
   ]);
 
   return {
-    filtered: filteredCharacters,
+    filtered,
     debouncedQuery,
   };
 }
+
+export default useCharacterFiltering;

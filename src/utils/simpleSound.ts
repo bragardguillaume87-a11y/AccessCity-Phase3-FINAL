@@ -8,6 +8,7 @@
  */
 
 import { logger } from './logger';
+import { AUDIO_DEFAULTS } from '@/config/constants';
 
 // ============================================================================
 // STATE
@@ -29,7 +30,7 @@ const audioCache = new Map<string, HTMLAudioElement>();
  * @example
  * playSound('/sounds/click.mp3', 0.3);
  */
-export function playSound(src: string, volume: number = 0.5): void {
+export function playSound(src: string, volume: number = AUDIO_DEFAULTS.MUSIC_VOLUME): void {
   if (isMuted) {
     logger.debug('[Sound] Muted, skipping:', src);
     return;

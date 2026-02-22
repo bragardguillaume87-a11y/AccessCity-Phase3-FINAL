@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronLeft, Layers, ArrowUp, ArrowDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { ChevronLeft, Layers, Plus, Minus } from 'lucide-react';
 import { t } from '@/lib/translations';
-import { Button } from '@/components/ui/button';
 
 interface LayerPickerPanelProps {
   characterName: string;
@@ -11,149 +9,126 @@ interface LayerPickerPanelProps {
   onBack: () => void;
 }
 
-// Preset layer values
+const LAYER_Z_INDEX = { MIN: 1, MAX: 20 } as const;
+
 const LAYER_PRESETS = [
-  { value: 1, label: 'Arrière-plan', icon: '🏔️' },
-  { value: 5, label: 'Milieu', icon: '🌳' },
-  { value: 10, label: 'Devant', icon: '👤' },
-  { value: 15, label: 'Tout devant', icon: '⭐' }
-];
+  { value: 1,  label: 'Arrière', icon: '🏔️' },
+  { value: 5,  label: 'Milieu',  icon: '🌳' },
+  { value: 10, label: 'Devant',  icon: '👤' },
+  { value: 15, label: '1er plan',icon: '⭐' },
+] as const;
 
 /**
- * LayerPickerPanel - Visual layer/z-index selector
+ * LayerPickerPanel — Sélecteur de couche compact.
  *
- * Simplified UI with preset values and +/- buttons.
- * Kid-friendly with visual representation.
+ * 4 presets en grille + ajustement fin +/-.
+ * Supprime le graphique visuel au profit d'une UI plus dense.
  */
 export function LayerPickerPanel({
-  characterName,
   currentLayer,
   onSelect,
-  onBack
+  onBack,
 }: LayerPickerPanelProps) {
   const [tempLayer, setTempLayer] = useState(currentLayer);
 
-  const handleIncrement = () => {
-    const newValue = Math.min(20, tempLayer + 1);
-    setTempLayer(newValue);
-  };
-
-  const handleDecrement = () => {
-    const newValue = Math.max(1, tempLayer - 1);
-    setTempLayer(newValue);
-  };
-
-  const handleApply = () => {
-    onSelect(tempLayer);
-  };
-
-  const handlePresetClick = (value: number) => {
-    setTempLayer(value);
-  };
+  const handlePreset  = (v: number) => setTempLayer(v);
+  const handleInc     = () => setTempLayer(prev => Math.min(LAYER_Z_INDEX.MAX, prev + 1));
+  const handleDec     = () => setTempLayer(prev => Math.max(LAYER_Z_INDEX.MIN, prev - 1));
+  const handleApply   = () => onSelect(tempLayer);
 
   return (
-    <div className="animate-step-slide">
-      {/* Header with back button */}
+    <div className="space-y-3">
+      {/* Retour */}
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-2 mb-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+        style={{ color: 'rgba(255,255,255,0.45)' }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
       >
-        <ChevronLeft className="w-4 h-4" />
-        <span>{t('layerPicker.title', { name: characterName })}</span>
+        <ChevronLeft className="w-3.5 h-3.5" />
+        Ordre d'affichage
       </button>
 
-      {/* Visual layer indicator */}
-      <div className="mb-4 p-4 bg-gradient-to-b from-slate-800/50 to-slate-900/50 rounded-xl border border-border">
-        {/* Layer visualization */}
-        <div className="flex items-end justify-center gap-2 h-24 mb-3">
-          {[1, 5, 10, 15].map((layer, index) => (
-            <div
-              key={layer}
-              className={cn(
-                "w-12 rounded-t-lg transition-all duration-300",
-                tempLayer >= layer
-                  ? "bg-primary"
-                  : "bg-muted"
-              )}
-              style={{ height: `${20 + index * 20}px` }}
-            />
-          ))}
-        </div>
-
-        {/* Labels */}
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{t('layerPicker.back')}</span>
-          <span>{t('layerPicker.front')}</span>
-        </div>
+      {/* Presets */}
+      <div className="grid grid-cols-4 gap-1">
+        {LAYER_PRESETS.map(preset => {
+          const isActive = tempLayer === preset.value;
+          return (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => handlePreset(preset.value)}
+              className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border transition-colors"
+              style={{
+                background: isActive ? 'rgba(124,58,237,0.12)' : 'var(--color-bg-base)',
+                borderColor: isActive ? 'var(--color-primary)' : 'var(--color-border-base)',
+              }}
+            >
+              <span className="text-base leading-none">{preset.icon}</span>
+              <span
+                className="text-[9px] leading-tight text-center"
+                style={{ color: isActive ? 'var(--color-primary)' : 'rgba(255,255,255,0.5)' }}
+              >
+                {preset.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Preset buttons */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        {LAYER_PRESETS.map(preset => (
-          <button
-            key={preset.value}
-            type="button"
-            onClick={() => handlePresetClick(preset.value)}
-            className={cn(
-              "flex flex-col items-center p-2 rounded-lg transition-all duration-200",
-              "border-2",
-              tempLayer === preset.value
-                ? "bg-primary/20 border-primary"
-                : "bg-card border-border hover:border-primary/50"
-            )}
-          >
-            <span className="text-xl mb-1">{preset.icon}</span>
-            <span className="text-[10px] text-muted-foreground">{preset.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Fine adjustment */}
-      <div className="flex items-center justify-center gap-4 mb-4">
-        <Button
+      {/* Ajustement fin */}
+      <div
+        className="flex items-center justify-between gap-2 rounded-lg px-3 py-2"
+        style={{ background: 'var(--color-bg-base)', border: '1px solid var(--color-border-base)' }}
+      >
+        <button
           type="button"
-          variant="outline"
-          size="icon"
-          onClick={handleDecrement}
-          disabled={tempLayer <= 1}
-          className="h-12 w-12"
+          onClick={handleDec}
+          disabled={tempLayer <= LAYER_Z_INDEX.MIN}
+          className="w-7 h-7 rounded-md flex items-center justify-center transition-colors disabled:opacity-30"
+          style={{ background: 'var(--color-bg-hover)' }}
+          aria-label="Diminuer le niveau"
         >
-          <ArrowDown className="h-5 w-5" />
-        </Button>
+          <Minus className="w-3.5 h-3.5" style={{ color: 'var(--color-text-primary)' }} />
+        </button>
 
         <div className="flex flex-col items-center">
-          <span className="text-3xl font-bold text-primary">{tempLayer}</span>
-          <span className="text-xs text-muted-foreground">Niveau</span>
+          <span className="text-lg font-bold leading-none" style={{ color: 'var(--color-primary)' }}>
+            {tempLayer}
+          </span>
+          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            {t('layerPicker.help') || 'Couche'}
+          </span>
         </div>
 
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="icon"
-          onClick={handleIncrement}
-          disabled={tempLayer >= 20}
-          className="h-12 w-12"
+          onClick={handleInc}
+          disabled={tempLayer >= LAYER_Z_INDEX.MAX}
+          className="w-7 h-7 rounded-md flex items-center justify-center transition-colors disabled:opacity-30"
+          style={{ background: 'var(--color-bg-hover)' }}
+          aria-label="Augmenter le niveau"
         >
-          <ArrowUp className="h-5 w-5" />
-        </Button>
+          <Plus className="w-3.5 h-3.5" style={{ color: 'var(--color-text-primary)' }} />
+        </button>
       </div>
 
-      {/* Help text */}
-      <p className="text-xs text-muted-foreground text-center mb-4">
-        {t('layerPicker.help')}
-      </p>
-
-      {/* Apply button */}
-      <Button
+      {/* Appliquer */}
+      <button
         type="button"
         onClick={handleApply}
-        className="w-full h-12"
         disabled={tempLayer === currentLayer}
+        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg transition-colors disabled:opacity-40"
+        style={{
+          background: tempLayer === currentLayer ? 'var(--color-bg-hover)' : 'var(--color-primary)',
+          color: tempLayer === currentLayer ? 'var(--color-text-muted)' : '#fff',
+        }}
       >
-        <Layers className="w-4 h-4 mr-2" />
+        <Layers className="w-3.5 h-3.5" aria-hidden="true" />
         Appliquer
-      </Button>
+      </button>
     </div>
   );
 }

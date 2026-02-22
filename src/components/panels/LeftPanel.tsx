@@ -4,6 +4,8 @@ import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
 import DialoguesPanel from './DialoguesPanel';
 import { useScenesStore, useUIStore } from '../../stores/index';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useSceneWithElements, useAllScenesWithElements } from '@/stores/selectors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
@@ -40,14 +42,15 @@ export default function LeftPanel({
   onSceneSelect,
 }: LeftPanelProps) {
   // Zustand stores
-  const scenes = useScenesStore((state) => state.scenes);
+  const scenes = useScenesStore((state) => state.scenes); // SceneMetadata[] (pour ScenesSidebar)
+  const scenesWithElements = useAllScenesWithElements(); // Scene[] avec dialogues (pour DialogueWizard)
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
-  const selectedScene = scenes.find((s) => s.id === selectedSceneForEdit);
-  const addDialogue = useScenesStore((state) => state.addDialogue);
-  const addDialogues = useScenesStore((state) => state.addDialogues);
-  const insertDialoguesAfter = useScenesStore((state) => state.insertDialoguesAfter);
-  const updateDialogue = useScenesStore((state) => state.updateDialogue);
+  const selectedScene = useSceneWithElements(selectedSceneForEdit);
+  const addDialogue = useDialoguesStore((state) => state.addDialogue);
+  const addDialogues = useDialoguesStore((state) => state.addDialogues);
+  const insertDialoguesAfter = useDialoguesStore((state) => state.insertDialoguesAfter);
+  const updateDialogue = useDialoguesStore((state) => state.updateDialogue);
 
   // DialogueWizard state from UIStore (no more prop-drilling)
   const wizardOpen = useUIStore((state) => state.dialogueWizardOpen);
@@ -105,21 +108,21 @@ export default function LeftPanel({
         onValueChange={handleTabChange}
         className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
       >
-        {/* Tabs Header avec indicateur gaming */}
-        <TabsList className="w-full grid grid-cols-2 rounded-none border-b-2 border-[var(--color-border-base)] bg-transparent p-0 h-auto">
+        {/* Tabs Header — compact vertical (icon + micro-label) pour tenir dans 160px */}
+        <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-[var(--color-border-base)] bg-transparent p-0 h-auto">
           <TabsTrigger
             value="scenes"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 gap-2"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 flex flex-col gap-1 px-2"
           >
-            <Film className="w-4 h-4" aria-hidden="true" />
-            <span className="font-semibold text-sm">Scènes</span>
+            <Film className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+            <span className="text-xs leading-none font-semibold truncate">Scènes</span>
           </TabsTrigger>
           <TabsTrigger
             value="dialogues"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 gap-2"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 flex flex-col gap-1 px-2"
           >
-            <MessageSquare className="w-4 h-4" aria-hidden="true" />
-            <span className="font-semibold text-sm">Dialogues</span>
+            <MessageSquare className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+            <span className="text-xs leading-none font-semibold truncate">Dial.</span>
           </TabsTrigger>
         </TabsList>
 
@@ -148,7 +151,7 @@ export default function LeftPanel({
         setWizardOpen(open);
         if (!open) setEditDialogueIndex(undefined);
       }}>
-        <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
+        <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0">
           <DialogHeader className="sr-only">
             <DialogTitle>
               {editDialogueIndex !== undefined
@@ -165,7 +168,7 @@ export default function LeftPanel({
                   ? selectedScene.dialogues[editDialogueIndex]
                   : undefined
               }
-              scenes={scenes}
+              scenes={scenesWithElements}
               onSave={handleWizardSave}
               onClose={() => setWizardOpen(false)}
             />

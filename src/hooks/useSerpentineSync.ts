@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useUIStore } from '@/stores/uiStore';
 import { buildNodeRowMap, recalculateSerpentineEdges } from '@/config/handleConfig';
+import { isTerminalNode } from '@/utils/textHelpers';
 
 /**
  * useSerpentineSync - Hook for dynamic serpentine edge handle recalculation
@@ -25,7 +26,7 @@ export function useSerpentineSync() {
   const recalculateEdges = useCallback(
     (nodes: Node[], edges: Edge[]): Edge[] => {
       if (!serpentineEnabled || nodes.length === 0) return edges;
-      const dialogueOnly = nodes.filter(n => n.type !== 'terminalNode');
+      const dialogueOnly = nodes.filter(n => !isTerminalNode(n));
       return recalculateSerpentineEdges(dialogueOnly, edges);
     },
     [serpentineEnabled]
@@ -39,8 +40,8 @@ export function useSerpentineSync() {
     (nodeId: string, oldNodes: Node[], newNodes: Node[]): boolean => {
       if (!serpentineEnabled) return false;
 
-      const oldMap = buildNodeRowMap(oldNodes.filter(n => n.type !== 'terminalNode'));
-      const newMap = buildNodeRowMap(newNodes.filter(n => n.type !== 'terminalNode'));
+      const oldMap = buildNodeRowMap(oldNodes.filter(n => !isTerminalNode(n)));
+      const newMap = buildNodeRowMap(newNodes.filter(n => !isTerminalNode(n)));
 
       const oldInfo = oldMap.get(nodeId);
       const newInfo = newMap.get(nodeId);
@@ -68,5 +69,5 @@ export function calculateSerpentineEdges(
   nodes: Node[],
   edges: Edge[]
 ): Edge[] {
-  return recalculateSerpentineEdges(nodes.filter(n => n.type !== 'terminalNode'), edges);
+  return recalculateSerpentineEdges(nodes.filter(n => !isTerminalNode(n)), edges);
 }

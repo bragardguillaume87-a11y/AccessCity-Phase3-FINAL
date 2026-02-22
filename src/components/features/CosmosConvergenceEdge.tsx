@@ -1,4 +1,5 @@
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, Edge, getSmoothStepPath } from '@xyflow/react';
+import { COSMOS_COLORS, COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
 
 /**
  * Data injected into each convergence edge by buildGraphEdges post-processing.
@@ -14,34 +15,16 @@ export interface CosmosConvergenceData extends Record<string, unknown> {
   isConvergence?: boolean;
 }
 
-/**
- * Visual constants for the fan effect.
- *
- * Fan algorithm:
- * - stepPosition: varies the bend point along the path (0.3–0.7 range)
- *   → separates the mid-section routes so they don't overlap on long paths
- * - Y_SPREAD: slightly shifts source/target Y per edge index
- *   → separates the arrival/departure points at the node handles
- *
- * The combination creates a clean fan where all edges are visually distinct
- * even when originating from nodes at different distances.
- */
-const STEP_RANGE = 0.4;   // spread of stepPosition: [0.3 … 0.7]
-const Y_SPREAD_PX = 9;    // px of Y shift per edge at source/target
+const { stepRange, ySpread } = COSMOS_DIMENSIONS.convergenceEdge;
+const { convergence } = COSMOS_COLORS;
 
 /**
  * CosmosConvergenceEdge — custom edge for "↩ rejoint" convergence connections
  *
- * Replaces the built-in 'straight'/'smoothstep' type for Cosmos theme convergence
- * edges. Key improvements over the built-in types:
- *
- * 1. Fan spreading: when multiple edges target the same node, their paths are
- *    fanned using varying stepPosition values and small Y offsets, preventing overlap.
- * 2. Smooth corners: borderRadius:20 for rounded steps.
- * 3. Permanent label: "↩ rejoint" always visible (not hover-dependent).
- * 4. Cross-row awareness: correctly routes via getSmoothStepPath regardless of
- *    whether source/target are in the same serpentine row (handles already set
- *    correctly by recalculateSerpentineEdges upstream).
+ * Fan algorithm:
+ * - stepPosition: varies the bend point along the path (0.3–0.7 range)
+ * - Y_SPREAD: slightly shifts source/target Y per edge index
+ * The combination creates a clean fan where all edges are visually distinct.
  */
 export function CosmosConvergenceEdge({
   id,
@@ -58,19 +41,16 @@ export function CosmosConvergenceEdge({
   const parallelIndex = data?.parallelIndex ?? 0;
   const parallelCount = data?.parallelCount ?? 1;
 
-  // ── Fan parameters ──────────────────────────────────────────────────────────
-  // For 1 edge: stepPosition = 0.5 (midpoint bend — normal)
-  // For n edges: evenly distributed in [0.3, 0.7]
+  // Fan stepPosition: single edge = 0.5, multiple = evenly in [0.3, 0.7]
   const stepPosition =
     parallelCount === 1
       ? 0.5
-      : 0.3 + (parallelIndex / Math.max(parallelCount - 1, 1)) * STEP_RANGE;
+      : 0.3 + (parallelIndex / Math.max(parallelCount - 1, 1)) * stepRange;
 
-  // Slight Y offset: centres the fan around the handle, so edges spread
-  // ±(n/2 * Y_SPREAD) around the natural handle Y.
-  const spread = (parallelIndex - (parallelCount - 1) / 2) * Y_SPREAD_PX;
+  // Slight Y offset: centres the fan around the handle
+  const spread = (parallelIndex - (parallelCount - 1) / 2) * ySpread;
 
-  // ── Path computation ────────────────────────────────────────────────────────
+  const dim = COSMOS_DIMENSIONS.convergenceEdge;
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY: sourceY + spread,
@@ -78,43 +58,41 @@ export function CosmosConvergenceEdge({
     targetX,
     targetY: targetY + spread,
     targetPosition,
-    borderRadius: 20,
-    offset: 24,
+    borderRadius: dim.borderRadius,
+    offset: dim.offset,
     stepPosition,
   });
 
   return (
     <>
-      {/* Edge path */}
       <BaseEdge
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          stroke: '#22c55e',
-          strokeWidth: 2,
-          strokeDasharray: '5,4',
+          stroke: convergence.stroke,
+          strokeWidth: dim.strokeWidth,
+          strokeDasharray: dim.strokeDasharray,
           ...style,
         }}
       />
 
-      {/* Permanent "↩ rejoint" label */}
       <EdgeLabelRenderer>
         <div
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            background: 'rgba(15, 23, 42, 0.88)',
-            border: '1px solid rgba(34, 197, 94, 0.45)',
-            color: '#86efac',
-            fontSize: 10,
-            fontWeight: 600,
+            background: convergence.labelBg,
+            border: `1px solid ${convergence.labelBorder}`,
+            color: convergence.labelText,
+            fontSize: dim.labelFontSize,
+            fontWeight: dim.labelFontWeight,
             letterSpacing: '0.02em',
-            padding: '2px 7px',
-            borderRadius: 5,
+            padding: dim.labelPadding,
+            borderRadius: dim.labelBorderRadius,
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            boxShadow: '0 0 8px rgba(34, 197, 94, 0.25)',
+            boxShadow: convergence.labelShadow,
           }}
         >
           ↩ rejoint

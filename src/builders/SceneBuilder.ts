@@ -35,6 +35,7 @@ import type {
 } from '@/types';
 import { SceneFactory } from '@/factories/SceneFactory';
 import { DialogueFactory } from '@/factories/DialogueFactory';
+import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 
 /**
@@ -85,7 +86,7 @@ export class SceneBuilder {
   withMusic(audioUrl: string, options?: Partial<Omit<SceneAudio, 'url'>>): this {
     this.scene.audio = {
       url: audioUrl,
-      volume: options?.volume ?? 0.5,
+      volume: options?.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME,
       loop: options?.loop ?? true,
       continueToNextScene: options?.continueToNextScene ?? false,
     };
@@ -148,7 +149,7 @@ export class SceneBuilder {
     const dialogue = DialogueFactory.create({
       speaker,
       text,
-      ...(sfxUrl && { sfx: { url: sfxUrl, volume: 0.7 } }),
+      ...(sfxUrl && { sfx: { url: sfxUrl, volume: AUDIO_DEFAULTS.SFX_VOLUME } }),
     });
 
     this.scene.dialogues.push(dialogue);

@@ -66,12 +66,54 @@ export interface EditorTranslations {
 }
 
 /**
+ * Dialogue Properties panel translations
+ */
+export interface DialogueEditorTranslations {
+  title: string;
+  propertiesTab: string;
+  choicesTab: string;
+  speaker: string;
+  text: string;
+  duplicate: string;
+  sfxLabel: string;
+  sfxVolume: string;
+  sfxChange: string;
+  sfxAdd: string;
+  moodsLabel: string;
+  moodDefault: string;
+  infoLabel: string;
+  noChoices: string;
+  noChoicesHint: string;
+  addChoice: string;
+  editWithAssistant: string;
+}
+
+/**
+ * Graph-specific translations (node/edge labels, accessibility)
+ */
+export interface GraphTranslations {
+  startBadge: string;
+  endBadge: string;
+  startAriaLabel: string;
+  endAriaLabel: string;
+  rowLabel: string;
+  nextBelow: string;
+  flowContinues: string;
+  convergenceLabel: string;
+  choiceAriaLabel: string;
+  emptyDialogue: string;
+  sceneJumpLabel: string;
+}
+
+/**
  * Complete translations structure
  */
 export interface Translations {
   gameStats: GameStatsTranslations;
   common: CommonTranslations;
   editor: EditorTranslations;
+  graph: GraphTranslations;
+  dialogueEditor: DialogueEditorTranslations;
 }
 
 // ============================================================================
@@ -94,4 +136,6 @@ export const DEFAULT_LOCALE: SupportedLocale = 'fr';
 export type TranslationPath =
   | `gameStats.${keyof GameStatsTranslations}`
   | `common.${keyof CommonTranslations}`
-  | `editor.${keyof EditorTranslations}`;
+  | `editor.${keyof EditorTranslations}`
+  | `graph.${keyof GraphTranslations}`
+  | `dialogueEditor.${keyof DialogueEditorTranslations}`;

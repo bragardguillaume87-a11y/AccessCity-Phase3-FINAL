@@ -1,102 +1,122 @@
 import { useMemo } from 'react';
-import type { Scene, Character } from '@/types';
+import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import type { SceneMetadata, Character } from '@/types';
 
 /**
- * Character usage information across scenes
+ * Character usage data interface
  */
 export interface CharacterUsageData {
-  /** Scene titles where this character appears */
+  /** List of scene titles/IDs where character is used */
   scenes: string[];
-  /** Number of scenes using this character */
+  /** Number of scenes where character appears */
   sceneCount: number;
 }
 
 /**
- * Hook to track character usage across all scenes
- *
- * This hook is used to:
- * - Display usage information in the preview panel
- * - Show warnings before deleting characters that are used in scenes
- * - Filter characters by usage status (used/unused)
- * - Display usage badges in the Management tab
- *
- * @param scenes - All scenes in the project
- * @param characters - All characters in the project
- * @returns Map of character IDs to their usage data
- *
- * @example
- * ```typescript
- * const usageMap = useCharacterUsage(scenes, characters);
- * const usage = usageMap.get(characterId);
- * if (usage && usage.sceneCount > 0) {
- *   console.log(`Character is used in ${usage.sceneCount} scenes`);
- *   console.log(`Scenes: ${usage.scenes.join(', ')}`);
- * }
- * ```
- */
-export function useCharacterUsage(
-  scenes: Scene[],
-  characters: Character[]
-): Map<string, CharacterUsageData> {
-  return useMemo(() => {
-    const usage = new Map<string, CharacterUsageData>();
-
-    // Iterate through all scenes and their characters
-    scenes.forEach((scene) => {
-      scene.characters.forEach((sceneChar) => {
-        // Initialize usage data if this is the first time we see this character
-        if (!usage.has(sceneChar.characterId)) {
-          usage.set(sceneChar.characterId, {
-            scenes: [],
-            sceneCount: 0,
-          });
-        }
-
-        // Get the usage data for this character
-        const data = usage.get(sceneChar.characterId)!;
-
-        // Add scene title (or ID as fallback) to the list
-        data.scenes.push(scene.title || scene.id);
-        data.sceneCount++;
-      });
-    });
-
-    return usage;
-  }, [scenes, characters]);
-}
-
-/**
- * Helper to check if a character is used in any scene
+ * Check if a character is used in any scene
  *
  * @param characterId - Character ID to check
- * @param usageMap - Usage map from useCharacterUsage hook
- * @returns true if character is used, false otherwise
+ * @param usageMap - Map of character usage data
+ * @returns True if character is used in at least one scene
  */
 export function isCharacterUsed(
   characterId: string,
   usageMap: Map<string, CharacterUsageData>
 ): boolean {
   const usage = usageMap.get(characterId);
-  return !!usage && usage.sceneCount > 0;
+  return usage !== undefined && usage.sceneCount > 0;
 }
 
 /**
- * Helper to get formatted usage text for display
+ * Get formatted usage text for a character
  *
  * @param characterId - Character ID
- * @param usageMap - Usage map from useCharacterUsage hook
- * @returns Formatted text like "Utilisé dans 3 scènes" or "Non utilisé"
+ * @param usageMap - Map of character usage data
+ * @returns Formatted usage text (e.g., "Utilisé dans 3 scènes")
  */
 export function getUsageText(
   characterId: string,
   usageMap: Map<string, CharacterUsageData>
-): string {
+): string | undefined {
   const usage = usageMap.get(characterId);
   if (!usage || usage.sceneCount === 0) {
-    return 'Non utilisé';
+    return undefined;
   }
-  if (usage.sceneCount === 1) {
-    return 'Utilisé dans 1 scène';
-  }
-  return `Utilisé dans ${usage.sceneCount} scènes`;
+
+  const count = usage.sceneCount;
+  return `Utilisé dans ${count} scène${count > 1 ? 's' : ''}`;
 }
+
+/**
+ * useCharacterUsage - Track character usage across scenes
+ *
+ * **Pattern:** Custom pattern inspired by AssetsLibraryModal usage warnings
+ *
+ * Builds a map of which characters are used in which scenes. Used to:
+ * - Show usage badges on character cards
+ * - Display warnings before deleting used characters
+ * - Filter characters by usage status
+ *
+ * ## Features
+ * - **Memoized calculation:** Recalculates only when scenes or characters change
+ * - **Map-based storage:** O(1) lookup for character usage
+ * - **Scene tracking:** Lists all scene titles where character appears
+ * - **Helper functions:** isCharacterUsed and getUsageText utilities
+ *
+ * ## Usage
+ * ```tsx
+ * const usageMap = useCharacterUsage(scenes, characters);
+ *
+ * // Check if character is used
+ * const isUsed = isCharacterUsed(characterId, usageMap);
+ *
+ * // Get usage badge text
+ * const badgeText = getUsageText(characterId, usageMap);
+ *
+ * // Get detailed usage info
+ * const usage = usageMap.get(characterId);
+ * if (usage) {
+ *   console.log(`Used in: ${usage.scenes.join(', ')}`);
+ * }
+ * ```
+ *
+ * @param scenes - Array of all scenes
+ * @param characters - Array of all characters (for dependency tracking)
+ * @returns Map of character ID to usage data
+ */
+export function useCharacterUsage(
+  scenes: SceneMetadata[],
+  characters: Character[]
+): Map<string, CharacterUsageData> {
+  // Post-Phase 3 : les personnages de scène sont dans sceneElementsStore, pas dans scenes[]
+  const elementsByScene = useSceneElementsStore((s) => s.elementsByScene);
+
+  return useMemo(() => {
+    const usage = new Map<string, CharacterUsageData>();
+
+    // Itérer sur les scènes (metadata) et lire les personnages depuis sceneElementsStore
+    scenes.forEach((scene) => {
+      const sceneChars = elementsByScene[scene.id]?.characters || [];
+      if (sceneChars.length === 0) return;
+
+      sceneChars.forEach((sceneChar) => {
+        const characterId = sceneChar.characterId;
+
+        if (!usage.has(characterId)) {
+          usage.set(characterId, {
+            scenes: [],
+            sceneCount: 0,
+          });
+        }
+
+        const data = usage.get(characterId)!;
+        data.scenes.push(scene.title || scene.id || 'Scène sans titre');
+        data.sceneCount++;
+      });
+    });
+
+    return usage;
+  }, [scenes, elementsByScene, characters]);
+}
+
+export default useCharacterUsage;

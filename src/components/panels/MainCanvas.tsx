@@ -1,17 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { buildFilterCSS } from '@/utils/backgroundFilter';
+import { getSceneDuration, getDialogueIndexAtTime } from '@/utils/dialogueDuration';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useUIStore } from '@/stores';
 import { GAME_STATS } from '@/i18n/types';
-import { BarChart3 } from 'lucide-react';
-import { StatBar } from '@/components/ui/stat-bar';
+import { CompactStatHUD } from '@/components/ui/compact-stat-hud';
+import { REFERENCE_CANVAS_WIDTH } from '@/config/canvas';
 import type { GameStats } from '@/types';
 import type {
   Scene,
   SceneCharacter,
   SelectedElementType,
-  FullscreenMode,
-  ModalType,
+  ModalContext,
   Prop,
   TextBox
 } from '@/types';
@@ -68,19 +70,23 @@ export interface MainCanvasProps {
   selectedScene: Scene | undefined;
   selectedElement: SelectedElementType;
   onSelectDialogue?: (sceneId: string, index: number | null, metadata?: unknown) => void;
-  onOpenModal?: (modal: ModalType | string, context?: unknown) => void;
-  fullscreenMode: FullscreenMode;
-  onFullscreenChange: (mode: FullscreenMode) => void;
 }
 
 export default function MainCanvas({
   selectedScene,
   selectedElement,
   onSelectDialogue,
-  onOpenModal,
-  fullscreenMode,
-  onFullscreenChange
 }: MainCanvasProps) {
+  // fullscreenMode + setFullscreenMode read from store (no prop drilling)
+  const fullscreenMode = useUIStore(s => s.fullscreenMode);
+  const setFullscreenMode = useUIStore(s => s.setFullscreenMode);
+
+  // Local openModal handler — delegates to store for internal use
+  const handleOpenModal = useCallback((modal: string, context: unknown = {}) => {
+    const store = useUIStore.getState();
+    store.setActiveModal(modal);
+    store.setModalContext(context as ModalContext);
+  }, []);
   const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
   const [canvasNode, setCanvasNode] = useState<HTMLDivElement | null>(null);
   const [canvasRef, canvasDimensions] = useCanvasDimensions();
@@ -100,17 +106,21 @@ export default function MainCanvas({
   const dialoguesCount = useDialoguesStore((s) =>
     sceneId ? (s.dialoguesByScene[sceneId]?.length || 0) : 0
   );
+  // ⚠️ selectedScene.dialogues est TOUJOURS [] (Phase 3 store split).
+  // Utiliser ce sélecteur réactif pour toutes les lectures de dialogues.
+  const sceneDialogues = useDialoguesStore((s) =>
+    sceneId ? (s.dialoguesByScene[sceneId] || []) : []
+  );
 
   const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
   const variables = useSettingsStore(s => s.variables) as GameStats;
 
-  const viewState = useCanvasViewState({ fullscreenMode, onFullscreenChange });
+  const viewState = useCanvasViewState();
   const canvasSize = computeCanvasSize(centerSize.width, centerSize.height, viewState.canvasZoom);
   const actions = useCanvasActions({
     selectedScene,
     sceneCharacters,
     setShowAddCharacterModal,
-    onOpenModal
   });
   const selection = useCanvasSelection({
     selectedScene,
@@ -123,7 +133,7 @@ export default function MainCanvas({
 
   // Auto-select first dialogue when scene changes or gains dialogues
   useEffect(() => {
-    if (!selectedScene?.id || !selectedScene.dialogues?.length) return;
+    if (!selectedScene?.id || !dialoguesCount) return;
     if (selectedElement?.type === 'scene') return;
     if (selectedElement?.type === 'dialogue' && selectedElementSceneId === selectedScene.id) return;
 
@@ -131,7 +141,7 @@ export default function MainCanvas({
       logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.id}`);
       onSelectDialogue(selectedScene.id, 0);
     }
-  }, [selectedScene?.id, selectedScene?.dialogues?.length, selectedElement?.type, selectedElementSceneId, onSelectDialogue]);
+  }, [selectedScene?.id, dialoguesCount, selectedElement?.type, selectedElementSceneId, onSelectDialogue]);
 
   const dragDrop = useCanvasDragDrop({
     selectedScene,
@@ -147,13 +157,14 @@ export default function MainCanvas({
 
   const contextMenu = useContextMenu({
     selectedScene,
+    selectedElement,
     characters: actions.characters,
     sceneCharacters,
     actions: {
       updateSceneCharacter: actions.updateSceneCharacter,
       removeCharacterFromScene: actions.removeCharacterFromScene
     },
-    onOpenModal
+    onOpenModal: handleOpenModal
   });
 
   const composedCanvasRef = useCallback((node: HTMLDivElement | null) => {
@@ -216,15 +227,47 @@ export default function MainCanvas({
     [selectedScene?.id, actions.removeTextBoxFromScene]
   );
 
-  const handleSeek = useCallback(
-    (time: number) => setCurrentTime(time),
-    [setCurrentTime]
+  // Active mood overrides from the currently selected dialogue (characterMoods field)
+  // ⚠️ Lit depuis sceneDialogues (dialoguesStore), PAS selectedScene.dialogues (toujours vide)
+  const activeMoodOverrides = useMemo<Record<string, string>>(() => {
+    if (selectedElement?.type !== 'dialogue' || selectedElement.sceneId !== selectedScene?.id) return {};
+    const dialogue = sceneDialogues[selectedElement.index];
+    return dialogue?.characterMoods || {};
+  }, [selectedElement, selectedScene?.id, sceneDialogues]);
+
+  // Scene duration computed from real text length estimates
+  const sceneDuration = useMemo(
+    () => Math.max(5, getSceneDuration(sceneDialogues)),
+    [sceneDialogues]
   );
 
-  const handlePlayPause = useCallback(
-    () => viewState.setIsPlaying(!viewState.isPlaying),
-    [viewState.isPlaying, viewState.setIsPlaying]
+  const handleSeek = useCallback(
+    (time: number) => {
+      setCurrentTime(time);
+      // Convert time → dialogue index → select in editor
+      const dialogues = useDialoguesStore.getState().dialoguesByScene[sceneId || ''] || [];
+      if (dialogues.length > 0 && onSelectDialogue && selectedScene?.id) {
+        const idx = getDialogueIndexAtTime(dialogues, time);
+        onSelectDialogue(selectedScene.id, idx);
+      }
+    },
+    [setCurrentTime, sceneId, selectedScene?.id, onSelectDialogue]
   );
+
+  const handlePlayPause = useCallback(() => {
+    const newIsPlaying = !viewState.isPlaying;
+    viewState.setIsPlaying(newIsPlaying);
+    // Auto-select first dialogue when starting playback with no dialogue selected
+    if (newIsPlaying && selectedScene?.id && dialoguesCount > 0) {
+      const noDialogueSelected =
+        !selectedElement ||
+        selectedElement.type !== 'dialogue' ||
+        selectedElement.sceneId !== selectedScene.id;
+      if (noDialogueSelected) {
+        onSelectDialogue?.(selectedScene.id, 0);
+      }
+    }
+  }, [viewState.isPlaying, viewState.setIsPlaying, selectedScene, selectedElement, onSelectDialogue]);
 
   const handleCloseAddCharacterModal = useCallback(
     () => setShowAddCharacterModal(false),
@@ -241,7 +284,7 @@ export default function MainCanvas({
         scene={selectedScene}
         dialoguesCount={dialoguesCount}
         fullscreenMode={fullscreenMode}
-        onFullscreenChange={onFullscreenChange}
+        onFullscreenChange={setFullscreenMode}
       />
 
       {/* Zone canvas + lecteur — flex-col simple, pas de librairie tierce */}
@@ -264,15 +307,23 @@ export default function MainCanvas({
               } ${
                 dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''
               }`}
-              style={{
-                backgroundImage: selectedScene.backgroundUrl ? `url(${selectedScene.backgroundUrl})` : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
               onDragOver={dragDrop.handleDragOver}
               onDragLeave={dragDrop.handleDragLeave}
               onDrop={dragDrop.handleDrop}
             >
+              {/* ── Fond — div séparée pour que le filtre n'affecte PAS les personnages ── */}
+              {selectedScene.backgroundUrl && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage: `url(${selectedScene.backgroundUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: buildFilterCSS(selectedScene.backgroundFilter),
+                  }}
+                />
+              )}
+
               <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
 
               <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
@@ -293,9 +344,14 @@ export default function MainCanvas({
                     canvasDimensions={canvasDimensions}
                     gridEnabled={viewState.gridEnabled}
                     selectedCharacterId={selection.selectedCharacterId ?? undefined}
+                    activeMoodOverride={activeMoodOverrides[sceneChar.id]}
                     onCharacterClick={selection.handleCharacterClick}
                     onContextMenu={contextMenu.handleCharacterRightClick}
                     onUpdatePosition={handleUpdateCharacterPosition}
+                    onFlipHorizontal={() => contextMenu.handleFlipHorizontal(sceneChar.id)}
+                    onRemove={() => contextMenu.handleRemove(sceneChar.id)}
+                    onPositionChange={(x, y) => selectedScene?.id && actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { position: { x, y } })}
+                    onScaleChange={(scale) => selectedScene?.id && actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { scale })}
                   />
                 );
               })}
@@ -348,13 +404,12 @@ export default function MainCanvas({
               />
 
               {enableStatsHUD && (
-                <div className="absolute top-4 left-4 z-10 bg-card/85 backdrop-blur-sm rounded-lg border border-border p-3 w-48 space-y-2 shadow-lg">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1">
-                    <BarChart3 className="w-3.5 h-3.5" />
-                    Stats HUD
-                  </div>
-                  <StatBar label="Physique" icon="💪" value={variables[GAME_STATS.PHYSIQUE] ?? 100} size="sm" />
-                  <StatBar label="Mentale" icon="🧠" value={variables[GAME_STATS.MENTALE] ?? 100} size="sm" />
+                <div className="absolute top-4 left-4 z-10">
+                  <CompactStatHUD
+                    physique={variables[GAME_STATS.PHYSIQUE] ?? 100}
+                    mentale={variables[GAME_STATS.MENTALE] ?? 100}
+                    scaleFactor={canvasSize.width > 0 ? canvasSize.width / REFERENCE_CANVAS_WIDTH : 1}
+                  />
                 </div>
               )}
 
@@ -373,6 +428,9 @@ export default function MainCanvas({
                     speakerName={speakerName}
                     currentDialogueText={currentDialogueText}
                     onNavigate={selection.handleDialogueNavigate}
+                    isAutoPlaying={viewState.isPlaying}
+                    onAutoPlayComplete={() => viewState.setIsPlaying(false)}
+                    canvasWidth={canvasSize.width}
                   />
                 );
               })()}
@@ -385,7 +443,7 @@ export default function MainCanvas({
           <SceneInfoBar charactersCount={sceneCharacters.length} dialoguesCount={dialoguesCount} />
           <TimelinePlayhead
             currentTime={currentTime}
-            duration={Math.max(60, dialoguesCount * 5)}
+            duration={sceneDuration}
             dialogues={selectedScene?.dialogues || []}
             onSeek={handleSeek}
             onPlayPause={handlePlayPause}

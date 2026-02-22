@@ -1,11 +1,12 @@
 {
-  "generated": "2026-02-04T22:15:41.770Z",
+  "generated": "2026-02-22T14:23:47.615Z",
   "version": "1.0.0",
-  "totalAssets": 10,
+  "totalAssets": 12,
   "categories": [
     "backgrounds",
     "characters",
-    "music"
+    "music",
+    "sfx"
   ],
   "assets": {
     "backgrounds": [
@@ -95,6 +96,15 @@
     ],
     "music": [
       {
+        "id": "music/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196",
+        "name": "ambbirdcampagne-id-0097lasonotheque.fr-1771770197196",
+        "path": "/assets/music/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196.wav",
+        "type": "wav",
+        "category": "music",
+        "size": 21403284,
+        "modified": "2026-02-22T14:23:17.289Z"
+      },
+      {
         "id": "music/lookupguitarjazz-1769627898826",
         "name": "lookupguitarjazz-1769627898826",
         "path": "/assets/music/lookupguitarjazz-1769627898826.mp3",
@@ -102,6 +112,17 @@
         "category": "music",
         "size": 3427288,
         "modified": "2026-01-28T19:18:18.892Z"
+      }
+    ],
+    "sfx": [
+      {
+        "id": "sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770227461",
+        "name": "ambbirdcampagne-id-0097lasonotheque.fr-1771770227461",
+        "path": "/assets/sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770227461.wav",
+        "type": "wav",
+        "category": "sfx",
+        "size": 21403284,
+        "modified": "2026-02-22T14:23:47.562Z"
       }
     ]
   }

@@ -48,7 +48,6 @@ function HomePage({
   const quotaMax = 5;
   const quotaUsed = quests.length;
   const quotaPercent = Math.min(100, (quotaUsed / quotaMax) * 100);
-  const selectedQuest = quests.find((q) => q.id === selectedQuestId);
 
   return (
     <div className="home-container">

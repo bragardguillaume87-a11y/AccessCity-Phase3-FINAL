@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AnimatedProgressBar } from '@/components/ui/progress-bar';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
  * Moral impact data structure
  */
 export interface MoralImpact {
-  /** Variable name (e.g., "Empathie", "Courage") */
+  /** Variable name (e.g., "physique", "mentale") */
   variable: string;
   /** Change amount (positive or negative) */
   delta: number;
@@ -57,7 +57,7 @@ export interface OutcomeModalProps {
  *   isOpen={showOutcome}
  *   message="Votre choix a eu un impact significatif sur la situation."
  *   illustration="/assets/outcome.png"
- *   moral={{ variable: 'Empathie', delta: 10 }}
+ *   moral={{ variable: 'physique', delta: 10 }}
  *   onClose={() => setShowOutcome(false)}
  * />
  * ```
@@ -91,6 +91,7 @@ export default function OutcomeModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl" onKeyDown={handleKeyDown}>
+        <DialogTitle className="sr-only">Résultat</DialogTitle>
         <div className="py-6 space-y-6">
           {/* Illustration */}
           {illustration && (

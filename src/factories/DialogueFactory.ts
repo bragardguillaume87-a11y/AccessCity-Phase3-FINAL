@@ -29,8 +29,9 @@
  */
 
 import type { Dialogue, DialogueChoice, DialogueAudio } from '@/types';
+import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
-import { DialogueSchema, DialogueInputSchema, validate } from '@/schemas/validation';
+import { DialogueSchema, validate } from '@/schemas/validation';
 import { z } from 'zod';
 
 /**
@@ -155,7 +156,7 @@ export class DialogueFactory {
     speaker: string,
     text: string,
     sfxUrl: string,
-    volume: number = 0.7
+    volume: number = AUDIO_DEFAULTS.SFX_VOLUME
   ): Dialogue {
     if (!sfxUrl || sfxUrl.trim() === '') {
       logger.warn('[DialogueFactory] Creating dialogue with empty sfxUrl');
@@ -194,17 +195,21 @@ export class DialogueFactory {
 
   /**
    * Create a placeholder/empty dialogue
-   * Used for initialization or temporary states
+   * Used for initialization or temporary states.
+   *
+   * ⚠️ Bypasses Zod validation intentionally — text is empty (draft state).
+   *    Call DialogueFactory.validate() before persisting.
    *
    * @param speaker - Optional speaker name (defaults to 'Narrator')
-   * @returns New empty Dialogue object
+   * @returns New empty Dialogue object (not validated)
    */
   static createEmpty(speaker: string = 'Narrator'): Dialogue {
-    return this.create({
+    return {
+      id: this.generateId(),
       speaker,
       text: '',
       choices: [],
-    });
+    };
   }
 
   /**

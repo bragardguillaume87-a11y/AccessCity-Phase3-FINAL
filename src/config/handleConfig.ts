@@ -1,7 +1,5 @@
-import { Position } from '@xyflow/react';
-
 /**
- * handleConfig.ts - Single source of truth for ReactFlow handle IDs and routing
+ * handleConfig.ts — Barrel module for handle IDs, node IDs, and serpentine routing
  *
  * SERP-FIX Architecture:
  * ReactFlow Handle has a single type (source OR target).
@@ -17,9 +15,34 @@ import { Position } from '@xyflow/react';
  * │  Left      │  'left'     │ target  │  'left-out' src │
  * │  Right     │  'right'    │ source  │  'right-in' tgt │
  * └──────────────────────────────────────────────────────┘
+ *
+ * Split into 3 focused modules (Phase 3.3):
+ * - handleConfig.ts (this file) — Handle IDs, definitions, choice handles
+ * - nodeIdCodec.ts — Dialogue node ID encode/decode
+ * - serpentineRouting.ts — Row detection + edge handle resolution
  */
 
+import { Position } from '@xyflow/react';
+
+// ─── Re-exports from sub-modules (backward compatibility) ────
+export {
+  dialogueNodeId,
+  extractDialogueIndex,
+  safeExtractDialogueIndex,
+  extractSceneId,
+} from './nodeIdCodec';
+
+export {
+  SERPENTINE_Y_THRESHOLD,
+  buildNodeRowMap,
+  getSerpentineHandles,
+  recalculateSerpentineEdges,
+} from './serpentineRouting';
+
+export type { NodeRowInfo } from './serpentineRouting';
+
 // ─── Handle IDs ──────────────────────────────────────────────
+
 export const HANDLE_ID = {
   TOP: 'top',
   BOTTOM: 'bottom',
@@ -45,7 +68,6 @@ export function isChoiceHandle(handleId: string | null | undefined): boolean {
 }
 
 // ─── Handle Definitions ─────────────────────────────────────
-// Used by NodeHandles component and for type-safety
 
 export interface HandleDef {
   id: string;
@@ -65,143 +87,3 @@ export const STANDARD_HANDLES: HandleDef[] = [
   { id: HANDLE_ID.LEFT_OUT,  type: 'source', position: Position.Left },
   { id: HANDLE_ID.RIGHT_IN,  type: 'target', position: Position.Right },
 ];
-
-// ─── Serpentine Routing ──────────────────────────────────────
-
-/** Y-threshold for detecting nodes in the same row */
-export const SERPENTINE_Y_THRESHOLD = 100;
-
-export interface NodeRowInfo {
-  rowIndex: number;
-  positionInRow: number;
-}
-
-/**
- * Build a map of nodeId -> row information based on Y positions.
- * Single source of truth for row detection (used by both initial layout and drag sync).
- */
-export function buildNodeRowMap<T extends { id: string; position: { x: number; y: number } }>(
-  nodes: T[]
-): Map<string, NodeRowInfo> {
-  const nodeRowMap = new Map<string, NodeRowInfo>();
-  if (nodes.length === 0) return nodeRowMap;
-
-  const sortedByY = [...nodes].sort((a, b) => a.position.y - b.position.y);
-
-  const rows: T[][] = [];
-  let currentRow: T[] = [sortedByY[0]];
-  let currentY = sortedByY[0].position.y;
-
-  for (let i = 1; i < sortedByY.length; i++) {
-    const node = sortedByY[i];
-    if (Math.abs(node.position.y - currentY) < SERPENTINE_Y_THRESHOLD) {
-      currentRow.push(node);
-    } else {
-      rows.push(currentRow);
-      currentRow = [node];
-      currentY = node.position.y;
-    }
-  }
-  rows.push(currentRow);
-
-  rows.forEach((row, rowIndex) => {
-    const sortedRow = [...row].sort((a, b) => a.position.x - b.position.x);
-    sortedRow.forEach((node, positionInRow) => {
-      nodeRowMap.set(node.id, { rowIndex, positionInRow });
-    });
-  });
-
-  return nodeRowMap;
-}
-
-/**
- * Determine the correct source/target handle IDs for an edge
- * based on serpentine row positions of its source and target nodes.
- *
- * Rules:
- * - Same row, even (0,2,4): LTR flow → source:right, target:left
- * - Same row, odd (1,3,5): RTL flow → source:left-out, target:right-in
- * - Different rows: vertical → source:bottom, target:top
- */
-export function getSerpentineHandles(
-  sourceRowIndex: number,
-  targetRowIndex: number,
-  currentSourceHandle: string | null | undefined
-): { sourceHandle: string; targetHandle: string } {
-  const sameRow = sourceRowIndex === targetRowIndex;
-  const isEvenRow = sourceRowIndex % 2 === 0;
-  const isChoice = isChoiceHandle(currentSourceHandle);
-
-  if (sameRow) {
-    if (isEvenRow) {
-      return {
-        sourceHandle: isChoice ? currentSourceHandle! : HANDLE_ID.RIGHT,
-        targetHandle: HANDLE_ID.LEFT,
-      };
-    } else {
-      return {
-        sourceHandle: isChoice ? currentSourceHandle! : HANDLE_ID.LEFT_OUT,
-        targetHandle: HANDLE_ID.RIGHT_IN,
-      };
-    }
-  } else {
-    return {
-      sourceHandle: isChoice ? currentSourceHandle! : HANDLE_ID.BOTTOM,
-      targetHandle: HANDLE_ID.TOP,
-    };
-  }
-}
-
-// ─── Node ID Helpers ─────────────────────────────────────────
-
-/** Dialogue node ID separator */
-const NODE_ID_SEPARATOR = '-d-';
-
-/** Build a dialogue node ID from sceneId and dialogue index */
-export function dialogueNodeId(sceneId: string, index: number): string {
-  return `${sceneId}${NODE_ID_SEPARATOR}${index}`;
-}
-
-/** Extract the dialogue index from a node ID. Returns NaN if invalid. */
-export function extractDialogueIndex(nodeId: string): number {
-  const parts = nodeId.split(NODE_ID_SEPARATOR);
-  return parseInt(parts[parts.length - 1], 10);
-}
-
-/** Extract dialogue index with validation. Returns -1 if invalid or negative. */
-export function safeExtractDialogueIndex(nodeId: string): number {
-  const index = extractDialogueIndex(nodeId);
-  return (Number.isNaN(index) || index < 0) ? -1 : index;
-}
-
-/** Extract scene ID from a dialogue node ID (format: "sceneId-d-index") */
-export function extractSceneId(nodeId: string): string {
-  const sepIndex = nodeId.indexOf(NODE_ID_SEPARATOR);
-  return sepIndex === -1 ? nodeId : nodeId.substring(0, sepIndex);
-}
-
-// ─── Serpentine Edge Recalculation (shared pure function) ────
-
-/**
- * Recalculate edge handles for serpentine routing based on node positions.
- * Pure function — no React dependencies. Used by both useSerpentineSync hook
- * and applySerpentineEdgeRouting utility.
- */
-export function recalculateSerpentineEdges<
-  E extends { source: string; target: string; sourceHandle?: string | null }
->(
-  nodes: Array<{ id: string; position: { x: number; y: number } }>,
-  edges: E[]
-): E[] {
-  if (nodes.length === 0) return edges;
-  const nodeRowMap = buildNodeRowMap(nodes);
-  return edges.map(edge => {
-    const sourceInfo = nodeRowMap.get(edge.source);
-    const targetInfo = nodeRowMap.get(edge.target);
-    if (!sourceInfo || !targetInfo) return edge;
-    const { sourceHandle, targetHandle } = getSerpentineHandles(
-      sourceInfo.rowIndex, targetInfo.rowIndex, edge.sourceHandle
-    );
-    return { ...edge, sourceHandle, targetHandle };
-  });
-}

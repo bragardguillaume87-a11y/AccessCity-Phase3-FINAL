@@ -171,26 +171,3 @@ export function getDefaultGameStats(
   };
 }
 
-/**
- * Map from legacy French stat names to GameStatKey
- * Used for migration/compatibility
- */
-export const LEGACY_STAT_MAPPING: Record<string, GameStatKey> = {
-  // Former social stats → now physical/mental bars
-  'Empathie': 'mentale',
-  'Autonomie': 'physique',
-  'Confiance': 'mentale',
-  'Empathy': 'mentale',
-  'Autonomy': 'physique',
-  'Confidence': 'mentale',
-  // New stats (for migration of any old uppercase keys)
-  'Physique': 'physique',
-  'Mentale': 'mentale',
-};
-
-/**
- * Convert legacy stat name to GameStatKey
- */
-export function legacyToStatKey(legacyName: string): GameStatKey | null {
-  return LEGACY_STAT_MAPPING[legacyName] ?? null;
-}

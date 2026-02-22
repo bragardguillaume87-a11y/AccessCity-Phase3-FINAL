@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import type { ComplexityLevel } from '@/types';
+import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext } from '@/types';
 
 /**
  * UI Store
@@ -123,6 +123,16 @@ function persistProConfig(config: ProModeConfig): void {
 // ============================================================================
 
 interface UIState {
+  // ── Layout / Editor shell state ──────────────────────────────────────
+  // These were previously local state in EditorShell and are now global
+  // so any component can read/write them without prop drilling.
+  fullscreenMode: FullscreenMode;
+  activeSection: SectionId | null;
+  activeModal: string | null;
+  modalContext: ModalContext;
+  showProblemsPanel: boolean;
+  commandPaletteOpen: boolean | string;
+
   // State
   selectedSceneId: string | null;
   selectedSceneForEdit: string | null;
@@ -149,6 +159,14 @@ interface UIState {
   proPaginationEnabled: boolean;
   proPageSize: number;
   proCurrentPage: number;
+
+  // ── Layout actions ───────────────────────────────────────────────────
+  setFullscreenMode: (mode: FullscreenMode) => void;
+  setActiveSection: (section: SectionId | null) => void;
+  setActiveModal: (modal: string | null) => void;
+  setModalContext: (ctx: ModalContext) => void;
+  setShowProblemsPanel: (show: boolean) => void;
+  setCommandPaletteOpen: (open: boolean | string) => void;
 
   // Actions
   setSelectedSceneId: (sceneId: string | null) => void;
@@ -194,6 +212,14 @@ export const useUIStore = create<UIState>()(
       const proConfig = getPersistedProConfig();
 
       return {
+        // Layout / Editor shell state
+        fullscreenMode: null,
+        activeSection: null,
+        activeModal: null,
+        modalContext: {},
+        showProblemsPanel: false,
+        commandPaletteOpen: false,
+
         // State
         selectedSceneId: null,
         selectedSceneForEdit: null,
@@ -220,6 +246,31 @@ export const useUIStore = create<UIState>()(
         proPaginationEnabled: false,
         proPageSize: 8,
         proCurrentPage: 0,
+
+        // Layout actions
+        setFullscreenMode: (mode) => {
+          set({ fullscreenMode: mode }, false, 'ui/setFullscreenMode');
+        },
+
+        setActiveSection: (section) => {
+          set({ activeSection: section }, false, 'ui/setActiveSection');
+        },
+
+        setActiveModal: (modal) => {
+          set({ activeModal: modal }, false, 'ui/setActiveModal');
+        },
+
+        setModalContext: (ctx) => {
+          set({ modalContext: ctx }, false, 'ui/setModalContext');
+        },
+
+        setShowProblemsPanel: (show) => {
+          set({ showProblemsPanel: show }, false, 'ui/setShowProblemsPanel');
+        },
+
+        setCommandPaletteOpen: (open) => {
+          set({ commandPaletteOpen: open }, false, 'ui/setCommandPaletteOpen');
+        },
 
         // Actions
         setSelectedSceneId: (sceneId) => {

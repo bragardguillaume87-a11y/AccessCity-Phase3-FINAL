@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronLeft, Check, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { t } from '@/lib/translations';
 import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
 
@@ -12,157 +11,128 @@ interface AnimationPickerPanelProps {
   onBack: () => void;
 }
 
-// Animation options with visual representations
 const ANIMATIONS = [
-  { id: 'none', emoji: '⏹️', key: 'animationPicker.none' as const },
-  { id: 'fadeIn', emoji: '✨', key: 'animationPicker.fadeIn' as const },
+  { id: 'none',        emoji: '⏹️', key: 'animationPicker.none'        as const },
+  { id: 'fadeIn',      emoji: '✨', key: 'animationPicker.fadeIn'      as const },
   { id: 'slideInLeft', emoji: '👈', key: 'animationPicker.slideInLeft' as const },
-  { id: 'slideInRight', emoji: '👉', key: 'animationPicker.slideInRight' as const },
-  { id: 'slideInUp', emoji: '👆', key: 'animationPicker.slideInUp' as const },
+  { id: 'slideInRight',emoji: '👉', key: 'animationPicker.slideInRight'as const },
+  { id: 'slideInUp',   emoji: '👆', key: 'animationPicker.slideInUp'   as const },
   { id: 'slideInDown', emoji: '👇', key: 'animationPicker.slideInDown' as const },
-  { id: 'pop', emoji: '💥', key: 'animationPicker.pop' as const },
-  { id: 'bounce', emoji: '🏀', key: 'animationPicker.bounce' as const }
+  { id: 'pop',         emoji: '💥', key: 'animationPicker.pop'         as const },
+  { id: 'bounce',      emoji: '🏀', key: 'animationPicker.bounce'      as const },
 ];
 
-/**
- * AnimatedEmoji - Shows emoji with looping animation preview on hover
- */
+/** Emoji animé au survol — preview de l'animation d'entrée. */
 function AnimatedEmoji({
   emoji,
   animationId,
-  isHovered
+  isHovered,
 }: {
   emoji: string;
   animationId: string;
   isHovered: boolean;
 }) {
-  // Get animation variant, default to 'none' if not found
   const variant = CHARACTER_ANIMATION_VARIANTS[animationId as keyof typeof CHARACTER_ANIMATION_VARIANTS]
-    || CHARACTER_ANIMATION_VARIANTS.none;
+    ?? CHARACTER_ANIMATION_VARIANTS.none;
 
   if (!isHovered || animationId === 'none') {
-    // Static emoji when not hovered or animation is 'none'
-    return (
-      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        <span className="text-xl">{emoji}</span>
-      </div>
-    );
+    return <span className="text-base leading-none">{emoji}</span>;
   }
 
-  // Extract animation properties without transition
-  const initialProps = {
-    opacity: variant.initial.opacity,
-    scale: variant.initial.scale,
-    x: variant.initial.x,
-    y: variant.initial.y
-  };
-
-  const animateProps = {
-    opacity: variant.animate.opacity,
-    scale: variant.animate.scale,
-    x: variant.animate.x,
-    y: variant.animate.y
-  };
-
-  // Animated emoji with looping animation
   return (
-    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
-      <motion.span
-        className="text-xl"
-        initial={initialProps}
-        animate={animateProps}
-        transition={{
-          duration: 0.6,
-          repeat: Infinity,
-          repeatType: 'loop',
-          repeatDelay: 0.3,
-          ease: 'easeOut'
-        }}
-      >
-        {emoji}
-      </motion.span>
-    </div>
+    <motion.span
+      className="text-base leading-none"
+      initial={{ opacity: variant.initial.opacity, scale: variant.initial.scale, x: variant.initial.x, y: variant.initial.y }}
+      animate={{ opacity: variant.animate.opacity, scale: variant.animate.scale, x: variant.animate.x, y: variant.animate.y }}
+      transition={{ duration: 0.5, repeat: Infinity, repeatType: 'loop', repeatDelay: 0.4, ease: 'easeOut' }}
+    >
+      {emoji}
+    </motion.span>
   );
 }
 
 /**
- * AnimationPickerPanel - Visual animation selector
+ * AnimationPickerPanel — Sélecteur d'animation d'entrée compact.
  *
- * Shows all entrance animations with emojis and descriptions.
- * Large touch targets for kids.
+ * Liste verticale avec preview hover sur chaque emoji.
  */
 export function AnimationPickerPanel({
   characterName,
   currentAnimation,
   onSelect,
-  onBack
+  onBack,
 }: AnimationPickerPanelProps) {
-  const [hoveredAnimation, setHoveredAnimation] = useState<string | null>(null);
+  const [hoveredAnim, setHoveredAnim] = useState<string | null>(null);
 
   return (
-    <div className="animate-step-slide">
-      {/* Header with back button */}
+    <div>
+      {/* Retour */}
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-2 mb-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 mb-2 text-xs font-medium transition-colors"
+        style={{ color: 'rgba(255,255,255,0.45)' }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
       >
-        <ChevronLeft className="w-4 h-4" />
-        <span>{t('animationPicker.title', { name: characterName })}</span>
+        <ChevronLeft className="w-3.5 h-3.5" />
+        {t('animationPicker.title', { name: characterName })}
       </button>
 
-      {/* Current animation indicator */}
-      <div className="mb-3 px-3 py-2 bg-primary/10 rounded-lg border border-primary/30 flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <span className="text-xs text-muted-foreground">{t('animationPicker.current')} :</span>
-        <span className="font-medium">
-          {t(ANIMATIONS.find(a => a.id === currentAnimation)?.key || 'animationPicker.none')}
-        </span>
+      {/* Liste */}
+      <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '280px' }}>
+        {ANIMATIONS.map((anim, idx) => {
+          const isActive = currentAnimation === anim.id;
+          return (
+            <motion.div
+              key={anim.id}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.03, duration: 0.12 }}
+            >
+              <button
+                type="button"
+                onClick={() => onSelect(anim.id)}
+                onMouseEnter={e => { setHoveredAnim(anim.id); if (!isActive) e.currentTarget.style.background = 'var(--color-bg-hover)'; }}
+                onMouseLeave={e => { setHoveredAnim(null);   if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                onFocus={()  => setHoveredAnim(anim.id)}
+                onBlur={()   => setHoveredAnim(null)}
+                className="w-full flex items-center gap-2.5 rounded-lg text-left transition-colors"
+                style={{
+                  padding: '6px 8px',
+                  background: isActive ? 'var(--color-primary-muted, rgba(124,58,237,0.12))' : 'transparent',
+                }}
+              >
+                {/* Icône animée */}
+                <div
+                  className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
+                  style={{ background: 'var(--color-bg-hover)' }}
+                >
+                  <AnimatedEmoji
+                    emoji={anim.emoji}
+                    animationId={anim.id}
+                    isHovered={hoveredAnim === anim.id}
+                  />
+                </div>
+
+                {/* Nom */}
+                <span
+                  className="flex-1 text-xs font-medium leading-tight truncate"
+                  style={{ color: isActive ? 'var(--color-primary)' : 'rgba(255,255,255,0.9)' }}
+                >
+                  {t(anim.key)}
+                </span>
+
+                {/* Checkmark */}
+                {isActive && <Check className="w-3.5 h-3.5 flex-shrink-0 text-primary" />}
+              </button>
+            </motion.div>
+          );
+        })}
       </div>
 
-      {/* Animation grid */}
-      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-        {ANIMATIONS.map(anim => (
-          <button
-            key={anim.id}
-            type="button"
-            onClick={() => onSelect(anim.id)}
-            onMouseEnter={() => setHoveredAnimation(anim.id)}
-            onMouseLeave={() => setHoveredAnimation(null)}
-            onFocus={() => setHoveredAnimation(anim.id)}
-            onBlur={() => setHoveredAnimation(null)}
-            className={cn(
-              "relative flex items-center gap-3 p-3 rounded-xl transition-all duration-200",
-              "hover:scale-[1.02] active:scale-[0.98]",
-              "border-2",
-              currentAnimation === anim.id
-                ? "bg-primary/20 border-primary text-foreground"
-                : "bg-card border-border hover:border-primary/50"
-            )}
-          >
-            {/* Emoji with animation preview */}
-            <AnimatedEmoji
-              emoji={anim.emoji}
-              animationId={anim.id}
-              isHovered={hoveredAnimation === anim.id}
-            />
-
-            {/* Label */}
-            <div className="flex-1 text-left min-w-0">
-              <div className="font-medium text-sm truncate">{t(anim.key)}</div>
-            </div>
-
-            {/* Check if selected */}
-            {currentAnimation === anim.id && (
-              <Check className="w-5 h-5 text-primary flex-shrink-0" />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Help text */}
-      <p className="mt-3 text-xs text-muted-foreground text-center">
-        L'animation joue quand la scène commence
+      <p className="mt-2 text-[10px] text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        Survole un item pour prévisualiser
       </p>
     </div>
   );

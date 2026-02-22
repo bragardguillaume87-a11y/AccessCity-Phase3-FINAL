@@ -18,19 +18,18 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { useUIStore } from '@/stores';
 import { useEditorFacade } from '@/facades';
 import { logger } from '@/utils/logger';
-import type { Scene } from '@/types';
+import type { SceneMetadata } from '@/types';
 
 /**
  * Editor Logic Configuration
  */
 interface UseEditorLogicConfig {
   /**
-   * Current scenes array
+   * Current scenes array (métadonnées uniquement — pas de dialogues/characters)
    */
-  scenes: Scene[];
+  scenes: SceneMetadata[];
 
   /**
    * Currently selected scene ID for editing
@@ -107,9 +106,8 @@ export function useEditorLogic(config: UseEditorLogicConfig): UseEditorLogicRetu
 
       setSelectedSceneForEdit(firstScene.id);
 
-      // Use EditorFacade's intelligent scene selection
-      // Automatically handles dialogue auto-selection or scene selection
-      editor.selectSceneWithAutoDialogue(firstScene.id);
+      // Select the scene (not auto-dialogue) so UnifiedPanel is visible on load
+      editor.selectScene(firstScene.id);
     }
   }, [selectedSceneForEdit, scenes, setSelectedSceneForEdit, editor]);
 

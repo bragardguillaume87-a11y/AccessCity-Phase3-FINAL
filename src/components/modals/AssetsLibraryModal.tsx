@@ -23,34 +23,27 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Asset } from '@/types';
+import type { AmbientAudio } from '@/types/audio';
 
-/**
- * Props for AssetsLibraryModal component
- */
 export interface AssetsLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialCategory?: string;
   targetSceneId?: string;
+  /** When 'sceneAudio', audio cards show "Utiliser cette musique" (assigns BGM).
+   *  When 'ambientTrack', audio cards show "Utiliser" (assigns ambient track at selectionSlot). */
+  selectionPurpose?: 'sceneAudio' | 'ambientTrack';
+  /** Ambient track slot (0 or 1). Used when selectionPurpose === 'ambientTrack'. */
+  selectionSlot?: 0 | 1;
 }
 
-/**
- * AssetsLibraryModal - Gestionnaire d'assets avec onglets
- *
- * Interface compacte organisée en 3 onglets:
- * - **Bibliothèque**: Navigation et visualisation des assets
- * - **Uploader**: Zone d'upload dédiée
- * - **Gestion**: Sélection multiple et suppression
- *
- * En mode sélection de fond (targetSceneId fourni):
- * - Seul l'onglet Bibliothèque est visible
- * - Click sur un asset = sélection du fond
- */
 export default function AssetsLibraryModal({
   isOpen,
   onClose,
   initialCategory,
-  targetSceneId
+  targetSceneId,
+  selectionPurpose,
+  selectionSlot = 0,
 }: AssetsLibraryModalProps) {
   const [activeTab, setActiveTab] = useState('library');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -58,16 +51,12 @@ export default function AssetsLibraryModal({
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('name-asc');
 
-  // Hooks
   const { assets: rawAssets, loading, deleteAssets, deleting, moveAsset, moving } = useAssets();
   const { favorites, isFavorite } = useFavorites();
-
-  // Stores
   const scenes = useScenesStore(state => state.scenes);
   const updateScene = useScenesStore(state => state.updateScene);
   const characters = useCharactersStore(state => state.characters);
 
-  // Check if asset is used in the project
   const getAssetUsage = (assetPath: string): { scenes: string[]; characters: string[] } => {
     const usedInScenes = scenes
       .filter(s => s.backgroundUrl === assetPath)
@@ -78,11 +67,12 @@ export default function AssetsLibraryModal({
     return { scenes: usedInScenes, characters: usedByCharacters };
   };
 
-  // Mode sélection de fond
   const targetScene = targetSceneId ? scenes.find(s => s.id === targetSceneId) : null;
-  const isBackgroundSelectionMode = !!targetSceneId && !!targetScene;
+  const isAudioSelectionMode   = selectionPurpose === 'sceneAudio'   && !!targetSceneId && !!targetScene;
+  const isAmbientSelectionMode = selectionPurpose === 'ambientTrack' && !!targetSceneId && !!targetScene;
+  // Background mode : targetSceneId fourni SANS purpose audio/ambiance
+  const isBackgroundSelectionMode = !!targetSceneId && !!targetScene && !isAudioSelectionMode && !isAmbientSelectionMode;
 
-  // Add IDs to assets
   const assets = useMemo(() => {
     return rawAssets.map(asset => ({
       ...asset,
@@ -90,14 +80,11 @@ export default function AssetsLibraryModal({
     }));
   }, [rawAssets]);
 
-  // Filter and sort assets
   const filteredAssets = useMemo(() => {
     const filtered = assets.filter(asset => {
-      // Search filter
       if (searchQuery && !asset.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      // Category filter
       if (activeCategory === 'favorites') {
         return isFavorite(asset.path);
       }
@@ -107,7 +94,6 @@ export default function AssetsLibraryModal({
       return true;
     });
 
-    // Sort assets
     return filtered.sort((a, b) => {
       switch (sortOrder) {
         case 'name-asc':
@@ -115,7 +101,6 @@ export default function AssetsLibraryModal({
         case 'name-desc':
           return b.name.localeCompare(a.name);
         case 'recent':
-          // Sort by path timestamp (files have timestamp in name)
           const tsA = a.path.match(/-(\d+)\./)?.[1] || '0';
           const tsB = b.path.match(/-(\d+)\./)?.[1] || '0';
           return parseInt(tsB) - parseInt(tsA);
@@ -129,7 +114,6 @@ export default function AssetsLibraryModal({
     });
   }, [assets, searchQuery, activeCategory, isFavorite, sortOrder]);
 
-  // Category counts
   const categoryCount = useMemo(() => ({
     all: assets.length,
     backgrounds: assets.filter(a => a.category === 'backgrounds').length,
@@ -138,21 +122,23 @@ export default function AssetsLibraryModal({
     music: assets.filter(a => a.category === 'music').length,
     sfx: assets.filter(a => a.category === 'sfx').length,
     voices: assets.filter(a => a.category === 'voices').length,
+    atmosphere: assets.filter(a => a.category === 'atmosphere').length,
   }), [assets]);
 
-  // Set initial category
   useEffect(() => {
     if (isOpen) {
       if (isBackgroundSelectionMode) {
         setActiveCategory('backgrounds');
         setActiveTab('library');
+      } else if (isAmbientSelectionMode) {
+        setActiveCategory('atmosphere');
+        setActiveTab('library');
       } else if (initialCategory) {
         setActiveCategory(initialCategory);
       }
     }
-  }, [isOpen, initialCategory, isBackgroundSelectionMode]);
+  }, [isOpen, initialCategory, isBackgroundSelectionMode, isAmbientSelectionMode]);
 
-  // Reset on close
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery('');
@@ -163,14 +149,26 @@ export default function AssetsLibraryModal({
     }
   }, [isOpen]);
 
-  // Handle background selection
   const handleSelectBackground = (assetPath: string) => {
     if (!isBackgroundSelectionMode || !targetSceneId) return;
     updateScene(targetSceneId, { backgroundUrl: assetPath });
     onClose();
   };
 
-  // Handle single asset delete with usage warning
+  const handleSelectAudio = (assetPath: string) => {
+    if (!isAudioSelectionMode || !targetSceneId) return;
+    updateScene(targetSceneId, { audio: { url: assetPath, volume: 0.5, loop: true } });
+    onClose();
+  };
+
+  const handleSelectAmbient = (assetPath: string) => {
+    if (!isAmbientSelectionMode || !targetSceneId) return;
+    const currentTracks = [...(targetScene?.ambientTracks ?? [])] as [AmbientAudio?, AmbientAudio?];
+    currentTracks[selectionSlot] = { url: assetPath, volume: 0.4, loop: true };
+    updateScene(targetSceneId, { ambientTracks: currentTracks });
+    onClose();
+  };
+
   const handleSingleDelete = async (assetPath: string, assetName?: string) => {
     const usage = getAssetUsage(assetPath);
     const isUsed = usage.scenes.length > 0 || usage.characters.length > 0;
@@ -190,14 +188,11 @@ export default function AssetsLibraryModal({
     if (!window.confirm(confirmMessage)) return;
 
     const result = await deleteAssets([assetPath]);
-    if (result.success && result.count > 0) {
-      // Silently deleted
-    } else if (result.errors && result.errors.length > 0) {
+    if (result.errors && result.errors.length > 0) {
       alert(`Erreur: ${result.errors[0].error}`);
     }
   };
 
-  // Handle bulk delete
   const handleBulkDelete = async (paths: string[]) => {
     const result = await deleteAssets(paths);
     if (result.success && result.count > 0) {
@@ -208,18 +203,15 @@ export default function AssetsLibraryModal({
     }
   };
 
-  // Handle asset click - show preview panel
   const handleAssetClick = (asset: Asset) => {
     setPreviewAsset(previewAsset?.id === asset.id ? null : asset);
   };
 
-  // Handle category change (move asset)
   const handleCategoryChange = async (newCategory: string) => {
     if (!previewAsset || previewAsset.category === newCategory) return;
 
     const result = await moveAsset(previewAsset.path, newCategory);
     if (result.success && result.newPath) {
-      // Update preview with new path
       setPreviewAsset({
         ...previewAsset,
         path: result.newPath,
@@ -233,7 +225,6 @@ export default function AssetsLibraryModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogContent className="max-w-[1200px] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
-        {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-slate-700/50 bg-slate-900">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary">
@@ -241,11 +232,17 @@ export default function AssetsLibraryModal({
             </div>
             <div>
               <DialogTitle className="text-base">
-                {isBackgroundSelectionMode ? 'Sélectionner un arrière-plan' : 'Bibliothèque d\'Assets'}
+                {isBackgroundSelectionMode
+                  ? 'Sélectionner un arrière-plan'
+                  : isAudioSelectionMode
+                    ? 'Choisir une musique'
+                    : isAmbientSelectionMode
+                      ? `Choisir une ambiance — Piste ${selectionSlot + 1}`
+                      : 'Bibliothèque d\'Assets'}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                {isBackgroundSelectionMode
-                  ? `Pour: "${targetScene?.title || targetScene?.id}"`
+                {isBackgroundSelectionMode || isAudioSelectionMode || isAmbientSelectionMode
+                  ? `Pour : "${targetScene?.title || targetScene?.id}"`
                   : `${assets.length} assets disponibles`
                 }
               </DialogDescription>
@@ -253,9 +250,7 @@ export default function AssetsLibraryModal({
           </div>
         </DialogHeader>
 
-        {/* Main Content */}
         <div className="flex-1 flex min-h-0">
-          {/* Tabs Section */}
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -266,21 +261,23 @@ export default function AssetsLibraryModal({
                 <Package className="h-3.5 w-3.5" />
                 Bibliothèque
               </TabsTrigger>
-              {!isBackgroundSelectionMode && (
+              {/* Upload visible sauf en mode sélection BGM et fond (pas pour ambiance) */}
+              {!isBackgroundSelectionMode && !isAudioSelectionMode && (
                 <>
                   <TabsTrigger value="upload" className="text-xs gap-1.5">
                     <Upload className="h-3.5 w-3.5" />
                     Uploader
                   </TabsTrigger>
-                  <TabsTrigger value="management" className="text-xs gap-1.5">
-                    <Settings className="h-3.5 w-3.5" />
-                    Sélection multiple
-                  </TabsTrigger>
+                  {!isAmbientSelectionMode && (
+                    <TabsTrigger value="management" className="text-xs gap-1.5">
+                      <Settings className="h-3.5 w-3.5" />
+                      Sélection multiple
+                    </TabsTrigger>
+                  )}
                 </>
               )}
             </TabsList>
 
-            {/* Library Tab */}
             <TabsContent value="library" className="flex-1 m-0 min-h-0">
               <LibraryTab
                 assets={filteredAssets}
@@ -293,22 +290,25 @@ export default function AssetsLibraryModal({
                 favoritesCount={favorites.length}
                 onAssetClick={handleAssetClick}
                 onAssetDelete={handleSingleDelete}
-                isSelectionMode={isBackgroundSelectionMode}
-                onSelectBackground={isBackgroundSelectionMode ? handleSelectBackground : undefined}
+                isSelectionMode={isBackgroundSelectionMode || isAudioSelectionMode || isAmbientSelectionMode}
+                onSelectBackground={
+                  isBackgroundSelectionMode ? handleSelectBackground
+                  : isAudioSelectionMode    ? handleSelectAudio
+                  : isAmbientSelectionMode  ? handleSelectAmbient
+                  : undefined
+                }
                 sortOrder={sortOrder}
                 onSortChange={setSortOrder}
               />
             </TabsContent>
 
-            {/* Upload Tab */}
-            {!isBackgroundSelectionMode && (
+            {!isBackgroundSelectionMode && !isAudioSelectionMode && (
               <TabsContent value="upload" className="flex-1 m-0 min-h-0">
                 <UploadTab initialCategory={activeCategory} />
               </TabsContent>
             )}
 
-            {/* Management Tab */}
-            {!isBackgroundSelectionMode && (
+            {!isBackgroundSelectionMode && !isAudioSelectionMode && !isAmbientSelectionMode && (
               <TabsContent value="management" className="flex-1 m-0 min-h-0">
                 <ManagementTab
                   assets={assets}
@@ -320,11 +320,9 @@ export default function AssetsLibraryModal({
             )}
           </Tabs>
 
-          {/* Preview Panel (optional side panel when asset is clicked) */}
-          {previewAsset && !isBackgroundSelectionMode && (
+          {previewAsset && !isBackgroundSelectionMode && !isAudioSelectionMode && (
             <div className="w-[320px] border-l border-slate-700/50 bg-slate-800/50 p-6 shrink-0 overflow-hidden flex flex-col">
               <div className="space-y-4 overflow-y-auto flex-1">
-                {/* Preview Image */}
                 <div className="relative rounded-lg overflow-hidden bg-black/30 border border-slate-600/30">
                   <img
                     src={previewAsset.path}
@@ -333,7 +331,6 @@ export default function AssetsLibraryModal({
                   />
                 </div>
 
-                {/* Asset Name */}
                 <div className="bg-slate-800/80 rounded-lg p-3 border border-slate-600/30">
                   <h4 className="font-semibold text-sm text-white truncate" title={previewAsset.name}>
                     {previewAsset.name}
@@ -341,7 +338,6 @@ export default function AssetsLibraryModal({
                   <p className="text-xs text-slate-400 mt-1">{previewAsset.category}</p>
                 </div>
 
-                {/* Category Selector */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                     <FolderInput className="h-3.5 w-3.5" />
@@ -380,7 +376,6 @@ export default function AssetsLibraryModal({
                   )}
                 </div>
 
-                {/* Delete Button */}
                 <Button
                   variant="destructive"
                   size="sm"

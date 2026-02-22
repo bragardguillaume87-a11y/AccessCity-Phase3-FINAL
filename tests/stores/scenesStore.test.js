@@ -1,51 +1,49 @@
+/**
+ * ScenesStore Tests
+ *
+ * Post-Phase 3 architecture: scenesStore gère uniquement les métadonnées
+ * (id, title, description, backgroundUrl). Les dialogues sont dans
+ * dialoguesStore, les éléments dans sceneElementsStore.
+ */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useScenesStore } from '../../src/stores/scenesStore.js';
 
 describe('ScenesStore', () => {
   beforeEach(() => {
-    // Reset store to initial state before each test
-    const store = useScenesStore.getState();
-    useScenesStore.setState({
-      scenes: [],
-    });
+    useScenesStore.setState({ scenes: [] });
   });
 
   describe('addScene()', () => {
-    it('should add a new scene with default values', () => {
-      const { addScene, scenes } = useScenesStore.getState();
-
+    it('should add a new scene with default metadata', () => {
+      const { addScene } = useScenesStore.getState();
       const sceneId = addScene();
 
-      const updatedScenes = useScenesStore.getState().scenes;
-      expect(updatedScenes).toHaveLength(1);
-      expect(updatedScenes[0]).toMatchObject({
+      const scenes = useScenesStore.getState().scenes;
+      expect(scenes).toHaveLength(1);
+      expect(scenes[0]).toMatchObject({
         id: sceneId,
-        title: 'New scene',
+        title: 'Nouvelle Scène',
         description: '',
-        dialogues: [],
-        textBoxes: [],
-        props: [],
+        backgroundUrl: '',
       });
     });
 
-    it('should add player character by default', () => {
+    it('should NOT have element arrays (SceneMetadata — data lives in other stores)', () => {
       const { addScene } = useScenesStore.getState();
-
       addScene();
 
-      const updatedScenes = useScenesStore.getState().scenes;
-      const newScene = updatedScenes[0];
-
-      expect(newScene.characters).toHaveLength(1);
-      expect(newScene.characters[0]).toMatchObject({
-        characterId: 'player',
-        mood: 'neutral',
-      });
+      const scene = useScenesStore.getState().scenes[0];
+      // Post-Phase 3 (type split) : SceneMetadata n'a PLUS ces champs
+      // - dialogues → dialoguesStore
+      // - characters/textBoxes/props → sceneElementsStore
+      expect(scene.dialogues).toBeUndefined();
+      expect(scene.characters).toBeUndefined();
+      expect(scene.textBoxes).toBeUndefined();
+      expect(scene.props).toBeUndefined();
     });
 
     it('should generate unique IDs', () => {
       const { addScene } = useScenesStore.getState();
-
       const id1 = addScene();
       const id2 = addScene();
 
@@ -55,40 +53,46 @@ describe('ScenesStore', () => {
   });
 
   describe('updateScene()', () => {
-    it('should update scene properties', () => {
+    it('should update scene metadata', () => {
       const { addScene, updateScene } = useScenesStore.getState();
-
       const sceneId = addScene();
+
       updateScene(sceneId, {
-        title: 'Updated Title',
-        description: 'Updated Description',
+        title: 'Titre mis à jour',
+        description: 'Description mise à jour',
       });
 
-      const updatedScenes = useScenesStore.getState().scenes;
-      expect(updatedScenes[0]).toMatchObject({
-        title: 'Updated Title',
-        description: 'Updated Description',
-      });
+      const scene = useScenesStore.getState().scenes[0];
+      expect(scene.title).toBe('Titre mis à jour');
+      expect(scene.description).toBe('Description mise à jour');
     });
 
     it('should not affect other scenes', () => {
       const { addScene, updateScene } = useScenesStore.getState();
-
       const id1 = addScene();
       const id2 = addScene();
 
-      updateScene(id1, { title: 'Scene 1' });
+      updateScene(id1, { title: 'Scène 1' });
 
       const scenes = useScenesStore.getState().scenes;
-      expect(scenes[0].title).toBe('Scene 1');
-      expect(scenes[1].title).toBe('New scene');
+      expect(scenes[0].title).toBe('Scène 1');
+      expect(scenes[1].title).toBe('Nouvelle Scène');
+    });
+
+    it('should update backgroundUrl', () => {
+      const { addScene, updateScene } = useScenesStore.getState();
+      const sceneId = addScene();
+
+      updateScene(sceneId, { backgroundUrl: '/backgrounds/city.jpg' });
+
+      const scene = useScenesStore.getState().scenes[0];
+      expect(scene.backgroundUrl).toBe('/backgrounds/city.jpg');
     });
   });
 
   describe('deleteScene()', () => {
     it('should remove scene by ID', () => {
       const { addScene, deleteScene } = useScenesStore.getState();
-
       const id1 = addScene();
       const id2 = addScene();
 
@@ -98,75 +102,30 @@ describe('ScenesStore', () => {
       expect(scenes).toHaveLength(1);
       expect(scenes[0].id).toBe(id2);
     });
-  });
 
-  describe('addDialogue()', () => {
-    it('should add dialogue to scene', () => {
-      const { addScene, addDialogue } = useScenesStore.getState();
+    it('should be a no-op for unknown ID', () => {
+      const { addScene, deleteScene } = useScenesStore.getState();
+      addScene();
 
-      const sceneId = addScene();
-      const dialogue = {
-        speaker: 'narrator',
-        text: 'Test dialogue',
-        choices: [],
-      };
+      deleteScene('unknown-id');
 
-      addDialogue(sceneId, dialogue);
-
-      const scenes = useScenesStore.getState().scenes;
-      expect(scenes[0].dialogues).toHaveLength(1);
-      expect(scenes[0].dialogues[0]).toMatchObject(dialogue);
+      expect(useScenesStore.getState().scenes).toHaveLength(1);
     });
   });
 
-  describe('updateDialogue()', () => {
-    it('should update dialogue at index', () => {
-      const { addScene, addDialogue, updateDialogue } = useScenesStore.getState();
-
+  describe('getSceneById()', () => {
+    it('should return the scene for a known ID', () => {
+      const { addScene, getSceneById } = useScenesStore.getState();
       const sceneId = addScene();
-      addDialogue(sceneId, { speaker: 'narrator', text: 'Original', choices: [] });
 
-      updateDialogue(sceneId, 0, { text: 'Updated' });
-
-      const scenes = useScenesStore.getState().scenes;
-      expect(scenes[0].dialogues[0].text).toBe('Updated');
-      expect(scenes[0].dialogues[0].speaker).toBe('narrator');
+      const scene = getSceneById(sceneId);
+      expect(scene).toBeDefined();
+      expect(scene.id).toBe(sceneId);
     });
-  });
 
-  describe('deleteDialogue()', () => {
-    it('should remove dialogue at index', () => {
-      const { addScene, addDialogue, deleteDialogue } = useScenesStore.getState();
-
-      const sceneId = addScene();
-      addDialogue(sceneId, { speaker: 'narrator', text: 'D1', choices: [] });
-      addDialogue(sceneId, { speaker: 'player', text: 'D2', choices: [] });
-
-      deleteDialogue(sceneId, 0);
-
-      const scenes = useScenesStore.getState().scenes;
-      expect(scenes[0].dialogues).toHaveLength(1);
-      expect(scenes[0].dialogues[0].text).toBe('D2');
-    });
-  });
-
-  describe('reorderDialogues()', () => {
-    it('should reorder dialogues', () => {
-      const { addScene, addDialogue, reorderDialogues } = useScenesStore.getState();
-
-      const sceneId = addScene();
-      addDialogue(sceneId, { speaker: 'narrator', text: 'D1', choices: [] });
-      addDialogue(sceneId, { speaker: 'player', text: 'D2', choices: [] });
-      addDialogue(sceneId, { speaker: 'narrator', text: 'D3', choices: [] });
-
-      reorderDialogues(sceneId, 0, 2);
-
-      const scenes = useScenesStore.getState().scenes;
-      const dialogues = scenes[0].dialogues;
-
-      expect(dialogues[0].text).toBe('D2');
-      expect(dialogues[1].text).toBe('D3');
-      expect(dialogues[2].text).toBe('D1');
+    it('should return undefined for unknown ID', () => {
+      const { getSceneById } = useScenesStore.getState();
+      expect(getSceneById('unknown')).toBeUndefined();
     });
   });
 });

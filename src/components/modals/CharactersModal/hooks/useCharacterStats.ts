@@ -2,103 +2,122 @@ import { useMemo, useCallback } from 'react';
 import type { Character } from '@/types';
 
 /**
- * Statistics for an individual character
+ * Character statistics interface
  */
 export interface CharacterStats {
   /** Completeness percentage (0-100) */
   completeness: number;
-  /** Number of moods defined for this character */
+  /** Number of moods configured */
   moodCount: number;
-  /** Number of sprites assigned to moods */
+  /** Number of sprites uploaded */
   spriteCount: number;
-  /** Whether all moods have sprites */
-  hasSpriteForAllMoods: boolean;
+  /** Whether character has validation errors */
+  hasErrors: boolean;
+  /** Whether character has validation warnings */
+  hasWarnings: boolean;
 }
 
 /**
- * Aggregate statistics for all characters
+ * Total aggregated stats across all characters
  */
 export interface TotalCharacterStats {
   /** Total number of characters */
   total: number;
-  /** Number of complete characters (all moods have sprites) */
+  /** Number of complete characters (100%) */
   complete: number;
-  /** Number of characters with at least one sprite */
+  /** Percentage of complete characters */
+  completePercentage: number;
+  /** Number of characters with sprites */
   withSprites: number;
+  /** Percentage of characters with sprites */
+  withSpritesPercentage: number;
 }
 
 /**
  * Return type for useCharacterStats hook
  */
-export interface UseCharacterStatsReturn {
-  /** Optimized function to get stats for a single character (uses memoized map) */
+export interface UseCharacterStatsV2Return {
+  /** Get stats for a specific character (O(1) lookup from cache) */
   getCharacterStats: (character: Character) => CharacterStats;
-  /** Aggregate stats for all characters */
+  /** Aggregated stats across all characters */
   totalStats: TotalCharacterStats;
-  /** Memoized map of all character stats (for bulk operations) */
+  /** Memoized stats map (for performance) */
   statsMap: Map<string, CharacterStats>;
 }
 
 /**
- * Calculate statistics for a single character (internal helper)
- *
- * @param character - Character object to analyze
- * @returns Stats object with completeness, mood count, sprite count, and completeness flag
+ * Calculate statistics for a single character
  */
 function calculateCharacterStats(character: Character): CharacterStats {
-  const moodCount = character.moods ? character.moods.length : 0;
-  const spriteCount = character.sprites
-    ? Object.values(character.sprites).filter((sprite) => sprite && sprite.trim()).length
-    : 0;
+  // Count moods
+  const moodCount = character.moods?.length || 0;
 
-  const hasSpriteForAllMoods = moodCount > 0 && spriteCount === moodCount;
-  const completeness = moodCount > 0 ? Math.round((spriteCount / moodCount) * 100) : 0;
+  // Count sprites (iterate through moods and count sprites)
+  let spriteCount = 0;
+  if (character.moods) {
+    character.moods.forEach((mood) => {
+      if (character.sprites?.[mood]) {
+        spriteCount++;
+      }
+    });
+  }
+
+  // Calculate completeness
+  // Requirements: name, at least 1 mood, sprite for each mood
+  let completeness = 0;
+  if (character.name && character.name.trim() !== '' && character.name !== 'Nouveau Personnage') {
+    completeness += 40; // Name worth 40%
+  }
+  if (moodCount > 0) {
+    completeness += 20; // Moods worth 20%
+  }
+  if (moodCount > 0 && spriteCount === moodCount) {
+    completeness += 40; // All sprites worth 40%
+  }
+
+  // Validation flags (simplified - would be enhanced with actual validation)
+  const hasErrors = !character.name || character.name.trim() === '';
+  const hasWarnings = moodCount > 0 && spriteCount < moodCount;
 
   return {
     completeness,
     moodCount,
     spriteCount,
-    hasSpriteForAllMoods,
+    hasErrors,
+    hasWarnings,
   };
 }
 
 /**
- * Custom hook for calculating character statistics with memoization
+ * useCharacterStats - Memoized character statistics calculation
  *
- * OPTIMIZATION: Creates a memoized Map of character stats to avoid recalculation.
- * Without memoization, stats are calculated multiple times:
- * - During filtering (completeness sort)
- * - During rendering (display stats)
- * - During total stats calculation
+ * **Pattern:** AssetsLibraryModal memoization pattern
  *
- * With memoization, each character's stats are calculated exactly once
- * and cached in a Map, reducing computation by ~70%.
+ * Calculates and caches statistics for all characters to avoid expensive
+ * recalculations during filtering and rendering operations.
  *
- * Provides both individual character stats calculation and aggregate stats
- * for all characters. Stats include completeness percentage, mood counts,
- * sprite counts, and completion flags.
+ * ## Features
+ * - **Map-based caching:** O(1) lookup for character stats
+ * - **Memoization:** Stats recalculated only when characters array changes
+ * - **Aggregated stats:** Total/complete/withSprites percentages
+ * - **Performance:** ~70% reduction in stat calculations vs naive approach
  *
- * @param characters - Array of all characters to analyze
- * @returns Object containing optimized getCharacterStats function, totalStats, and statsMap
- *
- * @example
+ * ## Usage
  * ```tsx
  * const { getCharacterStats, totalStats, statsMap } = useCharacterStats(characters);
  *
- * // Get stats for a single character (uses memoized map)
+ * // Get stats for specific character (O(1) lookup)
  * const stats = getCharacterStats(character);
- * console.log(stats.completeness); // 100
  *
- * // Access aggregate stats
- * console.log(totalStats.complete); // 5
- *
- * // Direct access to memoized map (for bulk operations)
- * const allStats = Array.from(statsMap.values());
+ * // Display aggregated stats
+ * <div>{totalStats.total} personnages ({totalStats.completePercentage}% complets)</div>
  * ```
+ *
+ * @param characters - Array of characters to calculate stats for
+ * @returns Object with getCharacterStats function, totalStats, and statsMap
  */
-export function useCharacterStats(characters: Character[]): UseCharacterStatsReturn {
-  // Create memoized map of all character stats
-  // This prevents recalculation during filtering, sorting, and rendering
+export function useCharacterStats(characters: Character[]): UseCharacterStatsV2Return {
+  // Memoize stats map - recalculate only when characters change
   const statsMap = useMemo(() => {
     const map = new Map<string, CharacterStats>();
     characters.forEach((character) => {
@@ -107,36 +126,39 @@ export function useCharacterStats(characters: Character[]): UseCharacterStatsRet
     return map;
   }, [characters]);
 
-  // Calculate total stats using the memoized map
+  // Calculate total aggregated stats
   const totalStats = useMemo((): TotalCharacterStats => {
     const total = characters.length;
+    let complete = 0;
+    let withSprites = 0;
 
-    const complete = characters.filter((c) => {
-      const stats = statsMap.get(c.id);
-      return stats && stats.hasSpriteForAllMoods && stats.moodCount > 0;
-    }).length;
-
-    const withSprites = characters.filter((c) => {
-      const stats = statsMap.get(c.id);
-      return stats && stats.spriteCount > 0;
-    }).length;
+    // Iterate through statsMap (already calculated)
+    statsMap.forEach((stats) => {
+      if (stats.completeness === 100) {
+        complete++;
+      }
+      if (stats.spriteCount > 0) {
+        withSprites++;
+      }
+    });
 
     return {
       total,
       complete,
+      completePercentage: total > 0 ? Math.round((complete / total) * 100) : 0,
       withSprites,
+      withSpritesPercentage: total > 0 ? Math.round((withSprites / total) * 100) : 0,
     };
-  }, [characters, statsMap]);
+  }, [characters.length, statsMap]);
 
-  // Optimized getter that uses the memoized map
-  // Falls back to calculation only if character is not in map (should never happen)
+  // Memoized getter function (uses map for O(1) lookup)
   const getCharacterStats = useCallback(
     (character: Character): CharacterStats => {
       const cached = statsMap.get(character.id);
       if (cached) {
         return cached;
       }
-      // Fallback: calculate on-the-fly if not in map
+      // Fallback: calculate on-the-fly if not in cache (shouldn't happen)
       return calculateCharacterStats(character);
     },
     [statsMap]
@@ -148,3 +170,5 @@ export function useCharacterStats(characters: Character[]): UseCharacterStatsRet
     statsMap,
   };
 }
+
+export default useCharacterStats;

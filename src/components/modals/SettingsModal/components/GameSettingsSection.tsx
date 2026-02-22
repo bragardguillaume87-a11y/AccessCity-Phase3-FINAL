@@ -1,7 +1,9 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Gamepad2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Gamepad2, BarChart3 } from 'lucide-react';
+import { useSettingsStore } from '@/stores/settingsStore';
 import type { SettingsFormData } from '../hooks/useSettingsImportExport';
 
 /**
@@ -17,7 +19,7 @@ export interface GameSettingsSectionProps {
 /**
  * GameSettingsSection - Game variables configuration
  *
- * Allows editing of game variables (Empathie, Autonomie, Confiance).
+ * Allows editing of game variables (Physique, Mentale) and Stats HUD toggle.
  * Each variable has initial, min, and max values that can be configured.
  *
  * @param props - Component props
@@ -36,15 +38,38 @@ export function GameSettingsSection({
   formData,
   onVariableChange
 }: GameSettingsSectionProps): React.ReactElement {
+  const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
+  const setEnableStatsHUD = useSettingsStore(s => s.setEnableStatsHUD);
+
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Section Header */}
       <div>
         <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
           <Gamepad2 className="h-5 w-5 text-primary" />
           Variables de Jeu
         </h3>
       </div>
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-semibold text-sm">Afficher les stats pendant le jeu</p>
+                <p className="text-xs text-muted-foreground">
+                  Montre la Physique et la Mentale en haut de l'écran de jeu
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={enableStatsHUD}
+              onCheckedChange={setEnableStatsHUD}
+              aria-label="Activer l'affichage des stats en jeu"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Game Variables */}
       <div className="space-y-4">

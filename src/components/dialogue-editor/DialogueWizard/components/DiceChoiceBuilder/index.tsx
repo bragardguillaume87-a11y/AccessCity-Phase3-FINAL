@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Dices } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DialogueChoice } from '@/types';
-import { GAME_STATS } from '@/i18n';
 import { DiceChoiceCard } from './DiceChoiceCard';
 
 interface DiceChoiceBuilderProps {

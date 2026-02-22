@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
-import type { Scene } from '../types';
+import type { SceneMetadata } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
 
@@ -27,68 +27,56 @@ import { useSceneElementsStore } from './sceneElementsStore';
 // ============================================================================
 
 /**
- * Interface simplifiée pour Scene
- * Les dialogues, characters, props, textBoxes sont gérés par d'autres stores
+ * ScenesState — Store interne avec SceneMetadata uniquement
+ *
+ * ⚠️ INVARIANT POST-PHASE 3 :
+ * - scenes[] ne contient QUE des métadonnées (id, title, description, backgroundUrl, audio)
+ * - Les dialogues → dialoguesStore
+ * - Les characters/textBoxes/props → sceneElementsStore
+ * - Pour une scène complète → useSceneWithElements() ou useAllScenesWithElements()
  */
-export interface SceneMetadata {
-  id: string;
-  title: string;
-  description: string;
-  backgroundUrl: string;
-  order?: number;
-}
-
 interface ScenesState {
   // State
-  scenes: Scene[];
+  scenes: SceneMetadata[];
 
   // Queries
-  getSceneById: (sceneId: string) => Scene | undefined;
-  getAllScenes: () => Scene[];
+  getSceneById: (sceneId: string) => SceneMetadata | undefined;
+  getAllScenes: () => SceneMetadata[];
 
   // Actions: CRUD
   addScene: () => string;
-  updateScene: (sceneId: string, patch: Partial<Scene> | ((scene: Scene) => Partial<Scene>)) => void;
+  updateScene: (sceneId: string, patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)) => void;
   deleteScene: (sceneId: string) => void;
-  reorderScenes: (newScenesOrder: Scene[]) => void;
+  reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
 
   // Batch operations (performance)
-  batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<Scene> }>) => void;
+  batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<SceneMetadata> }>) => void;
 }
 
 // ============================================================================
-// SAMPLE DATA (simplifié - sans dialogues/characters)
+// SAMPLE DATA
 // ============================================================================
 
 /**
- * SAMPLE_SCENES - Data de démo
+ * SAMPLE_SCENES - Data de démo (métadonnées uniquement)
  *
- * Note: Les dialogues, characters, textBoxes, props sont maintenant
- * initialisés dans leurs stores respectifs (dialoguesStore, sceneElementsStore)
+ * Post-Phase 3 : plus de dialogues/characters ici.
+ * Les données des stores associés (dialoguesStore, sceneElementsStore)
+ * sont initialisées séparément via leurs propres SAMPLE_DATA.
  */
-const SAMPLE_SCENES: Scene[] = [
+const SAMPLE_SCENES: SceneMetadata[] = [
   {
     id: 'scenetest01',
     title: 'Rencontre Mairie',
     description: 'Première rencontre avec le conseiller municipal pour le projet AccessCity.',
     backgroundUrl: '',
-    // Les tableaux suivants restent pour compatibilité de type Scene
-    // mais seront migrés vers les nouveaux stores
-    dialogues: [],
-    characters: [],
-    textBoxes: [],
-    props: [],
   },
   {
     id: 'scenetest02',
     title: 'Présentation Projet',
     description: 'Présentation du projet AccessCity devant le conseil municipal.',
     backgroundUrl: '',
-    dialogues: [],
-    characters: [],
-    textBoxes: [],
-    props: [],
   },
 ];
 
@@ -104,18 +92,18 @@ function generateSceneId(): string {
 }
 
 /**
- * Crée une scène vide avec defaults
+ * Crée une scène vide avec defaults (métadonnées uniquement)
+ *
+ * Post-Phase 3 : pas de dialogues/characters ici.
+ * Utiliser dialoguesStore.addDialogue() et sceneElementsStore.addCharacterToScene()
+ * pour ajouter du contenu après création.
  */
-function createEmptyScene(): Scene {
+function createEmptyScene(): SceneMetadata {
   return {
     id: generateSceneId(),
     title: 'Nouvelle Scène',
     description: '',
     backgroundUrl: '',
-    dialogues: [],
-    characters: [],
-    textBoxes: [],
-    props: [],
   };
 }
 
@@ -322,19 +310,17 @@ export const useScenesStore = create<ScenesState>()(
             const state = persistedState as { scenes?: LegacyScene[] };
             return {
               ...state,
-              scenes: state.scenes?.map((scene) => ({
+              scenes: state.scenes?.map((scene): SceneMetadata => ({
                 id: scene.id,
                 title: scene.title,
                 description: scene.description || '',
                 backgroundUrl: scene.backgroundUrl || '',
-                // Garder arrays vides pour compatibilité de type
-                dialogues: [],
-                characters: [],
-                textBoxes: [],
-                props: [],
+                // Post-Phase 3 : plus d'arrays vides dans le store
               })) || [],
             };
           }
+          // v3 → v4 : Supprimer les arrays vestigiaux (dialogues[], characters[], etc.)
+          // Les données JSON existantes ont ces champs mais ils sont ignorés à la lecture.
           return persistedState;
         },
       }

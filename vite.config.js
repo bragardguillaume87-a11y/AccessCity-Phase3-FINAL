@@ -79,6 +79,8 @@ export default defineConfig({
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
           // Misc vendors extracted from main chunk
           'vendor-misc': ['canvas-confetti', 'react-resizable-panels'],
+          // Phaser — lazy-loaded uniquement quand le PreviewPlayer s'ouvre
+          'vendor-phaser': ['phaser'],
         },
         // Naming convention for chunks
         chunkFileNames: 'assets/[name]-[hash].js',

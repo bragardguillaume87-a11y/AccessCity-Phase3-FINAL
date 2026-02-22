@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 /**
  * Preset templates for quick binary choices

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -124,9 +124,9 @@ export function ComplexChoiceBuilder({
           À propos des effets
         </p>
         <ul className="space-y-1 text-muted-foreground">
-          <li><strong>+ Ajouter</strong> : Ajoute une valeur (ex: Empathie +10)</li>
-          <li><strong>= Définir</strong> : Fixe une valeur absolue (ex: Confiance = 50)</li>
-          <li><strong>× Multiplier</strong> : Multiplie par un facteur (ex: Autonomie ×0.5)</li>
+          <li><strong>+ Ajouter</strong> : Ajoute une valeur (ex: Physique +10)</li>
+          <li><strong>= Définir</strong> : Fixe une valeur absolue (ex: Mentale = 50)</li>
+          <li><strong>× Multiplier</strong> : Multiplie par un facteur (ex: Physique ×0.5)</li>
         </ul>
       </div>
     </div>

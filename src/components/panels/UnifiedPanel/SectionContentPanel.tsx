@@ -7,6 +7,7 @@ import CharacterMoodPicker from './CharacterMoodPicker';
 import { ObjectsSection } from './ObjectsSection';
 import { AudioSection } from './AudioSection';
 import { DialogueBoxSection } from './DialogueBoxSection';
+import { EffectsSection } from './EffectsSection';
 import { useUIStore } from '@/stores';
 import type { SectionId } from '@/types';
 import { SECTION_LABELS } from '@/types';
@@ -84,6 +85,7 @@ export function SectionContentPanel() {
               <AudioSection onOpenModal={handleOpenModal} />
             )}
             {activeSection === 'dialogue' && <DialogueBoxSection />}
+            {activeSection === 'effects' && <EffectsSection />}
           </div>
         </motion.div>
       )}

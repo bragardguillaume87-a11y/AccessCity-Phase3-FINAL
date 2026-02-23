@@ -228,6 +228,53 @@
   background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
 }
 
+/* ========== CHARACTER SPRITE ANIMATIONS ========== */
+
+/**
+ * Respiration idle.
+ * transform-origin 50% 80% ancre le mouvement à la taille/bassin du sprite
+ * (le personnage "gonfle" vers le haut, pas depuis son centre).
+ * Amplitude contrôlée par CSS custom properties injectées par le composant.
+ */
+@keyframes char-breathe {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(var(--char-breathe-scale, 1.02)) translateY(var(--char-breathe-y, -2px));
+  }
+}
+
+.char-breathe {
+  animation: char-breathe var(--char-breathe-duration, 5s) ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
+
+/**
+ * Speaking pop — déclenchée par ajout de classe via ref (forceReflow pattern).
+ * Amplitude contrôlée par CSS custom properties injectées par le composant.
+ */
+@keyframes char-speak-pop {
+  0%   { transform: scale(1) translateY(0); }
+  30%  { transform: scale(var(--char-speak-scale, 1.03)) translateY(calc(-1 * var(--char-speak-y, 3px))); }
+  65%  { transform: scale(0.99) translateY(calc(var(--char-speak-y, 3px) * 0.4)); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.char-speak-pop {
+  animation: char-speak-pop 0.28s ease-out forwards;
+}
+
+/**
+ * Rendu pixel art — désactive l'anti-aliasing (interpolation nearest-neighbor).
+ * Chrome/Edge: image-rendering: pixelated
+ * Firefox/Safari: image-rendering: crisp-edges
+ */
+.char-pixel {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 /* ========== WCAG 2.2 AA COMPLIANCE NOTES ========== */
 /*
   Contrast Ratios (Dark Theme):

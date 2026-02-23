@@ -2,6 +2,8 @@ import React from 'react';
 import { Rnd } from 'react-rnd';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
+import { AnimatedCharacterSprite } from '@/components/ui/AnimatedCharacterSprite';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { AlignLeft, AlignCenter, AlignRight, Minus, Plus, FlipHorizontal, Trash2 } from 'lucide-react';
 import { percentToPixels, pixelsToPercent } from '@/utils/canvasPositioning';
 import { Z_INDEX } from '@/utils/zIndexLayers';
@@ -45,6 +47,8 @@ export interface CharacterSpriteProps {
   selectedCharacterId?: string;
   /** Mood override from the currently selected dialogue's characterMoods field */
   activeMoodOverride?: string;
+  /** Le personnage parle dans le dialogue actuellement sélectionné */
+  isSpeaking?: boolean;
   onCharacterClick: (sceneChar: SceneCharacterWithZIndex) => void;
   onContextMenu: (e: React.MouseEvent, sceneChar: SceneCharacterWithZIndex) => void;
   onUpdatePosition: (id: string, updates: Partial<SceneCharacterWithZIndex>) => void;
@@ -78,6 +82,7 @@ export const CharacterSprite = React.memo(function CharacterSprite({
   gridEnabled,
   selectedCharacterId,
   activeMoodOverride,
+  isSpeaking = false,
   onCharacterClick,
   onContextMenu,
   onUpdatePosition,
@@ -87,6 +92,7 @@ export const CharacterSprite = React.memo(function CharacterSprite({
   onScaleChange,
 }: CharacterSpriteProps) {
   const isSelected = selectedCharacterId === sceneChar.id;
+  const characterFx = useSettingsStore(s => s.characterFx);
 
   const effectiveMood = activeMoodOverride || sceneChar.mood || 'neutral';
   const sprite = character.sprites?.[effectiveMood];
@@ -179,31 +185,15 @@ export const CharacterSprite = React.memo(function CharacterSprite({
         whileHover={{ scale: 1.06 }}
         transition={{ type: 'spring', stiffness: 380, damping: 22 }}
       >
-        {/* Sprite */}
-        {sprite ? (
-          <img
-            src={sprite}
-            alt={character.name}
-            className="w-full h-full object-contain drop-shadow-lg pointer-events-none"
-            style={{ transform: sceneChar.flipped ? 'scaleX(-1)' : undefined }}
-            draggable="false"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const next = target.nextSibling as HTMLElement;
-              if (next) next.style.display = 'flex';
-            }}
-          />
-        ) : (
-          <div className="w-full h-full bg-muted rounded-full flex items-center justify-center border-2 border-border">
-            <span className="text-2xl">👤</span>
-          </div>
-        )}
-
-        {/* Fallback image cassée */}
-        <div className="hidden w-full h-full bg-muted rounded-full items-center justify-center border-2 border-border">
-          <span className="text-2xl">👤</span>
-        </div>
+        {/* Sprite avec animations */}
+        <AnimatedCharacterSprite
+          spriteUrl={sprite}
+          alt={character.name}
+          isSpeaking={isSpeaking}
+          flipped={sceneChar.flipped}
+          fxConfig={characterFx}
+          className="drop-shadow-lg"
+        />
 
         {/* Nom (hover) */}
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-black/80 text-white text-xs font-semibold rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
@@ -342,6 +332,7 @@ export const CharacterSprite = React.memo(function CharacterSprite({
     prevProps.canvasDimensions.height   === nextProps.canvasDimensions.height   &&
     prevProps.gridEnabled               === nextProps.gridEnabled               &&
     prevProps.selectedCharacterId       === nextProps.selectedCharacterId       &&
-    prevProps.activeMoodOverride        === nextProps.activeMoodOverride
+    prevProps.activeMoodOverride        === nextProps.activeMoodOverride        &&
+    prevProps.isSpeaking                === nextProps.isSpeaking
   );
 });

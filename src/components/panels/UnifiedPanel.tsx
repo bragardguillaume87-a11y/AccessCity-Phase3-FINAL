@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Image, Type, Users, Package, Volume2, LayoutTemplate, MessageSquare } from 'lucide-react';
+import { Image, Type, Users, Package, Volume2, LayoutTemplate, MessageSquare, Sparkles } from 'lucide-react';
 import { useUIStore } from '@/stores';
 import type { SectionId } from '@/types';
 
@@ -22,6 +22,7 @@ const SECTIONS = [
   { id: 'objects'     as SectionId, icon: Package,       label: 'Objets'   },
   { id: 'audio'       as SectionId, icon: Volume2,       label: 'Audio'    },
   { id: 'dialogue'    as SectionId, icon: MessageSquare, label: 'Dialogue' },
+  { id: 'effects'     as SectionId, icon: Sparkles,      label: 'Effets'   },
 ];
 
 export interface UnifiedPanelProps {

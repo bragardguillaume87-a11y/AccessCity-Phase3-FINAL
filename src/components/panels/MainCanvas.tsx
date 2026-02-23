@@ -229,11 +229,36 @@ export default function MainCanvas({
 
   // Active mood overrides from the currently selected dialogue (characterMoods field)
   // ⚠️ Lit depuis sceneDialogues (dialoguesStore), PAS selectedScene.dialogues (toujours vide)
+  //
+  // Comportement :
+  //   - Mode Dialogues (dialogue sélectionné) : moods du dialogue sélectionné
+  //   - Mode Scènes (aucun dialogue / scène sélectionnée) : moods du PREMIER dialogue
+  //     → le canvas montre comment la scène commence réellement pour le joueur,
+  //       pas le mood "base" de la scène qui peut différer du mood initial du jeu
   const activeMoodOverrides = useMemo<Record<string, string>>(() => {
-    if (selectedElement?.type !== 'dialogue' || selectedElement.sceneId !== selectedScene?.id) return {};
-    const dialogue = sceneDialogues[selectedElement.index];
-    return dialogue?.characterMoods || {};
+    if (selectedElement?.type === 'dialogue' && selectedElement.sceneId === selectedScene?.id) {
+      // Mode Dialogues : afficher les moods du dialogue sélectionné
+      const dialogue = sceneDialogues[selectedElement.index];
+      return dialogue?.characterMoods || {};
+    }
+    // Mode Scènes (ou aucun dialogue sélectionné) : afficher les moods du premier dialogue
+    // pour que le canvas soit cohérent avec ce que le joueur verra au lancement
+    const firstDialogue = sceneDialogues[0];
+    return firstDialogue?.characterMoods || {};
   }, [selectedElement, selectedScene?.id, sceneDialogues]);
+
+  // ID du sceneCharacter qui parle dans le dialogue sélectionné
+  // Utilisé pour déclencher l'animation isSpeaking sur le bon sprite
+  const speakingSceneCharId = useMemo<string | null>(() => {
+    if (selectedElement?.type !== 'dialogue' || selectedElement.sceneId !== selectedScene?.id) return null;
+    const dialogue = sceneDialogues[selectedElement.index];
+    if (!dialogue?.speaker) return null;
+    const sc = sceneCharacters.find(c =>
+      c.characterId === dialogue.speaker ||
+      actions.characters.find(ch => ch.id === c.characterId)?.name === dialogue.speaker
+    );
+    return sc?.id ?? null;
+  }, [selectedElement, selectedScene?.id, sceneDialogues, sceneCharacters, actions.characters]);
 
   // Scene duration computed from real text length estimates
   const sceneDuration = useMemo(
@@ -345,6 +370,7 @@ export default function MainCanvas({
                     gridEnabled={viewState.gridEnabled}
                     selectedCharacterId={selection.selectedCharacterId ?? undefined}
                     activeMoodOverride={activeMoodOverrides[sceneChar.id]}
+                    isSpeaking={speakingSceneCharId === sceneChar.id}
                     onCharacterClick={selection.handleCharacterClick}
                     onContextMenu={contextMenu.handleCharacterRightClick}
                     onUpdatePosition={handleUpdateCharacterPosition}

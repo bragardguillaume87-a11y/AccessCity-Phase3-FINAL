@@ -17,6 +17,11 @@
  */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
+import { AnimatedCharacterSprite } from '@/components/ui/AnimatedCharacterSprite';
+import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
+import type { CharacterAnimationVariantName } from '@/constants/animations';
 import type { GameStats } from '@/types';
 import { useSettingsStore, useCharactersStore } from '../../../stores/index';
 import { useAllScenesWithElements } from '@/stores/selectors';
@@ -56,6 +61,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
   const variables = useSettingsStore(state => state.variables);
   const enableStatsHUD = useSettingsStore(state => state.enableStatsHUD);
   const setEnableStatsHUD = useSettingsStore(state => state.setEnableStatsHUD);
+  const characterFx = useSettingsStore(state => state.characterFx);
   const characterLibrary = useCharactersStore(state => state.characters);
 
   // ── UI state ─────────────────────────────────────────────────────────────
@@ -136,6 +142,16 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
     if (!currentDialogue?.characterMoods) return;
     setMoodOverrides(prev => ({ ...prev, ...currentDialogue.characterMoods }));
   }, [currentDialogue]);
+
+  // ── Personnage qui parle (pour l'animation isSpeaking) ──────────────────
+  const speakingSceneCharId = useMemo<string | null>(() => {
+    if (!currentDialogue?.speaker) return null;
+    const sc = (currentScene?.characters ?? []).find(c =>
+      c.characterId === currentDialogue.speaker ||
+      characterLibrary.find(ch => ch.id === c.characterId)?.name === currentDialogue.speaker
+    );
+    return sc?.id ?? null;
+  }, [currentDialogue, currentScene?.characters, characterLibrary]);
 
   // ── Audio ─────────────────────────────────────────────────────────────────
   const initializeAudio = useCallback(async () => {
@@ -283,36 +299,61 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
             />
 
             {/* ── Sprites personnages ── */}
-            {currentScene.characters.map(sc => {
-              const char = characterLibrary.find(c => c.id === sc.characterId);
-              const mood = moodOverrides[sc.id] ?? sc.mood ?? 'neutral';
-              const spriteUrl = char?.sprites?.[mood]
-                ?? char?.sprites?.['neutral']
-                ?? (char?.sprites ? Object.values(char.sprites)[0] : undefined);
-              if (!spriteUrl) return null;
-              const widthPct  = (128 * (sc.scale ?? 1) / 960) * 100;
-              const heightPct = (128 * (sc.scale ?? 1) / 540) * 100;
-              return (
-                <img
-                  key={`${sc.id}-${mood}`}
-                  src={spriteUrl}
-                  alt=""
-                  draggable={false}
-                  style={{
-                    position: 'absolute',
-                    left: `${sc.position.x}%`,
-                    top: `${sc.position.y}%`,
-                    transform: `translate(-50%, -50%)${sc.flipped ? ' scaleX(-1)' : ''}`,
-                    width: `${widthPct}%`,
-                    height: `${heightPct}%`,
-                    objectFit: 'contain',
-                    zIndex: (sc.zIndex ?? 1) + 1,
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}
-                />
-              );
-            })}
+            {/* AnimatePresence : nécessaire pour jouer les animations de sortie (exit variants) */}
+            <AnimatePresence>
+              {currentScene.characters.map(sc => {
+                const char = characterLibrary.find(c => c.id === sc.characterId);
+                const mood = moodOverrides[sc.id] ?? sc.mood ?? 'neutral';
+                const spriteUrl = char?.sprites?.[mood]
+                  ?? char?.sprites?.['neutral']
+                  ?? (char?.sprites ? Object.values(char.sprites)[0] : undefined);
+                const widthPct  = (128 * (sc.scale ?? 1) / 960) * 100;
+                const heightPct = (128 * (sc.scale ?? 1) / 540) * 100;
+
+                // Lecture de l'animation d'entrée définie sur le personnage de la scène
+                const entranceKey = (sc.entranceAnimation || 'none') as CharacterAnimationVariantName;
+                const animVariant = (CHARACTER_ANIMATION_VARIANTS[entranceKey]
+                  ?? CHARACTER_ANIMATION_VARIANTS.none) as unknown as Variants;
+
+                // ⚠️ Framer Motion écrase style.transform quand il applique ses variants (x, y, opacity).
+                // On ne peut PAS utiliser transform:'translate(-50%,-50%)' pour le centrage — il serait perdu.
+                // Solution : pré-calculer left/top au coin supérieur-gauche (centre - demi-taille).
+                const leftPct = sc.position.x - widthPct  / 2;
+                const topPct  = sc.position.y - heightPct / 2;
+
+                return (
+                  // key inclut currentScene.id → remontage sur changement de scène
+                  // → animation d'entrée rejouée à chaque transition de scène
+                  // AnimatedCharacterSprite reçoit un nouveau montage → crossfade reset (correct)
+                  <motion.div
+                    key={`${currentScene.id}-${sc.id}`}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={animVariant}
+                    style={{
+                      position: 'absolute',
+                      left: `${leftPct}%`,
+                      top: `${topPct}%`,
+                      width: `${widthPct}%`,
+                      height: `${heightPct}%`,
+                      zIndex: (sc.zIndex ?? 1) + 1,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <AnimatedCharacterSprite
+                      spriteUrl={spriteUrl}
+                      alt={char?.name ?? ''}
+                      isSpeaking={speakingSceneCharId === sc.id}
+                      flipped={sc.flipped}
+                      fxConfig={characterFx}
+                      className="drop-shadow-lg"
+                    />
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
 
             {/* ── Dégradé adaptatif (selon position de la boîte) ── */}
             {dialogueBoxConfig.position !== 'center' && (

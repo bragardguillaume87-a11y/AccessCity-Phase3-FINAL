@@ -5,6 +5,31 @@ import { STAT_BOUNDS } from '@/config/gameConstants';
 import { TIMING } from '@/config/timing';
 import type { DialogueBoxStyle } from '@/types/scenes';
 
+// ── Character FX ──────────────────────────────────────────────────────────────
+
+/** Paramètres d'animation des sprites personnages (global projet, persisté). */
+export interface CharacterFxSettings {
+  breatheEnabled:    boolean;  // Respiration idle
+  breatheIntensity:  number;   // Amplitude — 0.5 à 2.0
+  breatheSpeed:      number;   // Durée de base en secondes — 3 à 8
+  speakingEnabled:   boolean;  // Pop quand le personnage parle
+  speakingIntensity: number;   // Intensité du pop — 0.5 à 2.0
+  crossfadeEnabled:  boolean;  // Fondu enchaîné lors du changement d'expression
+  crossfadeMs:       number;   // Durée de la transition — 50 à 600
+  pixelArt:          boolean;  // Désactive l'anti-aliasing (image-rendering: pixelated)
+}
+
+export const DEFAULT_CHARACTER_FX: CharacterFxSettings = {
+  breatheEnabled:    true,
+  breatheIntensity:  1.0,
+  breatheSpeed:      5,
+  speakingEnabled:   true,
+  speakingIntensity: 1.0,
+  crossfadeEnabled:  true,
+  crossfadeMs:       250,
+  pixelArt:          false,
+};
+
 /**
  * Settings Store
  * Manages project metadata, editor settings, and game variables.
@@ -58,6 +83,7 @@ interface SettingsState {
   variables: GameVariables;
   language: SupportedLocale;
   enableStatsHUD: boolean;
+  characterFx: CharacterFxSettings;
 
   // Actions
   setContextField: (key: keyof ProjectData, value: string) => void;
@@ -68,6 +94,7 @@ interface SettingsState {
   setLanguage: (lang: SupportedLocale) => void;
   setEnableStatsHUD: (enabled: boolean) => void;
   updateDialogueBoxDefaults: (style: Partial<DialogueBoxStyle>) => void;
+  setCharacterFx: (patch: Partial<CharacterFxSettings>) => void;
 }
 
 // ============================================================================
@@ -123,6 +150,7 @@ export const useSettingsStore = create<SettingsState>()(
         variables: DEFAULT_VARIABLES,
         language: 'fr' as SupportedLocale,
         enableStatsHUD: false,
+        characterFx: DEFAULT_CHARACTER_FX,
 
         // Actions: Project Data (context)
         setContextField: (key, value) => {
@@ -188,6 +216,13 @@ export const useSettingsStore = create<SettingsState>()(
           set({ enableStatsHUD: enabled }, false, 'settings/setEnableStatsHUD');
         },
 
+        // Actions: Character FX
+        setCharacterFx: (patch) => {
+          set((state) => ({
+            characterFx: { ...state.characterFx, ...patch },
+          }), false, 'settings/setCharacterFx');
+        },
+
         // Actions: Dialogue Box Defaults
         updateDialogueBoxDefaults: (style) => {
           set((state) => ({
@@ -211,6 +246,7 @@ export const useSettingsStore = create<SettingsState>()(
           projectSettings: state.projectSettings,
           language: state.language,
           enableStatsHUD: state.enableStatsHUD,
+          characterFx: state.characterFx,
         }),
       }
     ),

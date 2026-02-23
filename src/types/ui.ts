@@ -2,7 +2,7 @@
  * Section identifiers for the UnifiedPanel icon bar (Panel 4).
  * Controls which content is shown in Panel 3.
  */
-export type SectionId = 'backgrounds' | 'text' | 'characters' | 'objects' | 'audio' | 'dialogue';
+export type SectionId = 'backgrounds' | 'text' | 'characters' | 'objects' | 'audio' | 'dialogue' | 'effects';
 
 export const SECTION_LABELS: Record<SectionId, string> = {
   backgrounds: 'Fond',
@@ -11,6 +11,7 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   objects: 'Objets',
   audio: 'Audio',
   dialogue: 'Dialogue',
+  effects: 'Effets',
 };
 
 /**

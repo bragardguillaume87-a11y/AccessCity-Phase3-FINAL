@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AccessCity Player",
+  "version": "1.0.0",
+  "identifier": "fr.accesscity.player",
+  "build": {
+    "frontendDist": "../dist-player-tauri"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "AccessCity Player",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "asset: http://asset.localhost data: blob:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDIR/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}

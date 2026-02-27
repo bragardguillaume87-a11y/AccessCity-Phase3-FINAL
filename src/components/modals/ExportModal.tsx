@@ -1,21 +1,36 @@
 /**
  * ExportModal — Modale d'export de scénario standalone.
+ *
+ * Formats disponibles :
+ *  - ZIP HTML : index.html auto-suffisant (player JS+CSS+data inlinés)
+ *  - Exécutable Windows : player.exe (Tauri/WebView2) + game-data.json + assets/
  */
 
 import { useState, useCallback } from 'react';
-import { Download, Package, Film, AlertCircle, CheckCircle2, X, Layers, FileArchive } from 'lucide-react';
+import {
+  Download, Package, Film, AlertCircle, CheckCircle2,
+  X, Layers, FileArchive, Monitor,
+} from 'lucide-react';
 import { useAllScenesWithElements, useSceneWithElements } from '@/stores/selectors';
 import { useCharactersStore, useSettingsStore, useUIStore } from '@/stores/index';
 import { buildExportData } from '@/utils/exportProject';
 import { generateStandaloneZip } from '@/utils/generateStandaloneZip';
+import { generateStandaloneExe } from '@/utils/generateStandaloneExe';
 import type { Scene } from '@/types';
 
 type ExportScope = 'all' | 'scene';
+type ExportFormat = 'zip' | 'exe';
 type ExportStatus = 'idle' | 'building' | 'done' | 'error';
 
-const BUILD_STEPS = [
+const BUILD_STEPS_ZIP = [
   'Préparation des données…',
   'Récupération des assets et du player…',
+  'Téléchargement…',
+];
+
+const BUILD_STEPS_EXE = [
+  'Préparation des données…',
+  'Récupération des assets et de player.exe…',
   'Téléchargement…',
 ];
 
@@ -24,18 +39,19 @@ interface ExportModalProps {
 }
 
 export default function ExportModal({ onClose }: ExportModalProps) {
-  const [scope, setScope] = useState<ExportScope>('all');
-  const [status, setStatus] = useState<ExportStatus>('idle');
-  const [stepIndex, setStepIndex] = useState(0);
+  const [scope, setScope]           = useState<ExportScope>('all');
+  const [format, setFormat]         = useState<ExportFormat>('zip');
+  const [status, setStatus]         = useState<ExportStatus>('idle');
+  const [stepIndex, setStepIndex]   = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const allScenes = useAllScenesWithElements();
+  const allScenes           = useAllScenesWithElements();
   const selectedSceneForEdit = useUIStore(s => s.selectedSceneForEdit);
-  const activeScene = useSceneWithElements(selectedSceneForEdit ?? undefined);
-  const characters = useCharactersStore(s => s.characters);
-  const projectSettings = useSettingsStore(s => s.projectSettings);
-  const language = useSettingsStore(s => s.language);
-  const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
+  const activeScene         = useSceneWithElements(selectedSceneForEdit ?? undefined);
+  const characters          = useCharactersStore(s => s.characters);
+  const projectSettings     = useSettingsStore(s => s.projectSettings);
+  const language            = useSettingsStore(s => s.language);
+  const enableStatsHUD      = useSettingsStore(s => s.enableStatsHUD);
 
   const handleExport = useCallback(async () => {
     setStatus('building');
@@ -60,15 +76,15 @@ export default function ExportModal({ onClose }: ExportModalProps) {
       );
 
       setStepIndex(1);
-      const zipBlob = await generateStandaloneZip(
-        exportData,
-        projectSettings.project.title || 'accesscity-game'
-      );
+      const title = projectSettings.project.title || 'accesscity-game';
+      const blob = format === 'exe'
+        ? await generateStandaloneExe(exportData, title)
+        : await generateStandaloneZip(exportData, title);
 
       setStepIndex(2);
-      const url = URL.createObjectURL(zipBlob);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const filename = (projectSettings.project.title || 'accesscity-game')
+      const filename = title
         .replace(/[^a-z0-9\-_ ]/gi, '-')
         .replace(/\s+/g, '-')
         .toLowerCase();
@@ -82,11 +98,12 @@ export default function ExportModal({ onClose }: ExportModalProps) {
       setStatus('error');
       setErrorMessage(err instanceof Error ? err.message : 'Erreur inconnue');
     }
-  }, [scope, activeScene, allScenes, characters, projectSettings, language, enableStatsHUD]);
+  }, [scope, format, activeScene, allScenes, characters, projectSettings, language, enableStatsHUD]);
 
   const hasActiveScene = !!activeScene;
-  const projectTitle = projectSettings.project.title || 'Sans titre';
-  const isBuilding = status === 'building';
+  const projectTitle   = projectSettings.project.title || 'Sans titre';
+  const isBuilding     = status === 'building';
+  const buildSteps     = format === 'exe' ? BUILD_STEPS_EXE : BUILD_STEPS_ZIP;
 
   return (
     <div
@@ -130,8 +147,14 @@ export default function ExportModal({ onClose }: ExportModalProps) {
               onClick={onClose}
               className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
               style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLButtonElement).style.color = 'white'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)'; }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'white';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)';
+              }}
               aria-label="Fermer"
             >
               <X className="h-3.5 w-3.5" />
@@ -142,22 +165,20 @@ export default function ExportModal({ onClose }: ExportModalProps) {
         {/* ── Contenu ── */}
         <div className="px-5 py-5 space-y-4">
 
-          {/* Portée */}
+          {/* ── Portée ── */}
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-3"
               style={{ color: 'hsl(var(--muted-foreground))' }}>
               Portée de l&apos;export
             </p>
-
             <div className="grid grid-cols-2 gap-2.5">
+
               {/* Carte "Projet entier" */}
               <button
                 onClick={() => setScope('all')}
                 className="relative flex flex-col items-start gap-2 p-3.5 rounded-xl text-left transition-all"
                 style={{
-                  border: scope === 'all'
-                    ? '2px solid #3b82f6'
-                    : '2px solid hsl(var(--border))',
+                  border: scope === 'all' ? '2px solid #3b82f6' : '2px solid hsl(var(--border))',
                   background: scope === 'all'
                     ? 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.08))'
                     : 'hsl(var(--muted)/40%)',
@@ -173,11 +194,7 @@ export default function ExportModal({ onClose }: ExportModalProps) {
                   </div>
                 )}
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: scope === 'all'
-                      ? 'linear-gradient(135deg, #3b82f6, #6366f1)'
-                      : 'hsl(var(--muted))',
-                  }}>
+                  style={{ background: scope === 'all' ? 'linear-gradient(135deg, #3b82f6, #6366f1)' : 'hsl(var(--muted))' }}>
                   <Layers className="h-4 w-4 text-white" />
                 </div>
                 <div>
@@ -198,9 +215,7 @@ export default function ExportModal({ onClose }: ExportModalProps) {
                 disabled={!hasActiveScene}
                 className="relative flex flex-col items-start gap-2 p-3.5 rounded-xl text-left transition-all"
                 style={{
-                  border: scope === 'scene'
-                    ? '2px solid #a855f7'
-                    : '2px solid hsl(var(--border))',
+                  border: scope === 'scene' ? '2px solid #a855f7' : '2px solid hsl(var(--border))',
                   background: scope === 'scene'
                     ? 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.08))'
                     : hasActiveScene ? 'hsl(var(--muted)/40%)' : 'hsl(var(--muted)/20%)',
@@ -218,11 +233,7 @@ export default function ExportModal({ onClose }: ExportModalProps) {
                   </div>
                 )}
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: scope === 'scene'
-                      ? 'linear-gradient(135deg, #a855f7, #8b5cf6)'
-                      : 'hsl(var(--muted))',
-                  }}>
+                  style={{ background: scope === 'scene' ? 'linear-gradient(135deg, #a855f7, #8b5cf6)' : 'hsl(var(--muted))' }}>
                   <Film className="h-4 w-4 text-white" />
                 </div>
                 <div className="min-w-0 w-full">
@@ -239,28 +250,118 @@ export default function ExportModal({ onClose }: ExportModalProps) {
             </div>
           </div>
 
-          {/* Info format */}
-          <div className="flex items-start gap-3 rounded-xl px-3.5 py-3"
-            style={{
-              background: 'rgba(59,130,246,0.06)',
-              border: '1px solid rgba(59,130,246,0.2)',
-            }}>
-            <Package className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: '#60a5fa' }} />
-            <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              Produit un fichier <strong className="text-white/70 font-medium">.zip</strong> avec un{' '}
-              <strong className="text-white/70 font-medium">index.html</strong> jouable directement dans un navigateur.
+          {/* ── Format ── */}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3"
+              style={{ color: 'hsl(var(--muted-foreground))' }}>
+              Format d&apos;export
             </p>
+            <div className="grid grid-cols-2 gap-2.5">
+
+              {/* Card HTML */}
+              <button
+                onClick={() => setFormat('zip')}
+                className="relative flex flex-col items-start gap-2 p-3.5 rounded-xl text-left transition-all"
+                style={{
+                  border: format === 'zip' ? '2px solid #3b82f6' : '2px solid hsl(var(--border))',
+                  background: format === 'zip'
+                    ? 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.08))'
+                    : 'hsl(var(--muted)/40%)',
+                  boxShadow: format === 'zip' ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
+                }}
+              >
+                {format === 'zip' && (
+                  <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: '#3b82f6' }}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1.5 4L3 5.5L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: format === 'zip' ? 'linear-gradient(135deg, #3b82f6, #6366f1)' : 'hsl(var(--muted))' }}>
+                  <FileArchive className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold leading-tight"
+                    style={{ color: format === 'zip' ? 'white' : 'hsl(var(--foreground))' }}>
+                    HTML
+                  </p>
+                  <p className="text-xs mt-0.5"
+                    style={{ color: format === 'zip' ? 'rgba(255,255,255,0.6)' : 'hsl(var(--muted-foreground))' }}>
+                    Navigateur — tous OS
+                  </p>
+                </div>
+              </button>
+
+              {/* Card Exe Windows */}
+              <button
+                onClick={() => setFormat('exe')}
+                className="relative flex flex-col items-start gap-2 p-3.5 rounded-xl text-left transition-all"
+                style={{
+                  border: format === 'exe' ? '2px solid #22c55e' : '2px solid hsl(var(--border))',
+                  background: format === 'exe'
+                    ? 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.08))'
+                    : 'hsl(var(--muted)/40%)',
+                  boxShadow: format === 'exe' ? '0 0 0 3px rgba(34,197,94,0.12)' : 'none',
+                }}
+              >
+                {format === 'exe' && (
+                  <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: '#22c55e' }}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1.5 4L3 5.5L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: format === 'exe' ? 'linear-gradient(135deg, #22c55e, #10b981)' : 'hsl(var(--muted))' }}>
+                  <Monitor className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold leading-tight"
+                    style={{ color: format === 'exe' ? 'white' : 'hsl(var(--foreground))' }}>
+                    Exécutable
+                  </p>
+                  <p className="text-xs mt-0.5"
+                    style={{ color: format === 'exe' ? 'rgba(255,255,255,0.6)' : 'hsl(var(--muted-foreground))' }}>
+                    Windows 10/11
+                  </p>
+                </div>
+              </button>
+            </div>
           </div>
 
-          {/* ── États dynamiques ── */}
+          {/* ── Info contextuelle selon format ── */}
+          {format === 'zip' ? (
+            <div className="flex items-start gap-3 rounded-xl px-3.5 py-3"
+              style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)' }}>
+              <Package className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: '#60a5fa' }} />
+              <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                Produit un <strong className="text-white/70 font-medium">.zip</strong> avec un{' '}
+                <strong className="text-white/70 font-medium">index.html</strong> jouable dans un navigateur.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3 rounded-xl px-3.5 py-3"
+              style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
+              <Monitor className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: '#4ade80' }} />
+              <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                Produit un dossier{' '}
+                <strong className="text-white/70 font-medium">player.exe + assets</strong>.{' '}
+                Double-clic pour jouer —{' '}
+                <strong className="text-white/70 font-medium">Windows 10/11</strong> requis (Edge/WebView2).
+              </p>
+            </div>
+          )}
 
-          {/* Progression */}
+          {/* ── Progression ── */}
           {status === 'building' && (
             <div className="rounded-xl overflow-hidden"
               style={{ border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.07)' }}>
               <div className="px-4 py-3 space-y-3">
-                {BUILD_STEPS.map((label, i) => {
-                  const isDone = i < stepIndex;
+                {buildSteps.map((label, i) => {
+                  const isDone    = i < stepIndex;
                   const isCurrent = i === stepIndex;
                   return (
                     <div key={i} className="flex items-center gap-3">
@@ -268,17 +369,15 @@ export default function ExportModal({ onClose }: ExportModalProps) {
                         style={{
                           background: isDone
                             ? 'rgba(34,197,94,0.2)'
-                            : isCurrent
-                              ? 'rgba(59,130,246,0.3)'
-                              : 'rgba(255,255,255,0.05)',
+                            : isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)',
                           border: isDone
                             ? '1px solid rgba(34,197,94,0.5)'
-                            : isCurrent
-                              ? '1px solid rgba(59,130,246,0.5)'
-                              : '1px solid rgba(255,255,255,0.1)',
+                            : isCurrent ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(255,255,255,0.1)',
                         }}>
                         {isDone
-                          ? <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          ? <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                              <path d="M1.5 4L3 5.5L6.5 2" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                           : isCurrent
                             ? <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#60a5fa' }} />
                             : <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
@@ -286,11 +385,7 @@ export default function ExportModal({ onClose }: ExportModalProps) {
                       </div>
                       <span className="text-xs"
                         style={{
-                          color: isDone
-                            ? '#4ade80'
-                            : isCurrent
-                              ? '#93c5fd'
-                              : 'rgba(255,255,255,0.25)',
+                          color: isDone ? '#4ade80' : isCurrent ? '#93c5fd' : 'rgba(255,255,255,0.25)',
                           fontWeight: isCurrent ? 500 : 400,
                         }}>
                         {label}
@@ -302,13 +397,10 @@ export default function ExportModal({ onClose }: ExportModalProps) {
             </div>
           )}
 
-          {/* Succès */}
+          {/* ── Succès ── */}
           {status === 'done' && (
             <div className="flex items-center gap-3 rounded-xl px-4 py-3"
-              style={{
-                background: 'rgba(34,197,94,0.1)',
-                border: '1px solid rgba(34,197,94,0.3)',
-              }}>
+              style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
               <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
                 style={{ background: 'rgba(34,197,94,0.2)' }}>
                 <CheckCircle2 className="h-4 w-4" style={{ color: '#4ade80' }} />
@@ -316,13 +408,15 @@ export default function ExportModal({ onClose }: ExportModalProps) {
               <div>
                 <p className="text-sm font-medium" style={{ color: '#4ade80' }}>Exporté avec succès !</p>
                 <p className="text-xs mt-0.5" style={{ color: 'rgba(74,222,128,0.6)' }}>
-                  Le ZIP a été téléchargé dans vos fichiers.
+                  {format === 'exe'
+                    ? 'Extrayez le ZIP et double-cliquez sur player.exe pour jouer.'
+                    : 'Le ZIP a été téléchargé dans vos fichiers.'}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Erreur */}
+          {/* ── Erreur ── */}
           {status === 'error' && (
             <div className="rounded-xl overflow-hidden"
               style={{ border: '1px solid rgba(239,68,68,0.3)' }}>
@@ -345,10 +439,7 @@ export default function ExportModal({ onClose }: ExportModalProps) {
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm rounded-xl transition-colors font-medium"
-            style={{
-              background: 'hsl(var(--muted))',
-              color: 'hsl(var(--muted-foreground))',
-            }}
+            style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
           >
             {status === 'done' ? 'Fermer' : 'Annuler'}
           </button>
@@ -360,9 +451,14 @@ export default function ExportModal({ onClose }: ExportModalProps) {
             style={{
               background: isBuilding
                 ? 'rgba(59,130,246,0.4)'
-                : 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                : format === 'exe'
+                  ? 'linear-gradient(135deg, #22c55e, #10b981)'
+                  : 'linear-gradient(135deg, #3b82f6, #6366f1)',
               color: 'white',
-              boxShadow: isBuilding ? 'none' : '0 4px 14px rgba(59,130,246,0.35)',
+              boxShadow: isBuilding ? 'none'
+                : format === 'exe'
+                  ? '0 4px 14px rgba(34,197,94,0.35)'
+                  : '0 4px 14px rgba(59,130,246,0.35)',
             }}
           >
             {isBuilding
@@ -372,7 +468,7 @@ export default function ExportModal({ onClose }: ExportModalProps) {
                 </>
               : <>
                   <Download className="h-3.5 w-3.5" />
-                  Télécharger ZIP
+                  {format === 'exe' ? 'Télécharger .exe (ZIP)' : 'Télécharger ZIP'}
                 </>
             }
           </button>

@@ -1,9 +1,10 @@
 import * as React from "react"
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getDialogueCumulativeTimes } from '@/utils/dialogueDuration'
+import { useIsKidMode } from '@/hooks/useIsKidMode'
 import type { Dialogue } from '@/types'
 
 /**
@@ -54,6 +55,7 @@ export default function TimelinePlayhead({
 }: TimelinePlayheadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const timelineRef = useRef<HTMLDivElement | null>(null)
+  const isKid = useIsKidMode()
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
@@ -82,19 +84,18 @@ export default function TimelinePlayhead({
     handleTimelineClick(e)
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging && timelineRef.current) {
-      const rect = timelineRef.current.getBoundingClientRect()
-      const clickX = e.clientX - rect.left
-      const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100))
-      const newTime = (percentage / 100) * duration
-      onSeek(newTime)
-    }
-  }
+  // useCallback : handlers stables → pas de stale closure sur duration/onSeek
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!timelineRef.current) return
+    const rect = timelineRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100))
+    onSeek((percentage / 100) * duration)
+  }, [duration, onSeek])
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false)
-  }
+  }, [])
 
   useEffect(() => {
     if (isDragging) {
@@ -105,7 +106,7 @@ export default function TimelinePlayhead({
         window.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isDragging, duration, onSeek])
+  }, [isDragging, handleMouseMove, handleMouseUp])
 
   // Calculate dialogue marker positions based on estimated reading duration
   const dialogueMarkers = useMemo(() => {
@@ -193,7 +194,12 @@ export default function TimelinePlayhead({
           <button
             key={marker.id}
             type="button"
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] hover:bg-white hover:scale-150 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
+              isKid
+                ? "w-6 h-6 bg-[var(--color-primary)]/70 hover:bg-[var(--color-primary)] hover:scale-110 flex items-center justify-center"
+                : "w-2.5 h-2.5 bg-[var(--color-text-muted)] hover:bg-white hover:scale-150"
+            )}
             style={{ left: `${marker.position}%` }}
             title={`#${marker.idx + 1} — ${marker.preview}`}
             aria-label={`Dialogue ${marker.idx + 1} à ${formatTime(marker.time)}`}
@@ -206,7 +212,13 @@ export default function TimelinePlayhead({
               onSeek(marker.time)
               if (!isPlaying) onPlayPause()
             }}
-          />
+          >
+            {isKid && (
+              <span className="text-white text-[9px] font-bold leading-none" aria-hidden="true">
+                {marker.idx + 1}
+              </span>
+            )}
+          </button>
         ))}
 
         {/* Playhead (draggable indicator) */}

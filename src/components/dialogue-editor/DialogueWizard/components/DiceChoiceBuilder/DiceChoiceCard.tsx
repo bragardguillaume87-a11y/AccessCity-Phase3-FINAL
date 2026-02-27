@@ -35,12 +35,12 @@ export function DiceChoiceCard({
     <motion.div
       {...CARD_SLIDE_UP}
       className={cn(
-        "rounded-2xl border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5",
-        "p-6 space-y-5 relative group"
+        "rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5",
+        "p-4 space-y-4 relative group"
       )}
     >
       <ChoiceCardHeader
-        icon={<span className="text-2xl">🎲</span>}
+        icon={<span className="text-xl">🎲</span>}
         iconGradient="from-purple-500 to-pink-500"
         title={`Test #${index + 1}`}
         canRemove={canRemove}
@@ -49,15 +49,15 @@ export function DiceChoiceCard({
       />
 
       <div className="space-y-2">
-        <Label htmlFor={`dice-text-${choice.id}`} className="text-sm font-semibold">
-          Texte du choix (ce que voit le joueur)
+        <Label htmlFor={`dice-text-${choice.id}`} className="text-sm font-medium text-muted-foreground">
+          Texte du choix
         </Label>
         <Input
           id={`dice-text-${choice.id}`}
           value={choice.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
           placeholder="Ex: Tenter de convaincre le gardien"
-          className="h-12 text-base"
+          className="h-9 text-sm"
         />
       </div>
 

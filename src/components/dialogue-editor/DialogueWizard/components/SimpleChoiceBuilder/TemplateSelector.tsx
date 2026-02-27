@@ -22,26 +22,20 @@ interface TemplateSelectorProps {
  */
 export function TemplateSelector({ onApply }: TemplateSelectorProps) {
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-muted-foreground font-medium">
-        Besoin d'inspiration ? Choisis un modèle :
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {CHOICE_TEMPLATES.map((template, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => onApply(template)}
-            className="px-3 py-2 rounded-xl bg-card border-2 border-border hover:border-primary/50
-                       hover:bg-primary/5 transition-all text-sm font-medium flex items-center gap-1.5
-                       focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                       min-h-[40px]"
-          >
-            <span>{template.emoji}</span>
-            <span>{template.a} / {template.b}</span>
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-1.5">
+      {CHOICE_TEMPLATES.map((template, idx) => (
+        <button
+          key={idx}
+          type="button"
+          onClick={() => onApply(template)}
+          className="px-2.5 py-1.5 rounded-lg bg-card border border-border hover:border-primary/50
+                     hover:bg-primary/5 transition-all text-xs font-medium flex items-center gap-1
+                     focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+        >
+          <span>{template.emoji}</span>
+          <span className="text-muted-foreground">{template.a} / {template.b}</span>
+        </button>
+      ))}
     </div>
   );
 }

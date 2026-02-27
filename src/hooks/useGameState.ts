@@ -33,6 +33,12 @@ interface UseGameStateOptions {
   initialStats?: GameStats;
 }
 
+// Navigation target stored when a dice check is pending modal confirmation
+type NavigationTarget = {
+  nextSceneId?: string;
+  nextDialogueId?: string | null;
+} | null;
+
 /**
  * Return type for useGameState hook
  */
@@ -44,10 +50,14 @@ interface UseGameStateReturn {
   isPaused: boolean;
   readingSpeed: number;
   diceState: DiceState;
+  /** Difficulty of the dice check currently awaiting modal confirmation (null = no pending dice) */
+  pendingDiceDifficulty: number | null;
   isAtLastDialogue: boolean;
   goToScene: (sceneId: string, dialogueId?: string | null) => void;
   goToNextDialogue: () => void;
   chooseOption: (choice: DialogueChoice) => Promise<void>;
+  /** Confirm dice result and execute the stored navigation (called by DiceResultModal.onClose) */
+  confirmDiceNavigation: () => void;
   jumpToHistoryIndex: (index: number) => void;
   setReadingSpeed: (speed: number) => void;
   setIsPaused: (paused: boolean) => void;
@@ -110,6 +120,8 @@ export function useGameState({
     lastRoll: null,
     lastResult: null
   });
+  const [pendingDiceDifficulty, setPendingDiceDifficulty] = useState<number | null>(null);
+  const pendingNavigationRef = useRef<NavigationTarget>(null);
 
   // ── Unmount guard (Bug 3 : chooseOption async sans garde) ──────────────────
   const isMountedRef = useRef(true);
@@ -316,16 +328,43 @@ export function useGameState({
       branch = choice.diceCheck[result] || null;
     }
 
-    // 5. Navigate
-    const target = branch || choice;
-    if (target.nextSceneId) {
-      goToScene(target.nextSceneId, target.nextDialogueId || null);
-    } else if (target.nextDialogueId) {
-      setCurrentDialogueId(target.nextDialogueId);
+    // 5. Navigate — dice checks pause for modal confirmation; others navigate immediately
+    if (choice.diceCheck) {
+      const target = branch || choice;
+      pendingNavigationRef.current = {
+        nextSceneId: target.nextSceneId,
+        nextDialogueId: target.nextDialogueId,
+      };
+      setPendingDiceDifficulty(choice.diceCheck.difficulty);
+      // Navigation deferred — DiceResultModal will call confirmDiceNavigation()
+    } else {
+      const target = choice;
+      if (target.nextSceneId) {
+        goToScene(target.nextSceneId, target.nextDialogueId || null);
+      } else if (target.nextDialogueId) {
+        setCurrentDialogueId(target.nextDialogueId);
+      } else {
+        goToNextDialogue();
+      }
+    }
+  }, [currentScene, currentDialogue, stats, addToHistory, applyStatsDelta, computeEffectsDelta, goToNextDialogue, goToScene]);
+
+  /** Execute the navigation stored during a dice check and close the modal. */
+  const confirmDiceNavigation = useCallback(() => {
+    const pending = pendingNavigationRef.current;
+    pendingNavigationRef.current = null;
+    setPendingDiceDifficulty(null);
+    setDiceState({ rolling: false, lastRoll: null, lastResult: null });
+
+    if (!pending) return;
+    if (pending.nextSceneId) {
+      goToScene(pending.nextSceneId, pending.nextDialogueId ?? null);
+    } else if (pending.nextDialogueId) {
+      setCurrentDialogueId(pending.nextDialogueId);
     } else {
       goToNextDialogue();
     }
-  }, [currentScene, currentDialogue, stats, addToHistory, applyStatsDelta, computeEffectsDelta, goToNextDialogue, goToScene]);
+  }, [goToScene, goToNextDialogue]);
 
   return {
     currentScene,
@@ -335,10 +374,12 @@ export function useGameState({
     isPaused,
     readingSpeed,
     diceState,
+    pendingDiceDifficulty,
     isAtLastDialogue,
     goToScene,
     goToNextDialogue,
     chooseOption,
+    confirmDiceNavigation,
     jumpToHistoryIndex,
     setReadingSpeed,
     setIsPaused

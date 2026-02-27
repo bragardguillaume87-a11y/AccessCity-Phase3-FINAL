@@ -106,6 +106,18 @@ export interface GraphTranslations {
 }
 
 /**
+ * Kid mode UI translations (simplified labels for 8-10 year old users)
+ */
+export interface KidModeTranslations {
+  viewGraph: string;   // TopBar : 'Carte de l'histoire'
+  preview: string;     // TopBar : 'Tester l'histoire'
+  resources: string;   // TopBar : 'Images & sons'
+  more: string;        // TopBar : 'Plus...'
+  kidLabel: string;    // ModeSwitcher : 'Mode Élève'
+  proLabel: string;    // ModeSwitcher : 'Mode Avancé'
+}
+
+/**
  * Complete translations structure
  */
 export interface Translations {
@@ -114,6 +126,7 @@ export interface Translations {
   editor: EditorTranslations;
   graph: GraphTranslations;
   dialogueEditor: DialogueEditorTranslations;
+  kidMode: KidModeTranslations;
 }
 
 // ============================================================================
@@ -138,4 +151,5 @@ export type TranslationPath =
   | `common.${keyof CommonTranslations}`
   | `editor.${keyof EditorTranslations}`
   | `graph.${keyof GraphTranslations}`
-  | `dialogueEditor.${keyof DialogueEditorTranslations}`;
+  | `dialogueEditor.${keyof DialogueEditorTranslations}`
+  | `kidMode.${keyof KidModeTranslations}`;

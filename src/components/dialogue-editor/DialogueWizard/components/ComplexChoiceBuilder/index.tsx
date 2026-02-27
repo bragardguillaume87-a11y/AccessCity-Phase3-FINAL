@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DialogueChoice } from '@/types';
 import { ComplexChoiceCard } from './ComplexChoiceCard';
@@ -50,23 +50,7 @@ export function ComplexChoiceBuilder({
   }, [validation.isValid, onValidChange]);
 
   return (
-    <div className="space-y-6 px-2">
-      {/* Guide character */}
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg flex-shrink-0">
-          <span className="text-3xl">⚡</span>
-        </div>
-        <div className="flex-1 p-4 rounded-2xl bg-card border-2 border-border relative">
-          <div className="absolute left-[-8px] top-5 w-4 h-4 bg-card border-l-2 border-b-2 border-border rotate-45" />
-          <p className="text-base font-semibold text-foreground relative z-10">
-            Mode Expert : choix multiples !
-          </p>
-          <p className="text-sm text-muted-foreground mt-1 relative z-10">
-            Crée 2 à 4 choix avec des effets sur les variables du jeu. Chaque choix peut modifier l'empathie, l'autonomie ou la confiance du joueur.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4 px-2">
       {/* Progress */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
@@ -108,27 +92,14 @@ export function ComplexChoiceBuilder({
           <Button
             onClick={onAddChoice}
             variant="outline"
-            className="h-14 px-8 rounded-2xl border-2 border-dashed border-orange-500/40 hover:border-orange-500 hover:bg-orange-500/10 transition-all gap-3"
+            className="h-9 px-4 rounded-lg border border-dashed border-orange-500/40 hover:border-orange-500 hover:bg-orange-500/10 transition-all gap-2"
           >
-            <Plus className="w-5 h-5 text-orange-500" />
-            <span className="font-semibold">Ajouter un choix</span>
+            <Plus className="w-4 h-4 text-orange-500" />
+            <span className="text-sm">Ajouter un choix</span>
             <span className="text-xs text-muted-foreground">({choices.length}/{MAX_CHOICES})</span>
           </Button>
         </motion.div>
       )}
-
-      {/* Help */}
-      <div className="bg-muted/50 rounded-xl p-4 text-sm space-y-2">
-        <p className="font-semibold flex items-center gap-2">
-          <Sparkles className="w-4 h-4" />
-          À propos des effets
-        </p>
-        <ul className="space-y-1 text-muted-foreground">
-          <li><strong>+ Ajouter</strong> : Ajoute une valeur (ex: Physique +10)</li>
-          <li><strong>= Définir</strong> : Fixe une valeur absolue (ex: Mentale = 50)</li>
-          <li><strong>× Multiplier</strong> : Multiplie par un facteur (ex: Physique ×0.5)</li>
-        </ul>
-      </div>
     </div>
   );
 }

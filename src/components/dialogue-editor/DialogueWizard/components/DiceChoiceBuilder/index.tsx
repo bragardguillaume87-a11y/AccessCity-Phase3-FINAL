@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Dices } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DialogueChoice } from '@/types';
 import { DiceChoiceCard } from './DiceChoiceCard';
@@ -57,23 +57,7 @@ export function DiceChoiceBuilder({
   };
 
   return (
-    <div className="space-y-6 px-2">
-      {/* Guide character */}
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg flex-shrink-0">
-          <span className="text-3xl">🎲</span>
-        </div>
-        <div className="flex-1 p-4 rounded-2xl bg-card border-2 border-border relative">
-          <div className="absolute left-[-8px] top-5 w-4 h-4 bg-card border-l-2 border-b-2 border-border rotate-45" />
-          <p className="text-base font-semibold text-foreground relative z-10">
-            Le joueur lance les dés !
-          </p>
-          <p className="text-sm text-muted-foreground mt-1 relative z-10">
-            Configure 1 ou 2 tests de caractéristique. Le joueur devra battre la difficulté avec son dé.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4 px-2">
       {/* Progress */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
@@ -115,27 +99,14 @@ export function DiceChoiceBuilder({
           <Button
             onClick={handleAddTest}
             variant="outline"
-            className="h-14 px-8 rounded-2xl border-2 border-dashed border-purple-500/40 hover:border-purple-500 hover:bg-purple-500/10 transition-all gap-3"
+            className="h-9 px-4 rounded-lg border border-dashed border-purple-500/40 hover:border-purple-500 hover:bg-purple-500/10 transition-all gap-2"
           >
-            <Plus className="w-5 h-5 text-purple-500" />
-            <span className="font-semibold">Ajouter un 2ème test</span>
+            <Plus className="w-4 h-4 text-purple-500" />
+            <span className="text-sm">Ajouter un 2ème test</span>
             <span className="text-xs text-muted-foreground">({choices.length}/{MAX_DICE_TESTS})</span>
           </Button>
         </motion.div>
       )}
-
-      {/* Help */}
-      <div className="bg-muted/50 rounded-xl p-4 text-sm space-y-2">
-        <p className="font-semibold flex items-center gap-2">
-          <Dices className="w-4 h-4" />
-          Comment ça marche ?
-        </p>
-        <ul className="space-y-1 text-muted-foreground">
-          <li>Le joueur lance 1d20 + bonus de la caractéristique</li>
-          <li>Si le résultat est supérieur ou égal à la difficulté : succès !</li>
-          <li>Sinon : échec. Chaque résultat mène vers un dialogue différent.</li>
-        </ul>
-      </div>
     </div>
   );
 }

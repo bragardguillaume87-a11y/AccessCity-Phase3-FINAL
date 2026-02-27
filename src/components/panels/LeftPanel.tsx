@@ -7,7 +7,7 @@ import { useScenesStore, useUIStore } from '../../stores/index';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneWithElements, useAllScenesWithElements } from '@/stores/selectors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
+import { DialogueComposer } from '../dialogue-editor/DialogueComposer';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import type { Dialogue } from '@/types';
@@ -109,20 +109,20 @@ export default function LeftPanel({
         className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
       >
         {/* Tabs Header — compact vertical (icon + micro-label) pour tenir dans 160px */}
-        <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-[var(--color-border-base)] bg-transparent p-0 h-auto">
+        <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-[var(--color-border-base)] bg-transparent p-1 h-auto gap-1">
           <TabsTrigger
             value="scenes"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 flex flex-col gap-1 px-2"
+            className="rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-white data-[state=active]:shadow-none transition-all duration-200 h-11 flex flex-col gap-1 px-2"
           >
             <Film className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs leading-none font-semibold truncate">Scènes</span>
+            <span className="text-xs leading-none font-semibold">Scènes</span>
           </TabsTrigger>
           <TabsTrigger
             value="dialogues"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 flex flex-col gap-1 px-2"
+            className="rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-white data-[state=active]:shadow-none transition-all duration-200 h-11 flex flex-col gap-1 px-2"
           >
             <MessageSquare className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs leading-none font-semibold truncate">Dial.</span>
+            <span className="text-xs leading-none font-semibold">Dialogues</span>
           </TabsTrigger>
         </TabsList>
 
@@ -151,7 +151,7 @@ export default function LeftPanel({
         setWizardOpen(open);
         if (!open) setEditDialogueIndex(undefined);
       }}>
-        <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0">
+        <DialogContent className="max-w-4xl p-0 gap-0 max-h-[90vh]">
           <DialogHeader className="sr-only">
             <DialogTitle>
               {editDialogueIndex !== undefined
@@ -160,7 +160,7 @@ export default function LeftPanel({
             </DialogTitle>
           </DialogHeader>
           {selectedScene ? (
-            <DialogueWizard
+            <DialogueComposer
               sceneId={selectedScene.id}
               dialogueIndex={editDialogueIndex}
               dialogue={

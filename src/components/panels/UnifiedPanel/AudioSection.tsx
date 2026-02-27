@@ -108,7 +108,7 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
 
       {/* En-tête fichier */}
       <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--color-bg-base)] border border-[var(--color-border-base)]">
-        <Music className="w-4 h-4 text-blue-400 flex-shrink-0" aria-hidden="true" />
+        <Music className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" aria-hidden="true" />
         <span className="flex-1 text-[13px] text-[var(--color-text-primary)] truncate" title={audio.url}>
           {getFilename(audio.url)}
         </span>
@@ -126,10 +126,10 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
         onClick={handlePreview}
         className={`w-full flex items-center justify-center gap-2 text-[13px] font-medium py-2.5 px-3 rounded-xl border transition-all min-h-[40px] ${
           isPlaying
-            ? 'bg-blue-500/15 border-blue-500/60 text-blue-400'
+            ? 'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]'
             : playError
               ? 'bg-red-500/10 border-red-500/40 text-red-400'
-              : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-blue-500/40 hover:text-blue-400'
+              : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]'
         }`}
         aria-label={isPlaying ? 'Arrêter la lecture' : 'Écouter un extrait'}
       >
@@ -157,7 +157,7 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
             type="range" min="0" max="1" step="0.05" value={volume}
             onChange={handleVolumeChange}
             className="w-full h-2.5 cursor-pointer rounded-full"
-            style={{ accentColor: '#3b82f6' }}
+            style={{ accentColor: 'var(--color-primary)' }}
             aria-label={`Volume de la musique : ${Math.round(volume * 100)} %`}
           />
         </div>
@@ -170,8 +170,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
               onClick={() => handleDurationMode('scene')}
               className={`w-full text-[13px] py-2.5 px-3 rounded-xl border transition-all min-h-[40px] text-left flex items-center gap-2 ${
                 durationMode === 'scene'
-                  ? 'bg-blue-500 text-white border-blue-500 font-semibold shadow-md shadow-blue-500/25'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-blue-500/40'
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] font-semibold shadow-md'
+                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]/40'
               }`}
               aria-pressed={durationMode === 'scene'}
             >
@@ -181,8 +181,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
               onClick={() => handleDurationMode('dialogues')}
               className={`w-full text-[13px] py-2.5 px-3 rounded-xl border transition-all min-h-[40px] text-left flex items-center gap-2 ${
                 durationMode === 'dialogues'
-                  ? 'bg-blue-500 text-white border-blue-500 font-semibold shadow-md shadow-blue-500/25'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-blue-500/40'
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] font-semibold shadow-md'
+                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]/40'
               }`}
               aria-pressed={durationMode === 'dialogues'}
             >
@@ -200,7 +200,7 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
                 type="number" min="1" max="99"
                 value={audio.durationDialogues ?? 1}
                 onChange={handleDurationCount}
-                className="w-16 text-[13px] text-center border border-[var(--color-border-base)] rounded-lg px-1 py-1 bg-[var(--color-bg-base)] text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500"
+                className="w-16 text-[13px] text-center border border-[var(--color-border-base)] rounded-lg px-1 py-1 bg-[var(--color-bg-base)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
               />
               <span className="text-xs text-[var(--color-text-muted)]">dialogue(s)</span>
             </div>
@@ -220,8 +220,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
               onClick={() => onUpdate({ loop: true })}
               className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
                 isLooping
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-blue-500/40'
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                  : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]'
               }`}
               aria-pressed={isLooping}
             >
@@ -231,8 +231,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
               onClick={() => onUpdate({ loop: false })}
               className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
                 !isLooping
-                  ? 'bg-slate-600 text-white border-slate-500 shadow-md shadow-slate-500/20'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-slate-500/40'
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                  : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]'
               }`}
               aria-pressed={!isLooping}
             >
@@ -251,8 +251,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
               onClick={() => onUpdate({ continueToNextScene: true })}
               className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
                 isContinuing
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-blue-500/40'
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                  : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]'
               }`}
               aria-pressed={isContinuing}
             >
@@ -262,8 +262,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
               onClick={() => onUpdate({ continueToNextScene: false })}
               className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
                 !isContinuing
-                  ? 'bg-slate-600 text-white border-slate-500 shadow-md shadow-slate-500/20'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-slate-500/40'
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                  : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]'
               }`}
               aria-pressed={!isContinuing}
             >
@@ -276,7 +276,7 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
       {/* Changer de musique */}
       <button
         onClick={onOpenLibrary}
-        className="w-full flex items-center justify-center gap-2 text-[13px] py-2 px-3 rounded-xl border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-blue-500/40 hover:text-blue-400 transition-colors min-h-[36px]"
+        className="w-full flex items-center justify-center gap-2 text-[13px] py-2 px-3 rounded-xl border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-colors min-h-[36px]"
       >
         <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
         Changer de musique
@@ -339,7 +339,7 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
         <p className="text-xs text-[var(--color-text-muted)]">{slotLabel} — non choisi</p>
         <button
           onClick={onOpenLibrary}
-          className="w-full flex items-center justify-center gap-2 text-[13px] py-2.5 px-3 rounded-xl border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-emerald-500/40 hover:text-emerald-400 transition-colors min-h-[40px]"
+          className="w-full flex items-center justify-center gap-2 text-[13px] py-2.5 px-3 rounded-xl border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-colors min-h-[40px]"
         >
           <Wind className="w-3.5 h-3.5" aria-hidden="true" />
           + Choisir un son d'ambiance
@@ -353,7 +353,7 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
     <ControlCard>
       {/* En-tête fichier */}
       <div className="flex items-center gap-2">
-        <Wind className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" aria-hidden="true" />
+        <Wind className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0" aria-hidden="true" />
         <span className="flex-1 text-[13px] text-[var(--color-text-primary)] truncate" title={track.url}>
           {getFilename(track.url)}
         </span>
@@ -383,7 +383,7 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
           type="range" min="0" max="1" step="0.05" value={volume}
           onChange={handleVolumeChange}
           className="w-full h-2.5 cursor-pointer rounded-full"
-          style={{ accentColor: '#34d399' }}
+          style={{ accentColor: 'var(--color-primary)' }}
           aria-label={`Volume ${slotLabel} : ${Math.round(volume * 100)} %`}
         />
       </div>
@@ -393,10 +393,10 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
         onClick={handlePreview}
         className={`w-full flex items-center justify-center gap-2 text-[13px] py-2.5 px-3 rounded-xl border transition-all min-h-[40px] ${
           isPlaying
-            ? 'bg-emerald-500/15 border-emerald-500/60 text-emerald-400'
+            ? 'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]'
             : playError
               ? 'bg-red-500/10 border-red-500/40 text-red-400'
-              : 'bg-[var(--color-bg-base)]/80 border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-emerald-500/40 hover:text-emerald-400'
+              : 'bg-[var(--color-bg-base)]/80 border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]'
         }`}
       >
         {playError
@@ -418,9 +418,9 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
  * AudioSection — Panneau de configuration audio pour la scène sélectionnée.
  *
  * Design pour public mixte (adultes + 8 ans+) — Panel 3 à 320px :
- * - 🎵 Musique de fond (bleu) : fichier, écouter, volume, durée, boucle, continue
- * - 🌿 Ambiance sonore (emerald) : 2 pistes indépendantes en boucle
- * - 📚 Bibliothèque audio (slate) : accès aux fichiers
+ * - 🎵 Musique de fond : fichier, écouter, volume, durée, boucle, continue
+ * - 🌿 Ambiance sonore : 2 pistes indépendantes en boucle
+ * - 📚 Bibliothèque audio : accès aux fichiers
  *
  * Principes UX :
  * - Cartes de groupe (ControlCard) pour séparer les contrôles visuellement
@@ -486,8 +486,8 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   return (
     <div className="px-3 py-2 space-y-1.5">
 
-      {/* === Musique de fond — bleu === */}
-      <div className="pl-2 border-l-2 border-blue-500/70 py-0.5">
+      {/* === Musique de fond === */}
+      <div className="pl-2 border-l-2 border-[var(--color-primary)]/50 py-0.5">
         <CollapsibleSection
           title="🎵 Musique de fond"
           variant="flat"
@@ -505,7 +505,7 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
               <div className="space-y-2">
                 <button
                   onClick={handleOpenMusicLibrary}
-                  className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold py-3 px-3 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors min-h-[44px] shadow-md shadow-blue-600/20"
+                  className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold py-3 px-3 rounded-xl bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity min-h-[44px] shadow-md"
                 >
                   <Library className="w-4 h-4" aria-hidden="true" />
                   Choisir dans la bibliothèque
@@ -521,8 +521,8 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
 
       <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
 
-      {/* === Ambiance sonore — emerald === */}
-      <div className="pl-2 border-l-2 border-emerald-500/70 py-0.5">
+      {/* === Ambiance sonore === */}
+      <div className="pl-2 border-l-2 border-[var(--color-primary)]/50 py-0.5">
         <CollapsibleSection
           title="🌿 Ambiance sonore"
           variant="flat"
@@ -554,8 +554,8 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
 
       <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
 
-      {/* === Bibliothèque audio — slate === */}
-      <div className="pl-2 border-l-2 border-slate-500/50 py-0.5">
+      {/* === Bibliothèque audio === */}
+      <div className="pl-2 border-l-2 border-[var(--color-border-base)] py-0.5">
         <CollapsibleSection
           title="📚 Bibliothèque audio"
           variant="flat"
@@ -564,7 +564,7 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
           <div className="pb-3 space-y-2">
             <button
               onClick={() => onOpenModal('assets', { category: 'music' })}
-              className="w-full flex items-center justify-start gap-2 text-[13px] py-2.5 px-3 rounded-xl border border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-slate-400/50 hover:text-[var(--color-text-primary)] bg-[var(--color-bg-base)] transition-colors min-h-[40px]"
+              className="w-full flex items-center justify-start gap-2 text-[13px] py-2.5 px-3 rounded-xl border border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-text-primary)] bg-[var(--color-bg-base)] transition-colors min-h-[40px]"
             >
               <Library className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
               Gérer les fichiers audio

@@ -4,8 +4,11 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, MessageSquare, Sparkles, Network } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useUIStore } from '@/stores';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneWithElements } from '@/stores/selectors';
+import { useSelectionStore } from '@/stores/selectionStore';
+import type { DialogueSelection } from '@/stores/selectionStore.types';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { DEFAULTS } from '@/config/constants';
 import { DialogueCard } from './DialoguesPanel/DialogueCard';
@@ -29,9 +32,20 @@ export function DialoguesPanel({
   onDialogueSelect,
 }: DialoguesPanelProps) {
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
+  const isKid = useIsKidMode();
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
   const reorderDialogues = useDialoguesStore(state => state.reorderDialogues);
   const addDialogue = useDialoguesStore(state => state.addDialogue);
+  const selectedElement = useSelectionStore(state => state.selectedElement);
+
+  // Index du dialogue sélectionné dans cette scène (-1 si aucun)
+  // Note: cast nécessaire — TypeScript ne réduit pas le discriminant null (NoSelection.type)
+  const selectedDialogueIdx = useMemo(() => {
+    if (!selectedElement || selectedElement.type !== 'dialogue') return -1;
+    const sel = selectedElement as DialogueSelection;
+    if (sel.sceneId !== selectedSceneForEdit) return -1;
+    return sel.index;
+  }, [selectedElement, selectedSceneForEdit]);
 
   // DialogueWizard state from UIStore
   const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
@@ -142,6 +156,7 @@ export function DialoguesPanel({
                   dialogue={dialogue}
                   index={idx}
                   sceneId={selectedScene.id}
+                  isSelected={idx === selectedDialogueIdx}
                   onDialogueSelect={onDialogueSelect}
                   onEditWithWizard={handleEditWithWizard}
                 />
@@ -151,42 +166,53 @@ export function DialoguesPanel({
         )}
       </div>
 
-      {/* Footer avec boutons "Assistant Dialogue", "Mode Expert" et "Vue Graphe" */}
+      {/* Footer — simplifié en mode kid, complet en mode pro */}
       <div className="flex-shrink-0 p-3 border-t-2 border-[var(--color-border-base)]">
-        <div className="flex flex-col gap-2">
-          {/* Row 1: Assistant + Expert */}
-          <div className="flex gap-2">
-            <Button
-              variant="token-primary"
-              size="sm"
-              onClick={handleOpenWizard}
-              className="flex-1"
-            >
-              <Sparkles className="w-4 h-4 mr-2" aria-hidden="true" />
-              Assistant Dialogue
-            </Button>
+        {isKid ? (
+          // Mode Élève : un seul bouton proéminent
+          <Button
+            variant="gaming-primary"
+            size="kid"
+            onClick={handleAddDialogue}
+            className="w-full"
+          >
+            <Plus className="w-5 h-5 mr-2" aria-hidden="true" />
+            Nouveau dialogue
+          </Button>
+        ) : (
+          // Mode Avancé : tous les boutons
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant="token-primary"
+                size="sm"
+                onClick={handleOpenWizard}
+                className="flex-1"
+              >
+                <Sparkles className="w-4 h-4 mr-2" aria-hidden="true" />
+                Assistant Dialogue
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddDialogue}
+                className="flex-1"
+              >
+                <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+                Mode Expert
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleAddDialogue}
-              className="flex-1"
+              onClick={handleOpenGraphModal}
+              className="w-full"
             >
-              <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
-              Mode Expert
+              <Network className="w-4 h-4 mr-2" aria-hidden="true" />
+              Vue Graphe (Éditeur Nodal)
             </Button>
           </div>
-
-          {/* Row 2: Vue Graphe */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOpenGraphModal}
-            className="w-full"
-          >
-            <Network className="w-4 h-4 mr-2" aria-hidden="true" />
-            Vue Graphe (Éditeur Nodal)
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );

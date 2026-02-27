@@ -8,7 +8,7 @@ import { Confetti } from '@/components/ui/confetti';
 import { useCharactersStore } from '@/stores';
 import { DEFAULTS } from '@/config/constants';
 import type { DialogueFormData } from '../hooks/useDialogueForm';
-import type { DialogueWizardStep } from '../hooks/useDialogueWizardState';
+import type { ComplexityLevel, DialogueWizardStep } from '../hooks/useDialogueWizardState';
 
 interface StepReviewProps {
   formData: DialogueFormData;
@@ -16,10 +16,11 @@ interface StepReviewProps {
   onEditStep: (step: DialogueWizardStep) => void;
 }
 
-const COMPLEXITY_LABELS: Record<string, { label: string; emoji: string }> = {
-  simple: { label: 'Simple', emoji: '🎯' },
-  medium: { label: 'Dés Magiques', emoji: '🎲' },
-  complex: { label: 'Expert', emoji: '⚙️' },
+const COMPLEXITY_LABELS: Record<ComplexityLevel, { label: string; emoji: string }> = {
+  linear:  { label: 'Simple',       emoji: '📖' },
+  binary:  { label: 'À choisir',    emoji: '🔀' },
+  dice:    { label: 'Dés Magiques', emoji: '🎲' },
+  expert:  { label: 'Expert',       emoji: '⚡' },
 };
 
 /**
@@ -60,18 +61,6 @@ export function StepReview({
   return (
     <div className="space-y-6 animate-step-slide max-w-2xl mx-auto">
       {showConfetti && <Confetti />}
-
-      {/* Header */}
-      <div className="text-center">
-        <h3 className="text-2xl font-bold text-primary">
-          {isSaving ? '🎉 Dialogue créé !' : '✨ Ton dialogue est prêt !'}
-        </h3>
-        <p className="text-muted-foreground mt-1">
-          {isSaving
-            ? 'Sauvegarde réussie !'
-            : 'Vérifie que tout est bon avant de sauvegarder'}
-        </p>
-      </div>
 
       {/* Dialogue preview card */}
       <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl border border-slate-700 overflow-hidden">
@@ -180,7 +169,7 @@ export function StepReview({
         <Button
           type="button"
           onClick={handleSave}
-          className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-pink-500 hover:from-primary/90 hover:to-pink-500/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-pink-500 hover:from-primary/90 hover:to-pink-500/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           <Sparkles className="h-5 w-5 mr-2" />
           Sauvegarder mon dialogue !

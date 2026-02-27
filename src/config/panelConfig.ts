@@ -43,7 +43,7 @@ interface PanelMinWidths {
  * Panel 4 is always ICON_BAR wide.
  */
 export const PANEL_WIDTHS: PanelWidths = {
-  LEFT_DEFAULT: 135,
+  LEFT_DEFAULT: 300,
   CONTENT_SECTION: 320,
   CONTENT_PROPERTIES: 300,
   ICON_BAR: 72,
@@ -53,6 +53,6 @@ export const PANEL_WIDTHS: PanelWidths = {
  * Minimum panel widths for resizable panels (react-resizable-panels).
  */
 export const PANEL_MIN_WIDTHS: PanelMinWidths = {
-  LEFT: 80,
+  LEFT: 260,   // 260px garantit que la corbeille ne déborde pas (260-24-17-24-16 = 179px ≥ 164px needed)
   CANVAS: 300,
 } as const;

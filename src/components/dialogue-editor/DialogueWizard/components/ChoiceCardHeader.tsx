@@ -35,12 +35,12 @@ export function ChoiceCardHeader({
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br",
+          "w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br",
           iconGradient
         )}>
           {icon}
         </div>
-        <h4 className="text-lg font-bold">{title}</h4>
+        <h4 className="text-sm font-semibold">{title}</h4>
       </div>
       {canRemove && (
         <Button

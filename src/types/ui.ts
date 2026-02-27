@@ -32,6 +32,9 @@ export type SelectedElementType =
 
 export type FullscreenMode = 'graph' | 'canvas' | 'preview' | null;
 
+/** Mode d'interface — 'kid' = simplifié (8-10 ans), 'pro' = avancé (enseignant) */
+export type EditorMode = 'kid' | 'pro';
+
 export type ModalType =
   | 'characters'
   | 'assets'

@@ -37,7 +37,7 @@ export function ComplexChoiceCard({
     <motion.div
       {...CARD_SLIDE_UP}
       className={cn(
-        "rounded-2xl border-2 p-6 space-y-4 relative",
+        "rounded-xl border p-4 space-y-3 relative",
         colors.border,
         `bg-gradient-to-br ${colors.bg}`
       )}
@@ -53,7 +53,7 @@ export function ComplexChoiceCard({
 
       {/* Choice text */}
       <div className="space-y-2">
-        <Label htmlFor={`expert-text-${choice.id}`} className="text-sm font-semibold">
+        <Label htmlFor={`expert-text-${choice.id}`} className="text-sm font-medium text-muted-foreground">
           Texte du choix
         </Label>
         <Input
@@ -61,7 +61,7 @@ export function ComplexChoiceCard({
           value={choice.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
           placeholder="Ex: Accepter la quête dangereuse"
-          className="h-12 text-base"
+          className="h-9 text-sm"
         />
       </div>
 

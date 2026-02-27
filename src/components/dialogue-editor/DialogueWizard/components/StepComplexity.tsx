@@ -13,7 +13,6 @@ interface ComplexityCard {
   id: ComplexityLevel;
   icon: React.ElementType;
   title: string;
-  ageLabel: string;
   description: string;
   features: string[];
   color: string;
@@ -26,7 +25,6 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     id: 'linear',
     icon: FileText,
     title: 'Simples',
-    ageLabel: '8+',
     description: 'Texte uniquement, sans choix',
     features: ['Pas de choix', 'Histoire linéaire', 'Simple et rapide'],
     color: 'from-blue-500 to-cyan-600',
@@ -37,7 +35,6 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     id: 'binary',
     icon: GitBranch,
     title: 'À choisir',
-    ageLabel: '9+',
     description: '2 choix simples',
     features: ['2 choix possibles', 'Décisions faciles', 'Histoires qui bifurquent'],
     color: 'from-green-500 to-emerald-600',
@@ -48,7 +45,6 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     id: 'dice',
     icon: Dices,
     title: 'Dés magiques',
-    ageLabel: '10+',
     description: 'Tests de caractéristique',
     features: ['Dés à 20 faces', '1 ou 2 tests', 'Succès ou échec'],
     color: 'from-purple-500 to-pink-600',
@@ -59,7 +55,6 @@ const COMPLEXITY_CARDS: ComplexityCard[] = [
     id: 'expert',
     icon: Sparkles,
     title: 'Expert',
-    ageLabel: '12+',
     description: 'Multi-choix avec effets',
     features: ['2 à 4 choix', 'Effets sur variables', 'Logique avancée'],
     color: 'from-orange-500 to-red-600',
@@ -135,12 +130,6 @@ export function StepComplexity({
               <div className="flex-1 min-w-0 space-y-1.5">
                 {/* Title row */}
                 <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-bold text-white",
-                    `bg-gradient-to-r ${card.color}`
-                  )}>
-                    {card.ageLabel}
-                  </span>
                   <h3 className="text-base font-bold text-foreground truncate">
                     {card.title}
                   </h3>

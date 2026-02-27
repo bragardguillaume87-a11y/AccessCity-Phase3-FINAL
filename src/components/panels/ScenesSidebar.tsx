@@ -67,14 +67,14 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
       ref={setNodeRef}
       style={style}
       title={scene.title}
-      className={`
-        group relative rounded-xl overflow-hidden cursor-pointer transition-all
-        ${isSelected
+      className={[
+        'group relative rounded-xl cursor-pointer transition-all duration-200 p-1.5',
+        'bg-[var(--color-bg-elevated)]',
+        isSelected
           ? 'ring-2 ring-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.4)]'
-          : 'ring-1 ring-[var(--color-border-base)] hover:ring-[var(--color-border-hover)] shadow-sm hover:shadow-md'
-        }
-        ${isDragging ? 'shadow-xl' : ''}
-      `}
+          : 'ring-1 ring-[var(--color-border-base)] hover:ring-[var(--color-border-hover)] shadow-sm hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]',
+        isDragging ? 'shadow-xl' : '',
+      ].join(' ')}
       role="button"
       tabIndex={0}
       aria-label={`Scène ${index + 1}: ${scene.title}`}
@@ -89,19 +89,18 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
         }
       }}
     >
-      {/* Thumbnail — real background if available, SVG fallback otherwise */}
-      {/* Fixed height = compact filmstrip regardless of panel width */}
-      <div className="relative w-full h-[72px]">
+      {/* Thumbnail — overflow-hidden sur le sous-conteneur pour l'effet zoom au survol */}
+      <div className="relative w-full h-[68px] rounded-lg overflow-hidden">
         {hasBackground ? (
           <img
             src={scene.backgroundUrl}
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
           />
         ) : (
           <svg
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full transition-transform duration-300 group-hover:scale-[1.06]"
             viewBox="0 0 160 90"
             preserveAspectRatio="xMidYMid slice"
             aria-hidden="true"
@@ -130,15 +129,21 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
           </svg>
         )}
 
+        {/* Gradient overlay — apparaît doucement au survol */}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          aria-hidden="true"
+        />
+
         {/* Scene number — top-left overlay */}
-        <span className="absolute top-1 left-1 text-xs font-bold leading-none px-1 py-0.5 rounded bg-black/60 text-white tabular-nums">
+        <span className="absolute top-1 left-1 text-xs font-bold leading-none px-1 py-0.5 rounded bg-black/60 backdrop-blur-sm text-white tabular-nums">
           {index + 1}
         </span>
 
-        {/* Hover actions — top-right overlay */}
-        <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Hover actions — slide in depuis la droite au survol */}
+        <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-200">
           <button
-            className="w-5 h-5 rounded bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
+            className="w-5 h-5 rounded bg-black/60 backdrop-blur-sm hover:bg-black/80 text-white flex items-center justify-center"
             title="Dupliquer"
             aria-label="Dupliquer la scène"
             onClick={(e) => { e.stopPropagation(); onDuplicate(scene.id) }}
@@ -147,7 +152,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
             <Copy className="w-3 h-3" />
           </button>
           <button
-            className="w-5 h-5 rounded bg-black/60 hover:bg-red-600/90 text-white flex items-center justify-center"
+            className="w-5 h-5 rounded bg-black/60 backdrop-blur-sm hover:bg-red-600/90 text-white flex items-center justify-center"
             title="Supprimer"
             aria-label="Supprimer la scène"
             onClick={(e) => { e.stopPropagation(); onDelete(scene.id) }}
@@ -159,9 +164,14 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
 
         {/* Selected indicator — left cyan bar */}
         {isSelected && (
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-cyan-400 rounded-l" />
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-cyan-400" />
         )}
       </div>
+
+      {/* Title row — toujours visible sous l'image */}
+      <p className="mt-1 text-[11px] font-medium text-[var(--color-text-secondary)] truncate leading-tight px-0.5">
+        {scene.title}
+      </p>
     </div>
   )
 }
@@ -274,7 +284,7 @@ export default function ScenesSidebar({
       </div>
 
       {/* Filmstrip — compact thumbnails, proportions Powtoon */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5" role="list" aria-label={`${scenes.length} scènes`}>
+      <div className="flex-1 overflow-y-auto p-2 space-y-2" role="list" aria-label={`${scenes.length} scènes`}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

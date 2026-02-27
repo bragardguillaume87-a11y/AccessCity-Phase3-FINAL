@@ -28,6 +28,7 @@ const CharactersModal     = React.lazy(() => import('./modals/CharactersModal'))
 const AssetsLibraryModal  = React.lazy(() => import('./modals/AssetsLibraryModal'));
 const SettingsModal       = React.lazy(() => import('./modals/SettingsModal'));
 const PreviewModal        = React.lazy(() => import('./modals/PreviewModal'));
+const ExportModal         = React.lazy(() => import('./modals/ExportModal'));
 
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
@@ -115,7 +116,10 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
   // === RESET LAYOUT ===
   const handleResetLayout = useCallback(() => {
-    leftPanelRef.current?.resize(`${PANEL_WIDTHS.LEFT_DEFAULT}px`);
+    // ⚠️ resize() doit recevoir un NUMBER (pixels auto-convertis en %).
+    // resize("300px") = parseFloat("300px") = 300 → 300% du container (énorme!) — BUG CONFIRMÉ.
+    // resize(300) = 300 / groupWidth * 100 → pourcentage correct en pixels.
+    leftPanelRef.current?.resize(PANEL_WIDTHS.LEFT_DEFAULT);
     setActiveSection(null);
   }, [setActiveSection]);
 
@@ -141,14 +145,17 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
   // === ONE-TIME SETUP ===
   useEffect(() => {
+    // Supprime les anciennes clés de layout (migrations précédentes) pour éviter les conflits.
     const oldKeys = [
       'react-resizable-panels:layout',
       'react-resizable-panels:editor-main-group'
     ];
-    const hasOldKeys = oldKeys.some(key => localStorage.getItem(key) !== null);
-    if (hasOldKeys) {
-      logger.warn('[EditorShell] Ancien layout détecté. Si redimensionnement ne fonctionne pas, vider localStorage.');
-    }
+    oldKeys.forEach(key => {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        logger.debug('[EditorShell] Ancienne clé layout supprimée :', key);
+      }
+    });
   }, []);
 
   // === PRESENTATION-LAYER HANDLERS ===
@@ -160,9 +167,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const handleTabChange = (tab: 'scenes' | 'dialogues') => {
     setLeftPanelActiveTab(tab);
     editorLogic.handleTabChange(tab);
-    if (!fullscreenMode) {
-      leftPanelRef.current?.resize(tab === 'dialogues' ? `${PANEL_WIDTHS.CONTENT_PROPERTIES}px` : `${PANEL_WIDTHS.LEFT_DEFAULT}px`);
-    }
+    // ⚠️ Ne pas appeler leftPanelRef.resize() ici — cela écrase le redimensionnement manuel
+    // de l'utilisateur. La largeur est contrôlée par react-resizable-panels (minSize=260px).
   };
 
   // handleOpenModal reste nécessaire pour PropertiesPanel (prop) et le cas graph (spécial)
@@ -276,12 +282,13 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               flex-1 min-w-0 : prend tout l'espace restant après Panel 3 et Panel 4. */}
           <Group id="editor-layout-v4" className="flex-1 min-w-0 h-full">
 
-            {/* Panel 1 : Explorateur gauche (filmstrip scènes) */}
+            {/* Panel 1 : Explorateur gauche (filmstrip scènes)
+                 ⚠️ minSize/maxSize en NOMBRES = pixels (voir lt() dans react-resizable-panels v4)
+                 minSize=260px garantit que la corbeille ne déborde pas (calcul : 260-24-17-24-16 = 179px ≥ 164px needed) */}
             <Panel
               panelRef={leftPanelRef}
               defaultSize={PANEL_WIDTHS.LEFT_DEFAULT}
               minSize={PANEL_MIN_WIDTHS.LEFT}
-              maxSize={200}
               collapsible={true}
               collapsedSize={0}
               className="bg-card border-r border-border overflow-y-auto"
@@ -418,6 +425,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               onClose={() => setActiveModal(null)}
               initialSceneId={modalContext.sceneId || selectedScene?.id}
             />
+          </ErrorBoundary>
+        )}
+        {activeModal === 'export' && (
+          <ErrorBoundary name="ExportModal">
+            <ExportModal onClose={() => setActiveModal(null)} />
           </ErrorBoundary>
         )}
       </React.Suspense>

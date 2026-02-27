@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
@@ -68,6 +68,18 @@ export function DialogueWizard({
 
   // Validation (hook may have side effects)
   useChoiceValidation(formData);
+
+  // Filter nav steps to only show relevant steps for the current complexity level
+  const activeSteps = useMemo(() => {
+    const ACTIVE_IDS: Record<string, string[]> = {
+      linear:  ['complexity', 'basics', 'review'],
+      binary:  ['complexity', 'basics', 'choices', 'review'],
+      dice:    ['complexity', 'template', 'basics', 'choices', 'review'],
+      expert:  ['complexity', 'template', 'basics', 'choices', 'review'],
+    };
+    const ids = formData.complexityLevel ? ACTIVE_IDS[formData.complexityLevel] : null;
+    return ids ? DIALOGUE_WIZARD_STEPS.filter(s => ids.includes(s.id)) : DIALOGUE_WIZARD_STEPS;
+  }, [formData.complexityLevel]);
 
   // PHASE 1.3: Cleanup on unmount (ensures complexity is cleared no matter how wizard closes)
   useEffect(() => {
@@ -187,9 +199,10 @@ export function DialogueWizard({
       case 'template':
         return 'Passer';
       case 'basics':
-        return 'Créer les choix';
+        // Linear goes directly to review — no choices step
+        return formData.complexityLevel === 'linear' ? 'Terminer' : 'Créer les choix';
       case 'choices':
-        return 'Continuer';
+        return 'Terminer';
       case 'responses':
         return 'Terminer';
       default:
@@ -246,6 +259,9 @@ export function DialogueWizard({
             onAddChoice={formActions.addChoice}
             onRemoveChoice={formActions.removeChoice}
             onValidChange={handleValidChange}
+            responses={formData.complexityLevel === 'binary' ? formData.responses : undefined}
+            defaultSpeaker={formData.complexityLevel === 'binary' ? (formData.speaker || DEFAULTS.DIALOGUE_SPEAKER) : undefined}
+            onUpdateResponse={formData.complexityLevel === 'binary' ? (index, updates) => formActions.updateResponse(index, updates) : undefined}
           />
         );
 
@@ -282,7 +298,7 @@ export function DialogueWizard({
       {/* Progress bar - fixed height */}
       <div className="flex-shrink-0">
         <WizardProgressBar
-          steps={DIALOGUE_WIZARD_STEPS}
+          steps={activeSteps}
           currentStep={wizardState.currentStep}
           visitedSteps={wizardState.visitedSteps}
           onStepClick={wizardActions.goToStep}
@@ -308,7 +324,10 @@ export function DialogueWizard({
               onNext={wizardActions.nextStep}
               nextDisabled={!wizardState.canProceed}
               nextLabel={getNextLabel()}
-              isLastStep={wizardState.currentStep === 'responses'}
+              isLastStep={
+                wizardState.currentStep === 'choices' ||
+                (wizardState.currentStep === 'basics' && formData.complexityLevel === 'linear')
+              }
             />
           </div>
         </div>

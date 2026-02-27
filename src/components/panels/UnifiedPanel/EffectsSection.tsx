@@ -15,6 +15,8 @@ import { RotateCcw } from 'lucide-react';
 import { useSettingsStore, DEFAULT_CHARACTER_FX } from '@/stores/settingsStore';
 import type { CharacterFxSettings } from '@/stores/settingsStore';
 
+const DEFAULT_UI_SOUNDS_VOLUME = 0.3;
+
 // ── Sous-composants helpers (inspirés d'AudioSection) ────────────────────────
 
 function ControlCard({ children }: { children: React.ReactNode }) {
@@ -96,8 +98,10 @@ function SliderRow({ label, value, min, max, step, unit, disabled, onChange }: {
 // ── Composant principal ───────────────────────────────────────────────────────
 
 export function EffectsSection() {
-  const fx         = useSettingsStore(s => s.characterFx);
-  const setFx      = useSettingsStore(s => s.setCharacterFx);
+  const fx                = useSettingsStore(s => s.characterFx);
+  const setFx             = useSettingsStore(s => s.setCharacterFx);
+  const uiSoundsVolume    = useSettingsStore(s => s.uiSoundsVolume);
+  const setUiSoundsVolume = useSettingsStore(s => s.setUiSoundsVolume);
 
   const set = useCallback(
     (patch: Partial<CharacterFxSettings>) => setFx(patch),
@@ -106,7 +110,8 @@ export function EffectsSection() {
 
   const handleReset = useCallback(() => {
     setFx(DEFAULT_CHARACTER_FX);
-  }, [setFx]);
+    setUiSoundsVolume(DEFAULT_UI_SOUNDS_VOLUME);
+  }, [setFx, setUiSoundsVolume]);
 
   return (
     <div className="p-3 space-y-3">
@@ -184,6 +189,28 @@ export function EffectsSection() {
         <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
           Désactive l'anti-aliasing sur les sprites. À activer si tes personnages sont en pixel art.
         </p>
+      </ControlCard>
+
+      {/* ── Sons UI ──────────────────────────────────────────────────────── */}
+      <ControlCard>
+        <SectionTitle
+          emoji="🔊"
+          label="Sons UI"
+          enabled={uiSoundsVolume > 0}
+          onToggle={() => setUiSoundsVolume(uiSoundsVolume > 0 ? 0 : DEFAULT_UI_SOUNDS_VOLUME)}
+        />
+        <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+          Sons procéduraux : frappe typewriter, bouton suivant, choix, transitions de scène.
+          Générés sans fichiers audio (Web Audio API).
+        </p>
+        <SliderRow
+          label="Volume"
+          value={Math.round(uiSoundsVolume * 100)}
+          min={0} max={100} step={5}
+          unit="%"
+          disabled={uiSoundsVolume === 0}
+          onChange={v => setUiSoundsVolume(v / 100)}
+        />
       </ControlCard>
 
       {/* ── Réinitialiser ────────────────────────────────────────────────── */}

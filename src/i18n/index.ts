@@ -40,6 +40,7 @@ export type {
   GameStatsTranslations,
   CommonTranslations,
   EditorTranslations,
+  KidModeTranslations,
 } from './types';
 
 // ============================================================================
@@ -103,6 +104,8 @@ interface UseTranslationReturn {
   common: Translations['common'];
   /** Editor translations (shortcut) */
   editor: Translations['editor'];
+  /** Kid mode translations (shortcut) */
+  kidMode: Translations['kidMode'];
   /** Translate by path */
   t: (path: TranslationPath) => string;
 }
@@ -136,6 +139,7 @@ export function useTranslation(): UseTranslationReturn {
       gameStats: t.gameStats,
       common: t.common,
       editor: t.editor,
+      kidMode: t.kidMode,
       t: (path: TranslationPath) => translate(path, locale),
     };
   }, [locale]);

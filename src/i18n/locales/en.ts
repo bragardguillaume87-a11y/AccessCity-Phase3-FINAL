@@ -57,6 +57,15 @@ export const en: Translations = {
     editWithAssistant: 'Edit with Assistant',
   },
 
+  kidMode: {
+    viewGraph: "Story Map",
+    preview: "Test the Story",
+    resources: "Images & Sounds",
+    more: "More...",
+    kidLabel: "Student Mode",
+    proLabel: "Advanced Mode",
+  },
+
   graph: {
     startBadge: 'START',
     endBadge: 'END',

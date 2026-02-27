@@ -60,13 +60,12 @@ export function ChoiceCard({
     >
       {/* Card header with emoji */}
       <div className={cn(
-        "px-6 py-4 flex items-center gap-3",
+        "px-4 py-3 flex items-center gap-2",
         `bg-gradient-to-r ${config.gradient}`
       )}>
-        <span className="text-3xl">{config.emoji}</span>
+        <span className="text-xl">{config.emoji}</span>
         <div className="flex-1 min-w-0">
-          <h4 className="text-lg font-bold text-white">{config.label}</h4>
-          <p className="text-xs text-white/80">{config.hint}</p>
+          <h4 className="text-sm font-bold text-white">{config.label}</h4>
         </div>
 
         {/* Star celebration */}
@@ -85,7 +84,7 @@ export function ChoiceCard({
       </div>
 
       {/* Card body */}
-      <div className="p-6 space-y-4">
+      <div className="p-4 space-y-3">
         {/* Text input - large and friendly */}
         <div className="space-y-2">
           <Input
@@ -94,7 +93,7 @@ export function ChoiceCard({
             placeholder={config.placeholder}
             maxLength={50}
             className={cn(
-              "text-lg font-semibold h-12 rounded-xl",
+              "text-sm h-9 rounded-lg",
               isValid && `${config.borderValid}`
             )}
             aria-label={config.label}

@@ -88,6 +88,10 @@ export interface DialogueBoxProps {
   speakerIsOnRight?: boolean;
   speakerColor?: string;
 
+  // ── État dés ──
+  /** Vrai pendant le lancer de dé — désactive les boutons de choix. */
+  isRolling?: boolean;
+
   // ── Interactions ──
   /** Clic sur le texte — skip typewriter ou avance (selon le contexte). */
   onAdvance?: () => void;
@@ -124,6 +128,7 @@ export function DialogueBox({
   speakerPortraitUrl,
   speakerIsOnRight = false,
   speakerColor = '#22d3ee',
+  isRolling = false,
   onAdvance,
   onChoose,
   onRestart,
@@ -158,12 +163,13 @@ export function DialogueBox({
       style={{ background: boxBgStyle }}
     >
       {/* ── En-tête speaker ── */}
-      {speaker && (
+      {/* navigationSlot doit s'afficher même sans speaker (dialogues sans personnage) */}
+      {(speaker || navigationSlot) && (
         <div
-          className={`flex items-center gap-2.5 px-4 pt-3 pb-2 ${speakerIsOnRight ? 'flex-row-reverse' : 'flex-row'}`}
+          className={`flex items-center gap-2.5 px-4 pt-3 pb-2 ${speaker && speakerIsOnRight ? 'flex-row-reverse' : 'flex-row'}`}
         >
           {/* Portrait — taille proportionnelle au canvas */}
-          {config.showPortrait && speakerPortraitUrl && (
+          {speaker && config.showPortrait && speakerPortraitUrl && (
             <div
               className="rounded-lg overflow-hidden flex-shrink-0 border border-white/20 shadow-lg"
               style={{ width: portraitSizePx, height: portraitSizePx }}
@@ -184,19 +190,21 @@ export function DialogueBox({
           )}
 
           {/* Nom + ligne décorative */}
-          <div className={`flex items-center gap-2 flex-1 min-w-0 ${speakerIsOnRight ? 'flex-row-reverse' : ''}`}>
-            <span
-              className="font-bold uppercase tracking-widest drop-shadow flex-shrink-0"
-              style={{ color: speakerColor, fontSize: speakerFontSize }}
-            >
-              {speaker}
-            </span>
-            <div className="flex-1 h-px opacity-30 min-w-0" style={{ background: speakerColor }} />
-          </div>
+          {speaker && (
+            <div className={`flex items-center gap-2 flex-1 min-w-0 ${speakerIsOnRight ? 'flex-row-reverse' : ''}`}>
+              <span
+                className="font-bold uppercase tracking-widest drop-shadow flex-shrink-0"
+                style={{ color: speakerColor, fontSize: speakerFontSize }}
+              >
+                {speaker}
+              </span>
+              <div className="flex-1 h-px opacity-30 min-w-0" style={{ background: speakerColor }} />
+            </div>
+          )}
 
-          {/* Slot de navigation (éditeur uniquement) */}
+          {/* Slot de navigation (éditeur uniquement) — toujours à droite */}
           {navigationSlot && (
-            <div className="flex-shrink-0">
+            <div className={`flex-shrink-0${!speaker ? ' ml-auto' : ''}`}>
               {navigationSlot}
             </div>
           )}
@@ -205,7 +213,7 @@ export function DialogueBox({
 
       {/* ── Texte du dialogue ── */}
       <div
-        className={`relative px-4 ${speaker ? 'pt-0' : 'pt-3'} ${hasChoices ? 'pb-1' : 'pb-3'}`}
+        className={`relative px-4 ${(speaker || navigationSlot) ? 'pt-0' : 'pt-3'} ${hasChoices ? 'pb-1' : 'pb-3'}`}
         onClick={onAdvance}
         role={onAdvance ? 'button' : undefined}
         style={{ cursor: onAdvance ? 'pointer' : undefined }}
@@ -293,12 +301,12 @@ export function DialogueBox({
           {choices.map((choice, idx) => (
             <motion.button
               key={choice.id || idx}
-              onClick={() => onChoose?.(choice)}
+              onClick={() => !isRolling && onChoose?.(choice)}
               initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
+              animate={{ opacity: isRolling ? 0.45 : 1, x: 0 }}
               transition={{ delay: idx * 0.06, duration: 0.18, ease: 'easeOut' }}
-              whileHover={{ x: 6, backgroundColor: 'rgba(30,12,80,0.80)', borderColor: 'rgba(139,92,246,0.50)' }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={isRolling ? undefined : { x: 6, backgroundColor: 'rgba(30,12,80,0.80)', borderColor: 'rgba(139,92,246,0.50)' }}
+              whileTap={isRolling ? undefined : { scale: 0.98 }}
               className="w-full text-left rounded-xl text-white relative overflow-hidden group"
               style={{
                 backgroundColor: 'rgba(3,7,18,0.55)',
@@ -311,9 +319,11 @@ export function DialogueBox({
                 display: 'flex',
                 alignItems: 'center',
                 gap: Math.round(10 * sf),
+                pointerEvents: isRolling ? 'none' : 'auto',
+                cursor: isRolling ? 'not-allowed' : 'pointer',
               }}
             >
-              {/* Barre d'accent gauche — CSS group-hover (pointer-events-none → whileHover ne fonctionne pas) */}
+              {/* Barre d'accent gauche — CSS group-hover */}
               <div
                 className="absolute left-0 top-0 bottom-0 pointer-events-none origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-150"
                 style={{ background: CHOICE_ACCENT, width: 3, borderRadius: '9999px 0 0 9999px' }}
@@ -341,9 +351,36 @@ export function DialogueBox({
                 {idx + 1}
               </span>
 
-              {/* Texte du choix */}
-              <span className="relative z-10 flex-1">
-                {choice.text || 'Continuer'}
+              {/* Texte + badges */}
+              <span className="relative z-10 flex-1 min-w-0">
+                <span className="block">{choice.text || 'Continuer'}</span>
+
+                {/* Badge dés : stat + difficulté */}
+                {choice.diceCheck && (
+                  <span
+                    className="block mt-0.5 text-purple-400/80"
+                    style={{ fontSize: Math.round(9 * sf) }}
+                  >
+                    🎲 {choice.diceCheck.stat} · DC {choice.diceCheck.difficulty}
+                  </span>
+                )}
+
+                {/* Badges effets (opération add uniquement — clair pour le joueur) */}
+                {choice.effects && choice.effects.length > 0 && (
+                  <span className="flex flex-wrap gap-1 mt-0.5">
+                    {choice.effects.filter(e => e.operation === 'add').map((eff, i) => (
+                      <span
+                        key={i}
+                        className={`inline-block px-1.5 py-0.5 rounded-full font-semibold ${
+                          eff.value >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}
+                        style={{ fontSize: Math.round(9 * sf) }}
+                      >
+                        {eff.value >= 0 ? '+' : ''}{eff.value} {eff.variable}
+                      </span>
+                    ))}
+                  </span>
+                )}
               </span>
             </motion.button>
           ))}

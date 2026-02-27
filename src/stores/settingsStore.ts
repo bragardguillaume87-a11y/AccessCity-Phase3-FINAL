@@ -84,6 +84,12 @@ interface SettingsState {
   language: SupportedLocale;
   enableStatsHUD: boolean;
   characterFx: CharacterFxSettings;
+  /** Volume des sons UI procéduraux (typewriter, boutons, transitions). 0–1, 0 = muet. */
+  uiSoundsVolume: number;
+  /** Style de frappe typewriter : 'mecanique' | 'vintage' | 'gaming' | '8bit' | 'doux'. */
+  uiSoundStyle: string;
+  /** Intervalle minimum entre deux ticks (ms). 35 = rapide, 65 = normal, 130 = lent. */
+  uiSoundsTickInterval: number;
 
   // Actions
   setContextField: (key: keyof ProjectData, value: string) => void;
@@ -95,6 +101,9 @@ interface SettingsState {
   setEnableStatsHUD: (enabled: boolean) => void;
   updateDialogueBoxDefaults: (style: Partial<DialogueBoxStyle>) => void;
   setCharacterFx: (patch: Partial<CharacterFxSettings>) => void;
+  setUiSoundsVolume: (v: number) => void;
+  setUiSoundStyle: (style: string) => void;
+  setUiSoundsTickInterval: (ms: number) => void;
 }
 
 // ============================================================================
@@ -151,6 +160,9 @@ export const useSettingsStore = create<SettingsState>()(
         language: 'fr' as SupportedLocale,
         enableStatsHUD: false,
         characterFx: DEFAULT_CHARACTER_FX,
+        uiSoundsVolume: 0.3,
+        uiSoundStyle: 'mecanique',
+        uiSoundsTickInterval: 65,
 
         // Actions: Project Data (context)
         setContextField: (key, value) => {
@@ -223,6 +235,17 @@ export const useSettingsStore = create<SettingsState>()(
           }), false, 'settings/setCharacterFx');
         },
 
+        // Actions: UI Sounds
+        setUiSoundsVolume: (v) => {
+          set({ uiSoundsVolume: Math.max(0, Math.min(1, v)) }, false, 'settings/setUiSoundsVolume');
+        },
+        setUiSoundStyle: (style) => {
+          set({ uiSoundStyle: style }, false, 'settings/setUiSoundStyle');
+        },
+        setUiSoundsTickInterval: (ms) => {
+          set({ uiSoundsTickInterval: Math.max(35, Math.min(130, ms)) }, false, 'settings/setUiSoundsTickInterval');
+        },
+
         // Actions: Dialogue Box Defaults
         updateDialogueBoxDefaults: (style) => {
           set((state) => ({
@@ -247,6 +270,9 @@ export const useSettingsStore = create<SettingsState>()(
           language: state.language,
           enableStatsHUD: state.enableStatsHUD,
           characterFx: state.characterFx,
+          uiSoundsVolume: state.uiSoundsVolume,
+          uiSoundStyle: state.uiSoundStyle,
+          uiSoundsTickInterval: state.uiSoundsTickInterval,
         }),
       }
     ),

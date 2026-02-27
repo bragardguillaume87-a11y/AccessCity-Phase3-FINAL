@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import type { DialogueChoice, Scene } from '@/types';
+import type { ResponseData } from '../hooks/useDialogueForm';
 import { SimpleChoiceBuilder } from './SimpleChoiceBuilder';
 import { DiceChoiceBuilder } from './DiceChoiceBuilder';
 import { ComplexChoiceBuilder } from './ComplexChoiceBuilder';
@@ -15,15 +16,20 @@ interface StepChoicesProps {
   onAddChoice?: () => void;
   onRemoveChoice?: (index: number) => void;
   onValidChange: (isValid: boolean) => void;
+  // Binary-only: inline responses (replaces StepResponses)
+  responses?: ResponseData[];
+  defaultSpeaker?: string;
+  onUpdateResponse?: (index: number, updates: Partial<ResponseData>) => void;
 }
 
 /**
- * StepChoices - Adaptive choice builder based on complexity level (PHASE 2.4: Updated)
+ * StepChoices - Adaptive choice builder based on complexity level.
  *
  * Routes to appropriate builder:
- * - Simple: Linear (no choices) or Binary (2 choices) via SimpleChoiceBuilder
- * - Medium: DiceChoiceBuilder (dice mechanics) - Coming Soon
- * - Complex: ComplexChoiceBuilder (2-4 choices + effects) - Coming Soon
+ * - Linear:  no choices (skipped by routing — this case should never render)
+ * - Binary:  SimpleChoiceBuilder with inline response fields
+ * - Dice:    DiceChoiceBuilder (dice mechanics)
+ * - Expert:  ComplexChoiceBuilder (2-4 choices + effects)
  */
 export function StepChoices({
   complexityLevel,
@@ -33,39 +39,33 @@ export function StepChoices({
   onUpdateChoice,
   onAddChoice,
   onRemoveChoice,
-  onValidChange
+  onValidChange,
+  responses,
+  defaultSpeaker,
+  onUpdateResponse,
 }: StepChoicesProps) {
-  // PHASE 2.3: Handle 4 distinct complexity levels
   React.useEffect(() => {
-    // If linear dialogue (no choices), mark as valid so user can proceed
+    // Linear is now skipped by routing — guard for edge cases
     if (complexityLevel === 'linear') {
       onValidChange(true);
     }
   }, [complexityLevel, onValidChange]);
 
-  // Render appropriate builder based on complexity
   switch (complexityLevel) {
     case 'linear':
-      // Linear dialogue: no choices (simple story)
+      // Should never render (routing skips this step for linear)
       return (
-        <div className="text-center py-12 space-y-4 text-muted-foreground">
-          <FileText className="w-16 h-16 mx-auto opacity-50" />
-          <div>
-            <p className="text-lg font-semibold">Ce dialogue est simple (sans choix)</p>
-            <p className="text-sm mt-2">Le joueur lira simplement le texte et continuera.</p>
-          </div>
-          <p className="text-sm bg-muted/50 rounded-lg p-4 max-w-md mx-auto">
-            💡 <strong>Astuce :</strong> Pour ajouter des choix, revenez à l'étape précédente et sélectionnez "À choisir".
-          </p>
+        <div className="text-center py-12 space-y-3 text-muted-foreground">
+          <FileText className="w-12 h-12 mx-auto opacity-40" />
+          <p className="text-sm">Dialogue simple — pas de choix</p>
         </div>
       );
 
     case 'binary':
-      // Binary dialogue: exactly 2 simple choices
       if (choices.length !== 2) {
         return (
           <div className="flex items-center justify-center h-64">
-            <p className="text-destructive">Erreur : Le mode "À choisir" nécessite exactement 2 choix</p>
+            <p className="text-destructive text-sm">Erreur : 2 choix requis pour le mode "À choisir"</p>
           </div>
         );
       }
@@ -77,6 +77,9 @@ export function StepChoices({
           currentSceneId={currentSceneId}
           onUpdateChoice={onUpdateChoice}
           onValidChange={onValidChange}
+          responses={responses}
+          defaultSpeaker={defaultSpeaker}
+          onUpdateResponse={onUpdateResponse}
         />
       );
 

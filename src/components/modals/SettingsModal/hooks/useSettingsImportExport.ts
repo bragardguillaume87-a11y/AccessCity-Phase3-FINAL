@@ -27,6 +27,7 @@ export interface SettingsFormData {
         max: number;
       };
     };
+    enableStatsHUD?: boolean;
   };
 }
 

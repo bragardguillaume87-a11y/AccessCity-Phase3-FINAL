@@ -165,6 +165,16 @@ export function useDialogueWizardState(
         }
       }
 
+      // Skip 'choices' for linear (no choices in a simple dialogue)
+      if (nextStepId === 'choices' && complexityLevel === 'linear') {
+        nextStepId = 'review';
+      }
+
+      // Skip 'responses' for all levels (responses are now inline in the Choices step)
+      if (nextStepId === 'responses') {
+        nextStepId = 'review';
+      }
+
       setCurrentStep(nextStepId);
       setVisitedSteps(prev => new Set([...prev, nextStepId]));
       // Template step is optional → always proceed-able (no validation gate)
@@ -173,11 +183,15 @@ export function useDialogueWizardState(
   }, [stepIndex, canProceed, complexityLevel]);
 
   const previousStep = useCallback(() => {
-    const prevIndex = stepIndex - 1;
-    if (prevIndex >= 0) {
-      setCurrentStep(STEP_ORDER[prevIndex]);
-    }
-  }, [stepIndex]);
+    const prevMap: Partial<Record<DialogueWizardStep, DialogueWizardStep>> = {
+      review: complexityLevel === 'linear' ? 'basics' : 'choices',
+      choices: 'basics',
+      basics: (complexityLevel === 'dice' || complexityLevel === 'expert') ? 'template' : 'complexity',
+      template: 'complexity',
+    };
+    const prev = prevMap[currentStep];
+    if (prev) setCurrentStep(prev);
+  }, [currentStep, complexityLevel]);
 
   const setComplexity = useCallback((level: ComplexityLevel) => {
     setComplexityLevelState(level);

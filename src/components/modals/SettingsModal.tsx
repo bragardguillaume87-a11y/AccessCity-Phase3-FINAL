@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/index';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import { TIMING } from '@/config/timing';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,7 +9,8 @@ import {
   Palette,
   Gamepad2,
   Keyboard,
-  Accessibility
+  Accessibility,
+  Volume2
 } from 'lucide-react';
 
 // Hooks
@@ -24,7 +26,8 @@ import {
   EditorSettingsSection,
   GameSettingsSection,
   ShortcutsSection,
-  AccessibilitySection
+  AccessibilitySection,
+  AudioSettingsSection
 } from './SettingsModal/components';
 
 /**
@@ -67,8 +70,12 @@ export interface SettingsModalProps {
  */
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): React.ReactElement | null {
   // Zustand stores (granular selectors)
-  const projectSettings = useSettingsStore(state => state.projectSettings);
+  const projectSettings   = useSettingsStore(state => state.projectSettings);
   const updateProjectSettings = useSettingsStore(state => state.updateProjectSettings);
+  const enableStatsHUD    = useSettingsStore(state => state.enableStatsHUD);
+  const setEnableStatsHUD = useSettingsStore(state => state.setEnableStatsHUD);
+
+  const isKid = useIsKidMode();
 
   // Local state
   const [activeSection, setActiveSection] = useState<string>('project');
@@ -106,19 +113,30 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
       label: 'Accessibilité',
       icon: Accessibility,
       keywords: ['a11y', 'contraste', 'lecteur écran', 'aria']
+    },
+    {
+      id: 'audio',
+      label: 'Audio',
+      icon: Volume2,
+      keywords: ['son', 'musique', 'bruitage', 'typewriter', 'volume', 'ui', 'ambiance', 'bgm']
     }
   ];
 
+  // En mode kid, masquer les sections de configuration avancée
+  const KID_HIDDEN_SECTIONS = ['editor', 'shortcuts'];
+  const visibleSections = isKid ? sections.filter(s => !KID_HIDDEN_SECTIONS.includes(s.id)) : sections;
+
   // Custom hooks
-  const filteredSections = useSettingsSearch(sections, searchQuery);
+  const filteredSections = useSettingsSearch(visibleSections, searchQuery);
   const { handleExport, handleImport } = useSettingsImportExport(formData, setFormData);
 
-  // Sync form data when modal opens or projectSettings change
+  // Sync form data when modal opens (capture current store values)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isOpen && projectSettings) {
-      setFormData(projectSettings);
+      setFormData({ ...projectSettings, game: { ...projectSettings.game, enableStatsHUD } });
     }
-  }, [isOpen, projectSettings]);
+  }, [isOpen, projectSettings]); // enableStatsHUD intentionally omitted — sync on open only
 
   // Field change handlers
   const handleFieldChange = (section: string, field: string, value: string | boolean | number): void => {
@@ -150,6 +168,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
   // Modal actions
   const handleSave = (): void => {
     updateProjectSettings(formData);
+    setEnableStatsHUD(formData.game.enableStatsHUD ?? false);
     onClose();
   };
 
@@ -180,7 +199,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
           variables: {
             physique: { initial: 100, min: 0, max: 100 },
             mentale: { initial: 100, min: 0, max: 100 }
-          }
+          },
+          enableStatsHUD: true
         }
       };
       setFormData(defaults);
@@ -238,6 +258,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
                 <GameSettingsSection
                   formData={formData}
                   onVariableChange={handleVariableChange}
+                  onFieldChange={handleFieldChange}
                 />
               )}
 
@@ -246,6 +267,9 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
 
               {/* Accessibility Section */}
               {activeSection === 'accessibility' && <AccessibilitySection />}
+
+              {/* Audio Section */}
+              {activeSection === 'audio' && <AudioSettingsSection />}
             </ScrollArea>
 
             {/* Footer */}

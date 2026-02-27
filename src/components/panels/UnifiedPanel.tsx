@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Image, Type, Users, Package, Volume2, LayoutTemplate, MessageSquare, Sparkles } from 'lucide-react';
 import { useUIStore } from '@/stores';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import type { SectionId } from '@/types';
 
 /**
@@ -17,11 +18,11 @@ import type { SectionId } from '@/types';
 
 const SECTIONS = [
   { id: 'backgrounds' as SectionId, icon: Image,         label: 'Fond'     },
-  { id: 'text'        as SectionId, icon: Type,          label: 'Texte'    },
+  { id: 'audio'       as SectionId, icon: Volume2,       label: 'Audio'    },
   { id: 'characters'  as SectionId, icon: Users,         label: 'Persos'   },
   { id: 'objects'     as SectionId, icon: Package,       label: 'Objets'   },
-  { id: 'audio'       as SectionId, icon: Volume2,       label: 'Audio'    },
   { id: 'dialogue'    as SectionId, icon: MessageSquare, label: 'Dialogue' },
+  { id: 'text'        as SectionId, icon: Type,          label: 'Texte'    },
   { id: 'effects'     as SectionId, icon: Sparkles,      label: 'Effets'   },
 ];
 
@@ -32,6 +33,13 @@ export interface UnifiedPanelProps {
 
 export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
   const activeSection = useUIStore(s => s.activeSection);
+  const isKid = useIsKidMode();
+
+  // En mode kid, masquer uniquement les effets d'animation (trop complexes pour élèves).
+  // Audio reste visible — les élèves ont besoin d'ajouter de la musique à leurs scènes.
+  const sections = isKid
+    ? SECTIONS.filter(s => s.id !== 'effects')
+    : SECTIONS;
 
   const handleIconClick = useCallback((id: SectionId) => {
     const { activeSection: current, setActiveSection } = useUIStore.getState();
@@ -53,24 +61,27 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
 
       {/* Boutons icônes */}
       <div className="flex-1 flex flex-col items-center gap-1 py-2 w-full">
-        {SECTIONS.map(({ id, icon: Icon, label }) => (
-          <button
-            key={id}
-            onClick={() => handleIconClick(id)}
-            className={[
-              'flex flex-col items-center gap-1.5 w-full py-3.5 px-2 rounded-lg transition-all',
-              activeSection === id
-                ? 'bg-[var(--color-primary)] text-white'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]',
-            ].join(' ')}
-            aria-pressed={activeSection === id}
-            aria-label={label}
-            title={label}
-          >
-            <Icon className="w-6 h-6" aria-hidden="true" />
-            <span className="text-xs leading-none font-semibold">{label}</span>
-          </button>
-        ))}
+        {sections.map(({ id, icon: Icon, label }) => {
+          const isActive = activeSection === id;
+          return (
+            <button
+              key={id}
+              onClick={() => handleIconClick(id)}
+              className={[
+                'flex flex-col items-center gap-1.5 w-full py-3.5 px-2 rounded-lg transition-all',
+                isActive
+                  ? 'bg-[var(--color-primary)] text-white hover:scale-[1.06]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] hover:scale-[1.06]',
+              ].join(' ')}
+              aria-pressed={isActive}
+              aria-label={label}
+              title={label}
+            >
+              <Icon className="w-6 h-6" aria-hidden="true" />
+              <span className="text-xs leading-none font-semibold">{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Bouton reset layout — bas de la barre */}

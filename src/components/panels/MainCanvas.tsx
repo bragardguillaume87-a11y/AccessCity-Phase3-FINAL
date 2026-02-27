@@ -15,7 +15,8 @@ import type {
   SelectedElementType,
   ModalContext,
   Prop,
-  TextBox
+  TextBox,
+  DialogueChoice,
 } from '@/types';
 import type { CanvasProp } from './MainCanvas/components/PropElement';
 import type { CanvasTextBox } from './MainCanvas/components/TextBoxElement';
@@ -40,9 +41,7 @@ import { CharacterSprite } from './MainCanvas/components/CharacterSprite';
 import { PropElement } from './MainCanvas/components/PropElement';
 import { TextBoxElement } from './MainCanvas/components/TextBoxElement';
 import { DialoguePreviewOverlay } from './MainCanvas/components/DialoguePreviewOverlay';
-import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
 // import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization'; // masquée — doublon avec graphe Panel 3
-import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
 import { logger } from '../../utils/logger';
 import { CANVAS_PRESENTATION } from '@/config/canvas';
 
@@ -124,7 +123,6 @@ export default function MainCanvas({
   });
   const selection = useCanvasSelection({
     selectedScene,
-    selectedElement,
     onSelectDialogue
   });
 
@@ -279,6 +277,24 @@ export default function MainCanvas({
     [setCurrentTime, sceneId, selectedScene?.id, onSelectDialogue]
   );
 
+  /**
+   * Gère le clic sur un bouton de choix dans l'overlay éditeur.
+   * Navigue vers le dialogue lié (nextDialogueId) si défini, sinon vers le suivant.
+   * ✅ getState() dans un handler → lecture ponctuelle correcte (CLAUDE.md §6.7)
+   */
+  const handleChoiceNavigation = useCallback((choice: DialogueChoice) => {
+    if (!selectedScene?.id || !onSelectDialogue) return;
+    if (choice.nextDialogueId) {
+      const idx = sceneDialogues.findIndex(d => d.id === choice.nextDialogueId);
+      if (idx !== -1) {
+        onSelectDialogue(selectedScene.id, idx);
+        return;
+      }
+    }
+    // Fallback : dialogue suivant (pas de nextDialogueId ou ID introuvable)
+    selection.handleDialogueNavigate('next');
+  }, [selectedScene?.id, sceneDialogues, onSelectDialogue, selection.handleDialogueNavigate]);
+
   const handlePlayPause = useCallback(() => {
     const newIsPlaying = !viewState.isPlaying;
     viewState.setIsPlaying(newIsPlaying);
@@ -307,7 +323,6 @@ export default function MainCanvas({
     <div className="h-full flex flex-col">
       <SceneHeader
         scene={selectedScene}
-        dialoguesCount={dialoguesCount}
         fullscreenMode={fullscreenMode}
         onFullscreenChange={setFullscreenMode}
       />
@@ -440,7 +455,7 @@ export default function MainCanvas({
               )}
 
               {selectedElement?.type === 'dialogue' && selectedElement?.sceneId === selectedScene.id && (() => {
-                const dialogue = selectedScene.dialogues[selectedElement.index];
+                const dialogue = sceneDialogues[selectedElement.index];
                 if (!dialogue) return null;
 
                 const speaker = actions.characters.find(c => c.id === dialogue.speaker);
@@ -450,10 +465,11 @@ export default function MainCanvas({
                   <DialoguePreviewOverlay
                     dialogue={dialogue}
                     dialogueIndex={selectedElement.index}
-                    totalDialogues={selectedScene.dialogues.length}
+                    totalDialogues={sceneDialogues.length}
                     speakerName={speakerName}
                     currentDialogueText={currentDialogueText}
                     onNavigate={selection.handleDialogueNavigate}
+                    onChoose={handleChoiceNavigation}
                     isAutoPlaying={viewState.isPlaying}
                     onAutoPlayComplete={() => viewState.setIsPlaying(false)}
                     canvasWidth={canvasSize.width}
@@ -466,11 +482,10 @@ export default function MainCanvas({
 
         {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
         <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
-          <SceneInfoBar charactersCount={sceneCharacters.length} dialoguesCount={dialoguesCount} />
           <TimelinePlayhead
             currentTime={currentTime}
             duration={sceneDuration}
-            dialogues={selectedScene?.dialogues || []}
+            dialogues={sceneDialogues}
             onSeek={handleSeek}
             onPlayPause={handlePlayPause}
             isPlaying={viewState.isPlaying}
@@ -495,13 +510,10 @@ export default function MainCanvas({
           */}
         </div>
 
-      </div>
+        {/* Zone réservée — espace pour futur widget sous la timeline */}
+        <div className="flex-shrink-0 h-[72px] bg-background border-t border-border/50" />
 
-      <QuickActionsBar
-        sceneId={selectedScene.id}
-        onAddDialogue={actions.handleAddDialogue}
-        onSetBackground={actions.handleSetBackground}
-      />
+      </div>
 
       {contextMenu.contextMenuData && (
         <CharacterContextMenu

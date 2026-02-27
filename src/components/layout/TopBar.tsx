@@ -3,53 +3,30 @@ import { Button } from "@/components/ui/button"
 import { Users, Image, Settings, Download, Play, Network } from "lucide-react"
 import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
 import { useUIStore } from "@/stores"
+import { useTranslation } from "@/i18n"
+import { ModeSwitcher } from "@/components/ui/ModeSwitcher"
 
-/**
- * Validation data for TopBar
- */
 export interface TopBarValidation {
-  /** Whether there are any validation issues */
   hasIssues: boolean
-  /** Total number of errors */
   totalErrors: number
-  /** Total number of warnings */
   totalWarnings: number
 }
 
-/**
- * Props for TopBar component
- */
 export interface TopBarProps {
-  /** Callback for back button click */
   onBack?: (() => void) | null
-  /** Callback for undo action */
   undo: () => void
-  /** Callback for redo action */
   redo: () => void
-  /** Whether undo is available */
   canUndo: boolean
-  /** Whether redo is available */
   canRedo: boolean
-  /** Validation state and issues */
   validation?: TopBarValidation
-  /** Whether a save operation is in progress */
   isSaving: boolean
-  /** Timestamp of last save, or null if never saved */
   lastSaved: string | null
 }
 
 /**
- * TopBar - Application header with navigation and status
- *
- * Features:
- * - role="banner" for ARIA landmark
- * - Back button with tooltip
- * - Toolbar with Button Groups (Content Management | Project Actions)
- * - Undo/Redo buttons
- * - Validation badge (errors/warnings)
- * - Auto-save indicator
- *
- * Modal open + problems panel toggle are read/set directly from uiStore.
+ * TopBar - Application header with navigation and status.
+ * En mode 'kid' : boutons avancés masqués, labels simplifiés, ModeSwitcher visible.
+ * Modal open + problems panel toggle lus depuis uiStore.
  */
 export default function TopBar({
   onBack,
@@ -63,6 +40,8 @@ export default function TopBar({
 }: TopBarProps) {
   const showProblemsPanel = useUIStore(s => s.showProblemsPanel);
   const setShowProblemsPanel = useUIStore(s => s.setShowProblemsPanel);
+  const editorMode = useUIStore(s => s.editorMode);
+  const { kidMode: km } = useTranslation();
 
   const handleOpenCharacters = () => useUIStore.getState().setActiveModal('characters');
   const handleOpenAssets     = () => useUIStore.getState().setActiveModal('assets');
@@ -132,62 +111,85 @@ export default function TopBar({
                 aria-label="Bibliothèque de ressources (Ctrl+Shift+A)"
               >
                 <Image className="h-4 w-4" />
-                Ressources
+                {editorMode === 'kid' ? km.resources : 'Ressources'}
               </Button>
-              <Button
-                variant="gaming-accent"
-                size="sm"
-                onClick={handleOpenGraph}
-                title="Vue Graphe - Éditeur nodal des dialogues | Raccourci: Ctrl+Shift+G"
-                aria-label="Vue Graphe - Éditeur nodal (Ctrl+Shift+G)"
-                className="shadow-md"
-              >
-                <Network className="h-4 w-4" />
-                Vue Graphe
-              </Button>
+              {editorMode === 'pro' && (
+                <Button
+                  variant="gaming-accent"
+                  size="sm"
+                  onClick={handleOpenGraph}
+                  title="Vue Graphe - Éditeur nodal des dialogues | Raccourci: Ctrl+Shift+G"
+                  aria-label="Vue Graphe - Éditeur nodal (Ctrl+Shift+G)"
+                  className="shadow-md"
+                >
+                  <Network className="h-4 w-4" />
+                  Vue Graphe
+                </Button>
+              )}
             </div>
 
-            {/* Separator */}
-            <div className="h-8 w-px bg-muted" aria-hidden="true" />
+            {/* Separator — masqué en mode kid (Group 2 réduit à 1 bouton plat) */}
+            {editorMode === 'pro' && (
+              <div className="h-8 w-px bg-muted" aria-hidden="true" />
+            )}
 
-            {/* Group 2: Project Actions */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-muted/30 rounded-lg border border-border/50" role="group" aria-label="Actions du projet">
-              <Button
-                variant="toolbar"
-                size="sm"
-                onClick={handleOpenProject}
-                title="Paramètres du projet"
-                aria-label="Paramètres du projet"
-              >
-                <Settings className="h-4 w-4" />
-                Réglages
-              </Button>
-              <Button
-                variant="toolbar"
-                size="sm"
-                onClick={handleOpenExport}
-                title="Exporter le projet"
-                aria-label="Exporter le projet"
-              >
-                <Download className="h-4 w-4" />
-                Exporter
-              </Button>
+            {/* Group 2: Project Actions
+                Mode pro : container groupé (Réglages + Exporter + Aperçu)
+                Mode kid : bouton seul sans container pour éviter la double bordure */}
+            {editorMode === 'pro' ? (
+              <div className="flex items-center gap-1 px-2 py-1 bg-muted/30 rounded-lg border border-border/50" role="group" aria-label="Actions du projet">
+                <Button
+                  variant="toolbar"
+                  size="sm"
+                  onClick={handleOpenProject}
+                  title="Paramètres du projet"
+                  aria-label="Paramètres du projet"
+                >
+                  <Settings className="h-4 w-4" />
+                  Réglages
+                </Button>
+                <Button
+                  variant="toolbar"
+                  size="sm"
+                  onClick={handleOpenExport}
+                  title="Exporter le projet"
+                  aria-label="Exporter le projet"
+                >
+                  <Download className="h-4 w-4" />
+                  Exporter
+                </Button>
+                <Button
+                  variant="gaming-accent"
+                  size="sm"
+                  onClick={handleOpenPreview}
+                  title="Prévisualiser le jeu | Raccourci: Ctrl+R"
+                  aria-label="Prévisualiser le jeu (Ctrl+R)"
+                  className="shadow-md"
+                >
+                  <Play className="h-4 w-4" />
+                  Aperçu
+                </Button>
+              </div>
+            ) : (
               <Button
                 variant="gaming-accent"
                 size="sm"
                 onClick={handleOpenPreview}
-                title="Prévisualiser le jeu | Raccourci: Ctrl+R"
-                aria-label="Prévisualiser le jeu (Ctrl+R)"
+                title={`${km.preview} | Raccourci: Ctrl+R`}
+                aria-label={`${km.preview} (Ctrl+R)`}
                 className="shadow-md"
               >
                 <Play className="h-4 w-4" />
-                Aperçu
+                {km.preview}
               </Button>
-            </div>
+            )}
           </nav>
 
-          {/* Right: Undo/Redo + Validation + Save indicator */}
+          {/* Right: ModeSwitcher + Undo/Redo + Validation + Save indicator */}
           <div className="flex items-center gap-3">
+            {/* ModeSwitcher — bascule Mode Élève / Mode Avancé */}
+            <ModeSwitcher />
+            <div className="h-8 w-px bg-muted" aria-hidden="true" />
             {/* Undo/Redo buttons */}
             <div className="flex items-center gap-1 border-r border-border pr-3" role="group" aria-label="Historique">
               <button

@@ -54,9 +54,11 @@ interface StatRowProps {
   /** 'heartbeat' → lub-dub sur scale | 'flicker' → électrique sur opacity */
   animationType: 'heartbeat' | 'flicker';
   sf: number;
+  /** Libellé affiché après l'icône */
+  label?: string;
 }
 
-function StatRow({ icon, value, iconColor, animationType, sf }: StatRowProps) {
+function StatRow({ icon, value, iconColor, animationType, sf, label }: StatRowProps) {
   const clamped    = clampStat(value);
   const isCritical = clamped <= STAT_THRESHOLDS.WARNING;
   const numColor   = statColor(clamped);
@@ -86,21 +88,33 @@ function StatRow({ icon, value, iconColor, animationType, sf }: StatRowProps) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1.5">
-        {/* Icône — animation idle constante, plus intense si critique */}
-        <motion.span
-          className={iconColor}
-          animate={iconAnimate}
-          transition={iconTransition}
-          aria-hidden="true"
-          style={{ display: 'flex', alignItems: 'center' }}
-        >
-          <span style={{ width: iconSz, height: iconSz, display: 'flex' }}>
-            {icon}
-          </span>
-        </motion.span>
+      {/* justify-between : icône+label à gauche, chiffre aligné à droite */}
+      <div className="flex items-center justify-between gap-2">
 
-        {/* Chiffre — couleur dynamique selon niveau */}
+        {/* Groupe gauche : icône + label */}
+        <div className="flex items-center gap-1.5">
+          {/* Icône — animation idle constante, plus intense si critique */}
+          <motion.span
+            className={iconColor}
+            animate={iconAnimate}
+            transition={iconTransition}
+            aria-hidden="true"
+            style={{ display: 'flex', alignItems: 'center' }}
+          >
+            <span style={{ width: iconSz, height: iconSz, display: 'flex' }}>
+              {icon}
+            </span>
+          </motion.span>
+
+          {/* Libellé — toujours après l'icône (layout fixe) */}
+          {label && (
+            <span className="text-white/40 uppercase" style={{ fontSize: Math.max(8, Math.round(9 * sf)), lineHeight: 1, fontFamily: "'Audiowide', sans-serif", letterSpacing: '0.05em' }}>
+              {label}
+            </span>
+          )}
+        </div>
+
+        {/* Chiffre — couleur dynamique, toujours aligné à droite */}
         <span
           className={`font-bold tabular-nums ${numColor}`}
           style={{ fontSize: textSz, lineHeight: 1 }}
@@ -162,6 +176,7 @@ export function CompactStatHUD({ physique, mentale, scaleFactor = 1 }: CompactSt
         iconColor="text-rose-400"
         animationType="heartbeat"
         sf={sf}
+        label="physique"
       />
       <StatRow
         icon={<Zap className="w-full h-full" />}
@@ -169,6 +184,7 @@ export function CompactStatHUD({ physique, mentale, scaleFactor = 1 }: CompactSt
         iconColor="text-cyan-400"
         animationType="flicker"
         sf={sf}
+        label="mental"
       />
     </div>
   );

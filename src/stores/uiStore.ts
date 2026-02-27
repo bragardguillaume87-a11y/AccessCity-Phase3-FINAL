@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext } from '@/types';
+import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext, EditorMode } from '@/types';
 
 /**
  * UI Store
@@ -118,6 +118,24 @@ function persistProConfig(config: ProModeConfig): void {
   } catch { /* ignore */ }
 }
 
+/**
+ * Editor mode persistence (kid / pro)
+ */
+const EDITOR_MODE_KEY = 'accesscity-editor-mode';
+
+function getPersistedEditorMode(): EditorMode {
+  if (typeof window === 'undefined') return 'pro';
+  try {
+    const stored = localStorage.getItem(EDITOR_MODE_KEY);
+    return stored === 'kid' ? 'kid' : 'pro';
+  } catch { return 'pro'; }
+}
+
+function persistEditorMode(mode: EditorMode): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(EDITOR_MODE_KEY, mode); } catch { /* ignore */ }
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -198,6 +216,9 @@ interface UIState {
   setProPaginationEnabled: (enabled: boolean) => void;
   setProPageSize: (size: number) => void;
   setProCurrentPage: (page: number) => void;
+  // Editor mode (kid/pro)
+  editorMode: EditorMode;
+  setEditorMode: (mode: EditorMode) => void;
 }
 
 // ============================================================================
@@ -238,6 +259,8 @@ export const useUIStore = create<UIState>()(
         serpentineMode: serpentineConfig.mode,
         serpentineDirection: serpentineConfig.direction,
         serpentineGroupSize: serpentineConfig.groupSize,
+        // Editor mode state (persisted)
+        editorMode: getPersistedEditorMode(),
         // Pro mode state (persisted)
         proModeEnabled: proConfig.enabled,
         proModeDirection: proConfig.direction,
@@ -440,6 +463,11 @@ export const useUIStore = create<UIState>()(
 
       setProCurrentPage: (page) => {
         set({ proCurrentPage: page }, false, 'ui/setProCurrentPage');
+      },
+
+      setEditorMode: (mode) => {
+        persistEditorMode(mode);
+        set({ editorMode: mode }, false, 'ui/setEditorMode');
       },
     };
     }),

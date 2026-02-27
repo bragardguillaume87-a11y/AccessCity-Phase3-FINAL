@@ -34,20 +34,20 @@ export function StepTemplate({ complexityLevel, onSelect }: StepTemplateProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-8 space-y-8">
+    <div className="w-full max-w-4xl mx-auto py-4 space-y-4">
       {/* Header */}
-      <div className="text-center space-y-3">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-pink-500 bg-clip-text text-transparent">
+      <div className="text-center space-y-1">
+        <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-pink-500 bg-clip-text text-transparent">
           Choisis une situation de départ
         </h2>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-muted-foreground text-sm">
           Sélectionne un modèle pour pré-remplir ton dialogue — ou commence depuis zéro.
         </p>
       </div>
 
       {/* Templates grid */}
       {templates.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-2">
           {templates.map((template, idx) => {
             const isSelected = selectedId === template.id;
 
@@ -60,48 +60,48 @@ export function StepTemplate({ complexityLevel, onSelect }: StepTemplateProps) {
                 transition={{ duration: 0.25, delay: idx * 0.08 }}
                 onClick={() => handleCardClick(template)}
                 className={cn(
-                  'text-left w-full rounded-2xl border-4 p-5 transition-all duration-200',
-                  'focus:outline-none focus:ring-4 focus:ring-primary focus:ring-offset-2',
-                  'hover:border-primary/60 hover:shadow-lg',
+                  'text-left w-full rounded-xl border-2 p-3 transition-all duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                  'hover:border-primary/60 hover:shadow-md',
                   isSelected
-                    ? 'border-primary ring-4 ring-primary/30 shadow-xl bg-primary/5'
+                    ? 'border-primary ring-2 ring-primary/30 shadow-md bg-primary/5'
                     : 'border-border bg-card'
                 )}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3">
                   {/* Icon */}
-                  <div className="text-4xl flex-shrink-0 mt-0.5">{template.icon}</div>
+                  <div className="text-2xl flex-shrink-0 mt-0.5">{template.icon}</div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-lg font-bold text-foreground">{template.label}</h3>
+                      <h3 className="text-sm font-bold text-foreground">{template.label}</h3>
                       {isSelected && (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="text-primary text-xl font-bold"
+                          className="text-primary text-base font-bold"
                         >
                           ✓
                         </motion.span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                       {template.description}
                     </p>
 
                     {/* Preview text snippet */}
                     {template.prefill.text && (
-                      <p className="text-xs text-foreground/60 italic mt-2 truncate">
+                      <p className="text-xs text-foreground/60 italic mt-1.5 truncate">
                         « {template.prefill.text} »
                       </p>
                     )}
 
                     {/* Choices count */}
                     {template.prefill.choices && (
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="mt-1.5 flex items-center gap-1.5">
                         <span className="text-xs font-medium text-muted-foreground">
                           {template.prefill.choices.length} choix
                           {template.prefill.choices[0]?.diceCheck && ' · Jet de dé'}
@@ -121,7 +121,7 @@ export function StepTemplate({ complexityLevel, onSelect }: StepTemplateProps) {
       )}
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-center px-4 pt-2">
+      <div className="flex flex-col sm:flex-row gap-3 justify-center px-2 pt-1">
         {selectedId && (
           <motion.button
             initial={{ opacity: 0, scale: 0.9 }}
@@ -129,10 +129,10 @@ export function StepTemplate({ complexityLevel, onSelect }: StepTemplateProps) {
             type="button"
             onClick={handleUseTemplate}
             className={cn(
-              'px-8 py-3 rounded-xl font-bold text-white text-base',
+              'px-4 py-2 rounded-lg text-sm font-bold text-white',
               'bg-gradient-to-r from-primary to-pink-500',
-              'hover:shadow-lg hover:scale-105 transition-all',
-              'focus:outline-none focus:ring-4 focus:ring-primary focus:ring-offset-2'
+              'hover:shadow-md hover:scale-105 transition-all',
+              'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
             )}
           >
             Utiliser ce modèle →
@@ -143,10 +143,10 @@ export function StepTemplate({ complexityLevel, onSelect }: StepTemplateProps) {
           type="button"
           onClick={handleSkip}
           className={cn(
-            'px-8 py-3 rounded-xl font-medium text-base',
-            'border-2 border-border bg-background',
+            'px-4 py-2 rounded-lg text-sm font-medium',
+            'border border-border bg-background',
             'hover:border-primary/50 hover:bg-primary/5 transition-all',
-            'focus:outline-none focus:ring-4 focus:ring-primary focus:ring-offset-2',
+            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
             'text-muted-foreground'
           )}
         >

@@ -19,6 +19,7 @@
     "prebuild:vite": "node tools/generate-assets-manifest.js",
     "build:vite": "vite build --config vite.config.js",
     "build:player": "vite build --config vite.config.player.ts",
+    "dev:player-tauri": "vite --config vite.config.player-tauri.ts --port 5174",
     "build:player-tauri-frontend": "vite build --config vite.config.player-tauri.ts",
     "build:player-exe": "npm run build:player-tauri-frontend && npx tauri build --config src-tauri/tauri.conf.json",
     "build:vite:coverage": "set VITE_COVERAGE=true && vite build --config vite.config.js",

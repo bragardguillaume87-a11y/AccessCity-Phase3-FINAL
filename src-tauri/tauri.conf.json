@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "identifier": "fr.accesscity.player",
   "build": {
+    "devUrl": "http://localhost:5174",
+    "beforeDevCommand": "npm run dev:player-tauri",
     "frontendDist": "../dist-player-tauri"
   },
   "app": {
@@ -17,14 +19,12 @@
       }
     ],
     "security": {
-      "csp": "asset: http://asset.localhost data: blob:",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'",
       "assetProtocol": {
         "enable": true,
         "scope": ["$APPDIR/**"]
       }
     }
   },
-  "bundle": {
-    "active": false
-  }
+  "bundle": { "active": false }
 }

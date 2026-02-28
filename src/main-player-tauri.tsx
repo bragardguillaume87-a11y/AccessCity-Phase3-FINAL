@@ -269,7 +269,7 @@ function DebugPanel({ info, fetchResults, onTestFetch, onCopyAll, onClose }: Deb
             {info.sampleUrls.map((url, i) => (
               <div key={i} style={{
                 marginBottom: '3px',
-                color: url.startsWith('asset://') ? '#86efac' : '#fbbf24',
+                color: (url.startsWith('asset://') || url.startsWith('https://asset.localhost') || url.startsWith('http://asset.localhost')) ? '#86efac' : '#fbbf24',
               }}>
                 {url}
               </div>
@@ -303,8 +303,8 @@ function DebugPanel({ info, fetchResults, onTestFetch, onCopyAll, onClose }: Deb
       {/* Aide lecture */}
       <DebugSection label="Lecture des résultats">
         <div style={{ ...valueStyle, color: 'rgba(255,255,255,0.4)', lineHeight: '1.65' }}>
-          <span style={{ color: '#86efac' }}>Vert</span> = asset:// → protocole OK{'\n'}
-          <span style={{ color: '#fbbf24' }}>Jaune</span> = URL non réécrite → bug rewriteForTauri{'\n'}
+          <span style={{ color: '#86efac' }}>Vert</span> = asset:// ou https://asset.localhost → protocole OK{'\n'}
+          <span style={{ color: '#fbbf24' }}>Jaune</span> = URL non réécrite (assets/…) → bug rewriteForTauri{'\n'}
           fetch ERREUR = scope $APPDIR ou permission manquante
         </div>
       </DebugSection>
@@ -392,7 +392,10 @@ function rewriteForTauri(data: ExportData, exeDir: string): ExportData {
  */
 function extractSampleUrls(data: ExportData, limit: number): string[] {
   const json = JSON.stringify(data);
-  const matches = json.match(/"((?:asset:\/\/|assets\/)[^"]+)"/g) ?? [];
+  // Sur Windows, convertFileSrc() génère https://asset.localhost/...
+  // Sur macOS/Linux, il génère asset://localhost/...
+  // On matche également les chemins relatifs assets/ (avant réécriture)
+  const matches = json.match(/"((?:https?:\/\/asset\.localhost\/|asset:\/\/|assets\/)[^"]+)"/g) ?? [];
   const urls = matches
     .map(m => m.replace(/^"|"$/g, ''))
     .filter((v, i, arr) => arr.indexOf(v) === i); // dédupliquer

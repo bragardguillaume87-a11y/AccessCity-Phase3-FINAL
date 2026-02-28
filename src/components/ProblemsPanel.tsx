@@ -102,7 +102,7 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
     });
 
     // Dialogue errors - O(1) lookup with Map
-    Object.entries(validation.errors.dialogues).forEach(([key, errors]) => {
+    Object.entries(validation.errors.dialogues).forEach(([key, errors]: [string, ValidationError[]]) => {
       const [sceneId, dialogueIdx] = key.split('-');
       const scene = sceneMap.get(sceneId);
       (errors as ValidationError[]).forEach(error => {
@@ -120,7 +120,7 @@ export default function ProblemsPanel({ onNavigateTo }: ProblemsPanelProps): Rea
     });
 
     // Choice errors - O(1) lookup with Map
-    Object.entries(validation.errors.choices).forEach(([key, errors]) => {
+    Object.entries(validation.errors.choices).forEach(([key, errors]: [string, ValidationError[]]) => {
       const [sceneId, dialogueIdx, choiceIdx] = key.split('-');
       const scene = sceneMap.get(sceneId);
       (errors as ValidationError[]).forEach(error => {

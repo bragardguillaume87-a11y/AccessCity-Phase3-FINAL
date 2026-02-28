@@ -5,6 +5,7 @@ import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { SfxGeneratorPanel } from './SfxGeneratorPanel';
 import type { SceneAudio, AmbientAudio } from '@/types/audio';
 
 // ============================================================================
@@ -572,6 +573,21 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
             <p className="text-xs text-[var(--color-text-muted)]">
               Importe et organise tes musiques et sons d'ambiance
             </p>
+          </div>
+        </CollapsibleSection>
+      </div>
+
+      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
+
+      {/* === Générateur SFX 8-bit === */}
+      <div className="pl-2 border-l-2 border-[var(--color-primary)]/30 py-0.5">
+        <CollapsibleSection
+          title="🎲 Générateur SFX 8-bit"
+          variant="flat"
+          defaultOpen={false}
+        >
+          <div className="pb-3">
+            <SfxGeneratorPanel />
           </div>
         </CollapsibleSection>
       </div>

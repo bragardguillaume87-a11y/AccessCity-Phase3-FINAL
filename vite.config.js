@@ -81,6 +81,8 @@ export default defineConfig({
           'vendor-misc': ['canvas-confetti', 'react-resizable-panels'],
           // Phaser — lazy-loaded uniquement quand le PreviewPlayer s'ouvre
           'vendor-phaser': ['phaser'],
+          // Theatre.js — timeline/animations, @theatre/studio exclu (devDep, import() conditionnel)
+          'vendor-theatre': ['@theatre/core', '@theatre/react'],
         },
         // Naming convention for chunks
         chunkFileNames: 'assets/[name]-[hash].js',

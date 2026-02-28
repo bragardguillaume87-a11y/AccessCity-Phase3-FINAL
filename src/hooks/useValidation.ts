@@ -245,7 +245,7 @@ export function useValidation(): ValidationResult {
   const validation = useMemo(() => {
     // Merge dialogue errors from scenes and cross-domain
     const mergedDialogues = { ...scenesValidation.errors.dialogues };
-    Object.entries(crossDomainValidation.errors).forEach(([key, errs]) => {
+    Object.entries(crossDomainValidation.errors).forEach(([key, errs]: [string, ValidationError[]]) => {
       if (key.includes('-') && !key.split('-')[2]) { // It's a dialogue key
         mergedDialogues[key] = [...(mergedDialogues[key] || []), ...errs];
       }
@@ -253,7 +253,7 @@ export function useValidation(): ValidationResult {
 
     // Merge choice errors from scenes and cross-domain
     const mergedChoices = { ...scenesValidation.errors.choices };
-    Object.entries(crossDomainValidation.errors).forEach(([key, errs]) => {
+    Object.entries(crossDomainValidation.errors).forEach(([key, errs]: [string, ValidationError[]]) => {
       if (key.split('-').length === 3) { // It's a choice key
         mergedChoices[key] = [...(mergedChoices[key] || []), ...errs];
       }

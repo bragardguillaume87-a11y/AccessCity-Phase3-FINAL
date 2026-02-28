@@ -132,7 +132,7 @@ export function buildInitialVariables(
   vars: Record<string, ExportVariableDef>
 ): GameStats {
   const result: GameStats = {};
-  Object.entries(vars).forEach(([key, def]) => {
+  Object.entries(vars).forEach(([key, def]: [string, ExportVariableDef]) => {
     result[key] = def.initial ?? 0;
   });
   return result;

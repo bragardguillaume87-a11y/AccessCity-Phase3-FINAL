@@ -188,15 +188,14 @@ export function CharactersModal({
 
   const validationErrors = useMemo(() => {
     const errors: Record<string, Array<{ field: string; message: string; severity: 'error' | 'warning' }>> = {};
-    const charErrors = validation.errors?.characters || {};
-    Object.entries(charErrors).forEach(([charId, charErrorList]) => {
-      if (Array.isArray(charErrorList)) {
-        errors[charId] = charErrorList.map((err) => ({
-          field: err.field || 'unknown',
-          message: err.message || 'Erreur inconnue',
-          severity: (err.severity as 'error' | 'warning') || 'error',
-        }));
-      }
+    type ErrEntry = { field: string; message: string; severity: string };
+    const charErrors = (validation.errors?.characters ?? {}) as unknown as Record<string, ErrEntry[]>;
+    Object.entries(charErrors).forEach(([charId, charErrorList]: [string, ErrEntry[]]) => {
+      errors[charId] = charErrorList.map((err) => ({
+        field: err.field || 'unknown',
+        message: err.message || 'Erreur inconnue',
+        severity: (err.severity as 'error' | 'warning') || 'error',
+      }));
     });
 
     return errors;

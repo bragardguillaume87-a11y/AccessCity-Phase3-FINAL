@@ -29,6 +29,9 @@ const AssetsLibraryModal  = React.lazy(() => import('./modals/AssetsLibraryModal
 const SettingsModal       = React.lazy(() => import('./modals/SettingsModal'));
 const PreviewModal        = React.lazy(() => import('./modals/PreviewModal'));
 const ExportModal         = React.lazy(() => import('./modals/ExportModal'));
+const CinematicEditorModal = React.lazy(() =>
+  import('./modals/CinematicEditor').then(m => ({ default: m.CinematicEditor }))
+);
 
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
@@ -432,6 +435,10 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             <ExportModal onClose={() => setActiveModal(null)} />
           </ErrorBoundary>
         )}
+        {/* CinematicEditor — toujours monté, se gère lui-même via uiStore */}
+        <ErrorBoundary name="CinematicEditor">
+          <CinematicEditorModal />
+        </ErrorBoundary>
       </React.Suspense>
     </div>
   );

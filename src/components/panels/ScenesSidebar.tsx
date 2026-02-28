@@ -19,8 +19,10 @@ import { useScenesStore } from '../../stores/index'
 import { useDialoguesStore } from '@/stores/dialoguesStore'
 import { useSceneElementsStore } from '@/stores/sceneElementsStore'
 import { Button } from '@/components/ui/button'
-import { Plus, Copy, Trash2 } from 'lucide-react'
+import { Plus, Copy, Trash2, Film } from 'lucide-react'
 import type { SceneMetadata } from '@/types'
+import { useUIStore } from '@/stores/uiStore'
+import { useState, useRef, useEffect } from 'react'
 
 /**
  * SceneCard Props Interface
@@ -33,6 +35,7 @@ interface SceneCardProps {
   onSelect: () => void
   onDuplicate: (sceneId: string) => void
   onDelete: (sceneId: string) => void
+  onOpenCinematic?: (sceneId: string) => void
 }
 
 /**
@@ -44,7 +47,7 @@ interface SceneCardProps {
  * DnD note: PointerSensor uses activationConstraint { distance: 8 } so
  * a simple click fires onClick normally before drag activates.
  */
-function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDuplicate, onDelete }: SceneCardProps) {
+function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDuplicate, onDelete, onOpenCinematic }: SceneCardProps) {
   const {
     attributes,
     listeners,
@@ -61,6 +64,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
   }
 
   const hasBackground = !!scene.backgroundUrl
+  const isCinematic = scene.sceneType === 'cinematic'
 
   return (
     <div
@@ -82,6 +86,9 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
       {...attributes}
       {...listeners}
       onClick={onSelect}
+      onDoubleClick={() => {
+        if (isCinematic && onOpenCinematic) onOpenCinematic(scene.id)
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -140,8 +147,30 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
           {index + 1}
         </span>
 
+        {/* Cinematic badge — top-right (hidden on hover, replaced by action buttons) */}
+        {isCinematic && (
+          <span
+            className="absolute top-1 right-1 flex items-center gap-0.5 text-[10px] font-bold px-1 py-0.5 rounded bg-violet-600/90 backdrop-blur-sm text-white group-hover:opacity-0 transition-opacity duration-200 pointer-events-none"
+            title="Double-cliquer pour ouvrir l'éditeur cinématique"
+            aria-hidden="true"
+          >
+            <Film className="w-2.5 h-2.5" />
+          </span>
+        )}
+
         {/* Hover actions — slide in depuis la droite au survol */}
         <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-200">
+          {isCinematic && onOpenCinematic && (
+            <button
+              className="w-5 h-5 rounded bg-violet-600/90 backdrop-blur-sm hover:bg-violet-500 text-white flex items-center justify-center"
+              title="Éditer la cinématique"
+              aria-label="Ouvrir l'éditeur cinématique"
+              onClick={(e) => { e.stopPropagation(); onOpenCinematic(scene.id) }}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <Film className="w-3 h-3" />
+            </button>
+          )}
           <button
             className="w-5 h-5 rounded bg-black/60 backdrop-blur-sm hover:bg-black/80 text-white flex items-center justify-center"
             title="Dupliquer"
@@ -200,9 +229,26 @@ export default function ScenesSidebar({
   const deleteScene = useScenesStore(state => state.deleteScene)
   const updateScene = useScenesStore(state => state.updateScene)
   const reorderScenes = useScenesStore(state => state.reorderScenes)
+  const setCinematicEditorOpen = useUIStore(state => state.setCinematicEditorOpen)
 
   // Real character counts come from sceneElementsStore (not scene.characters which is always [])
   const elementsByScene = useSceneElementsStore(state => state.elementsByScene)
+
+  // Add scene dropdown
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const addMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!addMenuOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setAddMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [addMenuOpen])
 
   // activationConstraint: drag only starts after 8px movement, so simple clicks still fire
   const sensors = useSensors(
@@ -223,9 +269,17 @@ export default function ScenesSidebar({
     }
   }
 
-  const handleAddScene = () => {
-    const newId = addScene()
+  const handleAddScene = (sceneType?: 'standard' | 'cinematic') => {
+    const newId = addScene(sceneType)
     onSceneSelect(newId)
+    setAddMenuOpen(false)
+    if (sceneType === 'cinematic') {
+      setCinematicEditorOpen(true, newId)
+    }
+  }
+
+  const handleOpenCinematic = (sceneId: string) => {
+    setCinematicEditorOpen(true, sceneId)
   }
 
   const handleDuplicateScene = (sceneId: string) => {
@@ -234,13 +288,14 @@ export default function ScenesSidebar({
 
     const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId)
     const elements = useSceneElementsStore.getState().getElementsForScene(sceneId)
-    const newId = addScene()
+    const newId = addScene(scene.sceneType)
 
     // Copier les métadonnées via scenesStore
     updateScene(newId, {
       title: `${scene.title} (copie)`,
       description: scene.description,
       backgroundUrl: scene.backgroundUrl,
+      cinematicEvents: scene.cinematicEvents ? [...scene.cinematicEvents] : undefined,
     })
 
     // Copier les dialogues via dialoguesStore (Post-Phase 3)
@@ -269,18 +324,45 @@ export default function ScenesSidebar({
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-bg-elevated)]" role="complementary" aria-label="Filmstrip des scènes">
-      {/* Header compact */}
-      <div className="flex-shrink-0 p-2 border-b border-[var(--color-border-base)]">
+      {/* Header compact — bouton + menu déroulant type de scène */}
+      <div className="flex-shrink-0 p-2 border-b border-[var(--color-border-base)] relative" ref={addMenuRef}>
         <Button
           variant="token-primary"
           size="sm"
-          onClick={handleAddScene}
+          onClick={() => setAddMenuOpen(prev => !prev)}
           className="w-full h-9 text-[13px] font-semibold justify-center focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
           aria-label="Ajouter une scène"
+          aria-expanded={addMenuOpen}
+          aria-haspopup="menu"
         >
           <Plus className="w-4 h-4 mr-1.5" aria-hidden="true" />
           Scène
         </Button>
+
+        {/* Dropdown menu */}
+        {addMenuOpen && (
+          <div
+            className="absolute left-2 right-2 top-full mt-1 z-50 rounded-lg border border-[var(--color-border-base)] bg-[var(--color-bg-elevated)] shadow-xl overflow-hidden"
+            role="menu"
+          >
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-left hover:bg-[var(--color-bg-base)] text-[var(--color-text-primary)] transition-colors"
+              onClick={() => handleAddScene('standard')}
+              role="menuitem"
+            >
+              <Plus className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+              <span>Scène normale</span>
+            </button>
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-left hover:bg-[var(--color-bg-base)] text-[var(--color-text-primary)] transition-colors border-t border-[var(--color-border-base)]"
+              onClick={() => handleAddScene('cinematic')}
+              role="menuitem"
+            >
+              <Film className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
+              <span>Cinématique</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filmstrip — compact thumbnails, proportions Powtoon */}
@@ -304,6 +386,7 @@ export default function ScenesSidebar({
                   onSelect={() => onSceneSelect(scene.id)}
                   onDuplicate={handleDuplicateScene}
                   onDelete={handleDeleteScene}
+                  onOpenCinematic={handleOpenCinematic}
                 />
               </div>
             ))}

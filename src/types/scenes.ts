@@ -1,5 +1,9 @@
 import type { Condition, DiceCheck, Effect } from './game';
 import type { SceneAudio, DialogueAudio, AmbientAudio } from './audio';
+import type { CinematicEvent } from './cinematic';
+
+/** Type de scène : dialogue interactif ou cinématique auto-play */
+export type SceneType = 'standard' | 'cinematic';
 
 /**
  * CSS filter overrides applied to the scene background image only.
@@ -38,6 +42,10 @@ export interface SceneMetadata {
   ambientTracks?: [AmbientAudio?, AmbientAudio?];
   /** CSS filter applied to background image only. Characters and UI are unaffected. */
   backgroundFilter?: BackgroundFilter;
+  /** Scene type: 'standard' (click-to-advance dialogues) or 'cinematic' (auto-play event sequence). Default: 'standard'. */
+  sceneType?: SceneType;
+  /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. */
+  cinematicEvents?: CinematicEvent[];
 }
 
 export interface Position {
@@ -160,4 +168,8 @@ export interface Scene {
   ambientTracks?: [AmbientAudio?, AmbientAudio?];
   /** CSS filter applied to background image only. Inherited from SceneMetadata. */
   backgroundFilter?: BackgroundFilter;
+  /** Scene type: 'standard' (click-to-advance dialogues) or 'cinematic' (auto-play event sequence). Default: 'standard'. */
+  sceneType?: SceneType;
+  /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. Inherited from SceneMetadata. */
+  cinematicEvents?: CinematicEvent[];
 }

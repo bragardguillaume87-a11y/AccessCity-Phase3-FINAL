@@ -37,6 +37,7 @@ import { useCanvasDimensions } from '../MainCanvas/hooks/useCanvasDimensions';
 import { Volume2, VolumeX, BarChart3 } from 'lucide-react';
 import { audioManager } from '../../../utils/audioManager';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import { CinematicPlayer } from './CinematicPlayer';
 import { logger } from '@/utils/logger';
 import { GAME_STATS } from '@/i18n';
 import { DialogueBox } from '@/components/ui/DialogueBox';
@@ -401,7 +402,17 @@ export default function PreviewPlayer({
         ref={centerDivRef}
         className="flex-1 min-h-0 bg-black flex items-center justify-center relative overflow-hidden"
       >
-        {canvasSize.width > 0 && (
+        {canvasSize.width > 0 && currentScene.sceneType === 'cinematic' && (
+          <CinematicPlayer
+            events={currentScene.cinematicEvents ?? []}
+            backgroundUrl={currentScene.backgroundUrl}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            characterLibrary={characterLibrary}
+            onSequenceEnd={goToNextDialogue}
+          />
+        )}
+        {canvasSize.width > 0 && currentScene.sceneType !== 'cinematic' && (
           <div
             className="relative overflow-hidden flex-shrink-0"
             style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}

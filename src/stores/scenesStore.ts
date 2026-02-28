@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
-import type { SceneMetadata } from '../types';
+import type { SceneMetadata, SceneType, CinematicEvent } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
 
@@ -44,11 +44,12 @@ interface ScenesState {
   getAllScenes: () => SceneMetadata[];
 
   // Actions: CRUD
-  addScene: () => string;
+  addScene: (sceneType?: SceneType) => string;
   updateScene: (sceneId: string, patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)) => void;
   deleteScene: (sceneId: string) => void;
   reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
+  updateCinematicEvents: (sceneId: string, events: CinematicEvent[]) => void;
 
   // Batch operations (performance)
   batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<SceneMetadata> }>) => void;
@@ -98,13 +99,18 @@ function generateSceneId(): string {
  * Utiliser dialoguesStore.addDialogue() et sceneElementsStore.addCharacterToScene()
  * pour ajouter du contenu après création.
  */
-function createEmptyScene(): SceneMetadata {
-  return {
+function createEmptyScene(sceneType?: SceneType): SceneMetadata {
+  const base: SceneMetadata = {
     id: generateSceneId(),
-    title: 'Nouvelle Scène',
+    title: sceneType === 'cinematic' ? 'Nouvelle Cinématique' : 'Nouvelle Scène',
     description: '',
     backgroundUrl: '',
   };
+  if (sceneType === 'cinematic') {
+    base.sceneType = 'cinematic';
+    base.cinematicEvents = [];
+  }
+  return base;
 }
 
 // ============================================================================
@@ -152,8 +158,8 @@ export const useScenesStore = create<ScenesState>()(
            * const sceneId = addScene();
            * console.log(sceneId); // 'scene-abc123...'
            */
-          addScene: () => {
-            const newScene = createEmptyScene();
+          addScene: (sceneType) => {
+            const newScene = createEmptyScene(sceneType);
 
             set(
               (state) => ({
@@ -248,6 +254,23 @@ export const useScenesStore = create<ScenesState>()(
               },
               false,
               'scenes/batchUpdateScenes'
+            );
+          },
+
+          /**
+           * Met à jour la séquence d'events d'une scène cinématique
+           *
+           * Remplace la liste complète — utiliser pour drag-to-reorder et add/remove event.
+           */
+          updateCinematicEvents: (sceneId, events) => {
+            set(
+              (state) => ({
+                scenes: state.scenes.map((s) =>
+                  s.id === sceneId ? { ...s, cinematicEvents: events } : s
+                ),
+              }),
+              false,
+              'scenes/updateCinematicEvents'
             );
           },
 

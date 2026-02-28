@@ -163,6 +163,9 @@ interface UIState {
   dialogueWizardInitialComplexity: ComplexityLevel | null;
   dialogueGraphModalOpen: boolean;
   dialogueGraphSelectedScene: string | null;
+  // Cinematic editor
+  cinematicEditorOpen: boolean;
+  cinematicEditorSceneId: string | null;
   graphThemeId: string;
   // SERP-5: Serpentine layout configuration
   serpentineEnabled: boolean;
@@ -199,6 +202,9 @@ interface UIState {
   clearDialogueWizardInitialComplexity: () => void;
   setDialogueGraphModalOpen: (open: boolean) => void;
   setDialogueGraphSelectedScene: (sceneId: string | null) => void;
+  // Cinematic editor actions
+  setCinematicEditorOpen: (open: boolean, sceneId?: string | null) => void;
+  setCinematicEditorSceneId: (sceneId: string | null) => void;
   setGraphThemeId: (themeId: string) => void;
   // SERP-5: Serpentine layout actions
   setSerpentineEnabled: (enabled: boolean) => void;
@@ -253,6 +259,8 @@ export const useUIStore = create<UIState>()(
         dialogueWizardInitialComplexity: null,
         dialogueGraphModalOpen: false,
         dialogueGraphSelectedScene: null,
+        cinematicEditorOpen: false,
+        cinematicEditorSceneId: null,
         graphThemeId: getPersistedThemeId(),  // PHASE 4: Persist theme selection
         // SERP-5: Serpentine layout state (persisted)
         serpentineEnabled: serpentineConfig.enabled,
@@ -342,6 +350,18 @@ export const useUIStore = create<UIState>()(
 
       setDialogueGraphSelectedScene: (sceneId) => {
         set({ dialogueGraphSelectedScene: sceneId }, false, 'ui/setDialogueGraphSelectedScene');
+      },
+
+      setCinematicEditorOpen: (open, sceneId) => {
+        set(
+          { cinematicEditorOpen: open, cinematicEditorSceneId: sceneId !== undefined ? sceneId : null },
+          false,
+          'ui/setCinematicEditorOpen'
+        );
+      },
+
+      setCinematicEditorSceneId: (sceneId) => {
+        set({ cinematicEditorSceneId: sceneId }, false, 'ui/setCinematicEditorSceneId');
       },
 
       setGraphThemeId: (themeId) => {

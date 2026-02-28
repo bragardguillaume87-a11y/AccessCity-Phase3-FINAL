@@ -62,7 +62,7 @@ export default function TopBar({
   const handleToggleStudio = useCallback(() => {
     const next = !studioVisible;
     setStudioVisible(next);
-    toggleTheatreStudio(next);
+    void toggleTheatreStudio(next); // async lazy init — fire-and-forget
   }, [studioVisible]);
 
   return (

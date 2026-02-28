@@ -66,9 +66,16 @@ export async function initTheatreStudio(): Promise<void> {
 
 /**
  * Affiche ou masque le panel Theatre Studio.
- * Sans effet si Studio n'est pas initialisé (prod build).
+ * Initialise Studio au premier appel (lazy init) — pas besoin d'appeler
+ * initTheatreStudio() au préalable.
+ * Sans effet en production.
  */
-export function toggleTheatreStudio(show: boolean): void {
+export async function toggleTheatreStudio(show: boolean): Promise<void> {
+  if (!import.meta.env.DEV) return;
+  // Lazy init : charge Studio la première fois que le bouton est cliqué
+  if (!_studioInitialized) {
+    await initTheatreStudio();
+  }
   if (!_studioModule) return;
   if (show) {
     _studioModule.ui.restore();

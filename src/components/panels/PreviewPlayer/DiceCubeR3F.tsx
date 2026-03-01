@@ -12,11 +12,11 @@
  * ⚠️ Ne pas importer directement — utiliser DiceCubeWrapper (lazy + WebGL check).
  */
 import { useRef, useMemo, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, Lightformer } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BoxGeometry, MeshPhysicalMaterial, CanvasTexture } from 'three';
+import { BoxGeometry, MeshPhysicalMaterial, CanvasTexture, PMREMGenerator } from 'three';
 import type { Mesh } from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 import {
   type DiceCubeProps,
@@ -126,6 +126,28 @@ function createNumberTexture(num: number, bgColor: string, textColor: string): C
   return new CanvasTexture(canvas);
 }
 
+// ── SceneEnv — IBL via THREE.RoomEnvironment (zéro réseau, PMREMGenerator) ───
+
+/**
+ * Met en place un environnement IBL studio-neutre sans aucune requête réseau.
+ * THREE.RoomEnvironment génère une scène de pièce procédurale baked en PMREM.
+ * Identique en qualité au preset="studio" mais 100% local.
+ */
+function SceneEnv() {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    const pmrem   = new PMREMGenerator(gl);
+    pmrem.compileEquirectangularShader();
+    const roomEnv = new RoomEnvironment();
+    const envMap  = pmrem.fromScene(roomEnv).texture;
+    scene.environment = envMap;
+    pmrem.dispose();
+    roomEnv.dispose();
+    return () => { envMap.dispose(); scene.environment = null; };
+  }, [gl, scene]);
+  return null;
+}
+
 // ── DiceMesh3D (intérieur du <Canvas>) ───────────────────────────────────────
 
 interface DiceMesh3DProps {
@@ -232,20 +254,11 @@ function DiceMesh3D({ phase, success, displayNumber }: DiceMesh3DProps) {
 
   return (
     <>
-      {/* IBL studio via Lightformers — zéro réseau, PMREMGenerator local uniquement */}
-      <Environment resolution={256}>
-        <Lightformer form="rect"  intensity={3.0} color="#ffffff" position={[0, 5, -4]}  scale={[12, 8, 1]} />
-        <Lightformer form="rect"  intensity={1.2} color="#e8f4ff" position={[-5, 2, 2]}  scale={[6, 6, 1]} />
-        <Lightformer form="rect"  intensity={0.8} color="#fff8e8" position={[5, -1, 2]}   scale={[6, 6, 1]} />
-        <Lightformer form="ring"  intensity={0.5} color="#ffffff" position={[0, 0, 5]}    scale={3} />
-      </Environment>
-      <ambientLight intensity={0.30} />
-      <directionalLight position={[3, 5, 3]} intensity={0.8} />
-      <pointLight
-        position={[-2, -1, 3]}
-        color={lightColor}
-        intensity={isPostImpact ? 1.8 : 0.6}
-      />
+      {/* IBL via RoomEnvironment + lumières directionnelles pour couleur de phase */}
+      <SceneEnv />
+      <ambientLight intensity={0.20} />
+      <directionalLight position={[3, 5, 3]} intensity={0.9} />
+      <pointLight position={[-2, -1, 3]} color={lightColor} intensity={isPostImpact ? 2.0 : 0.7} />
       <mesh ref={meshRef} geometry={geometry} material={materials} />
     </>
   );
@@ -338,8 +351,9 @@ export function DiceCubeR3F({ phase, success, displayNumber }: DiceCubeProps) {
       <div style={{ position: 'absolute', inset: 0 }}>
         <Canvas
           style={{ width: '100%', height: '100%' }}
+          dpr={[1, 2]}
           gl={{ antialias: true, alpha: true }}
-          camera={{ fov: 45, position: [0, 0, 3.2] as [number, number, number] }}
+          camera={{ fov: 42, near: 0.5, far: 20, position: [0, 0, 3.0] as [number, number, number] }}
         >
           <DiceMesh3D phase={phase} success={success} displayNumber={displayNumber} />
         </Canvas>

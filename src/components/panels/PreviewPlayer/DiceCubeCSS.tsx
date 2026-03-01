@@ -53,7 +53,8 @@ const FACE_SHADE: Record<keyof typeof FACE_TRANSFORMS, number> = {
 export const PALETTE = {
   neutral: {
     // Ivoire blanc cassé — dé de jeu classique, surface nacrée chaude
-    frontGradient: 'linear-gradient(145deg, #f8f3e8 0%, #ede0c4 50%, #d8c9a8 100%)',
+    // 3 couches : Fresnel rim + Phong specular off-center + diffuse Lambertian
+    frontGradient: 'radial-gradient(ellipse 120% 120% at 50% 50%, transparent 58%, rgba(255,255,255,0.13) 100%), radial-gradient(ellipse 55% 35% at 28% 22%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.35) 30%, transparent 65%), linear-gradient(145deg, #f8f3e8 0%, #ede0c4 50%, #d8c9a8 100%)',
     sideBase:      [232, 216, 180] as const,
     textColor:     '#1a1008',
     textShadow:    '0 1px 3px rgba(0,0,0,0.55), 0 0 10px rgba(180,140,60,0.18)',
@@ -65,7 +66,7 @@ export const PALETTE = {
     dotOpacity:    0.30,
   },
   success: {
-    frontGradient: 'linear-gradient(145deg, #052e16 0%, #065f46 50%, #059669 100%)',
+    frontGradient: 'radial-gradient(ellipse 120% 120% at 50% 50%, transparent 58%, rgba(52,211,153,0.11) 100%), radial-gradient(ellipse 55% 35% at 28% 22%, rgba(52,211,153,0.55) 0%, rgba(52,211,153,0.22) 30%, transparent 65%), linear-gradient(145deg, #052e16 0%, #065f46 50%, #059669 100%)',
     sideBase:      [6, 80, 58] as const,
     textColor:     '#86efac',
     textShadow:    '0 0 24px rgba(134,239,172,0.85), 0 2px 8px rgba(0,0,0,0.95)',
@@ -77,7 +78,7 @@ export const PALETTE = {
     dotOpacity:    0.26,
   },
   failure: {
-    frontGradient: 'linear-gradient(145deg, #450a0a 0%, #7f1d1d 50%, #a01c1c 100%)',
+    frontGradient: 'radial-gradient(ellipse 120% 120% at 50% 50%, transparent 58%, rgba(252,165,165,0.10) 100%), radial-gradient(ellipse 55% 35% at 28% 22%, rgba(252,165,165,0.45) 0%, rgba(252,165,165,0.18) 30%, transparent 65%), linear-gradient(145deg, #450a0a 0%, #7f1d1d 50%, #a01c1c 100%)',
     sideBase:      [110, 22, 22] as const,
     textColor:     '#fca5a5',
     textShadow:    '0 0 24px rgba(252,165,165,0.80), 0 2px 8px rgba(0,0,0,0.95)',
@@ -112,7 +113,7 @@ function getFrontBoxShadow(phase: Phase, success: boolean): string {
     p.specular,
     p.ao,
     isPost ? `0 0 60px ${p.glowColor}` : '0 0 0px rgba(0,0,0,0)',
-    '0 12px 36px rgba(0,0,0,0.75)',
+    '0 2px 4px rgba(0,0,0,0.50), 0 10px 20px rgba(0,0,0,0.36), 0 22px 32px rgba(0,0,0,0.20)',
   ].join(', ');
 }
 
@@ -167,6 +168,7 @@ export function DiceCubeCSS({ phase, success, displayNumber, flashId }: DiceCube
         position: 'absolute', inset: -42, borderRadius: 52,
         background: glow.background, opacity: glow.opacity,
         filter: 'blur(38px)', pointerEvents: 'none',
+        mixBlendMode: 'screen',
         transition: 'background 0.45s ease, opacity 0.40s ease',
       }} />
 
@@ -249,7 +251,7 @@ export function DiceCubeCSS({ phase, success, displayNumber, flashId }: DiceCube
             {/* Gloss Layer — reflet diagonal (Blender: Clearcoat / Gloss Map) */}
             <div style={{
               position: 'absolute', inset: 0, borderRadius: 18, pointerEvents: 'none',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.09) 36%, transparent 56%)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.06) 36%, transparent 50%)',
             }} />
             <span style={{
               position: 'absolute', top: 9, left: 12,
@@ -321,6 +323,7 @@ export function DiceCubeCSS({ phase, success, displayNumber, flashId }: DiceCube
             background: getSideFaceColor(phase, success, FACE_SHADE.right),
             backfaceVisibility: 'hidden',
             border: '1.5px solid rgba(255,255,255,0.10)',
+            boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.20), inset -2px -2px 6px rgba(0,0,0,0.28)',
             transition: 'background 0.44s ease',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -339,6 +342,7 @@ export function DiceCubeCSS({ phase, success, displayNumber, flashId }: DiceCube
             background: getSideFaceColor(phase, success, FACE_SHADE.left),
             backfaceVisibility: 'hidden',
             border: '1.5px solid rgba(255,255,255,0.09)',
+            boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.18), inset -2px -2px 6px rgba(0,0,0,0.28)',
             transition: 'background 0.44s ease',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -357,6 +361,7 @@ export function DiceCubeCSS({ phase, success, displayNumber, flashId }: DiceCube
             background: getSideFaceColor(phase, success, FACE_SHADE.top),
             backfaceVisibility: 'hidden',
             border: '1.5px solid rgba(255,255,255,0.13)',
+            boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.24), inset -2px -2px 6px rgba(0,0,0,0.22)',
             transition: 'background 0.44s ease',
           }} />
 

@@ -144,7 +144,7 @@ export function DiceOverlay({
       style={{
         position: 'absolute', inset: 0, zIndex: 50,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 18,
+        gap: 18, paddingBottom: '14vh',
       }}
       onClick={showButton ? onClose : undefined}
     >

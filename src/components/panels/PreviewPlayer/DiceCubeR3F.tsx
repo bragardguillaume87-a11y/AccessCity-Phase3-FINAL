@@ -13,7 +13,7 @@
  */
 import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment } from '@react-three/drei';
+import { Environment, Lightformer } from '@react-three/drei';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BoxGeometry, MeshPhysicalMaterial, CanvasTexture } from 'three';
 import type { Mesh } from 'three';
@@ -232,14 +232,19 @@ function DiceMesh3D({ phase, success, displayNumber }: DiceMesh3DProps) {
 
   return (
     <>
-      {/* IBL studio : source principale de lumière pour les matériaux clearcoat */}
-      <Environment preset="studio" />
-      <ambientLight intensity={0.15} />
-      <directionalLight position={[3, 5, 3]} intensity={0.6} />
+      {/* IBL studio via Lightformers — zéro réseau, PMREMGenerator local uniquement */}
+      <Environment resolution={256}>
+        <Lightformer form="rect"  intensity={3.0} color="#ffffff" position={[0, 5, -4]}  scale={[12, 8, 1]} />
+        <Lightformer form="rect"  intensity={1.2} color="#e8f4ff" position={[-5, 2, 2]}  scale={[6, 6, 1]} />
+        <Lightformer form="rect"  intensity={0.8} color="#fff8e8" position={[5, -1, 2]}   scale={[6, 6, 1]} />
+        <Lightformer form="ring"  intensity={0.5} color="#ffffff" position={[0, 0, 5]}    scale={3} />
+      </Environment>
+      <ambientLight intensity={0.30} />
+      <directionalLight position={[3, 5, 3]} intensity={0.8} />
       <pointLight
         position={[-2, -1, 3]}
         color={lightColor}
-        intensity={isPostImpact ? 1.2 : 0.4}
+        intensity={isPostImpact ? 1.8 : 0.6}
       />
       <mesh ref={meshRef} geometry={geometry} material={materials} />
     </>

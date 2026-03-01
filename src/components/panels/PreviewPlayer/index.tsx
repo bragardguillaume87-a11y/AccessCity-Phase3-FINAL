@@ -560,8 +560,9 @@ export default function PreviewPlayer({
             </div>
 
             {/* ── Stats HUD — Pro mode only ── */}
+            {/* z-[60] > DiceOverlay (z-50) → HUD visible même pendant le lancer de dé */}
             {!isKid && enableStatsHUD && (
-              <div className="absolute top-3 left-3 z-20">
+              <div className="absolute top-3 left-3 z-[60]">
                 <CompactStatHUD
                   physique={stats[GAME_STATS.PHYSIQUE] ?? 100}
                   mentale={stats[GAME_STATS.MENTALE] ?? 100}

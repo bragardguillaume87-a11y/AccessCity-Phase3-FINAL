@@ -84,6 +84,8 @@ export default defineConfig({
           'vendor-phaser': ['phaser'],
           // Theatre.js — timeline/animations, @theatre/studio exclu (devDep, import() conditionnel)
           'vendor-theatre': ['@theatre/core', '@theatre/react'],
+          // Three.js + React Three Fiber — lazy-loaded uniquement quand DiceOverlay s'ouvre
+          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
         },
         // Naming convention for chunks
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -91,8 +93,8 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Warn if chunks exceed 500KB
-    chunkSizeWarningLimit: 500,
+    // vendor-three (Three.js + R3F + drei) pèse ~1100KB raw / 298KB gzip — lazy loaded
+    chunkSizeWarningLimit: 1200,
   },
   preview: {
     port: 4173,

@@ -1,7 +1,7 @@
 {
-  "generated": "2026-03-01T09:49:11.442Z",
+  "generated": "2026-03-01T19:23:58.347Z",
   "version": "1.0.0",
-  "totalAssets": 12,
+  "totalAssets": 13,
   "categories": [
     "backgrounds",
     "characters",
@@ -18,6 +18,15 @@
         "category": "backgrounds",
         "size": 1273399,
         "modified": "2026-01-23T22:10:10.806Z"
+      },
+      {
+        "id": "backgrounds/93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251",
+        "name": "93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251",
+        "path": "/assets/backgrounds/93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1748510,
+        "modified": "2026-03-01T19:23:58.281Z"
       },
       {
         "id": "backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902",

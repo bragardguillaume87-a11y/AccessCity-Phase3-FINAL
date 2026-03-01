@@ -1,12 +1,10 @@
 
-import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Users, Image, Settings, Download, Play, Network, Film } from "lucide-react"
+import { Users, Image, Settings, Download, Play, Network } from "lucide-react"
 import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
 import { useUIStore } from "@/stores"
 import { useTranslation } from "@/i18n"
 import { ModeSwitcher } from "@/components/ui/ModeSwitcher"
-import { toggleTheatreStudio } from "@/lib/theatre"
 
 export interface TopBarValidation {
   hasIssues: boolean
@@ -45,8 +43,6 @@ export default function TopBar({
   const editorMode = useUIStore(s => s.editorMode);
   const { kidMode: km } = useTranslation();
 
-  const [studioVisible, setStudioVisible] = useState(false);
-
   const handleOpenCharacters = () => useUIStore.getState().setActiveModal('characters');
   const handleOpenAssets     = () => useUIStore.getState().setActiveModal('assets');
   const handleOpenProject    = () => useUIStore.getState().setActiveModal('project');
@@ -59,11 +55,6 @@ export default function TopBar({
       store.setDialogueGraphModalOpen(true);
     }
   };
-  const handleToggleStudio = useCallback(() => {
-    const next = !studioVisible;
-    setStudioVisible(next);
-    void toggleTheatreStudio(next); // async lazy init — fire-and-forget
-  }, [studioVisible]);
 
   return (
     <header
@@ -135,19 +126,7 @@ export default function TopBar({
                   Vue Graphe
                 </Button>
               )}
-              {import.meta.env.DEV && editorMode === 'pro' && (
-                <Button
-                  variant={studioVisible ? "gaming-accent" : "toolbar"}
-                  size="sm"
-                  onClick={handleToggleStudio}
-                  title="Theatre Studio — Éditeur de timeline d'animations (dev uniquement)"
-                  aria-label="Afficher/masquer Theatre Studio"
-                  aria-pressed={studioVisible}
-                >
-                  <Film className="h-4 w-4" />
-                  Timeline
-                </Button>
-              )}
+
             </div>
 
             {/* Separator — masqué en mode kid (Group 2 réduit à 1 bouton plat) */}

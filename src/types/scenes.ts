@@ -48,6 +48,17 @@ export interface SceneMetadata {
   cinematicEvents?: CinematicEvent[];
 }
 
+/**
+ * Type guard — retourne true si la scène est une cinématique auto-play.
+ * Utiliser partout où sceneType === 'cinematic' est testé pour centraliser la logique.
+ *
+ * @example
+ * if (isCinematicScene(selectedScene)) { ... }
+ */
+export function isCinematicScene(scene: { sceneType?: SceneType } | null | undefined): boolean {
+  return scene?.sceneType === 'cinematic';
+}
+
 export interface Position {
   x: number;
   y: number;

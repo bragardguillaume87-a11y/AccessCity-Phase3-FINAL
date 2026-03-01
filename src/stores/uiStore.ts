@@ -204,7 +204,6 @@ interface UIState {
   setDialogueGraphSelectedScene: (sceneId: string | null) => void;
   // Cinematic editor actions
   setCinematicEditorOpen: (open: boolean, sceneId?: string | null) => void;
-  setCinematicEditorSceneId: (sceneId: string | null) => void;
   setGraphThemeId: (themeId: string) => void;
   // SERP-5: Serpentine layout actions
   setSerpentineEnabled: (enabled: boolean) => void;
@@ -358,10 +357,6 @@ export const useUIStore = create<UIState>()(
           false,
           'ui/setCinematicEditorOpen'
         );
-      },
-
-      setCinematicEditorSceneId: (sceneId) => {
-        set({ cinematicEditorSceneId: sceneId }, false, 'ui/setCinematicEditorSceneId');
       },
 
       setGraphThemeId: (themeId) => {

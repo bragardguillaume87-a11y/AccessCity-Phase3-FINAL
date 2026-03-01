@@ -82,6 +82,7 @@ export function useSceneActions() {
   const deleteScene = useScenesStore((state) => state.deleteScene);
   const reorderScenes = useScenesStore((state) => state.reorderScenes);
   const setSceneBackground = useScenesStore((state) => state.setSceneBackground);
+  const updateCinematicEvents = useScenesStore((state) => state.updateCinematicEvents);
 
   return useMemo(
     () => ({
@@ -90,8 +91,9 @@ export function useSceneActions() {
       deleteScene,
       reorderScenes,
       setSceneBackground,
+      updateCinematicEvents,
     }),
-    [addScene, updateScene, deleteScene, reorderScenes, setSceneBackground]
+    [addScene, updateScene, deleteScene, reorderScenes, setSceneBackground, updateCinematicEvents]
   );
 }
 

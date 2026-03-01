@@ -99,7 +99,7 @@ export function LibraryTab({
         </div>
 
         {/* Category Filters */}
-        <div className="flex gap-1 flex-1">
+        <div className="flex gap-1 flex-1 min-w-0 overflow-x-auto">
           {categories.map((cat) => (
             <Button
               key={cat.id}

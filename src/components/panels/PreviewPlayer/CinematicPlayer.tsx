@@ -67,6 +67,18 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
   const [dialogue, setDialogue] = useState<{ speaker: string; speakerMood?: string; text: string; autoAdvance: boolean } | null>(null);
   const [waitingForClick, setWaitingForClick] = useState(false);
 
+  // Références audio persistantes (bgm + ambiance indépendants)
+  const bgmAudioRef      = useRef<HTMLAudioElement | null>(null);
+  const ambianceAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Libère toutes les ressources audio à l'unmount (évite les zombies audio entre scènes)
+  useEffect(() => {
+    return () => {
+      if (bgmAudioRef.current)      { bgmAudioRef.current.pause();      bgmAudioRef.current.src = '';      bgmAudioRef.current      = null; }
+      if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const advanceRef = useRef<() => void>(() => {});
 
   const advance = useCallback(() => {
@@ -170,9 +182,68 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
         return;
       }
       case 'bgm': {
-        // Simple bgm playback (audioManager would be better but adds coupling)
-        try { const a = new Audio(event.url); a.volume = event.volume ?? 0.7; a.loop = true; a.play().catch(() => {}); } catch { /* ignore */ }
+        // Arrête la bgm précédente puis lance la nouvelle (src='' libère le buffer mémoire)
+        if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; }
+        try {
+          const a = new Audio(event.url);
+          a.volume = event.volume ?? 0.7;
+          a.loop = true;
+          a.play().catch(() => {});
+          bgmAudioRef.current = a;
+        } catch { /* ignore */ }
         return timedAdvance(100);
+      }
+      case 'bgmStop': {
+        const audio = bgmAudioRef.current;
+        if (audio) {
+          if (event.fade) {
+            // Fondu progressif sur ~1 seconde
+            const initialVol = audio.volume;
+            const step = initialVol / 10;
+            let count = 0;
+            const interval = setInterval(() => {
+              count++;
+              if (!bgmAudioRef.current || count >= 10) {
+                clearInterval(interval);
+                if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; }
+              } else {
+                audio.volume = Math.max(0, audio.volume - step);
+              }
+            }, 100);
+          } else {
+            audio.pause();
+            audio.src = '';
+            bgmAudioRef.current = null;
+          }
+        }
+        return timedAdvance(event.fade ? 1100 : 100);
+      }
+      case 'characterExpression': {
+        setActiveChars(prev => prev.map(c =>
+          c.characterId === event.characterId ? { ...c, mood: event.mood } : c
+        ));
+        return timedAdvance(100);
+      }
+      case 'characterMove': {
+        setActiveChars(prev => prev.map(c =>
+          c.characterId === event.characterId ? { ...c, side: event.side } : c
+        ));
+        return timedAdvance(durationMs + 100);
+      }
+      case 'ambiance': {
+        // Arrête l'ambiance précédente et lance la nouvelle
+        if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
+        if (event.url) {
+          try {
+            const a = new Audio(event.url);
+            a.volume = event.volume ?? 0.5;
+            a.loop = event.loop;
+            a.play().catch(() => {});
+            ambianceAudioRef.current = a;
+          } catch { /* ignore */ }
+        }
+        immediateAdvance();
+        return;
       }
       case 'vignette': {
         setVignette({ visible: event.on, intensity: event.intensity });
@@ -238,10 +309,15 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
     exit: { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, transition: { duration: 0.3 } },
   });
 
+  // Chaque changement de shakeKey = nouvelle clé de keyframe → relance toujours l'animation
+  const shakeAnimation = shakeKey > 0
+    ? `cinematicShake${shakeKey} 0.5s ease-in-out`
+    : 'none';
+
   return (
     <div
       className="relative overflow-hidden flex-shrink-0 cursor-pointer select-none"
-      style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
+      style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px`, animation: shakeAnimation }}
       onClick={handleClick}
       role="presentation"
     >
@@ -336,8 +412,10 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
         }}
       />
 
-      {/* Screen shake — triggered by key change */}
-      <style>{shakeKey > 0 ? `@keyframes cinematicShake { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-8px,4px)} 40%{transform:translate(8px,-4px)} 60%{transform:translate(-6px,6px)} 80%{transform:translate(6px,-2px)} }` : ''}</style>
+      {/* Screen shake — keyframe unique par déclenchement pour forcer la re-animation */}
+      {shakeKey > 0 && (
+        <style>{`@keyframes cinematicShake${shakeKey} { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-8px,4px)} 40%{transform:translate(8px,-4px)} 60%{transform:translate(-6px,6px)} 80%{transform:translate(6px,-2px)} }`}</style>
+      )}
 
       {/* Dialogue box */}
       {dialogue && (

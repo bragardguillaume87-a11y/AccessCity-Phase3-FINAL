@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Film } from 'lucide-react';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
 import { getSceneDuration, getDialogueIndexAtTime } from '@/utils/dialogueDuration';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
@@ -17,6 +18,7 @@ import type {
   Prop,
   TextBox,
   DialogueChoice,
+  Dialogue,
 } from '@/types';
 import type { CanvasProp } from './MainCanvas/components/PropElement';
 import type { CanvasTextBox } from './MainCanvas/components/TextBoxElement';
@@ -48,6 +50,38 @@ import { CANVAS_PRESENTATION } from '@/config/canvas';
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
+// ⚠️ EMPTY_DIALOGUES must be module-level (not inline []) to avoid useSyncExternalStore getSnapshot instability.
+// `|| []` inside a Zustand selector creates a new array on every getSnapshot call → React 18 infinite loop.
+const EMPTY_DIALOGUES: Dialogue[] = [];
+
+/**
+ * Placeholder affiché dans le canvas quand la scène sélectionnée est de type 'cinematic'.
+ * Les scènes cinématiques utilisent l'Éditeur Cinématique modal — pas le canvas standard.
+ */
+function CinematicScenePlaceholder({ sceneId, sceneTitle }: { sceneId: string; sceneTitle: string }) {
+  const setCinematicEditorOpen = useUIStore(s => s.setCinematicEditorOpen);
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-5 text-center p-8 select-none">
+      <Film className="w-14 h-14 text-violet-400 opacity-50" aria-hidden="true" />
+      <div>
+        <p className="font-semibold text-base text-[var(--color-text-primary)]">{sceneTitle}</p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Scène cinématique</p>
+      </div>
+      <p className="text-sm text-[var(--color-text-muted)] max-w-sm leading-relaxed">
+        Les scènes cinématiques s'éditent dans l'Éditeur Cinématique dédié.<br />
+        Le canvas standard n'est pas disponible pour ce type de scène.
+      </p>
+      <button
+        type="button"
+        onClick={() => setCinematicEditorOpen(true, sceneId)}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors shadow-md"
+      >
+        <Film className="w-4 h-4" aria-hidden="true" />
+        Ouvrir l'Éditeur Cinématique
+      </button>
+    </div>
+  );
+}
 
 /**
  * Calcule les dimensions explicites du canvas (équivalent "object-fit: contain").
@@ -108,7 +142,7 @@ export default function MainCanvas({
   // ⚠️ selectedScene.dialogues est TOUJOURS [] (Phase 3 store split).
   // Utiliser ce sélecteur réactif pour toutes les lectures de dialogues.
   const sceneDialogues = useDialoguesStore((s) =>
-    sceneId ? (s.dialoguesByScene[sceneId] || []) : []
+    sceneId ? (s.dialoguesByScene[sceneId] || EMPTY_DIALOGUES) : EMPTY_DIALOGUES
   );
 
   const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
@@ -317,6 +351,11 @@ export default function MainCanvas({
 
   if (!selectedScene) {
     return <EmptySceneState />;
+  }
+
+  // Cinematic scenes have their own editor — the standard canvas is not applicable
+  if (selectedScene.sceneType === 'cinematic') {
+    return <CinematicScenePlaceholder sceneId={selectedScene.id} sceneTitle={selectedScene.title} />;
   }
 
   return (

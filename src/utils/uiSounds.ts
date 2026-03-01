@@ -483,6 +483,125 @@ function gameStart(): void {
   });
 }
 
+// ── Sons de dé ───────────────────────────────────────────────────────────────
+
+/**
+ * Roulement de dé — rattle bruité sur 1.5s.
+ * Bandpass sweep 300 → 4000 Hz simulant un dé qui roule sur une table.
+ * Deux couches : grave (impact table) + aigu (friction plastique).
+ */
+function diceRollStart(): void {
+  if (_muted || !isRunning()) return;
+  const ctx = getCtx();
+  const master = getMaster();
+  const t = ctx.currentTime;
+  const dur = 1.5;
+
+  // Couche grave — impacts répétés (bruit basse fréquence décroissant)
+  const size = Math.ceil(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, size, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  // Bruit enveloppé : pics périodiques simulant les rebonds
+  for (let i = 0; i < size; i++) {
+    const t2 = i / ctx.sampleRate;
+    // Fréquence de rebond accélère (3→12 Hz sur 1.5s) puis ralentit
+    const rebondFreq = t2 < 0.8 ? 3 + t2 * 10 : 12 - (t2 - 0.8) * 8;
+    const envelope = 0.5 + 0.5 * Math.cos(2 * Math.PI * rebondFreq * t2);
+    data[i] = (Math.random() * 2 - 1) * envelope;
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const fltLow = ctx.createBiquadFilter();
+  fltLow.type = 'bandpass';
+  fltLow.frequency.setValueAtTime(300, t);
+  fltLow.frequency.exponentialRampToValueAtTime(1200, t + dur * 0.6);
+  fltLow.frequency.exponentialRampToValueAtTime(300, t + dur);
+  fltLow.Q.value = 0.9;
+  const gainLow = ctx.createGain();
+  gainLow.gain.setValueAtTime(0.32, t);
+  gainLow.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fltLow);
+  fltLow.connect(gainLow);
+  gainLow.connect(master);
+  src.start(t);
+  src.stop(t + dur + 0.01);
+
+  // Couche aiguë — friction plastique (highpass 2000 Hz, plus courte)
+  noiseBurst(900, 0.14, 2000);
+}
+
+/**
+ * Impact au sol — thud grave + crack percussif.
+ * Sawtooth 55 Hz (résonnance grave) + noise haute fréquence court (impact sec).
+ */
+function diceImpact(): void {
+  if (_muted || !isRunning()) return;
+  // Thud grave (table)
+  oscBurst(55, 'sawtooth', 0.55, 280, 0.3);
+  // Sous-basse
+  oscBurst(38, 'sine', 0.40, 200, 0.2);
+  // Crack sec
+  noiseBurst(70, 0.38, 1800);
+}
+
+/**
+ * Victoire — arpège C5→E5→G5→C6.
+ * Accord majeur parfait (523→659→784→1047 Hz) — tonalité de triomphe.
+ * Notes séparées de 80 ms pour un effet "fanfare" sans être agressif.
+ */
+function diceSuccess(): void {
+  if (_muted || !isRunning()) return;
+  const ctx = getCtx();
+  const master = getMaster();
+  const t = ctx.currentTime;
+  const notes = [523.3, 659.3, 784.0, 1046.5] as const;
+  notes.forEach((freq, i) => {
+    const noteT = t + i * 0.08;
+    const osc = ctx.createOscillator();
+    osc.type = i < 2 ? 'sine' : 'triangle';
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, noteT);
+    gain.gain.linearRampToValueAtTime(0.28, noteT + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteT + 0.22);
+    osc.connect(gain);
+    gain.connect(master);
+    osc.start(noteT);
+    osc.stop(noteT + 0.23);
+  });
+  // Shimmer final
+  setTimeout(() => { if (isRunning()) noiseBurst(120, 0.10, 4000); }, 350);
+}
+
+/**
+ * Échec — descente C5→A4→F4 (tonalité mineure descendante).
+ * Sine avec vibrato léger pour un caractère mélancolique sans être brutal.
+ */
+function diceFailure(): void {
+  if (_muted || !isRunning()) return;
+  const ctx = getCtx();
+  const master = getMaster();
+  const t = ctx.currentTime;
+  const notes = [523.3, 440.0, 349.2] as const;
+  notes.forEach((freq, i) => {
+    const noteT = t + i * 0.11;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, noteT);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.96, noteT + 0.18);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, noteT);
+    gain.gain.linearRampToValueAtTime(0.22, noteT + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteT + 0.22);
+    osc.connect(gain);
+    gain.connect(master);
+    osc.start(noteT);
+    osc.stop(noteT + 0.23);
+  });
+  // Grondement final (doom)
+  oscBurst(80, 'sawtooth', 0.12, 350, 0.5);
+}
+
 // ── Contrôle volume / mute ────────────────────────────────────────────────────
 
 /**
@@ -531,6 +650,10 @@ export const uiSounds = {
   choiceSelect,
   sceneTransition,
   gameStart,
+  diceRollStart,
+  diceImpact,
+  diceSuccess,
+  diceFailure,
   initialize,
   setVolume,
   setMuted,

@@ -16,6 +16,10 @@ interface CharacterFormData {
   moods: string[];
   /** Mapping of mood IDs to sprite file paths */
   sprites: Record<string, string>;
+  /** Whether this character is the player protagonist */
+  isProtagonist?: boolean;
+  /** Initial game stats (physique/mentale 0–100) — used when isProtagonist=true */
+  initialStats?: { physique?: number; mentale?: number };
 }
 
 /**
@@ -61,6 +65,10 @@ interface UseCharacterFormReturn {
   updateSprite: (mood: string, spritePath: string) => void;
   /** Rename an existing mood */
   renameMood: (oldMoodId: string, newMoodId: string) => boolean;
+  /** Toggle protagonist flag */
+  setIsProtagonist: (value: boolean) => void;
+  /** Update a single initial stat */
+  setInitialStat: (stat: 'physique' | 'mentale', value: number) => void;
   /** Validate and save the form */
   handleSave: () => boolean;
   /** Reset form to initial values */
@@ -240,6 +248,19 @@ export function useCharacterForm(
     return true;
   }, [formData.moods]);
 
+  const setIsProtagonist = useCallback((value: boolean): void => {
+    setFormData(prev => ({ ...prev, isProtagonist: value }));
+    setHasChanges(true);
+  }, []);
+
+  const setInitialStat = useCallback((stat: 'physique' | 'mentale', value: number): void => {
+    setFormData(prev => ({
+      ...prev,
+      initialStats: { ...(prev.initialStats ?? {}), [stat]: value },
+    }));
+    setHasChanges(true);
+  }, []);
+
   /**
    * Validate and save the form
    */
@@ -286,6 +307,8 @@ export function useCharacterForm(
     removeMood,
     updateSprite,
     renameMood,
+    setIsProtagonist,
+    setInitialStat,
     handleSave,
     resetForm
   };

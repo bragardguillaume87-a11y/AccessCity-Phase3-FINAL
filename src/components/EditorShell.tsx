@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useUIStore, useScenesStore, useCharactersStore } from '../stores/index.ts';
+import { useUIStore, useScenesStore, useCharactersStore, useDialoguesStore } from '../stores/index.ts';
 import { useSceneWithElements } from '../stores/selectors/index';
+import { isCinematicScene } from '../types/scenes';
 import { useSelection, toSelectedElementType } from '../hooks/useSelection.ts';
+import { isDialogueSelection, isSceneSelection } from '../stores/selectionStore.types';
 import { useEditorLogic } from '../hooks/useEditorLogic.ts';
 import { useUndoRedo } from '../hooks/useUndoRedo.ts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
@@ -15,6 +17,7 @@ import Sidebar from './layout/Sidebar';
 import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas';
+import { CinematicInlinePlayer } from './panels/CinematicInlinePlayer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
 import type { ModalContext } from '../types';
@@ -68,6 +71,17 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const { selectedElement } = useSelection();
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
+  // === SYNC ÉDITEUR → APERÇU ===
+  // Résout l'élément sélectionné vers un ID de dialogue pour PreviewPlayer.
+  // Réactif : se recalcule si selectedElement ou les dialogues changent.
+  // isDialogueSelection / isSceneSelection = type guards discriminés (selectionStore.types).
+  const dialoguesByScene = useDialoguesStore(s => s.dialoguesByScene);
+  const previewDialogueId = useMemo(() => {
+    if (!isDialogueSelection(selectedElement)) return null;
+    return dialoguesByScene[selectedElement.sceneId]?.[selectedElement.index]?.id ?? null;
+  }, [selectedElement, dialoguesByScene]);
+  // previewSceneId est déclaré après selectedScene (dépendance) — voir ligne suivant selectedScene
+
   // === BUSINESS LOGIC LAYER ===
   const editorLogic = useEditorLogic({
     scenes,
@@ -86,6 +100,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const setActiveModal = useUIStore(s => s.setActiveModal);
   const modalContext = useUIStore(s => s.modalContext);
   const setModalContext = useUIStore(s => s.setModalContext);
+  const cinematicEditorOpen = useUIStore(s => s.cinematicEditorOpen);
   const activeSection = useUIStore(s => s.activeSection);
   const setActiveSection = useUIStore(s => s.setActiveSection);
 
@@ -190,6 +205,13 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
   // Compose full Scene from all 3 stores
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
+
+  // Scène de départ pour le preview : dialogue sélectionné > scène sélectionnée > scène courante
+  const previewSceneId = useMemo(() => {
+    if (isDialogueSelection(selectedElement)) return selectedElement.sceneId;
+    if (isSceneSelection(selectedElement)) return selectedElement.id;
+    return modalContext.sceneId || selectedScene?.id;
+  }, [selectedElement, modalContext.sceneId, selectedScene]);
   const selectedElementLegacy = useMemo(
     () => toSelectedElementType(selectedElement),
     [selectedElement]
@@ -329,13 +351,23 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               aria-label="Canvas de scène"
             >
               <h3 className="sr-only">Canvas de scène</h3>
-              <ErrorBoundary name="MainCanvas">
-                <MainCanvas
-                  selectedScene={selectedScene}
-                  selectedElement={selectedElementLegacy}
-                  onSelectDialogue={editorLogic.handleDialogueSelect}
+              {/* GUARD : scènes cinématiques → placeholder dédié, MainCanvas ne monte pas.
+                  Évite que les hooks de MainCanvas (useDialogueSync, useCanvasKeyboard, etc.)
+                  s'exécutent pour un type de scène qu'ils ne gèrent pas. */}
+              {isCinematicScene(selectedScene) ? (
+                <CinematicInlinePlayer
+                  scene={selectedScene!}
+                  characters={characters}
                 />
-              </ErrorBoundary>
+              ) : (
+                <ErrorBoundary name="MainCanvas">
+                  <MainCanvas
+                    selectedScene={selectedScene}
+                    selectedElement={selectedElementLegacy}
+                    onSelectDialogue={editorLogic.handleDialogueSelect}
+                  />
+                </ErrorBoundary>
+              )}
             </Panel>
 
           </Group>
@@ -426,7 +458,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             <PreviewModal
               isOpen={true}
               onClose={() => setActiveModal(null)}
-              initialSceneId={modalContext.sceneId || selectedScene?.id}
+              initialSceneId={previewSceneId}
+              initialDialogueId={previewDialogueId}
             />
           </ErrorBoundary>
         )}
@@ -435,10 +468,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             <ExportModal onClose={() => setActiveModal(null)} />
           </ErrorBoundary>
         )}
-        {/* CinematicEditor — toujours monté, se gère lui-même via uiStore */}
-        <ErrorBoundary name="CinematicEditor">
-          <CinematicEditorModal />
-        </ErrorBoundary>
+        {cinematicEditorOpen && (
+          <ErrorBoundary name="CinematicEditor">
+            <CinematicEditorModal />
+          </ErrorBoundary>
+        )}
       </React.Suspense>
     </div>
   );

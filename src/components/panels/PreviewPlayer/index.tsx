@@ -42,7 +42,7 @@ import { logger } from '@/utils/logger';
 import { GAME_STATS } from '@/i18n';
 import { DialogueBox } from '@/components/ui/DialogueBox';
 import { CompactStatHUD } from '@/components/ui/compact-stat-hud';
-import DiceResultModal from '@/components/DiceResultModal';
+import { DiceOverlay } from './DiceOverlay';
 
 /** Aspect ratio 16:9 */
 const ASPECT_RATIO = 16 / 9;
@@ -57,6 +57,9 @@ function computePlayerSize(containerW: number, containerH: number): { width: num
 
 export interface PreviewPlayerProps {
   initialSceneId?: string | null;
+  /** ID du dialogue de départ.
+   *  null ou absent → premier dialogue de la scène (comportement par défaut). */
+  initialDialogueId?: string | null;
   onClose: () => void;
   /** Standalone mode — si fourni, bypasse les stores Zustand (lecture depuis ExportData). */
   standaloneScenes?: Scene[];
@@ -67,6 +70,7 @@ export interface PreviewPlayerProps {
 
 export default function PreviewPlayer({
   initialSceneId,
+  initialDialogueId,
   onClose,
   standaloneScenes,
   standaloneCharacters,
@@ -84,6 +88,20 @@ export default function PreviewPlayer({
   const uiSoundsTickInterval    = useSettingsStore(state => state.uiSoundsTickInterval);
   const storeCharacterLibrary = useCharactersStore(state => state.characters);
   const characterLibrary: Character[] = standaloneCharacters ?? storeCharacterLibrary;
+
+  // Protagoniste → stats initiales (fallback sur variables globales si non trouvé).
+  // useMemo évite de re-traverser la liste à chaque render ; se met à jour uniquement
+  // si la bibliothèque de personnages ou le override standalone changent.
+  const protagonistStats = useMemo<GameStats | null>(() => {
+    if (standaloneInitialVariables) return null; // standalone override prend la priorité
+    const protagonist = storeCharacterLibrary.find(c => c.isProtagonist);
+    if (!protagonist?.initialStats) return null;
+    const { physique, mentale } = protagonist.initialStats;
+    return {
+      [GAME_STATS.PHYSIQUE]: physique ?? 100,
+      [GAME_STATS.MENTALE]:  mentale  ?? 100,
+    };
+  }, [storeCharacterLibrary, standaloneInitialVariables]);
 
   const isKid = useIsKidMode();
 
@@ -135,7 +153,9 @@ export default function PreviewPlayer({
   } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
-    initialStats: standaloneInitialVariables ?? (variables as GameStats) ?? {},
+    initialDialogueId: initialDialogueId ?? null,
+    // Priorité : standalone > protagoniste > variables globales > vide
+    initialStats: standaloneInitialVariables ?? protagonistStats ?? (variables as GameStats) ?? {},
   });
 
   // ── Config boîte de dialogue (hook partagé avec DialoguePreviewOverlay) ──
@@ -241,7 +261,12 @@ export default function PreviewPlayer({
 
   useEffect(() => { return () => { audioManager.stopBGM(0); audioManager.stopAllAmbient(); }; }, []);
 
-  // ── Pistes ambiantes — démarrent/s'arrêtent au changement de scène ─────────
+  // ── Pistes ambiantes — démarrent/s'arrêtent au changement de scène ou de pistes ──
+  // Les deux slots sont traités séparément pour éviter d'arrêter slot-0 quand slot-1 change.
+  // Deps incluent les URLs des 2 slots pour détecter les changements de pistes sans
+  // changer d'ID de scène (ex: édition des pistes ambiantes en live).
+  const ambientSlot0Url = currentScene?.ambientTracks?.[0]?.url ?? '';
+  const ambientSlot1Url = currentScene?.ambientTracks?.[1]?.url ?? '';
   useEffect(() => {
     if (!audioInitialized || !currentScene) {
       audioManager.stopAllAmbient();
@@ -254,8 +279,7 @@ export default function PreviewPlayer({
       else            audioManager.stopAmbient(slot);
     });
     return () => { audioManager.stopAllAmbient(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioInitialized, currentScene?.id]);
+  }, [audioInitialized, currentScene?.id, ambientSlot0Url, ambientSlot1Url]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     audioManager.initialize()
@@ -387,15 +411,6 @@ export default function PreviewPlayer({
           </button>
         </div>
       </header>
-
-      {/* ── Modale résultat dé — bloquante, s'ouvre après le lancer ── */}
-      <DiceResultModal
-        isOpen={diceState.lastRoll !== null}
-        roll={diceState.lastRoll ?? 0}
-        difficulty={pendingDiceDifficulty ?? 0}
-        success={diceState.lastResult === 'success'}
-        onClose={confirmDiceNavigation}
-      />
 
       {/* ── Zone de jeu ── */}
       <div
@@ -536,7 +551,7 @@ export default function PreviewPlayer({
                   speakerPortraitUrl={speakerPortraitUrl}
                   speakerIsOnRight={speakerIsOnRight}
                   speakerColor={speakerColor}
-                  isRolling={diceState.rolling}
+                  isRolling={diceState.lastRoll !== null}
                   onChoose={handleChoose}
                   onRestart={() => goToScene(currentScene.id, null)}
                   onClose={onClose}
@@ -554,6 +569,17 @@ export default function PreviewPlayer({
                 />
               </div>
             )}
+
+            {/* ── Overlay spectaculaire lancer de dé ──
+                 Le résultat (roll/success/difficulty) est connu SYNCHRONEMENT avant l'ouverture.
+                 L'animation DiceOverlay fournit elle-même la suspense visuelle (1750ms). */}
+            <DiceOverlay
+              isOpen={diceState.lastRoll !== null}
+              roll={diceState.lastRoll ?? 0}
+              difficulty={pendingDiceDifficulty ?? 0}
+              success={diceState.lastResult === 'success'}
+              onClose={confirmDiceNavigation}
+            />
 
           </div>
         )}

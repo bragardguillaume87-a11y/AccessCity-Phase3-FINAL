@@ -12,6 +12,7 @@ import {
   TINT_PRESET_LABELS,
 } from '@/types/cinematic';
 import type { Character } from '@/types';
+import { AssetMiniPicker } from './CinematicEditor/AssetMiniPicker';
 
 // ── Shared field components ───────────────────────────────────────────────────
 
@@ -174,6 +175,7 @@ export function CinematicEventInspector({ event, characters, onUpdate }: Props) 
       {event.type === 'background' && (<>
         <Field label="Image de fond (URL ou chemin)">
           <TextInput value={event.url} onChange={v => patch('url', v)} placeholder="/assets/backgrounds/ville.jpg" />
+          <AssetMiniPicker category="backgrounds" value={event.url} onChange={v => patch('url', v)} />
         </Field>
         <Field label="Transition">
           <Select value={event.transition} onChange={v => patch('transition', v as 'cut' | 'fade' | 'dissolve')}
@@ -221,6 +223,11 @@ export function CinematicEventInspector({ event, characters, onUpdate }: Props) 
       {(event.type === 'sfx' || event.type === 'bgm') && (<>
         <Field label="Fichier audio (URL ou chemin)">
           <TextInput value={event.url} onChange={v => patch('url', v)} placeholder="/assets/audio/son.mp3" />
+          <AssetMiniPicker
+            category={event.type === 'bgm' ? 'music' : 'sfx'}
+            value={event.url}
+            onChange={v => patch('url', v)}
+          />
         </Field>
         <Field label={`Volume (${Math.round((event.volume ?? 0.7) * 100)} %)`}>
           <input type="range" min={0} max={1} step={0.05}
@@ -283,6 +290,50 @@ export function CinematicEventInspector({ event, characters, onUpdate }: Props) 
           <Select value={event.characterId} onChange={v => patch('characterId', v)} options={characterOptions} />
         </Field>
         <Field label="Intensité"><Select value={event.intensity} onChange={v => patch('intensity', v as CinematicIntensity)} options={intensityOptions} /></Field>
+      </>)}
+
+      {event.type === 'characterExpression' && (<>
+        <Field label="Personnage (déjà présent à l'écran)">
+          <Select value={event.characterId} onChange={v => patch('characterId', v)} options={characterOptions} />
+        </Field>
+        {event.characterId && (
+          <Field label="Nouvelle expression">
+            <Select value={event.mood} onChange={v => patch('mood', v)} options={moodOptions(event.characterId)} />
+          </Field>
+        )}
+      </>)}
+
+      {event.type === 'characterMove' && (<>
+        <Field label="Personnage (déjà présent à l'écran)">
+          <Select value={event.characterId} onChange={v => patch('characterId', v)} options={characterOptions} />
+        </Field>
+        <Field label="Nouvelle position">
+          <Select value={event.side} onChange={v => patch('side', v as CinematicSide)} options={sideOptions} />
+        </Field>
+        <Field label="Vitesse"><Select value={event.speed} onChange={v => patch('speed', v as CinematicSpeed)} options={speedOptions} /></Field>
+      </>)}
+
+      {event.type === 'bgmStop' && (
+        <Field label="Transition">
+          <Toggle value={event.fade} onChange={v => patch('fade', v)} label={event.fade ? 'Fondu progressif (1 s)' : 'Arrêt immédiat'} />
+        </Field>
+      )}
+
+      {event.type === 'ambiance' && (<>
+        <Field label="Fichier audio (URL ou chemin)">
+          <TextInput value={event.url} onChange={v => patch('url', v)} placeholder="/assets/sfx/pluie.mp3" />
+          <AssetMiniPicker category="sfx" value={event.url} onChange={v => patch('url', v)} />
+        </Field>
+        <Field label={`Volume (${Math.round((event.volume ?? 0.5) * 100)} %)`}>
+          <input type="range" min={0} max={1} step={0.05}
+            value={event.volume ?? 0.5}
+            onChange={e => patch('volume', parseFloat(e.target.value))}
+            className="w-full accent-violet-500"
+          />
+        </Field>
+        <Field label="Lecture en boucle">
+          <Toggle value={event.loop} onChange={v => patch('loop', v)} label={event.loop ? 'Boucle continue' : 'Lecture unique'} />
+        </Field>
       </>)}
     </div>
   );

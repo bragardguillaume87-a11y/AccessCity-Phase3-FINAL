@@ -21,6 +21,7 @@ import EditorFooter from './CharacterEditorModal/components/EditorFooter';
 // Expert mode hooks
 import { useCharacterPreview } from './CharacterEditorModal/hooks/useCharacterPreview';
 import { useCharacterCompleteness } from './CharacterEditorModal/hooks/useCharacterCompleteness';
+import CharacterStatsSection from './CharacterEditorModal/components/CharacterStatsSection';
 
 // Wizard mode
 import CharacterWizard from './CharacterWizard';
@@ -155,6 +156,8 @@ function ExpertModeContent({
     removeMood,
     updateSprite,
     renameMood,
+    setIsProtagonist,
+    setInitialStat,
     handleSave,
     resetForm
   } = useCharacterForm(character as Character, characters, onSave);
@@ -240,6 +243,13 @@ function ExpertModeContent({
                 onRenameMood={renameMood}
                 onUpdateSprite={updateSprite}
                 moodPresets={moodPresets}
+              />
+
+              <CharacterStatsSection
+                isProtagonist={formData.isProtagonist ?? false}
+                initialStats={formData.initialStats ?? {}}
+                onToggleProtagonist={setIsProtagonist}
+                onUpdateStat={setInitialStat}
               />
             </div>
           </ScrollArea>

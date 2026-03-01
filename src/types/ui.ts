@@ -55,6 +55,10 @@ export interface ModalContext {
   category?: string;
   targetSceneId?: string;
   sceneId?: string;
+  /** ID du dialogue de départ pour PreviewPlayer.
+   *  Transmis quand l'utilisateur ouvre le preview avec un dialogue sélectionné.
+   *  null ou absent → premier dialogue de la scène (comportement par défaut). */
+  dialogueId?: string | null;
   /** Selection purpose when opening the assets modal from a specific tool.
    *  'sceneAudio'    → BGM : "Utiliser cette musique" assigne scene.audio.
    *  'ambientTrack'  → Ambiance : "Utiliser" assigne scene.ambientTracks[slot]. */

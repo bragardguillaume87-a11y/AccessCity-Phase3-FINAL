@@ -11,6 +11,7 @@ import { DialogueComposer } from '../dialogue-editor/DialogueComposer';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import type { Dialogue } from '@/types';
+import { isCinematicScene } from '@/types';
 
 // PHASE 4 (Option 4): Lazy load DialogueGraphModal for bundle optimization
 // This modal contains ReactFlow, Dagre, and theme system (~300KB)
@@ -47,6 +48,7 @@ export default function LeftPanel({
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
+  const isCinematicSelected = isCinematicScene(selectedScene);
   const addDialogue = useDialoguesStore((state) => state.addDialogue);
   const addDialogues = useDialoguesStore((state) => state.addDialogues);
   const insertDialoguesAfter = useDialoguesStore((state) => state.insertDialoguesAfter);
@@ -69,7 +71,8 @@ export default function LeftPanel({
   };
 
   const handleWizardSave = (dialogues: Dialogue[]) => {
-    if (!selectedScene || dialogues.length === 0) return;
+    // Guard: cinematic scenes do not store dialogues in dialoguesStore
+    if (!selectedScene || dialogues.length === 0 || isCinematicSelected) return;
 
     if (editDialogueIndex !== undefined) {
       // Edit mode: update the main dialogue
@@ -139,9 +142,20 @@ export default function LeftPanel({
 
         <TabsContent value="dialogues" className="flex-1 m-0 animate-in fade-in duration-200">
           <div className="h-full overflow-y-auto overflow-x-hidden">
-            <DialoguesPanel
-              onDialogueSelect={onDialogueSelect}
-            />
+            {isCinematicSelected ? (
+              <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
+                <Film className="w-8 h-8 text-violet-400 opacity-40" aria-hidden="true" />
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Scène cinématique</p>
+                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                  Les dialogues ne sont pas disponibles pour ce type de scène.
+                  Utilisez l&apos;Éditeur Cinématique pour créer des événements.
+                </p>
+              </div>
+            ) : (
+              <DialoguesPanel
+                onDialogueSelect={onDialogueSelect}
+              />
+            )}
           </div>
         </TabsContent>
       </Tabs>

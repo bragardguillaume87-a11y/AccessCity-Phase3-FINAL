@@ -95,6 +95,9 @@ export function useValidation(): ValidationResult {
         errors.scenes[scene.id] = sceneErrors;
       }
 
+      // Build O(1) lookup for intra-scene nextDialogueId validation
+      const dialogueIds = new Set((scene.dialogues || []).map(d => d.id));
+
       // Dialogues validation
       (scene.dialogues || []).forEach((dialogue, dIdx) => {
         const dialogueErrors: ValidationError[] = [];
@@ -125,6 +128,40 @@ export function useValidation(): ValidationResult {
           if (!choice.text || choice.text.trim() === '') {
             choiceErrors.push({ field: 'text', message: 'Texte du choix manquant', severity: 'error' });
             totalErrors++;
+          }
+
+          // Broken nextDialogueId (intra-scene seulement — nextSceneId = cross-scene, ignoré)
+          if (!choice.nextSceneId) {
+            if (choice.nextDialogueId === '') {
+              choiceErrors.push({ field: 'nextDialogueId', message: 'Lien navigation vide (utilisera dialogue suivant)', severity: 'warning' });
+              totalWarnings++;
+            } else if (choice.nextDialogueId && !dialogueIds.has(choice.nextDialogueId)) {
+              choiceErrors.push({ field: 'nextDialogueId', message: `Dialogue cible "${choice.nextDialogueId}" introuvable dans la scène`, severity: 'error' });
+              totalErrors++;
+            }
+          }
+
+          // Dice check broken links (même logique : nextSceneId = cross-scene, ignoré)
+          if (choice.diceCheck) {
+            const { success, failure } = choice.diceCheck;
+            if (!success?.nextSceneId) {
+              if (success?.nextDialogueId === '') {
+                choiceErrors.push({ field: 'diceCheck.success', message: 'Lien succès dé vide (utilisera dialogue suivant)', severity: 'warning' });
+                totalWarnings++;
+              } else if (success?.nextDialogueId && !dialogueIds.has(success.nextDialogueId)) {
+                choiceErrors.push({ field: 'diceCheck.success', message: `Dialogue cible succès "${success.nextDialogueId}" introuvable`, severity: 'error' });
+                totalErrors++;
+              }
+            }
+            if (!failure?.nextSceneId) {
+              if (failure?.nextDialogueId === '') {
+                choiceErrors.push({ field: 'diceCheck.failure', message: 'Lien échec dé vide (utilisera dialogue suivant)', severity: 'warning' });
+                totalWarnings++;
+              } else if (failure?.nextDialogueId && !dialogueIds.has(failure.nextDialogueId)) {
+                choiceErrors.push({ field: 'diceCheck.failure', message: `Dialogue cible échec "${failure.nextDialogueId}" introuvable`, severity: 'error' });
+                totalErrors++;
+              }
+            }
           }
 
           if (choiceErrors.length > 0) {

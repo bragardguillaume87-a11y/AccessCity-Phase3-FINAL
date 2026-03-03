@@ -80,10 +80,6 @@ export default defineConfig({
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
           // Misc vendors extracted from main chunk
           'vendor-misc': ['canvas-confetti', 'react-resizable-panels'],
-          // Phaser — lazy-loaded uniquement quand le PreviewPlayer s'ouvre
-          'vendor-phaser': ['phaser'],
-          // Theatre.js — timeline/animations, @theatre/studio exclu (devDep, import() conditionnel)
-          'vendor-theatre': ['@theatre/core', '@theatre/react'],
           // Three.js + React Three Fiber — lazy-loaded uniquement quand DiceOverlay s'ouvre
           'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
         },

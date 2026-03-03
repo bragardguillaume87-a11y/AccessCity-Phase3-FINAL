@@ -44,6 +44,10 @@ export function OutcomeEditor({ type, branch, onChange, currentSceneId }: Outcom
     return text.length > 50 ? `${text.substring(0, 50)}…` : text;
   }, []);
 
+  // Radix UI interdit value="" dans SelectItem (réservé pour vider la sélection programmatiquement).
+  // On utilise un sentinel non-ambigu que l'on convertit en undefined à la sortie.
+  const SENTINEL_AUTO = '__auto__';
+
   return (
     <div className={cn('rounded-xl p-3 border-2 space-y-2', config.border, config.bg)}>
       <Label className="flex items-center gap-2 text-sm font-semibold">
@@ -51,14 +55,16 @@ export function OutcomeEditor({ type, branch, onChange, currentSceneId }: Outcom
         {config.label}
       </Label>
       <Select
-        value={branch.nextDialogueId ?? ''}
-        onValueChange={(value) => onChange({ ...branch, nextDialogueId: value || undefined })}
+        value={branch.nextDialogueId || SENTINEL_AUTO}
+        onValueChange={(value) =>
+          onChange({ ...branch, nextDialogueId: value === SENTINEL_AUTO ? undefined : value })
+        }
       >
         <SelectTrigger className="h-9 text-sm bg-background/60">
           <SelectValue placeholder="— Avancer automatiquement —" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">— Avancer automatiquement —</SelectItem>
+          <SelectItem value={SENTINEL_AUTO}>— Avancer automatiquement —</SelectItem>
           {dialogues.map((d, idx) => (
             <SelectItem key={d.id} value={d.id}>
               💬 {getDialoguePreview(d.text, idx)}

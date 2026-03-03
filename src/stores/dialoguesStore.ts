@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import type { Dialogue } from '../types';
 
 /**
@@ -385,7 +386,7 @@ export const useDialoguesStore = create<DialoguesState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

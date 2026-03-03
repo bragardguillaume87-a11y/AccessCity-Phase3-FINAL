@@ -344,8 +344,9 @@ export function useGameState({
     if (choice.diceCheck) {
       const target = branch || choice;
       pendingNavigationRef.current = {
-        nextSceneId: target.nextSceneId,
-        nextDialogueId: target.nextDialogueId,
+        // Normaliser "" → undefined pour éviter le piège falsy dans confirmDiceNavigation
+        nextSceneId: target.nextSceneId || undefined,
+        nextDialogueId: target.nextDialogueId || undefined,
       };
       // Navigation deferred — DiceOverlay will call confirmDiceNavigation()
     } else {

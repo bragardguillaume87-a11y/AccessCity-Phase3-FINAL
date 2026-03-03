@@ -1,8 +1,8 @@
 # AccessCity Visual Novel Editor — Guide pour IA
 
 > **Version**: Phase 3 FINAL
-> **Dernière mise à jour**: 2026-02-18
-> **Stack**: React 18, TypeScript, Zustand, Vite 7, @xyflow/react
+> **Dernière mise à jour**: 2026-03-03
+> **Stack**: React 19, TypeScript, Zustand 5, Vite 7, @xyflow/react
 
 ---
 

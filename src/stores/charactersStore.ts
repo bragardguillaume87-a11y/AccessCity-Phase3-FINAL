@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import { setupAutoSave } from '../utils/storeSubscribers';
 import type { Character } from '../types';
 
@@ -120,8 +121,8 @@ export const useCharactersStore = create<CharactersState>()(
     ),
     {
       limit: 50,
-      // PERFORMANCE: Only compare reference equality (fast)
-      equality: (pastState, currentState) => pastState === currentState,
+      // PERFORMANCE: Shallow equality — compare chaque champ de l'état partialisé
+      equality: shallow,
       // PERFORMANCE: Only track 'characters' in undo history (not actions)
       // @ts-expect-error - Zundo partialize expects subset of state (this is correct behavior)
       partialize: (state) => ({

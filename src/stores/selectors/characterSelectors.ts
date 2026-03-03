@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useCharactersStore } from '../charactersStore';
 import type { Character } from '../../types';
 
@@ -54,7 +55,7 @@ export function useCharactersCount(): number {
  */
 export function useCharacterIds(): string[] {
   return useCharactersStore(
-    useCallback((state) => state.characters.map((c) => c.id), [])
+    useShallow((state) => state.characters.map((c) => c.id))
   );
 }
 
@@ -64,16 +65,14 @@ export function useCharacterIds(): string[] {
  */
 export function useCharacterNamesMap(): Record<string, string> {
   return useCharactersStore(
-    useCallback(
-      (state) =>
-        state.characters.reduce(
-          (acc, char) => {
-            acc[char.id] = char.name;
-            return acc;
-          },
-          {} as Record<string, string>
-        ),
-      []
+    useShallow((state) =>
+      state.characters.reduce(
+        (acc, char) => {
+          acc[char.id] = char.name;
+          return acc;
+        },
+        {} as Record<string, string>
+      )
     )
   );
 }
@@ -84,12 +83,10 @@ export function useCharacterNamesMap(): Record<string, string> {
  */
 export function useSpeakableCharacters(): Character[] {
   return useCharactersStore(
-    useCallback(
-      (state) =>
-        state.characters.filter(
-          (c) => c.moods && c.moods.length > 0 && Object.keys(c.sprites).length > 0
-        ),
-      []
+    useShallow((state) =>
+      state.characters.filter(
+        (c) => c.moods && c.moods.length > 0 && Object.keys(c.sprites).length > 0
+      )
     )
   );
 }

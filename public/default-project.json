@@ -301,28 +301,6 @@
         "text": "Heu ... tu es vraiment sur de toi ?",
         "choices": [],
         "isResponse": true
-      },
-      {
-        "id": "dialogue-1772049681108-phh4y3j",
-        "speaker": "counsellor",
-        "text": "La situation est tendue. Le bruit, la foule, les obstacles… Peux-tu garder ton calme ?",
-        "choices": [
-          {
-            "id": "choice-tpl-0-1772049661760",
-            "text": "Je respire profondément et j'avance.",
-            "effects": [],
-            "diceCheck": {
-              "stat": "mentale",
-              "difficulty": 8,
-              "success": {
-                "nextDialogueId": ""
-              },
-              "failure": {
-                "nextDialogueId": ""
-              }
-            }
-          }
-        ]
       }
     ],
     "scenetest02": [

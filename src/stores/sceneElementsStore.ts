@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import type { SceneCharacter, TextBox, Prop } from '../types';
 
 /** Scene Elements Store — Repository pattern for visual elements per scene */
@@ -393,7 +394,7 @@ export const useSceneElementsStore = create<SceneElementsState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

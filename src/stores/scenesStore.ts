@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
 import type { SceneMetadata, SceneType, CinematicEvent, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
@@ -377,7 +378,7 @@ export const useScenesStore = create<ScenesState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

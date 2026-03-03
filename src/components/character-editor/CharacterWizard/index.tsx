@@ -45,6 +45,8 @@ export function CharacterWizard({
     addMood,
     removeMood,
     updateSprite,
+    setIsProtagonist,
+    setInitialStat,
     handleSave
   } = useCharacterForm(character as Character, characters, onSave);
 
@@ -99,6 +101,10 @@ export function CharacterWizard({
             onUpdateDescription={(desc) => updateField('description', desc)}
             onValidChange={handleValidChange}
             nameError={errors.name?.[0]}
+            isProtagonist={formData.isProtagonist}
+            initialStats={formData.initialStats}
+            onToggleProtagonist={setIsProtagonist}
+            onUpdateStat={setInitialStat}
           />
         );
 

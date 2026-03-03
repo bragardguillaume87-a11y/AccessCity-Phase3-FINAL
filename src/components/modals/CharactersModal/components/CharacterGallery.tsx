@@ -101,8 +101,8 @@ export function CharacterGallery({
       {/* Padding inside ScrollArea */}
       <div className="p-4">
         {viewMode === 'grid' ? (
-          // Grid layout: 5-6 columns for compact view
-          <div className="grid grid-cols-5 xl:grid-cols-6 gap-3">
+          // Grid layout: 4-5 columns — adapté au format portrait 3:4
+          <div className="grid grid-cols-4 xl:grid-cols-5 gap-3">
             {children}
           </div>
         ) : (

@@ -246,6 +246,7 @@ export function ComposerFormPanel({
                   onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
                   onRemove={() => handleRemoveChoice(safeTab)}
                   canRemove={choices.length > 1}
+                  currentSceneId={currentSceneId}
                 />
               )}
 

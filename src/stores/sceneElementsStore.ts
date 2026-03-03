@@ -48,6 +48,9 @@ interface SceneElementsState {
   removePropFromScene: (sceneId: string, propId: string) => void;
   updateProp: (sceneId: string, propId: string, updates: Partial<Prop>) => void;
   deleteAllElementsForScene: (sceneId: string) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importElementsByScene: (data: Record<string, SceneElements>) => void;
 }
 
 function generateId(prefix: string): string {
@@ -374,6 +377,10 @@ export const useSceneElementsStore = create<SceneElementsState>()(
               false,
               'sceneElements/deleteAllElementsForScene'
             );
+          },
+
+          importElementsByScene: (data) => {
+            set(() => ({ elementsByScene: data }), false, 'sceneElements/importElementsByScene');
           },
         })),
         { name: 'SceneElementsStore' }

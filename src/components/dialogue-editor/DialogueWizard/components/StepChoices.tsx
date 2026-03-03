@@ -91,6 +91,7 @@ export function StepChoices({
           onAddChoice={onAddChoice}
           onRemoveChoice={onRemoveChoice}
           onValidChange={onValidChange}
+          currentSceneId={currentSceneId}
         />
       );
 

@@ -3,18 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react';
-
-/**
- * Asset interface
- */
-export interface Asset {
-  name: string;
-  path: string;
-  category: string;
-  type?: string;
-  size?: number;
-  [key: string]: unknown;
-}
+import type { Asset } from '@/types';
 
 /**
  * Props for AssetLibraryGrid component
@@ -138,15 +127,18 @@ export function AssetLibraryGrid({
         <>
           <ScrollArea className="max-h-[400px] pr-4">
             <div className="grid grid-cols-3 gap-2 mb-4">
-              {assets.map((asset, idx) => (
-                <AssetThumbnail
-                  key={`${asset.path}-${idx}`}
-                  asset={asset}
-                  selected={selectedValue === asset.path}
-                  onSelect={() => onSelect(asset.path)}
-                  onHover={() => onHover(asset)}
-                />
-              ))}
+              {assets.map((asset, idx) => {
+                const assetUrl = asset.url ?? asset.path;
+                return (
+                  <AssetThumbnail
+                    key={`${asset.path}-${idx}`}
+                    asset={asset}
+                    selected={selectedValue === assetUrl || selectedValue === asset.path}
+                    onSelect={() => onSelect(assetUrl)}
+                    onHover={() => onHover(asset)}
+                  />
+                );
+              })}
             </div>
           </ScrollArea>
 
@@ -155,9 +147,9 @@ export function AssetLibraryGrid({
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-xs font-semibold text-muted-foreground mb-2">Récemment utilisés</p>
               <div className="flex gap-2 flex-wrap">
-                {recentAssets.map((assetPath, idx) => (
+                {recentAssets.map((assetPath) => (
                   <Badge
-                    key={idx}
+                    key={assetPath}
                     variant={selectedValue === assetPath ? 'default' : 'outline'}
                     className={`cursor-pointer text-xs px-3 py-1.5 ${
                       selectedValue === assetPath
@@ -198,7 +190,7 @@ function AssetThumbnail({
       }`}
     >
       <LazyImage
-        src={asset.path}
+        src={asset.url ?? asset.path}
         alt={asset.name}
         className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
       />

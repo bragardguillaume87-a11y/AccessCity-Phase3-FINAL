@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Music, Volume2, Mic, Play, Pause, Trash2 } from 'lucide-react';
+import { Music, Volume2, Mic, Play, Pause, Trash2, Pencil } from 'lucide-react';
 import { logger } from '@/utils/logger';
 import type { Asset } from '@/types';
 
@@ -10,6 +10,7 @@ export interface AudioAssetCardProps {
   asset: Asset;
   onClick: () => void;
   onDelete?: () => void;
+  onRename?: (newName: string) => void;
   isSelectionMode?: boolean;
   onSelectAudio?: () => void;
 }
@@ -27,13 +28,29 @@ export function AudioAssetCard({
   asset,
   onClick,
   onDelete,
+  onRename,
   isSelectionMode = false,
   onSelectAudio
 }: AudioAssetCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenameDraft(asset.name);
+    setIsRenaming(true);
+  };
+
+  const confirmRename = () => {
+    if (renameDraft.trim() && renameDraft.trim() !== asset.name) {
+      onRename?.(renameDraft.trim());
+    }
+    setIsRenaming(false);
+  };
 
   const getCategoryIcon = () => {
     switch (asset.category) {
@@ -55,7 +72,7 @@ export function AudioAssetCard({
 
   useEffect(() => {
     // Create audio element on mount
-    audioRef.current = new Audio(asset.path);
+    audioRef.current = new Audio(asset.url ?? asset.path);
 
     const audio = audioRef.current;
 
@@ -76,7 +93,7 @@ export function AudioAssetCard({
       audio.pause();
       audio.src = '';
     };
-  }, [asset.path]);
+  }, [asset.path, asset.url]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -182,9 +199,35 @@ export function AudioAssetCard({
 
       {/* Footer - Name + Actions */}
       <div className="p-2.5 space-y-2">
-        <p className="text-xs font-semibold truncate text-foreground" title={asset.name}>
-          {asset.name}
-        </p>
+        {isRenaming ? (
+          <input
+            value={renameDraft}
+            onChange={e => setRenameDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') confirmRename();
+              if (e.key === 'Escape') setIsRenaming(false);
+            }}
+            onBlur={confirmRename}
+            onClick={e => e.stopPropagation()}
+            className="w-full text-xs bg-slate-700 border border-primary rounded px-1.5 py-0.5 text-white outline-none focus:ring-1 focus:ring-primary"
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-1 min-w-0 group/name">
+            <p className="text-xs font-semibold truncate text-foreground flex-1" title={asset.name}>
+              {asset.name}
+            </p>
+            {onRename && !isSelectionMode && (
+              <button
+                onClick={startRename}
+                className="opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0 text-slate-500 hover:text-slate-200 p-0.5 rounded"
+                title="Renommer"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Selection mode : bouton Utiliser dans le footer (pas d'overlay) */}
         {isSelectionMode ? (
@@ -232,3 +275,5 @@ export function AudioAssetCard({
     </Card>
   );
 }
+
+export default memo(AudioAssetCard);

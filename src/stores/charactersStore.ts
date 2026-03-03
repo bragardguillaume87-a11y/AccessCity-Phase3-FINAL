@@ -22,6 +22,9 @@ interface CharactersState {
   updateCharacter: (updated: Partial<Character> & { id: string }) => void;
   deleteCharacter: (charId: string) => void;
 
+  // Import (remplacement complet pour restauration de projet)
+  importCharacters: (characters: Character[]) => void;
+
   // Helpers (selectors)
   getCharacterById: (charId: string) => Character | undefined;
 }
@@ -96,6 +99,10 @@ export const useCharactersStore = create<CharactersState>()(
             set((state) => ({
               characters: state.characters.filter((c) => c.id !== charId),
             }), false, 'characters/deleteCharacter');
+          },
+
+          importCharacters: (characters) => {
+            set(() => ({ characters }), false, 'characters/importCharacters');
           },
 
           // Helpers (selectors)

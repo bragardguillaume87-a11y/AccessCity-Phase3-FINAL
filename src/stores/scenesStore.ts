@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
-import type { SceneMetadata, SceneType, CinematicEvent } from '../types';
+import type { SceneMetadata, SceneType, CinematicEvent, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
 
@@ -50,9 +50,14 @@ interface ScenesState {
   reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
   updateCinematicEvents: (sceneId: string, events: CinematicEvent[]) => void;
+  /** Met à jour les pistes multi-canaux (nouveau format NLE). */
+  updateCinematicTracks: (sceneId: string, tracks: CinematicTracks) => void;
 
   // Batch operations (performance)
   batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<SceneMetadata> }>) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importScenes: (scenes: SceneMetadata[]) => void;
 }
 
 // ============================================================================
@@ -274,6 +279,24 @@ export const useScenesStore = create<ScenesState>()(
             );
           },
 
+          /**
+           * Met à jour les pistes multi-canaux d'une scène cinématique (nouveau format NLE).
+           *
+           * Remplace l'objet CinematicTracks complet — utilisé par l'éditeur multi-pistes
+           * après chaque drag/resize/ajout/suppression de bloc.
+           */
+          updateCinematicTracks: (sceneId, tracks) => {
+            set(
+              (state) => ({
+                scenes: state.scenes.map((s) =>
+                  s.id === sceneId ? { ...s, cinematicTracks: tracks } : s
+                ),
+              }),
+              false,
+              'scenes/updateCinematicTracks'
+            );
+          },
+
           // ============================================================
           // ACTIONS: DELETE
           // ============================================================
@@ -316,6 +339,10 @@ export const useScenesStore = create<ScenesState>()(
               false,
               'scenes/reorderScenes'
             );
+          },
+
+          importScenes: (scenes) => {
+            set(() => ({ scenes }), false, 'scenes/importScenes');
           },
         })),
         { name: 'ScenesStore' }

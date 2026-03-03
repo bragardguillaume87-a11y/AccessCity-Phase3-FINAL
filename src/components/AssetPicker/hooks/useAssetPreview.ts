@@ -1,16 +1,5 @@
 import { useState } from 'react';
-
-/**
- * Asset from useAssets hook (local interface)
- */
-export interface Asset {
-  name: string;
-  path: string;
-  category: string;
-  type?: string;
-  size?: number;
-  [key: string]: unknown;
-}
+import type { Asset } from '@/types';
 
 /**
  * Return type for useAssetPreview hook

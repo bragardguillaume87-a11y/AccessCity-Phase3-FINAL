@@ -486,9 +486,11 @@ function gameStart(): void {
 // ── Sons de dé ───────────────────────────────────────────────────────────────
 
 /**
- * Roulement de dé — rattle bruité sur 1.5s.
- * Bandpass sweep 300 → 4000 Hz simulant un dé qui roule sur une table.
- * Deux couches : grave (impact table) + aigu (friction plastique).
+ * Roulement de dé — rattle bruité sur 1.5s + cliquetis de facettes.
+ * Trois couches :
+ *   1. Grave  — bruit enveloppé avec pics de rebond (bandpass sweep)
+ *   2. Aiguë  — friction surface (highpass 2000 Hz)
+ *   3. Clicks — 12 impacts nets (facettes) qui accélèrent puis ralentissent
  */
 function diceRollStart(): void {
   if (_muted || !isRunning()) return;
@@ -497,14 +499,12 @@ function diceRollStart(): void {
   const t = ctx.currentTime;
   const dur = 1.5;
 
-  // Couche grave — impacts répétés (bruit basse fréquence décroissant)
+  // Couche grave — bruit enveloppé avec pics de rebond
   const size = Math.ceil(ctx.sampleRate * dur);
   const buf = ctx.createBuffer(1, size, ctx.sampleRate);
   const data = buf.getChannelData(0);
-  // Bruit enveloppé : pics périodiques simulant les rebonds
   for (let i = 0; i < size; i++) {
     const t2 = i / ctx.sampleRate;
-    // Fréquence de rebond accélère (3→12 Hz sur 1.5s) puis ralentit
     const rebondFreq = t2 < 0.8 ? 3 + t2 * 10 : 12 - (t2 - 0.8) * 8;
     const envelope = 0.5 + 0.5 * Math.cos(2 * Math.PI * rebondFreq * t2);
     data[i] = (Math.random() * 2 - 1) * envelope;
@@ -526,8 +526,33 @@ function diceRollStart(): void {
   src.start(t);
   src.stop(t + dur + 0.01);
 
-  // Couche aiguë — friction plastique (highpass 2000 Hz, plus courte)
+  // Couche aiguë — friction surface
   noiseBurst(900, 0.14, 2000);
+
+  // Cliquetis de facettes — 12 impacts nets (accélération → décélération)
+  // Simule chaque arête du dé qui touche la surface pendant le roulement
+  const clickTimes = [0.05, 0.13, 0.20, 0.28, 0.35, 0.43, 0.52, 0.64, 0.79, 1.01, 1.26, 1.44];
+  for (const ct of clickTimes) {
+    const st = t + ct;
+    const clickSize = Math.ceil(ctx.sampleRate * 0.022);
+    const clickBuf = ctx.createBuffer(1, clickSize, ctx.sampleRate);
+    const cData = clickBuf.getChannelData(0);
+    for (let i = 0; i < clickSize; i++) {
+      cData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (clickSize * 0.12));
+    }
+    const cSrc = ctx.createBufferSource();
+    cSrc.buffer = clickBuf;
+    const cFlt = ctx.createBiquadFilter();
+    cFlt.type = 'highpass';
+    cFlt.frequency.value = 2800;
+    const cGain = ctx.createGain();
+    cGain.gain.value = 0.28 * (1 - (ct / dur) * 0.45);
+    cSrc.connect(cFlt);
+    cFlt.connect(cGain);
+    cGain.connect(master);
+    cSrc.start(st);
+    cSrc.stop(st + 0.025);
+  }
 }
 
 /**
@@ -545,9 +570,9 @@ function diceImpact(): void {
 }
 
 /**
- * Victoire — arpège C5→E5→G5→C6.
+ * Victoire — arpège C5→E5→G5→C6 + note tenue finale.
  * Accord majeur parfait (523→659→784→1047 Hz) — tonalité de triomphe.
- * Notes séparées de 80 ms pour un effet "fanfare" sans être agressif.
+ * Notes séparées de 80ms + sustain C6 résonant + shimmer étendu.
  */
 function diceSuccess(): void {
   if (_muted || !isRunning()) return;
@@ -555,6 +580,8 @@ function diceSuccess(): void {
   const master = getMaster();
   const t = ctx.currentTime;
   const notes = [523.3, 659.3, 784.0, 1046.5] as const;
+
+  // Arpège ascendant
   notes.forEach((freq, i) => {
     const noteT = t + i * 0.08;
     const osc = ctx.createOscillator();
@@ -569,13 +596,29 @@ function diceSuccess(): void {
     osc.start(noteT);
     osc.stop(noteT + 0.23);
   });
-  // Shimmer final
-  setTimeout(() => { if (isRunning()) noiseBurst(120, 0.10, 4000); }, 350);
+
+  // Note tenue C6 — sustain résonant après l'arpège
+  const susT = t + notes.length * 0.08 + 0.06;
+  const susOsc = ctx.createOscillator();
+  susOsc.type = 'sine';
+  susOsc.frequency.value = 1046.5;
+  const susGain = ctx.createGain();
+  susGain.gain.setValueAtTime(0.0001, susT);
+  susGain.gain.linearRampToValueAtTime(0.18, susT + 0.06);
+  susGain.gain.exponentialRampToValueAtTime(0.0001, susT + 0.90);
+  susOsc.connect(susGain);
+  susGain.connect(master);
+  susOsc.start(susT);
+  susOsc.stop(susT + 0.95);
+
+  // Shimmer étendu — deux vagues successives (scintillement)
+  setTimeout(() => { if (isRunning()) noiseBurst(180, 0.11, 4200); }, 360);
+  setTimeout(() => { if (isRunning()) noiseBurst(120, 0.07, 5800); }, 600);
 }
 
 /**
- * Échec — descente C5→A4→F4 (tonalité mineure descendante).
- * Sine avec vibrato léger pour un caractère mélancolique sans être brutal.
+ * Échec — descente C5→A4→F4 (tonalité mineure) + écho + grondement sourd.
+ * Triangle avec vibrato léger + écho désaccordé pour un sentiment de fatalité.
  */
 function diceFailure(): void {
   if (_muted || !isRunning()) return;
@@ -583,6 +626,8 @@ function diceFailure(): void {
   const master = getMaster();
   const t = ctx.currentTime;
   const notes = [523.3, 440.0, 349.2] as const;
+
+  // Descente mineure
   notes.forEach((freq, i) => {
     const noteT = t + i * 0.11;
     const osc = ctx.createOscillator();
@@ -598,8 +643,24 @@ function diceFailure(): void {
     osc.start(noteT);
     osc.stop(noteT + 0.23);
   });
-  // Grondement final (doom)
-  oscBurst(80, 'sawtooth', 0.12, 350, 0.5);
+
+  // Écho légèrement désaccordé — sentiment de "destin scellé"
+  const echoT = t + notes.length * 0.11 + 0.06;
+  const echoOsc = ctx.createOscillator();
+  echoOsc.type = 'triangle';
+  echoOsc.frequency.setValueAtTime(349.2 * 0.93, echoT);
+  echoOsc.frequency.exponentialRampToValueAtTime(349.2 * 0.86, echoT + 0.45);
+  const echoGain = ctx.createGain();
+  echoGain.gain.setValueAtTime(0.11, echoT);
+  echoGain.gain.exponentialRampToValueAtTime(0.0001, echoT + 0.50);
+  echoOsc.connect(echoGain);
+  echoGain.connect(master);
+  echoOsc.start(echoT);
+  echoOsc.stop(echoT + 0.55);
+
+  // Grondement sourd étendu — basse continue (doom)
+  oscBurst(42, 'sawtooth', 0.16, 650, 0.45);
+  oscBurst(80, 'sawtooth', 0.10, 350, 0.50);
 }
 
 // ── Contrôle volume / mute ────────────────────────────────────────────────────

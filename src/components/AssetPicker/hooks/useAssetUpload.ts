@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { logger } from '@/utils/logger';
+import { isTauriEditor, convertFileSrcIfNeeded } from '@/utils/tauri';
 import { API } from '@/config/constants';
 import { TIMING } from '@/config/timing';
 
@@ -39,48 +41,38 @@ export interface UseAssetUploadReturn {
 }
 
 /**
- * useAssetUpload - Manage asset upload and server health checking
+ * useAssetUpload - Manage single-file asset upload.
  *
- * This hook centralizes all upload-related logic:
- * - Server health checking (checks if backend is running)
- * - File upload with FormData
- * - Upload status tracking (uploading/success/error)
- * - Automatic manifest reload after successful upload
- *
- * @param props - Configuration and callbacks
- * @returns Upload state and handlers
- *
- * @example
- * ```tsx
- * const { uploadStatus, serverStatus, handleFileUpload, checkServerHealth } = useAssetUpload({
- *   assetType: 'background',
- *   activeTab: 'upload',
- *   onAssetSelect: handleSelect,
- *   onReloadManifest: reloadManifest
- * });
- * ```
+ * Supports two backends :
+ *  - Web  : FormData POST to Express server (localhost:3001)
+ *  - Tauri: invoke('upload_asset_editor') with raw bytes (no server needed)
  */
 export function useAssetUpload({
   assetType,
   activeTab,
   onAssetSelect,
-  onReloadManifest
+  onReloadManifest,
 }: UseAssetUploadProps): UseAssetUploadReturn {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [serverStatus, setServerStatus] = useState<ServerStatus>(null);
 
   /**
-   * Check if backend upload server is running
+   * Check if backend upload server is running.
+   * En mode Tauri, toujours "online" (pas de serveur requis).
    */
   const checkServerHealth = useCallback(async (): Promise<boolean> => {
+    if (isTauriEditor()) {
+      setServerStatus('online');
+      return true;
+    }
+
     setServerStatus('checking');
     try {
       const response = await fetch(`${API.BASE_URL}/api/health`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
-
       if (response.ok) {
         setServerStatus('online');
         return true;
@@ -97,7 +89,8 @@ export function useAssetUpload({
   }, []);
 
   /**
-   * Check server health when Upload tab is activated
+   * Check server health when Upload tab is activated.
+   * En mode Tauri, marque directement online.
    */
   useEffect(() => {
     if (activeTab === 'upload' && serverStatus === null) {
@@ -106,20 +99,13 @@ export function useAssetUpload({
   }, [activeTab, serverStatus, checkServerHealth]);
 
   /**
-   * Upload file to backend server
+   * Upload a single file.
    *
-   * Flow:
-   * 1. Validate file type (must be image)
-   * 2. Check server health
-   * 3. Upload via FormData POST request
-   * 4. Select uploaded asset
-   * 5. Reload manifest to refresh library
-   *
-   * @param file - File to upload
+   * En mode Tauri : lit le fichier en bytes et invoque upload_asset_editor.
+   * En mode web   : envoie le fichier via FormData POST.
    */
   const handleFileUpload = useCallback(
     async (file: File): Promise<void> => {
-      // Validate file type
       if (!file || !file.type.startsWith('image/')) {
         logger.warn('[useAssetUpload] Invalid file type:', file?.type);
         setUploadError('Invalid file type. Only images allowed.');
@@ -127,47 +113,57 @@ export function useAssetUpload({
         return;
       }
 
-      // Check server health before upload
       setUploadStatus('uploading');
-      const isServerOnline = await checkServerHealth();
-
-      if (!isServerOnline) {
-        setUploadError(
-          "Upload server is not running. Please start the server with 'npm run dev' (not 'npm run dev:vite')."
-        );
-        setUploadStatus('error');
-        return;
-      }
-
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('category', assetType + 's'); // 'backgrounds', 'characters', 'illustrations'
-
       setUploadError(null);
 
       try {
-        // Upload file
-        const response = await fetch(`${API.BASE_URL}/api/assets/upload`, {
-          method: 'POST',
-          body: formData
-        });
+        if (isTauriEditor()) {
+          // ── Tauri mode : invoke Rust command ──────────────────────────
+          const buffer = await file.arrayBuffer();
+          const data = Array.from(new Uint8Array(buffer));
+          const category = assetType + 's'; // 'backgrounds', 'characters', etc.
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Upload failed');
+          const absolutePath = await invoke<string>('upload_asset_editor', {
+            filename: file.name,
+            category,
+            data,
+          });
+
+          // Retourner l'URL display-ready pour sélectionner l'asset
+          onAssetSelect(convertFileSrcIfNeeded(absolutePath));
+        } else {
+          // ── Web mode : FormData POST to Express server ─────────────────
+          const isServerOnline = await checkServerHealth();
+          if (!isServerOnline) {
+            setUploadError(
+              "Upload server is not running. Please start the server with 'npm run dev' (not 'npm run dev:vite')."
+            );
+            setUploadStatus('error');
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('category', assetType + 's');
+
+          const response = await fetch(`${API.BASE_URL}/api/assets/upload`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Upload failed');
+          }
+
+          const data = await response.json();
+          onAssetSelect(data.path);
         }
-
-        const data = await response.json();
-
-        // Select the newly uploaded asset
-        onAssetSelect(data.path);
 
         // Reload manifest to update library
         if (onReloadManifest) {
-          setTimeout(() => onReloadManifest(), TIMING.DEBOUNCE_AUTOSAVE); // Small delay for manifest generation
+          setTimeout(() => onReloadManifest(), TIMING.DEBOUNCE_AUTOSAVE);
         } else {
-          // Fallback: reload page
           setTimeout(() => window.location.reload(), TIMING.UPLOAD_RELOAD_DELAY);
         }
 
@@ -181,11 +177,5 @@ export function useAssetUpload({
     [assetType, onAssetSelect, onReloadManifest, checkServerHealth]
   );
 
-  return {
-    uploadStatus,
-    uploadError,
-    serverStatus,
-    handleFileUpload,
-    checkServerHealth
-  };
+  return { uploadStatus, uploadError, serverStatus, handleFileUpload, checkServerHealth };
 }

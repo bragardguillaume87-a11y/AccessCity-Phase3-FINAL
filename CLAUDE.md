@@ -477,6 +477,7 @@ const edgeTypes = useMemo(() => getEdgeTypes(theme.id), [theme.id]);
 - **Store patterns** : [`.claude/rules/store-patterns.md`](.claude/rules/store-patterns.md)
 - **Graph patterns** : [`.claude/rules/graph-patterns.md`](.claude/rules/graph-patterns.md)
 - **Adaptation IA** : [`.claude/rules/ai-adaptation.md`](.claude/rules/ai-adaptation.md)
+- **Bugs Tauri typiques** : [`.claude/rules/tauri-patterns.md`](.claude/rules/tauri-patterns.md) ← **lire avant tout audit Tauri**
 
 ### Documentation externe
 

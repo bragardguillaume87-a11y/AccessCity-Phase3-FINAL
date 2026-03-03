@@ -1,9 +1,12 @@
 /**
- * CinematicPlayer — Lecteur de séquences cinématiques
+ * CinematicPlayer — Lecteur multi-pistes de séquences cinématiques.
  *
- * Joue les CinematicEvent[] d'une scène en auto-play séquentiel.
- * Utilise Framer Motion pour les effets visuels (fade, flash, zoom, tint…).
- * Logique : state machine par index — chaque event traité via useEffect.
+ * Architecture temps-réel :
+ *  - Ticker 16 ms accumule `currentTimeMs`
+ *  - `processedEventIds` (Set) — chaque événement est déclenché exactement une fois
+ *  - Comportement "Restaurant" : ticker se fige sur dialogue en attente de clic,
+ *    la BGM / ambiance (audio natif) continue naturellement
+ *  - Backward-compat : accepte tracks (nouveau) ou events (ancien via migration)
  */
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,8 +16,12 @@ import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { useSpeakerLayout } from '@/hooks/useSpeakerLayout';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
 import type { CinematicEvent, TintPreset } from '@/types';
+import type { CinematicTracks } from '@/types/cinematic';
 import type { Character } from '@/types/characters';
-import { CINEMATIC_SPEED_MS } from '@/types/cinematic';
+import {
+  CINEMATIC_SPEED_MS,
+  flattenTracks, getTotalDurationMs, migrateToCinematicTracks,
+} from '@/types/cinematic';
 
 // ── Types internes ────────────────────────────────────────────────────────────
 
@@ -26,7 +33,15 @@ interface ActiveCharacter {
   shaking: boolean;
 }
 
-// CSS filters by tint preset
+interface DialogueState {
+  speaker: string;
+  speakerMood?: string;
+  text: string;
+  autoAdvance: boolean;
+}
+
+// ── Constantes de rendu ───────────────────────────────────────────────────────
+
 const TINT_FILTERS: Record<TintPreset, string> = {
   none:   '',
   memory: 'sepia(0.7) brightness(0.9)',
@@ -36,59 +51,84 @@ const TINT_FILTERS: Record<TintPreset, string> = {
   dream:  'saturate(0.8) hue-rotate(260deg) brightness(0.9)',
 };
 
+const SIDE_POSITIONS: Record<string, React.CSSProperties> = {
+  left:   { left: '5%',  bottom: '0' },
+  right:  { right: '5%', bottom: '0' },
+  top:    { left: '50%', bottom: '60%' },
+  bottom: { left: '50%', bottom: '0' },
+};
+
+const getSideVariants = (side: string) => ({
+  initial: { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, y: side === 'bottom' ? 60 : 0 },
+  animate: { opacity: 1, x: 0, y: 0, transition: { duration: 0.4 } },
+  exit:    { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, transition: { duration: 0.3 } },
+});
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
-  events: CinematicEvent[];
+  /** Multi-track cinematic data (nouveau format). */
+  tracks?: CinematicTracks;
+  /** Backward-compat : tableau plat d'events (converti en tracks si tracks absent). */
+  events?: CinematicEvent[];
   backgroundUrl: string;
   canvasWidth: number;
   canvasHeight: number;
   characterLibrary: Character[];
-  /** Callback quand tous les events sont joués (pour passer à la scène suivante) */
   onSequenceEnd: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth, canvasHeight, characterLibrary, onSequenceEnd }: Props) {
-  // ── Visual state ──────────────────────────────────────────────────────────
-  const [eventIndex, setEventIndex] = useState(0);
-  const [bgUrl, setBgUrl] = useState(initialBg);
-  const [activeChars, setActiveChars] = useState<ActiveCharacter[]>([]);
-  const [fadeOverlay, setFadeOverlay] = useState<{ visible: boolean; color: 'black' | 'white'; opacity: number }>({ visible: false, color: 'black', opacity: 0 });
-  const [flashKey, setFlashKey] = useState(0);
-  const [flashColor, setFlashColor] = useState<'black' | 'white'>('white');
-  const [shakeKey, setShakeKey] = useState(0);
-  const [vignette, setVignette] = useState<{ visible: boolean; intensity: 'light' | 'medium' | 'strong' }>({ visible: false, intensity: 'medium' });
-  const [tintPreset, setTintPreset] = useState<TintPreset>('none');
-  const [zoom, setZoom] = useState(1);
-  const [letterbox, setLetterbox] = useState(false);
-  const [titleCard, setTitleCard] = useState<{ title: string; subtitle?: string } | null>(null);
-  const [dialogue, setDialogue] = useState<{ speaker: string; speakerMood?: string; text: string; autoAdvance: boolean } | null>(null);
-  const [waitingForClick, setWaitingForClick] = useState(false);
+export function CinematicPlayer({
+  tracks: tracksProp, events: eventsProp,
+  backgroundUrl: initialBg, canvasWidth, canvasHeight,
+  characterLibrary, onSequenceEnd,
+}: Props) {
 
-  // Références audio persistantes (bgm + ambiance indépendants)
+  // Résolution tracks (backward-compat)
+  const tracks = useMemo(
+    () => tracksProp ?? migrateToCinematicTracks(eventsProp ?? []),
+    [tracksProp, eventsProp],
+  );
+
+  // ── Visual state ──────────────────────────────────────────────────────────
+  const [currentTimeMs, setCurrentTimeMs]   = useState(0);
+  const [waitingForClick, setWaitingForClick] = useState(false);
+  const processedEventIds                   = useRef<Set<string>>(new Set());
+
+  // Ref pour éviter la stale closure dans l'effet processeur d'événements
+  // (deps: [currentTimeMs] uniquement → waitingForClick et onSequenceEnd seraient obsolètes sans ref)
+  const waitingForClickRef = useRef(false);
+  const onSequenceEndRef   = useRef(onSequenceEnd);
+  useEffect(() => { waitingForClickRef.current = waitingForClick; });
+  useEffect(() => { onSequenceEndRef.current   = onSequenceEnd;   });
+
+  const [bgUrl, setBgUrl]       = useState(initialBg);
+  const [activeChars, setActiveChars] = useState<ActiveCharacter[]>([]);
+  const [fadeOverlay, setFadeOverlay] = useState<{ visible: boolean; color: 'black' | 'white'; opacity: number }>(
+    { visible: false, color: 'black', opacity: 0 }
+  );
+  const [flashKey, setFlashKey]     = useState(0);
+  const [flashColor, setFlashColor] = useState<'black' | 'white'>('white');
+  const [shakeKey, setShakeKey]     = useState(0);
+  const [vignette, setVignette]     = useState<{ visible: boolean; intensity: 'light' | 'medium' | 'strong' }>({ visible: false, intensity: 'medium' });
+  const [tintPreset, setTintPreset] = useState<TintPreset>('none');
+  const [zoom, setZoom]             = useState(1);
+  const [letterbox, setLetterbox]   = useState(false);
+  const [titleCard, setTitleCard]   = useState<{ title: string; subtitle?: string } | null>(null);
+  const [dialogue, setDialogue]     = useState<DialogueState | null>(null);
+
+  // Audio persistant — continue nativement pendant la pause Restaurant
   const bgmAudioRef      = useRef<HTMLAudioElement | null>(null);
   const ambianceAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Libère toutes les ressources audio à l'unmount (évite les zombies audio entre scènes)
   useEffect(() => {
     return () => {
-      if (bgmAudioRef.current)      { bgmAudioRef.current.pause();      bgmAudioRef.current.src = '';      bgmAudioRef.current      = null; }
+      if (bgmAudioRef.current)      { bgmAudioRef.current.pause();      bgmAudioRef.current.src      = ''; bgmAudioRef.current      = null; }
       if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const advanceRef = useRef<() => void>(() => {});
-
-  const advance = useCallback(() => {
-    setEventIndex(i => i + 1);
-    setDialogue(null);
-    setWaitingForClick(false);
-    setTitleCard(null);
-  }, []);
-
-  advanceRef.current = advance;
 
   // ── Dialogue typewriter ───────────────────────────────────────────────────
   const dialogueBoxConfig = useDialogueBoxConfig(undefined);
@@ -105,182 +145,131 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
     moodOverrides: dialogue?.speakerMood ? { [dialogue.speaker]: dialogue.speakerMood } : {},
   });
 
-  // Auto-advance dialogue when typewriter is done (autoAdvance mode)
+  // Auto-advance dialogue (autoAdvance=true) : 1.2s après fin typewriter
   useEffect(() => {
-    if (!dialogue || !typewriterDone || waitingForClick) return;
-    const timer = setTimeout(() => { advanceRef.current(); }, 1200);
+    if (!dialogue?.autoAdvance || !typewriterDone) return;
+    const timer = setTimeout(() => setDialogue(null), 1200);
     return () => clearTimeout(timer);
-  }, [typewriterDone, dialogue, waitingForClick]);
+  }, [typewriterDone, dialogue]);
 
-  // ── Event processor ───────────────────────────────────────────────────────
+  // ── Ticker 16 ms ─────────────────────────────────────────────────────────
+  // Comportement Restaurant : se fige quand waitingForClick=true
+  // BGM/ambiance : audio natif, continue indépendamment ✓
   useEffect(() => {
-    if (eventIndex >= events.length) {
-      onSequenceEnd();
-      return;
-    }
+    if (waitingForClick) return;
+    const totalMs = getTotalDurationMs(tracks);
+    if (currentTimeMs >= totalMs) return;
+    const timer = setTimeout(() => setCurrentTimeMs(t => t + 16), 16);
+    return () => clearTimeout(timer);
+  }, [waitingForClick, currentTimeMs, tracks]);
 
-    const event = events[eventIndex];
-    const durationMs = 'speed' in event ? CINEMATIC_SPEED_MS[event.speed] : 0;
+  // ── Déclenchement des événements au bon moment ────────────────────────────
+  useEffect(() => {
+    const allTracked = flattenTracks(tracks);
+    const toFire = allTracked.filter(te =>
+      !processedEventIds.current.has(te.id) &&
+      te.startTimeMs <= currentTimeMs
+    );
 
-    const immediateAdvance = () => { advanceRef.current(); };
-    const timedAdvance = (ms: number) => {
-      const t = setTimeout(() => advanceRef.current(), Math.max(ms, 50));
-      return () => clearTimeout(t);
-    };
+    for (const te of toFire) {
+      processedEventIds.current.add(te.id);
+      const event = te.event;
+      const durationMs = 'speed' in event ? CINEMATIC_SPEED_MS[(event as { speed: keyof typeof CINEMATIC_SPEED_MS }).speed] : 0;
 
-    switch (event.type) {
-      case 'fade': {
-        const targetOpacity = event.direction === 'out' ? 1 : 0;
-        const startOpacity  = event.direction === 'out' ? 0 : 1;
-        setFadeOverlay({ visible: true, color: event.color, opacity: startOpacity });
-        const t1 = setTimeout(() => setFadeOverlay({ visible: true, color: event.color, opacity: targetOpacity }), 50);
-        const t2 = setTimeout(() => {
-          if (event.direction === 'in') setFadeOverlay({ visible: false, color: event.color, opacity: 0 });
-          advanceRef.current();
-        }, durationMs + 100);
-        return () => { clearTimeout(t1); clearTimeout(t2); };
-      }
-      case 'flash': {
-        setFlashColor(event.color);
-        setFlashKey(k => k + 1);
-        return timedAdvance(durationMs + 150);
-      }
-      case 'screenShake': {
-        setShakeKey(k => k + 1);
-        return timedAdvance(durationMs + 300);
-      }
-      case 'background': {
-        setBgUrl(event.url);
-        return timedAdvance(200);
-      }
-      case 'characterEnter': {
-        setActiveChars(prev => {
-          const filtered = prev.filter(c => c.characterId !== event.characterId);
-          return [...filtered, { characterId: event.characterId, mood: event.mood, side: event.side, visible: true, shaking: false }];
-        });
-        return timedAdvance(durationMs + 100);
-      }
-      case 'characterExit': {
-        setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, visible: false } : c));
-        const t = setTimeout(() => {
-          setActiveChars(prev => prev.filter(c => c.characterId !== event.characterId));
-          advanceRef.current();
-        }, durationMs + 100);
-        return () => clearTimeout(t);
-      }
-      case 'dialogue': {
-        setDialogue({ speaker: event.speaker, speakerMood: event.speakerMood, text: event.text, autoAdvance: event.autoAdvance });
-        if (!event.autoAdvance) { setWaitingForClick(true); }
-        return undefined; // advance is triggered by click or typewriter completion
-      }
-      case 'wait': {
-        return timedAdvance(Math.max(durationMs, 100));
-      }
-      case 'sfx': {
-        try { const a = new Audio(event.url); a.volume = event.volume ?? 0.7; a.play().catch(() => {}); } catch { /* ignore */ }
-        immediateAdvance();
-        return;
-      }
-      case 'bgm': {
-        // Arrête la bgm précédente puis lance la nouvelle (src='' libère le buffer mémoire)
-        if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; }
-        try {
-          const a = new Audio(event.url);
-          a.volume = event.volume ?? 0.7;
-          a.loop = true;
-          a.play().catch(() => {});
-          bgmAudioRef.current = a;
-        } catch { /* ignore */ }
-        return timedAdvance(100);
-      }
-      case 'bgmStop': {
-        const audio = bgmAudioRef.current;
-        if (audio) {
-          if (event.fade) {
-            // Fondu progressif sur ~1 seconde
-            const initialVol = audio.volume;
-            const step = initialVol / 10;
-            let count = 0;
-            const interval = setInterval(() => {
-              count++;
-              if (!bgmAudioRef.current || count >= 10) {
-                clearInterval(interval);
-                if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; }
-              } else {
-                audio.volume = Math.max(0, audio.volume - step);
-              }
-            }, 100);
-          } else {
-            audio.pause();
-            audio.src = '';
-            bgmAudioRef.current = null;
+      switch (event.type) {
+        case 'fade': {
+          const start = event.direction === 'out' ? 0 : 1;
+          const end   = event.direction === 'out' ? 1 : 0;
+          setFadeOverlay({ visible: true, color: event.color, opacity: start });
+          setTimeout(() => setFadeOverlay({ visible: true, color: event.color, opacity: end }), 50);
+          if (event.direction === 'in') setTimeout(() => setFadeOverlay({ visible: false, color: event.color, opacity: 0 }), durationMs + 100);
+          break;
+        }
+        case 'flash':
+          setFlashColor(event.color);
+          setFlashKey(k => k + 1);
+          break;
+        case 'screenShake':
+          setShakeKey(k => k + 1);
+          break;
+        case 'background':
+          setBgUrl(event.url);
+          break;
+        case 'characterEnter':
+          setActiveChars(prev => [
+            ...prev.filter(c => c.characterId !== event.characterId),
+            { characterId: event.characterId, mood: event.mood, side: event.side, visible: true, shaking: false },
+          ]);
+          break;
+        case 'characterExit':
+          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, visible: false } : c));
+          setTimeout(() => setActiveChars(prev => prev.filter(c => c.characterId !== event.characterId)), durationMs + 100);
+          break;
+        case 'dialogue':
+          setDialogue({ speaker: event.speaker, speakerMood: event.speakerMood, text: event.text, autoAdvance: event.autoAdvance });
+          if (!event.autoAdvance) setWaitingForClick(true);  // Restaurant : gèle le ticker ✓
+          break;
+        case 'sfx':
+          try { const a = new Audio(event.url); a.volume = event.volume ?? 0.7; a.play().catch(() => {}); } catch { /* ignore */ }
+          break;
+        case 'bgm':
+          if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; }
+          try { const a = new Audio(event.url); a.volume = event.volume ?? 0.7; a.loop = true; a.play().catch(() => {}); bgmAudioRef.current = a; } catch { /* ignore */ }
+          break;
+        case 'bgmStop': {
+          const audio = bgmAudioRef.current;
+          if (audio) {
+            if (event.fade) {
+              const step = audio.volume / 10; let count = 0;
+              const iv = setInterval(() => { count++; if (!bgmAudioRef.current || count >= 10) { clearInterval(iv); if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; } } else audio.volume = Math.max(0, audio.volume - step); }, 100);
+            } else { audio.pause(); audio.src = ''; bgmAudioRef.current = null; }
           }
+          break;
         }
-        return timedAdvance(event.fade ? 1100 : 100);
+        case 'ambiance':
+          if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
+          if (event.url) {
+            try { const a = new Audio(event.url); a.volume = event.volume ?? 0.5; a.loop = event.loop; a.play().catch(() => {}); ambianceAudioRef.current = a; } catch { /* ignore */ }
+          }
+          break;
+        case 'characterExpression':
+          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, mood: event.mood } : c));
+          break;
+        case 'characterMove':
+          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, side: event.side } : c));
+          break;
+        case 'characterShake':
+          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, shaking: true } : c));
+          setTimeout(() => setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, shaking: false } : c)), 800);
+          break;
+        case 'vignette':
+          setVignette({ visible: event.on, intensity: event.intensity });
+          break;
+        case 'tint':
+          setTintPreset(event.preset);
+          break;
+        case 'zoom':
+          setZoom(event.scale);
+          break;
+        case 'letterbox':
+          setLetterbox(event.on);
+          break;
+        case 'titleCard':
+          setTitleCard({ title: event.title, subtitle: event.subtitle });
+          setTimeout(() => setTitleCard(null), Math.max(durationMs + 500, 2000));
+          break;
+        default:
+          break;
       }
-      case 'characterExpression': {
-        setActiveChars(prev => prev.map(c =>
-          c.characterId === event.characterId ? { ...c, mood: event.mood } : c
-        ));
-        return timedAdvance(100);
-      }
-      case 'characterMove': {
-        setActiveChars(prev => prev.map(c =>
-          c.characterId === event.characterId ? { ...c, side: event.side } : c
-        ));
-        return timedAdvance(durationMs + 100);
-      }
-      case 'ambiance': {
-        // Arrête l'ambiance précédente et lance la nouvelle
-        if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
-        if (event.url) {
-          try {
-            const a = new Audio(event.url);
-            a.volume = event.volume ?? 0.5;
-            a.loop = event.loop;
-            a.play().catch(() => {});
-            ambianceAudioRef.current = a;
-          } catch { /* ignore */ }
-        }
-        immediateAdvance();
-        return;
-      }
-      case 'vignette': {
-        setVignette({ visible: event.on, intensity: event.intensity });
-        return timedAdvance(durationMs + 100);
-      }
-      case 'tint': {
-        setTintPreset(event.preset);
-        return timedAdvance(durationMs + 100);
-      }
-      case 'zoom': {
-        setZoom(event.scale);
-        return timedAdvance(durationMs + 200);
-      }
-      case 'letterbox': {
-        setLetterbox(event.on);
-        return timedAdvance(durationMs + 100);
-      }
-      case 'titleCard': {
-        setTitleCard({ title: event.title, subtitle: event.subtitle });
-        return timedAdvance(Math.max(durationMs + 500, 2000));
-      }
-      case 'characterShake': {
-        setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, shaking: true } : c));
-        const t = setTimeout(() => {
-          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, shaking: false } : c));
-          advanceRef.current();
-        }, 800);
-        return () => clearTimeout(t);
-      }
-      default:
-        immediateAdvance();
-        return undefined;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventIndex]);
 
-  // ── Vignette intensity CSS ────────────────────────────────────────────────
+    // Fin de séquence — utilise les refs pour éviter la stale closure
+    const totalMs = getTotalDurationMs(tracks);
+    if (currentTimeMs >= totalMs && !waitingForClickRef.current) onSequenceEndRef.current();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTimeMs]);
+
+  // ── Vignette CSS ──────────────────────────────────────────────────────────
   const vignetteStyle = useMemo(() => {
     if (!vignette.visible) return {};
     const sizes = { light: '40%', medium: '60%', strong: '80%' };
@@ -290,29 +279,13 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
   // ── Click handler ─────────────────────────────────────────────────────────
   const handleClick = useCallback(() => {
     if (!typewriterDone && dialogue) { skipTypewriter(); return; }
-    if (waitingForClick) { advance(); return; }
-  }, [typewriterDone, dialogue, waitingForClick, skipTypewriter, advance]);
-
-  // ── Character sprite position ─────────────────────────────────────────────
-  const getSidePosition = (side: string): { left?: string; right?: string; bottom: string } => {
-    switch (side) {
-      case 'left':   return { left: '5%', bottom: '0' };
-      case 'right':  return { right: '5%', bottom: '0' };
-      case 'top':    return { left: '50%', bottom: '60%' };
-      default:       return { left: '50%', bottom: '0' };
+    if (waitingForClick) {
+      setDialogue(null);
+      setWaitingForClick(false);  // ticker reprend ici ✓
     }
-  };
+  }, [typewriterDone, dialogue, waitingForClick, skipTypewriter]);
 
-  const getSideVariants = (side: string) => ({
-    initial: { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, y: side === 'bottom' ? 60 : 0 },
-    animate: { opacity: 1, x: 0, y: 0, transition: { duration: 0.4 } },
-    exit: { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, transition: { duration: 0.3 } },
-  });
-
-  // Chaque changement de shakeKey = nouvelle clé de keyframe → relance toujours l'animation
-  const shakeAnimation = shakeKey > 0
-    ? `cinematicShake${shakeKey} 0.5s ease-in-out`
-    : 'none';
+  const shakeAnimation = shakeKey > 0 ? `cinematicShake${shakeKey} 0.5s ease-in-out` : 'none';
 
   return (
     <div
@@ -321,103 +294,81 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
       onClick={handleClick}
       role="presentation"
     >
-      {/* Background with tint filter */}
+      {/* Fond + filtre teinte */}
       <div
         className="absolute inset-0 transition-all duration-500"
         style={{
           backgroundImage: bgUrl ? `url(${bgUrl})` : undefined,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize: 'cover', backgroundPosition: 'center',
           backgroundColor: '#1a1a2e',
           filter: [buildFilterCSS(undefined), TINT_FILTERS[tintPreset]].filter(Boolean).join(' ') || undefined,
-          transform: `scale(${zoom})`,
-          transformOrigin: 'center center',
+          transform: `scale(${zoom})`, transformOrigin: 'center center',
         }}
       />
 
-      {/* Vignette overlay */}
-      {vignette.visible && (
-        <div className="absolute inset-0 pointer-events-none transition-all duration-500" style={vignetteStyle} />
-      )}
+      {/* Vignette */}
+      {vignette.visible && <div className="absolute inset-0 pointer-events-none transition-all duration-500" style={vignetteStyle} />}
 
-      {/* Letterbox — top/bottom bars */}
+      {/* Letterbox */}
       <AnimatePresence>
         {letterbox && (<>
-          <motion.div key="lb-top" initial={{ height: 0 }} animate={{ height: '10%' }} exit={{ height: 0 }}
-            className="absolute top-0 left-0 right-0 bg-black z-20" />
-          <motion.div key="lb-bot" initial={{ height: 0 }} animate={{ height: '10%' }} exit={{ height: 0 }}
-            className="absolute bottom-0 left-0 right-0 bg-black z-20" />
+          <motion.div key="lb-top" initial={{ height: 0 }} animate={{ height: '10%' }} exit={{ height: 0 }} className="absolute top-0 left-0 right-0 bg-black z-20" />
+          <motion.div key="lb-bot" initial={{ height: 0 }} animate={{ height: '10%' }} exit={{ height: 0 }} className="absolute bottom-0 left-0 right-0 bg-black z-20" />
         </>)}
       </AnimatePresence>
 
-      {/* Characters */}
+      {/* Personnages */}
       <AnimatePresence>
         {activeChars.filter(c => c.visible).map(ac => {
           const char = characterLibrary.find(c => c.id === ac.characterId);
           const spriteUrl = char?.sprites?.[ac.mood] ?? char?.sprites?.['neutral'] ?? (char?.sprites ? Object.values(char.sprites)[0] : undefined);
-          const pos = getSidePosition(ac.side);
-          const variants = getSideVariants(ac.side);
-
           return (
             <motion.div
               key={ac.characterId}
               initial="initial" animate="animate" exit="exit"
-              variants={variants}
+              variants={getSideVariants(ac.side)}
               className={ac.shaking ? 'animate-bounce' : ''}
-              style={{ position: 'absolute', width: '25%', height: '70%', ...pos }}
+              style={{ position: 'absolute', width: '25%', height: '70%', ...SIDE_POSITIONS[ac.side] }}
             >
-              {spriteUrl && (
-                <img src={spriteUrl} alt={char?.name ?? ''} className="w-full h-full object-contain object-bottom" />
-              )}
+              {spriteUrl && <img src={spriteUrl} alt={char?.name ?? ''} className="w-full h-full object-contain object-bottom" />}
             </motion.div>
           );
         })}
       </AnimatePresence>
 
-      {/* Title card overlay */}
+      {/* Carte titre */}
       <AnimatePresence>
         {titleCard && (
-          <motion.div
-            key="titlecard"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div key="titlecard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-30 text-center px-8"
           >
             <p className="text-white text-3xl font-bold drop-shadow-lg">{titleCard.title}</p>
-            {titleCard.subtitle && (
-              <p className="text-white/75 text-lg mt-3 drop-shadow-md">{titleCard.subtitle}</p>
-            )}
+            {titleCard.subtitle && <p className="text-white/75 text-lg mt-3 drop-shadow-md">{titleCard.subtitle}</p>}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Flash overlay */}
+      {/* Flash */}
       <AnimatePresence>
         {flashKey > 0 && (
-          <motion.div
-            key={flashKey}
-            initial={{ opacity: 0.9 }} animate={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+          <motion.div key={flashKey} initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.3 }}
             className="absolute inset-0 pointer-events-none z-40"
             style={{ backgroundColor: flashColor === 'white' ? 'white' : 'black' }}
           />
         )}
       </AnimatePresence>
 
-      {/* Fade overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none z-40 transition-opacity duration-500"
-        style={{
-          backgroundColor: fadeOverlay.color === 'black' ? 'black' : 'white',
-          opacity: fadeOverlay.visible ? fadeOverlay.opacity : 0,
-        }}
+      {/* Fondu */}
+      <div className="absolute inset-0 pointer-events-none z-40 transition-opacity duration-500"
+        style={{ backgroundColor: fadeOverlay.color === 'black' ? 'black' : 'white', opacity: fadeOverlay.visible ? fadeOverlay.opacity : 0 }}
       />
 
-      {/* Screen shake — keyframe unique par déclenchement pour forcer la re-animation */}
+      {/* Shake keyframe */}
       {shakeKey > 0 && (
         <style>{`@keyframes cinematicShake${shakeKey} { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-8px,4px)} 40%{transform:translate(8px,-4px)} 60%{transform:translate(-6px,6px)} 80%{transform:translate(6px,-2px)} }`}</style>
       )}
 
-      {/* Dialogue box */}
+      {/* Dialogue */}
       {dialogue && (
         <DialogueBox
           speaker={speakerDisplayName}
@@ -434,7 +385,7 @@ export function CinematicPlayer({ events, backgroundUrl: initialBg, canvasWidth,
         />
       )}
 
-      {/* "Clic pour continuer" indicator */}
+      {/* Indicateur "clic pour continuer" */}
       {waitingForClick && typewriterDone && (
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}

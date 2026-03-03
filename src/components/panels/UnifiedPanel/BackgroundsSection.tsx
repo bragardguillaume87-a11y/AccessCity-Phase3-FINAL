@@ -131,14 +131,14 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
                   <div
                     key={bg.path || idx}
                     draggable
-                    onDragStart={(e) => handleDragStart(e, bg.path)}
+                    onDragStart={(e) => handleDragStart(e, bg.url)}
                     className="relative aspect-video rounded-lg overflow-hidden border-2 border-[var(--color-border-base)] hover:border-[var(--color-primary)] cursor-grab active:cursor-grabbing transition-all hover:scale-105"
                     tabIndex={0}
                     role="button"
                     aria-label={`Faire glisser le fond ${bg.name} sur le canvas`}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); }}
                   >
-                    <img src={bg.path} alt={bg.name} className="w-full h-full object-cover" draggable="false" />
+                    <img src={bg.url} alt={bg.name} className="w-full h-full object-cover" draggable="false" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2">
                       <p className="text-white text-xs font-medium truncate w-full">{bg.name}</p>
                     </div>

@@ -3,6 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import { convertFileSrcIfNeeded } from '@/utils/tauri';
+import type { SceneCharacter } from '@/types';
+
+// ⚠️ Module-level constant — évite de créer un [] inline dans le sélecteur Zustand.
+// `|| []` dans un sélecteur crée une nouvelle référence à chaque getSnapshot →
+// React 18 useSyncExternalStore détecte un "snapshot instable" → boucle infinie.
+// Même pattern que MainCanvas.tsx lignes 50-55.
+const EMPTY_SCENE_CHARACTERS: SceneCharacter[] = [];
 
 /**
  * CharacterMoodPicker - Gallery avatars with mood preview
@@ -26,7 +34,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
   // Lecture du contexte scène pour mettre à jour les personnages sur le canvas
   const selectedSceneId = useUIStore(s => s.selectedSceneForEdit);
   const sceneCharacters = useSceneElementsStore(s =>
-    selectedSceneId ? (s.elementsByScene[selectedSceneId]?.characters || []) : []
+    selectedSceneId ? (s.elementsByScene[selectedSceneId]?.characters || EMPTY_SCENE_CHARACTERS) : EMPTY_SCENE_CHARACTERS
   );
   const updateSceneCharacter = useSceneElementsStore(s => s.updateSceneCharacter);
 
@@ -81,7 +89,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
               <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[var(--color-bg-base)] border-2 border-[var(--color-border-base)] overflow-hidden flex items-center justify-center">
                 {character.sprites?.[defaultMood] ? (
                   <img
-                    src={character.sprites[defaultMood]}
+                    src={convertFileSrcIfNeeded(character.sprites[defaultMood])}
                     alt={character.name}
                     className="w-full h-full object-cover"
                     draggable="false"
@@ -137,7 +145,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                       <div className="w-8 h-8 rounded-full overflow-hidden border border-[var(--color-border-base)] bg-[var(--color-bg-base)]">
                         {character.sprites?.[mood] ? (
                           <img
-                            src={character.sprites[mood]}
+                            src={convertFileSrcIfNeeded(character.sprites[mood])}
                             alt={`${character.name} ${mood}`}
                             className="w-full h-full object-cover"
                             draggable="false"

@@ -1,6 +1,6 @@
 import type { Condition, DiceCheck, Effect } from './game';
 import type { SceneAudio, DialogueAudio, AmbientAudio } from './audio';
-import type { CinematicEvent } from './cinematic';
+import type { CinematicEvent, CinematicTracks } from './cinematic';
 
 /** Type de scène : dialogue interactif ou cinématique auto-play */
 export type SceneType = 'standard' | 'cinematic';
@@ -46,6 +46,8 @@ export interface SceneMetadata {
   sceneType?: SceneType;
   /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. */
   cinematicEvents?: CinematicEvent[];
+  /** Multi-track timeline (nouveau format NLE). Remplace cinematicEvents quand présent. */
+  cinematicTracks?: CinematicTracks;
 }
 
 /**
@@ -183,4 +185,6 @@ export interface Scene {
   sceneType?: SceneType;
   /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. Inherited from SceneMetadata. */
   cinematicEvents?: CinematicEvent[];
+  /** Multi-track timeline (nouveau format NLE). Inherited from SceneMetadata. */
+  cinematicTracks?: CinematicTracks;
 }

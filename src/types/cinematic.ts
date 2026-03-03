@@ -335,6 +335,118 @@ export function snapDurationToSpeed(targetMs: number): CinematicSpeed {
   return best;
 }
 
+// ── Multi-track timeline ──────────────────────────────────────────────────────
+
+/** Les 5 canaux parallèles de la timeline cinématique */
+export type CinematicTrackId = 'background' | 'effects' | 'characters' | 'audio' | 'dialogue';
+
+/**
+ * Un événement positionné sur un canal et dans le temps absolu.
+ * Wraps CinematicEvent existant (non-breaking).
+ */
+export interface CinematicTrackedEvent {
+  /** ID unique de l'occurrence dans la timeline (distinct de event.id pour permettre le clone) */
+  id: string;
+  /** L'événement cinématique original */
+  event: CinematicEvent;
+  /** Canal sur lequel est positionné cet événement */
+  trackId: CinematicTrackId;
+  /** Début absolu dans la séquence (ms). Détermine la position horizontale du bloc. */
+  startTimeMs: number;
+}
+
+/** L'ensemble des 5 canaux — remplace le tableau plat CinematicEvent[] */
+export interface CinematicTracks {
+  background: CinematicTrackedEvent[];
+  effects:    CinematicTrackedEvent[];
+  characters: CinematicTrackedEvent[];
+  audio:      CinematicTrackedEvent[];
+  dialogue:   CinematicTrackedEvent[];
+}
+
+/** Métadonnées visuelles de chaque canal (label, couleurs) */
+export const CINEMATIC_TRACKS_META: Record<CinematicTrackId, {
+  label: string;
+  color: string;
+  accentColor: string;
+}> = {
+  background: { label: 'Fond',        color: '#1e293b', accentColor: '#6366f1' },
+  effects:    { label: 'Effets',      color: '#1a1a2e', accentColor: '#a855f7' },
+  characters: { label: 'Personnages', color: '#1e3a5f', accentColor: '#3b82f6' },
+  audio:      { label: 'Audio',       color: '#042f2e', accentColor: '#10b981' },
+  dialogue:   { label: 'Dialogue',    color: '#451a03', accentColor: '#f59e0b' },
+};
+
+/**
+ * Assigne automatiquement un canal par défaut selon le type d'événement.
+ * Utilisé lors de l'ajout d'un événement via le bouton "+" d'une piste.
+ */
+export function getDefaultTrackId(type: CinematicEventType): CinematicTrackId {
+  if (['background', 'fade', 'tint', 'zoom', 'letterbox'].includes(type)) return 'background';
+  if (['flash', 'screenShake', 'vignette', 'titleCard'].includes(type)) return 'effects';
+  if (['characterEnter', 'characterExit', 'characterMove', 'characterExpression', 'characterShake'].includes(type)) return 'characters';
+  if (['sfx', 'bgm', 'bgmStop', 'ambiance'].includes(type)) return 'audio';
+  return 'dialogue'; // dialogue, wait
+}
+
+/**
+ * Calcule la durée totale de la séquence en ms.
+ * = la fin du dernier événement sur n'importe quel canal.
+ */
+export function getTotalDurationMs(tracks: CinematicTracks): number {
+  let max = 0;
+  for (const track of Object.values(tracks)) {
+    for (const te of track) {
+      const end = te.startTimeMs + getEventDurationMs(te.event);
+      if (end > max) max = end;
+    }
+  }
+  return max;
+}
+
+/**
+ * Aplatit tous les canaux en un tableau unique trié par startTimeMs.
+ * Utilisé par le player pour itérer les événements à déclencher.
+ */
+export function flattenTracks(tracks: CinematicTracks): CinematicTrackedEvent[] {
+  return (Object.values(tracks) as CinematicTrackedEvent[][])
+    .flat()
+    .sort((a, b) => a.startTimeMs - b.startTimeMs);
+}
+
+/**
+ * Migration automatique depuis le format plat (CinematicEvent[]) vers multi-pistes.
+ *
+ * Stratégie : chaque événement est affecté à son canal par défaut, puis placé
+ * à la suite des événements précédents sur CE canal (curseur par piste).
+ * Les canaux évoluent indépendamment — résultat non-parfait mais cohérent.
+ *
+ * @param events - Tableau plat existant (peut être vide)
+ * @returns CinematicTracks avec les événements redistribués
+ */
+export function migrateToCinematicTracks(events: CinematicEvent[]): CinematicTracks {
+  const tracks: CinematicTracks = {
+    background: [], effects: [], characters: [], audio: [], dialogue: [],
+  };
+  const cursors: Record<CinematicTrackId, number> = {
+    background: 0, effects: 0, characters: 0, audio: 0, dialogue: 0,
+  };
+
+  for (const event of events) {
+    const trackId = getDefaultTrackId(event.type);
+    const tracked: CinematicTrackedEvent = {
+      id: `tracked-${event.id}`,
+      event,
+      trackId,
+      startTimeMs: cursors[trackId],
+    };
+    tracks[trackId].push(tracked);
+    cursors[trackId] += getEventDurationMs(event);
+  }
+
+  return tracks;
+}
+
 // ── Factory ──────────────────────────────────────────────────────────────────
 
 /** Crée un event avec des valeurs par défaut sensibles */

@@ -1,0 +1,537 @@
+{
+  "_accesscity_export_version": "2.0",
+  "exportedAt": "2026-03-01T23:54:22.115Z",
+  "projectTitle": "Prototype Dialogues",
+  "scenes": [
+    {
+      "id": "scenetest01",
+      "title": "Rencontre Mairie",
+      "description": "Première rencontre avec le conseiller municipal pour le projet AccessCity.",
+      "backgroundUrl": "/assets/backgrounds/93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251.png",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": [],
+      "backgroundFilter": {
+        "blur": 1.5,
+        "brightness": 75,
+        "saturation": 185,
+        "contrast": 70
+      },
+      "audio": {
+        "url": "/assets/music/lookupguitarjazz-1769627898826.mp3",
+        "volume": 0.3,
+        "loop": true,
+        "durationMode": "scene",
+        "continueToNextScene": false
+      },
+      "ambientTracks": [
+        {
+          "url": "/assets/music/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196.wav",
+          "volume": 0.65,
+          "loop": true
+        }
+      ]
+    },
+    {
+      "id": "scenetest02",
+      "title": "Exploration du quartier",
+      "description": "Recensez les obstacles à l'accessibilité dans le quartier.",
+      "backgroundUrl": "/assets/backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293.png",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-1771416919221-hploxymt1",
+      "title": "Nouvelle Scène",
+      "description": "",
+      "backgroundUrl": "/assets/backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902.png",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-1772274870852-dc66g1rag",
+      "title": "Bienvenue à Access City",
+      "description": "",
+      "backgroundUrl": "",
+      "sceneType": "cinematic",
+      "cinematicEvents": [
+        {
+          "id": "event-1772289942075-dbnwk",
+          "type": "letterbox",
+          "on": true,
+          "speed": "normal"
+        },
+        {
+          "id": "event-1772274926205-anx2d",
+          "type": "bgm",
+          "url": "",
+          "fade": true,
+          "volume": 0.7
+        },
+        {
+          "id": "event-1772274895114-9f79q",
+          "type": "background",
+          "url": "/assets/backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293.png",
+          "transition": "fade"
+        },
+        {
+          "id": "event-1772274907666-d10zh",
+          "type": "characterEnter",
+          "characterId": "player",
+          "mood": "happy",
+          "side": "left",
+          "animation": "slideInLeft",
+          "speed": "verySlow"
+        },
+        {
+          "id": "event-1772294686026-i21p4",
+          "type": "zoom",
+          "direction": "in",
+          "scale": 1.2,
+          "speed": "slow"
+        },
+        {
+          "id": "event-1772313587880-lp4dk",
+          "type": "fade",
+          "direction": "out",
+          "color": "black",
+          "speed": "normal"
+        },
+        {
+          "id": "event-1772313596392-glqx7",
+          "type": "characterMove",
+          "characterId": "",
+          "side": "right",
+          "speed": "normal"
+        }
+      ]
+    }
+  ],
+  "dialoguesByScene": {
+    "scenetest01": [
+      {
+        "id": "d01-00",
+        "speaker": "player",
+        "text": "Vous arrivez devant la mairie pour présenter AccessCity — une initiative pour rendre la ville accessible à tous.",
+        "choices": [],
+        "stageDirections": "Le joueur s'arrête devant l'entrée principale.",
+        "characterMoods": {
+          "scene-char-counsellor-01": "professional",
+          "scene-char-player-01": "happy"
+        }
+      },
+      {
+        "id": "d01-01",
+        "speaker": "counsellor",
+        "text": "Bonjour ! Je suis le conseiller Dupont. J'ai entendu parler de votre projet — je suis impatient d'en savoir plus.",
+        "choices": [],
+        "speakerMood": "happy",
+        "characterMoods": {
+          "scene-char-player-01": "neutral",
+          "scene-char-counsellor-01": "helpful"
+        }
+      },
+      {
+        "id": "d01-02",
+        "speaker": "player",
+        "text": "Merci de me recevoir, monsieur. AccessCity vise à cartographier et corriger tous les obstacles à l'accessibilité dans notre quartier.",
+        "choices": [],
+        "characterMoods": {
+          "scene-char-player-01": "happy",
+          "scene-char-counsellor-01": "professional"
+        }
+      },
+      {
+        "id": "d01-03",
+        "speaker": "counsellor",
+        "text": "Intéressant. Quelle sera votre première priorité sur le terrain ?",
+        "choices": [
+          {
+            "id": "c01-03-A",
+            "text": "Les rampes d'accès : elles bloquent les fauteuils roulants.",
+            "effects": [
+              {
+                "variable": "physique",
+                "value": 5,
+                "operation": "add"
+              }
+            ],
+            "nextDialogueId": "d01-04"
+          },
+          {
+            "id": "c01-03-B",
+            "text": "La signalétique : les personnes malvoyantes sont aussi concernées.",
+            "effects": [
+              {
+                "variable": "mentale",
+                "value": 3,
+                "operation": "add"
+              }
+            ],
+            "nextDialogueId": "d01-05"
+          }
+        ],
+        "characterMoods": {
+          "scene-char-player-01": "neutral",
+          "scene-char-counsellor-01": "professional"
+        }
+      },
+      {
+        "id": "d01-04",
+        "speaker": "counsellor",
+        "text": "Excellent choix ! Les rampes sont souvent négligées. Votre approche est très concrète.",
+        "choices": [],
+        "isResponse": true,
+        "speakerMood": "happy",
+        "nextDialogueId": "d01-06",
+        "characterMoods": {
+          "scene-char-player-01": "happy",
+          "scene-char-counsellor-01": "professional"
+        }
+      },
+      {
+        "id": "d01-05",
+        "speaker": "counsellor",
+        "text": "Très juste ! La signalétique profite à tout le monde — et c'est souvent peu coûteux à corriger.",
+        "choices": [],
+        "isResponse": true,
+        "speakerMood": "happy",
+        "nextDialogueId": "d01-06",
+        "characterMoods": {
+          "scene-char-player-01": "neutral",
+          "scene-char-counsellor-01": "helpful"
+        }
+      },
+      {
+        "id": "d01-06",
+        "speaker": "counsellor",
+        "text": "Avant de vous accorder un budget, je dois m'assurer que vous pouvez défendre ce projet devant le conseil. Êtes-vous prêt ?",
+        "choices": [
+          {
+            "id": "c01-06-dice",
+            "text": "Je tente de convaincre le conseil !",
+            "effects": [],
+            "nextDialogueId": "d01-07",
+            "diceCheck": {
+              "stat": "mentale",
+              "difficulty": 6,
+              "success": {
+                "nextDialogueId": "d01-07"
+              },
+              "failure": {
+                "nextDialogueId": "d01-08"
+              }
+            }
+          }
+        ],
+        "stageDirections": "Le jet de dés détermine si le joueur convainc le conseil municipal.",
+        "characterMoods": {
+          "scene-char-player-01": "neutral",
+          "scene-char-counsellor-01": "helpful"
+        }
+      },
+      {
+        "id": "d01-07",
+        "speaker": "counsellor",
+        "text": "Remarquable ! Votre discours a convaincu le conseil à l'unanimité. Le budget est accordé !",
+        "choices": [],
+        "speakerMood": "happy",
+        "nextDialogueId": "d01-09",
+        "characterMoods": {
+          "scene-char-player-01": "happy",
+          "scene-char-counsellor-01": "professional"
+        }
+      },
+      {
+        "id": "d01-08",
+        "speaker": "counsellor",
+        "text": "Le conseil hésite encore. Revenez avec des données de terrain plus précises et nous reconsidérerons.",
+        "choices": [],
+        "speakerMood": "neutral",
+        "nextDialogueId": "d01-09"
+      },
+      {
+        "id": "d01-09",
+        "speaker": "narrator",
+        "text": "La rencontre s'est terminée. Votre aventure pour rendre la ville accessible à tous ne fait que commencer.",
+        "choices": [],
+        "stageDirections": "Le joueur quitte la salle du conseil avec ses notes.",
+        "characterMoods": {
+          "scene-char-player-01": "happy"
+        }
+      },
+      {
+        "id": "dialogue-1771099010939-4g0ctbz",
+        "speaker": "player",
+        "text": "veux tu manger tes morts ?",
+        "choices": [
+          {
+            "id": "choice-1771098964719-1",
+            "text": "Accepter",
+            "effects": [],
+            "nextDialogueId": "dialogue-1771099010938-resp-a"
+          },
+          {
+            "id": "choice-1771098964719-2",
+            "text": "Refuser",
+            "effects": [],
+            "nextDialogueId": "dialogue-1771099010938-resp-b"
+          }
+        ]
+      },
+      {
+        "id": "dialogue-1771099010938-resp-a",
+        "speaker": "player",
+        "text": "mais c'est formidable ?",
+        "choices": [],
+        "isResponse": true,
+        "characterMoods": {
+          "scene-char-player-01": "happy",
+          "scene-char-counsellor-01": "helpful"
+        }
+      },
+      {
+        "id": "dialogue-1771099010938-resp-b",
+        "speaker": "player",
+        "text": "Heu ... tu es vraiment sur de toi ?",
+        "choices": [],
+        "isResponse": true
+      },
+      {
+        "id": "dialogue-1772049681108-phh4y3j",
+        "speaker": "counsellor",
+        "text": "La situation est tendue. Le bruit, la foule, les obstacles… Peux-tu garder ton calme ?",
+        "choices": [
+          {
+            "id": "choice-tpl-0-1772049661760",
+            "text": "Je respire profondément et j'avance.",
+            "effects": [],
+            "diceCheck": {
+              "stat": "mentale",
+              "difficulty": 8,
+              "success": {
+                "nextDialogueId": ""
+              },
+              "failure": {
+                "nextDialogueId": ""
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "scenetest02": [
+      {
+        "id": "d02-00",
+        "speaker": "narrator",
+        "text": "Une nouvelle journée commence. Carnet en main, vous sortez recenser les obstacles à l'accessibilité.",
+        "choices": []
+      },
+      {
+        "id": "d02-01",
+        "speaker": "player",
+        "text": "Par où commencer ? Le quartier est vaste...",
+        "choices": []
+      },
+      {
+        "id": "d02-02",
+        "speaker": "narrator",
+        "text": "Devant la pharmacie, une marche de 12 cm bloque les fauteuils roulants. C'est un bon point de départ.",
+        "choices": []
+      },
+      {
+        "id": "d02-03",
+        "speaker": "player",
+        "text": "...",
+        "choices": [
+          {
+            "id": "c02-03-A",
+            "text": "Je mesure et photographie le problème avec précision.",
+            "effects": [
+              {
+                "variable": "mentale",
+                "value": 5,
+                "operation": "add"
+              }
+            ],
+            "actionType": "continue"
+          },
+          {
+            "id": "c02-03-B",
+            "text": "Je note l'emplacement et continue rapidement.",
+            "effects": [
+              {
+                "variable": "mentale",
+                "value": 2,
+                "operation": "add"
+              }
+            ],
+            "actionType": "continue"
+          }
+        ]
+      }
+    ]
+  },
+  "elementsByScene": {
+    "scenetest01": {
+      "characters": [
+        {
+          "id": "scene-char-player-01",
+          "characterId": "player",
+          "mood": "angry",
+          "position": {
+            "x": 23.01901139455512,
+            "y": 59.285128224783065
+          },
+          "size": {
+            "width": 200,
+            "height": 300
+          },
+          "entranceAnimation": "slideInLeft",
+          "exitAnimation": "none",
+          "scale": 2.1995926680244398,
+          "flipped": false
+        },
+        {
+          "id": "scene-char-counsellor-01",
+          "characterId": "counsellor",
+          "mood": "neutral",
+          "position": {
+            "x": 70.79350302515593,
+            "y": 56.120366755933816
+          },
+          "size": {
+            "width": 200,
+            "height": 300
+          },
+          "entranceAnimation": "slideInRight",
+          "exitAnimation": "none",
+          "scale": 2.604378818737271,
+          "flipped": true
+        }
+      ],
+      "textBoxes": [],
+      "props": []
+    },
+    "scenetest02": {
+      "characters": [
+        {
+          "id": "scene-char-player-02",
+          "characterId": "player",
+          "mood": "neutral",
+          "position": {
+            "x": 27.228072317023027,
+            "y": 67.38587284624911
+          },
+          "size": {
+            "width": 200,
+            "height": 300
+          },
+          "entranceAnimation": "fadeIn",
+          "exitAnimation": "none",
+          "scale": 2.0842105263157893
+        }
+      ],
+      "textBoxes": [],
+      "props": []
+    }
+  },
+  "characters": [
+    {
+      "id": "player",
+      "name": "Patricia",
+      "description": "",
+      "sprites": {
+        "neutral": "/assets/characters/01-1769468247355.png",
+        "angry": "/assets/characters/a-1769628071209.png",
+        "happy": "/assets/characters/b-1769628075775.png"
+      },
+      "moods": [
+        "neutral",
+        "angry",
+        "happy"
+      ],
+      "initialStats": {
+        "physique": 50,
+        "mentale": 50
+      },
+      "isProtagonist": true
+    },
+    {
+      "id": "counsellor",
+      "name": "Conseiller municipal",
+      "description": "",
+      "sprites": {
+        "neutral": "/assets/characters/aa-1769631637542.png",
+        "professional": "/assets/characters/cc-1769631643290.png",
+        "helpful": "/assets/characters/bb-1769631641012.png"
+      },
+      "moods": [
+        "neutral",
+        "professional",
+        "helpful"
+      ]
+    },
+    {
+      "id": "narrator",
+      "name": "Narrateur",
+      "description": "",
+      "sprites": {},
+      "moods": []
+    }
+  ],
+  "projectData": {
+    "title": "Sans titre",
+    "location": "",
+    "tone": "realiste",
+    "description": ""
+  },
+  "projectSettings": {
+    "project": {
+      "title": "Prototype Dialogues",
+      "author": "",
+      "description": "",
+      "version": "1.0.0"
+    },
+    "editor": {
+      "theme": "dark",
+      "autosave": true,
+      "autosaveInterval": 30000,
+      "gridSize": 20,
+      "snapToGrid": true,
+      "showGrid": true
+    },
+    "game": {
+      "variables": {
+        "physique": {
+          "initial": 50,
+          "min": 0,
+          "max": 100
+        },
+        "mentale": {
+          "initial": 50,
+          "min": 0,
+          "max": 100
+        }
+      },
+      "dialogueBoxDefaults": {
+        "borderStyle": "prominent",
+        "boxOpacity": 0.65,
+        "position": "bottom",
+        "showPortrait": true,
+        "speakerAlign": "auto",
+        "portraitOffsetX": 45,
+        "fontSize": 19,
+        "portraitOffsetY": 15,
+        "portraitScale": 1.5,
+        "typewriterSpeed": 25
+      },
+      "enableStatsHUD": true
+    }
+  }
+}

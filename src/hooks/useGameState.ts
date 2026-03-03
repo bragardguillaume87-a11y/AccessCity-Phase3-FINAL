@@ -140,6 +140,10 @@ export function useGameState({
       ? dialogues.find((d) => d.id === currentDialogueId)
       : dialogues[0];
 
+    // Guard : ID explicite mais dialogue introuvable (ex : nextDialogueId invalide ou dialogue supprimé)
+    // → retourner null plutôt que de repartir de l'index 0, ce qui causerait un rejeu du début.
+    if (currentDialogueId && !target) return null;
+
     // If target passes conditions, use it
     if (target && evaluateConditions(target.conditions, stats)) return target;
 

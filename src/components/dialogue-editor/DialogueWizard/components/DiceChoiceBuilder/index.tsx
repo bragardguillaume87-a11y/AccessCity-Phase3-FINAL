@@ -11,6 +11,7 @@ interface DiceChoiceBuilderProps {
   onAddChoice?: () => void;
   onRemoveChoice?: (index: number) => void;
   onValidChange: (isValid: boolean) => void;
+  currentSceneId: string;
 }
 
 const MAX_DICE_TESTS = 2;
@@ -30,6 +31,7 @@ export function DiceChoiceBuilder({
   onAddChoice,
   onRemoveChoice,
   onValidChange,
+  currentSceneId,
 }: DiceChoiceBuilderProps) {
   const canAddTest = choices.length < MAX_DICE_TESTS;
 
@@ -85,6 +87,7 @@ export function DiceChoiceBuilder({
             onUpdate={(updates) => onUpdateChoice(index, updates)}
             onRemove={() => onRemoveChoice?.(index)}
             canRemove={choices.length > 1}
+            currentSceneId={currentSceneId}
           />
         ))}
       </AnimatePresence>

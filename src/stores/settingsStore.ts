@@ -4,6 +4,7 @@ import { GAME_STATS, type SupportedLocale } from '../i18n';
 import { STAT_BOUNDS } from '@/config/gameConstants';
 import { TIMING } from '@/config/timing';
 import type { DialogueBoxStyle } from '@/types/scenes';
+import type { AssetCollection } from '@/types/collections';
 
 // ── Character FX ──────────────────────────────────────────────────────────────
 
@@ -90,6 +91,8 @@ interface SettingsState {
   uiSoundStyle: string;
   /** Intervalle minimum entre deux ticks (ms). 35 = rapide, 65 = normal, 130 = lent. */
   uiSoundsTickInterval: number;
+  /** Collections d'assets personnalisées (dossiers utilisateur) — persistées avec le projet. */
+  assetCollections: AssetCollection[];
 
   // Actions
   setContextField: (key: keyof ProjectData, value: string) => void;
@@ -104,6 +107,14 @@ interface SettingsState {
   setUiSoundsVolume: (v: number) => void;
   setUiSoundStyle: (style: string) => void;
   setUiSoundsTickInterval: (ms: number) => void;
+  addAssetCollection: (name: string) => string;
+  removeAssetCollection: (id: string) => void;
+  renameAssetCollection: (id: string, name: string) => void;
+  addAssetToCollection: (collectionId: string, assetId: string) => void;
+  removeAssetFromCollection: (collectionId: string, assetId: string) => void;
+  /** Noms d'affichage personnalisés par assetPath. Ne renomme pas le fichier. */
+  assetDisplayNames: Record<string, string>;
+  setAssetDisplayName: (assetPath: string, displayName: string) => void;
 }
 
 // ============================================================================
@@ -163,6 +174,8 @@ export const useSettingsStore = create<SettingsState>()(
         uiSoundsVolume: 0.3,
         uiSoundStyle: 'mecanique',
         uiSoundsTickInterval: 65,
+        assetCollections: [],
+        assetDisplayNames: {},
 
         // Actions: Project Data (context)
         setContextField: (key, value) => {
@@ -246,6 +259,50 @@ export const useSettingsStore = create<SettingsState>()(
           set({ uiSoundsTickInterval: Math.max(35, Math.min(130, ms)) }, false, 'settings/setUiSoundsTickInterval');
         },
 
+        // Actions: Asset Collections
+        addAssetCollection: (name) => {
+          const id = `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          set((state) => ({
+            assetCollections: [...state.assetCollections, { id, name, assetIds: [] }],
+          }), false, 'settings/addAssetCollection');
+          return id;
+        },
+        removeAssetCollection: (id) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.filter(c => c.id !== id),
+          }), false, 'settings/removeAssetCollection');
+        },
+        renameAssetCollection: (id, name) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.map(c =>
+              c.id === id ? { ...c, name } : c
+            ),
+          }), false, 'settings/renameAssetCollection');
+        },
+        addAssetToCollection: (collectionId, assetId) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.map(c =>
+              c.id === collectionId && !c.assetIds.includes(assetId)
+                ? { ...c, assetIds: [...c.assetIds, assetId] }
+                : c
+            ),
+          }), false, 'settings/addAssetToCollection');
+        },
+        removeAssetFromCollection: (collectionId, assetId) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.map(c =>
+              c.id === collectionId
+                ? { ...c, assetIds: c.assetIds.filter(id => id !== assetId) }
+                : c
+            ),
+          }), false, 'settings/removeAssetFromCollection');
+        },
+        setAssetDisplayName: (assetPath, displayName) => {
+          set((state) => ({
+            assetDisplayNames: { ...state.assetDisplayNames, [assetPath]: displayName },
+          }), false, 'settings/setAssetDisplayName');
+        },
+
         // Actions: Dialogue Box Defaults
         updateDialogueBoxDefaults: (style) => {
           set((state) => ({
@@ -273,6 +330,7 @@ export const useSettingsStore = create<SettingsState>()(
           uiSoundsVolume: state.uiSoundsVolume,
           uiSoundStyle: state.uiSoundStyle,
           uiSoundsTickInterval: state.uiSoundsTickInterval,
+          assetCollections: state.assetCollections,
         }),
       }
     ),

@@ -16,6 +16,7 @@ interface DiceChoiceCardProps {
   onUpdate: (updates: Partial<DialogueChoice>) => void;
   onRemove: () => void;
   canRemove: boolean;
+  currentSceneId: string;
 }
 
 export function DiceChoiceCard({
@@ -24,6 +25,7 @@ export function DiceChoiceCard({
   onUpdate,
   onRemove,
   canRemove,
+  currentSceneId,
 }: DiceChoiceCardProps) {
   const diceCheck = choice.diceCheck!;
 
@@ -76,11 +78,13 @@ export function DiceChoiceCard({
           type="success"
           branch={diceCheck.success || {}}
           onChange={(success) => updateDiceCheck({ success })}
+          currentSceneId={currentSceneId}
         />
         <OutcomeEditor
           type="failure"
           branch={diceCheck.failure || {}}
           onChange={(failure) => updateDiceCheck({ failure })}
+          currentSceneId={currentSceneId}
         />
       </div>
     </motion.div>

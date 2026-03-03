@@ -1,13 +1,15 @@
+import { memo, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ImageIcon, Users as UsersIcon, Palette, MapPin, Trash2, Eye } from 'lucide-react';
+import { ImageIcon, Users as UsersIcon, Palette, MapPin, Trash2, Eye, Pencil } from 'lucide-react';
 import type { Asset } from '@/types';
 
 export interface SimpleAssetCardProps {
   asset: Asset;
   onClick: () => void;
   onDelete?: () => void;
+  onRename?: (newName: string) => void;
   isSelectionMode?: boolean;
   onSelectBackground?: () => void;
 }
@@ -24,9 +26,28 @@ export function SimpleAssetCard({
   asset,
   onClick,
   onDelete,
+  onRename,
   isSelectionMode = false,
   onSelectBackground
 }: SimpleAssetCardProps) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenameDraft(asset.name);
+    setIsRenaming(true);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const confirmRename = () => {
+    if (renameDraft.trim() && renameDraft.trim() !== asset.name) {
+      onRename?.(renameDraft.trim());
+    }
+    setIsRenaming(false);
+  };
+
   const getCategoryIcon = () => {
     switch (asset.category) {
       case 'backgrounds': return <ImageIcon className="h-3 w-3" />;
@@ -62,7 +83,7 @@ export function SimpleAssetCard({
         onClick={isSelectionMode ? handleSelect : handlePreview}
       >
         <img
-          src={asset.path}
+          src={asset.url ?? asset.path}
           alt={asset.name}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
@@ -93,9 +114,36 @@ export function SimpleAssetCard({
 
       {/* Footer - Name + Actions */}
       <div className="p-2.5 space-y-2">
-        <p className="text-xs font-semibold truncate text-foreground" title={asset.name}>
-          {asset.name}
-        </p>
+        {isRenaming ? (
+          <input
+            ref={renameInputRef}
+            value={renameDraft}
+            onChange={e => setRenameDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') confirmRename();
+              if (e.key === 'Escape') setIsRenaming(false);
+            }}
+            onBlur={confirmRename}
+            onClick={e => e.stopPropagation()}
+            className="w-full text-xs bg-slate-700 border border-primary rounded px-1.5 py-0.5 text-white outline-none focus:ring-1 focus:ring-primary"
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-1 min-w-0 group/name">
+            <p className="text-xs font-semibold truncate text-foreground flex-1" title={asset.name}>
+              {asset.name}
+            </p>
+            {onRename && !isSelectionMode && (
+              <button
+                onClick={startRename}
+                className="opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0 text-slate-500 hover:text-slate-200 p-0.5 rounded"
+                title="Renommer"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons - Always visible, not on overlay */}
         {!isSelectionMode && (
@@ -125,3 +173,5 @@ export function SimpleAssetCard({
     </Card>
   );
 }
+
+export default memo(SimpleAssetCard);

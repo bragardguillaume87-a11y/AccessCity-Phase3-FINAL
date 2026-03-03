@@ -139,7 +139,11 @@ export function StepAppearance({
               <SpriteCard
                 key={idx}
                 path={assetPath}
-                isSelected={assetPath === currentSprite}
+                isSelected={
+                  assetPath === currentSprite ||
+                  // Fallback : ancien localStorage (path) vs nouveau currentSprite (URL)
+                  assetPath.split(/[/\\]/).pop() === currentSprite.split(/[/\\]/).pop()
+                }
                 onClick={() => handleSelect(assetPath)}
               />
             ))}
@@ -158,15 +162,18 @@ export function StepAppearance({
               Aucune image trouvée
             </div>
           ) : (
-            filteredAssets.map((asset, idx) => (
-              <SpriteCard
-                key={idx}
-                path={asset.path}
-                name={asset.name}
-                isSelected={asset.path === currentSprite}
-                onClick={() => handleSelect(asset.path)}
-              />
-            ))
+            filteredAssets.map((asset, idx) => {
+              const assetUrl = asset.url ?? asset.path;
+              return (
+                <SpriteCard
+                  key={idx}
+                  path={assetUrl}
+                  name={asset.name}
+                  isSelected={assetUrl === currentSprite || asset.path === currentSprite}
+                  onClick={() => handleSelect(assetUrl)}
+                />
+              );
+            })
           )}
         </div>
       </div>

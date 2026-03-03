@@ -4,15 +4,33 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Trash2, Search, X, Package, ImageIcon, Users as UsersIcon, Palette } from 'lucide-react';
+import { Trash2, Search, X, Package, ImageIcon, Users as UsersIcon, Palette, FolderInput, FolderOpen } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SelectableAssetCard } from './SelectableAssetCard';
 import type { Asset } from '@/types';
+import type { AssetCollection } from '@/types/collections';
+
+const MOVE_CATEGORIES = [
+  { id: 'backgrounds',   label: 'Arrière-plans' },
+  { id: 'characters',    label: 'Sprites' },
+  { id: 'illustrations', label: 'Illustrations' },
+  { id: 'music',         label: 'Musique' },
+  { id: 'sfx',           label: 'Effets sonores' },
+  { id: 'voices',        label: 'Voix' },
+  { id: 'atmosphere',    label: 'Ambiance' },
+];
 
 export interface ManagementTabProps {
   assets: Asset[];
   onBulkDelete: (paths: string[]) => Promise<void>;
   deleting: boolean;
   getAssetUsage?: (assetPath: string) => { scenes: string[]; characters: string[] };
+  collections?: AssetCollection[];
+  onAddToCollection?: (collectionId: string, assetIds: string[]) => void;
+  onBulkMove?: (assetPaths: string[], targetCategory: string) => Promise<void>;
+  moving?: boolean;
 }
 
 /**
@@ -27,7 +45,11 @@ export function ManagementTab({
   assets,
   onBulkDelete,
   deleting,
-  getAssetUsage
+  getAssetUsage,
+  collections = [],
+  onAddToCollection,
+  onBulkMove,
+  moving = false,
 }: ManagementTabProps) {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +90,23 @@ export function ManagementTab({
     } else {
       setSelectedAssets(new Set(filteredAssets.map(a => a.id)));
     }
+  };
+
+  const handleAddToCollection = (collectionId: string) => {
+    if (selectedAssets.size === 0 || !onAddToCollection) return;
+    onAddToCollection(collectionId, Array.from(selectedAssets));
+    setSelectedAssets(new Set());
+  };
+
+  const handleMoveToCategory = async (targetCategory: string) => {
+    if (selectedAssets.size === 0 || !onBulkMove) return;
+    const paths = Array.from(selectedAssets);
+    const confirmed = window.confirm(
+      `Déplacer ${paths.length} asset(s) vers "${MOVE_CATEGORIES.find(c => c.id === targetCategory)?.label || targetCategory}" ?`
+    );
+    if (!confirmed) return;
+    await onBulkMove(paths, targetCategory);
+    setSelectedAssets(new Set());
   };
 
   const handleDelete = async () => {
@@ -133,16 +172,56 @@ export function ManagementTab({
           )}
         </div>
 
-        {/* Delete Button */}
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleDelete}
-          disabled={selectedAssets.size === 0 || deleting}
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          {deleting ? 'Suppression...' : 'Supprimer'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Ajouter à collection */}
+          {onAddToCollection && collections.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={selectedAssets.size === 0}>
+                  <FolderOpen className="h-4 w-4 mr-1" />
+                  Ajouter à…
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {collections.map(col => (
+                  <DropdownMenuItem key={col.id} onClick={() => handleAddToCollection(col.id)}>
+                    {col.name} ({col.assetIds.length})
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Déplacer vers catégorie */}
+          {onBulkMove && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={selectedAssets.size === 0 || moving}>
+                  <FolderInput className="h-4 w-4 mr-1" />
+                  {moving ? 'Déplacement…' : 'Déplacer vers…'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {MOVE_CATEGORIES.map(cat => (
+                  <DropdownMenuItem key={cat.id} onClick={() => handleMoveToCategory(cat.id)}>
+                    {cat.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Delete Button */}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={selectedAssets.size === 0 || deleting}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            {deleting ? 'Suppression...' : 'Supprimer'}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

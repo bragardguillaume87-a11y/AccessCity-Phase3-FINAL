@@ -123,7 +123,7 @@ export function AssetLightbox({ asset, onClose, onNavigate, usage }: AssetLightb
       >
         {/* Image */}
         <img
-          src={asset.path}
+          src={asset.url ?? asset.path}
           alt={asset.name}
           className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl"
         />

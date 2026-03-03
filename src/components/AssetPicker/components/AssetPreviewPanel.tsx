@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-
-/**
- * Asset interface
- */
-export interface Asset {
-  name: string;
-  path: string;
-  category: string;
-  type?: string;
-  size?: number;
-  [key: string]: unknown;
-}
+import type { Asset } from '@/types';
 
 /**
  * Props for AssetPreviewPanel component

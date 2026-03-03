@@ -25,7 +25,6 @@ import type { CharacterAnimationVariantName } from '@/constants/animations';
 import type { GameStats, DialogueChoice, Scene } from '@/types';
 import type { Character } from '@/types/characters';
 import { useSettingsStore, useCharactersStore } from '../../../stores/index';
-import { useIsKidMode } from '@/hooks/useIsKidMode';
 import { uiSounds } from '@/utils/uiSounds';
 import { useAllScenesWithElements } from '@/stores/selectors';
 import { REFERENCE_CANVAS_WIDTH } from '@/config/canvas';
@@ -102,8 +101,6 @@ export default function PreviewPlayer({
       [GAME_STATS.MENTALE]:  mentale  ?? 100,
     };
   }, [storeCharacterLibrary, standaloneInitialVariables]);
-
-  const isKid = useIsKidMode();
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -387,16 +384,16 @@ export default function PreviewPlayer({
             {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             {isMuted ? 'Son OFF' : 'Son ON'}
           </button>
-          {/* Stats HUD — Pro mode only (trop complexe pour élèves) */}
-          {!isKid && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setEnableStatsHUD(!enableStatsHUD); }}
-              className={`px-3 py-1 rounded text-sm flex items-center gap-1.5 ${enableStatsHUD ? 'bg-purple-600 text-white' : 'bg-muted'}`}
-            >
-              <BarChart3 className="h-4 w-4" />
-              Stats
-            </button>
-          )}
+          {/* Stats HUD — accessible dans tous les modes (Pro + Élève).
+              Les créateurs peuvent tester les stats même en prévisualisation mode élève.
+              Masqué par défaut (enableStatsHUD = false). */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setEnableStatsHUD(!enableStatsHUD); }}
+            className={`px-3 py-1 rounded text-sm flex items-center gap-1.5 ${enableStatsHUD ? 'bg-purple-600 text-white' : 'bg-muted'}`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Stats
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); setIsFullscreen(!isFullscreen); }}
             className="px-3 py-1 bg-muted rounded text-sm"
@@ -419,7 +416,8 @@ export default function PreviewPlayer({
       >
         {canvasSize.width > 0 && currentScene.sceneType === 'cinematic' && (
           <CinematicPlayer
-            events={currentScene.cinematicEvents ?? []}
+            tracks={currentScene.cinematicTracks}
+            events={currentScene.cinematicEvents}
             backgroundUrl={currentScene.backgroundUrl}
             canvasWidth={canvasSize.width}
             canvasHeight={canvasSize.height}
@@ -559,9 +557,9 @@ export default function PreviewPlayer({
               </div>
             </div>
 
-            {/* ── Stats HUD — Pro mode only ── */}
+            {/* ── Stats HUD — tous modes (Pro + Élève) ── */}
             {/* z-[60] > DiceOverlay (z-50) → HUD visible même pendant le lancer de dé */}
-            {!isKid && enableStatsHUD && (
+            {enableStatsHUD && (
               <div className="absolute top-3 left-3 z-[60]">
                 <CompactStatHUD
                   physique={stats[GAME_STATS.PHYSIQUE] ?? 100}

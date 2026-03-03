@@ -49,12 +49,13 @@ export function AssetMiniPicker({ category, value, onChange }: Props) {
     return (
       <div className="grid grid-cols-3 gap-1.5 mt-1">
         {assets.map(asset => {
-          const selected = asset.path === value;
+          const assetUrl = asset.url ?? asset.path;
+          const selected = assetUrl === value || asset.path === value;
           return (
             <button
               key={asset.path}
               type="button"
-              onClick={() => onChange(asset.path)}
+              onClick={() => onChange(assetUrl)}
               title={asset.name}
               className={[
                 'relative overflow-hidden rounded-md border-2 transition-all',
@@ -67,7 +68,7 @@ export function AssetMiniPicker({ category, value, onChange }: Props) {
               <div
                 className="absolute inset-0"
                 style={{
-                  backgroundImage: `url(${asset.path})`,
+                  backgroundImage: `url(${assetUrl})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   backgroundColor: '#1a1a2e',
@@ -94,13 +95,14 @@ export function AssetMiniPicker({ category, value, onChange }: Props) {
   return (
     <div className="flex flex-col gap-0.5 mt-1 max-h-40 overflow-y-auto pr-1">
       {assets.map(asset => {
-        const selected = asset.path === value;
+        const assetUrl = asset.url ?? asset.path;
+        const selected = assetUrl === value || asset.path === value;
         const name = asset.name ?? asset.path.split('/').pop() ?? asset.path;
         return (
           <button
             key={asset.path}
             type="button"
-            onClick={() => onChange(asset.path)}
+            onClick={() => onChange(assetUrl)}
             className={[
               'flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] text-left transition-colors',
               selected

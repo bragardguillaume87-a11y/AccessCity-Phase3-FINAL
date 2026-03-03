@@ -1,49 +1,74 @@
-
+import { useCallback } from 'react';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { DiceCheckBranch } from '@/types';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
 
 interface OutcomeEditorProps {
   type: 'success' | 'failure';
   branch: DiceCheckBranch;
   onChange: (branch: DiceCheckBranch) => void;
+  /** ID de la scène courante — pour afficher les dialogues disponibles. */
+  currentSceneId: string;
 }
 
-export function OutcomeEditor({ type, branch, onChange }: OutcomeEditorProps) {
+/**
+ * OutcomeEditor — Sélection du dialogue cible après succès ou échec du dé.
+ *
+ * Utilise un Select (dialogues réels de la scène) plutôt qu'une Textarea libre,
+ * pour éviter que l'utilisateur entre du texte narratif ("bravo !") à la place
+ * d'un vrai ID de dialogue — ce qui causait des rejeux inattendus dans le preview.
+ */
+export function OutcomeEditor({ type, branch, onChange, currentSceneId }: OutcomeEditorProps) {
   const isSuccess = type === 'success';
 
   const config = isSuccess
     ? {
         emoji: '✅',
         label: 'En cas de succès',
-        placeholder: 'Que se passe-t-il si le joueur réussit le test ?',
         border: 'border-green-500/30',
         bg: 'bg-green-500/5',
-        ring: 'focus-within:ring-green-500/20',
       }
     : {
         emoji: '❌',
         label: 'En cas d\'échec',
-        placeholder: 'Que se passe-t-il si le joueur échoue ?',
         border: 'border-red-500/30',
         bg: 'bg-red-500/5',
-        ring: 'focus-within:ring-red-500/20',
       };
 
+  const dialogues = useDialoguesStore(s => s.getDialoguesByScene(currentSceneId));
+
+  const getDialoguePreview = useCallback((text: string, idx: number) => {
+    if (!text?.trim()) return `Dialogue ${idx + 1} (vide)`;
+    return text.length > 50 ? `${text.substring(0, 50)}…` : text;
+  }, []);
+
   return (
-    <div className={cn("rounded-xl p-4 border-2", config.border, config.bg, config.ring)}>
-      <Label className="flex items-center gap-2 text-sm font-semibold mb-2">
+    <div className={cn('rounded-xl p-3 border-2 space-y-2', config.border, config.bg)}>
+      <Label className="flex items-center gap-2 text-sm font-semibold">
         <span className="text-lg">{config.emoji}</span>
         {config.label}
       </Label>
-      <Textarea
-        value={branch.nextDialogueId || ''}
-        onChange={(e) => onChange({ ...branch, nextDialogueId: e.target.value })}
-        placeholder={config.placeholder}
-        className="min-h-[60px] resize-none bg-transparent border-0 p-0 focus-visible:ring-0 text-sm"
-        rows={2}
-      />
+      <Select
+        value={branch.nextDialogueId ?? ''}
+        onValueChange={(value) => onChange({ ...branch, nextDialogueId: value || undefined })}
+      >
+        <SelectTrigger className="h-9 text-sm bg-background/60">
+          <SelectValue placeholder="— Avancer automatiquement —" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">— Avancer automatiquement —</SelectItem>
+          {dialogues.map((d, idx) => (
+            <SelectItem key={d.id} value={d.id}>
+              💬 {getDialoguePreview(d.text, idx)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        Optionnel — laissez vide pour avancer au dialogue suivant.
+      </p>
     </div>
   );
 }

@@ -11,7 +11,7 @@ interface StepComplexityProps {
 
 interface ComplexityCard {
   id: ComplexityLevel;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
   features: string[];

@@ -48,6 +48,9 @@ interface DialoguesState {
 
   // Cascade delete (appelé par scenesStore)
   deleteAllDialoguesForScene: (sceneId: string) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importDialoguesByScene: (data: Record<string, Dialogue[]>) => void;
 }
 
 // ============================================================================
@@ -367,6 +370,9 @@ export const useDialoguesStore = create<DialoguesState>()(
               false,
               'dialogues/duplicateDialogue'
             );
+          },
+          importDialoguesByScene: (data) => {
+            set(() => ({ dialoguesByScene: data }), false, 'dialogues/importDialoguesByScene');
           },
         })),
         { name: 'DialoguesStore' }

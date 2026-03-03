@@ -170,7 +170,7 @@ export function useCanvasDragDrop({
           actions.addCharacterToScene(
             selectedScene.id,
             data.characterId,
-            'neutral',
+            data.mood || 'neutral',
             position,
             'none'
           );

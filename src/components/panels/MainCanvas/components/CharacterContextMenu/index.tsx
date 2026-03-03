@@ -28,7 +28,7 @@ export interface CharacterContextMenuProps {
 
 interface MenuItemData {
   id: string;
-  icon?: React.ElementType;
+  icon?: React.ComponentType<{ className?: string }>;
   emoji?: string;
   label: string;
   desc: string;

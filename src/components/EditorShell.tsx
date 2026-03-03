@@ -20,6 +20,7 @@ import MainCanvas from './panels/MainCanvas';
 import { CinematicInlinePlayer } from './panels/CinematicInlinePlayer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
+import { isFirstLaunch, loadDefaultProject } from '../utils/loadDefaultProject';
 import type { ModalContext } from '../types';
 import { SectionContentPanel } from './panels/UnifiedPanel/SectionContentPanel';
 import { PANEL_WIDTHS, PANEL_MIN_WIDTHS } from '../config/panelConfig';
@@ -103,6 +104,16 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const cinematicEditorOpen = useUIStore(s => s.cinematicEditorOpen);
   const activeSection = useUIStore(s => s.activeSection);
   const setActiveSection = useUIStore(s => s.setActiveSection);
+
+  // === PREMIER LANCEMENT — chargement du projet par défaut bundlé ===
+  // Si /public/default-project.json est présent et que c'est la première ouverture
+  // (STORAGE_KEYS.ONBOARDING_COMPLETED absent), importe silencieusement le projet.
+  useEffect(() => {
+    if (!isFirstLaunch()) return;
+    loadDefaultProject().then(loaded => {
+      if (loaded) logger.info('[EditorShell] Projet par défaut chargé au premier lancement.');
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // État local résiduel (pas de gain à globaliser)
   const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');

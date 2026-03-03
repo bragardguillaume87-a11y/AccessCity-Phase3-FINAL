@@ -1,22 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Audiowide&display=swap');
+/* Poppins + Audiowide conservés pour compatibilité, DM Sans + Syne ajoutés pour le nouveau design */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Syne:wght@600;700;800&family=Poppins:wght@400;600;700&family=Audiowide&display=swap');
 @import './styles/tokens.css';
+@import './styles/studio.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 * {
-  font-family: 'Poppins', 'Inter', sans-serif;
+  font-family: 'DM Sans', 'Poppins', 'Inter', sans-serif;
 }
 
 body {
   margin: 0;
   padding: 0;
-  /* Midnight Bloom background with subtle purple glow */
-  background: radial-gradient(circle at 20% 20%, rgba(108, 92, 231, 0.12), transparent 25%),
-    radial-gradient(circle at 80% 0%, rgba(100, 149, 237, 0.10), transparent 22%),
-    #1a1d23;
-  color: #e5e5e5;
+  /* Premium dark — #08090f avec reflets subtils */
+  background: radial-gradient(circle at 20% 20%, rgba(107, 92, 231, 0.10), transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(250, 109, 154, 0.06), transparent 22%),
+    #08090f;
+  color: #eef0f8;
 }
 
 #root {

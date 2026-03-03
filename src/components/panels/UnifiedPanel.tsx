@@ -48,55 +48,52 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
 
   return (
     <div
-      className="h-full w-full flex flex-col items-center bg-[var(--color-bg-base)]"
+      className="h-full w-full flex flex-col items-center bg-[var(--color-bg-elevated)]"
       role="toolbar"
       aria-label="Outils d'édition de scène"
     >
       {/* En-tête identité */}
       <div className="flex-shrink-0 w-full flex items-center justify-center h-9 border-b border-[var(--color-border-base)]">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-secondary)] select-none">
-          Ajouter
+        <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] select-none">
+          Outils
         </span>
       </div>
 
-      {/* Boutons icônes */}
-      <div className="flex-1 flex flex-col items-center gap-1 py-2 w-full">
+      {/* Boutons icônes — classes toolbar-btn de studio.css */}
+      <div className="flex-1 flex flex-col items-center py-2 w-full">
         {sections.map(({ id, icon: Icon, label }) => {
           const isActive = activeSection === id;
           return (
             <button
               key={id}
               onClick={() => handleIconClick(id)}
-              className={[
-                'flex flex-col items-center gap-1.5 w-full py-3.5 px-2 rounded-lg transition-all',
-                isActive
-                  ? 'bg-[var(--color-primary)] text-white hover:scale-[1.06]'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] hover:scale-[1.06]',
-              ].join(' ')}
+              className={`toolbar-btn${isActive ? ' active' : ''}`}
               aria-pressed={isActive}
               aria-label={label}
               title={label}
             >
-              <Icon className="w-6 h-6" aria-hidden="true" />
-              <span className="text-xs leading-none font-semibold">{label}</span>
+              <Icon size={20} aria-hidden="true" />
+              <span>{label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Bouton reset layout — bas de la barre */}
+      {/* Séparateur + Reset layout */}
       {onResetLayout && (
-        <div className="flex-shrink-0 w-full border-t border-[var(--color-border-base)] py-1">
+        <>
+          <div className="toolbar-sep" aria-hidden="true" />
           <button
             onClick={onResetLayout}
-            className="flex flex-col items-center gap-0.5 w-full py-2 px-1 rounded transition-all text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
+            className="toolbar-btn toolbar-reset"
             title="Réinitialiser les proportions des panneaux"
             aria-label="Réinitialiser les proportions des panneaux"
           >
-            <LayoutTemplate className="w-5 h-5" aria-hidden="true" />
-            <span className="text-[10px] leading-none font-semibold">Reset</span>
+            <LayoutTemplate size={18} aria-hidden="true" />
+            <span>Reset</span>
           </button>
-        </div>
+          <div style={{ height: 8 }} />
+        </>
       )}
     </div>
   );

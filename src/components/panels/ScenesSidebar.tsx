@@ -24,6 +24,9 @@ import type { SceneMetadata } from '@/types'
 import { useUIStore } from '@/stores/uiStore'
 import { useState, useRef, useEffect } from 'react'
 
+/** Cycle de backgrounds pour les scènes sans image (correspond aux classes scene-bg-* de studio.css) */
+const BG_CYCLE = ['scene-bg-city', 'scene-bg-interior', 'scene-bg-night', 'scene-bg-forest'] as const
+
 /**
  * SceneCard Props Interface
  */
@@ -32,6 +35,7 @@ interface SceneCardProps {
   index: number
   isSelected: boolean
   charactersCount: number
+  dialogueCount: number
   onSelect: () => void
   onDuplicate: (sceneId: string) => void
   onDelete: (sceneId: string) => void
@@ -39,15 +43,15 @@ interface SceneCardProps {
 }
 
 /**
- * SceneCard - Compact Powtoon-style thumbnail card
+ * SceneCard — Template "Midnight Bloom" design
  *
- * Layout: Scene number overlay on thumbnail, title in tooltip.
- * No inline title, no badges — maximum screen real-estate efficiency.
+ * Thumbnail 96px avec gradient par type, badges overlay,
+ * compteur de dialogues, actions au survol.
  *
  * DnD note: PointerSensor uses activationConstraint { distance: 8 } so
  * a simple click fires onClick normally before drag activates.
  */
-function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDuplicate, onDelete, onOpenCinematic }: SceneCardProps) {
+function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, onSelect, onDuplicate, onDelete, onOpenCinematic }: SceneCardProps) {
   const {
     attributes,
     listeners,
@@ -65,20 +69,14 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
 
   const hasBackground = !!scene.backgroundUrl
   const isCinematic = scene.sceneType === 'cinematic'
+  const bgClass = BG_CYCLE[index % BG_CYCLE.length]
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      title={scene.title}
-      className={[
-        'group relative rounded-xl cursor-pointer transition-all duration-200 p-1.5',
-        'bg-[var(--color-bg-elevated)]',
-        isSelected
-          ? 'ring-2 ring-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.4)]'
-          : 'ring-1 ring-[var(--color-border-base)] hover:ring-[var(--color-border-hover)] shadow-sm hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]',
-        isDragging ? 'shadow-xl' : '',
-      ].join(' ')}
+      data-scene-id={scene.id}
+      className={`scene-item${isSelected ? ' active' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`Scène ${index + 1}: ${scene.title}`}
@@ -96,111 +94,90 @@ function SceneCard({ scene, index, isSelected, charactersCount, onSelect, onDupl
         }
       }}
     >
-      {/* Thumbnail — overflow-hidden sur le sous-conteneur pour l'effet zoom au survol */}
-      <div className="relative w-full h-[68px] rounded-lg overflow-hidden">
+      {/* Thumbnail 96px */}
+      <div className="scene-thumb">
         {hasBackground ? (
           <img
             src={scene.backgroundUrl}
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <svg
-            className="absolute inset-0 w-full h-full transition-transform duration-300 group-hover:scale-[1.06]"
-            viewBox="0 0 160 90"
-            preserveAspectRatio="xMidYMid slice"
-            aria-hidden="true"
-          >
-            <rect width="160" height="90" fill="var(--color-bg-base)" />
-            <rect width="160" height="90" fill="var(--color-primary)" opacity="0.08" />
-            <pattern id={`grid-${scene.id}`} width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--color-border-base)" strokeWidth="0.5" opacity="0.4" />
-            </pattern>
-            <rect width="160" height="90" fill={`url(#grid-${scene.id})`} />
-            {/* Character silhouettes — from sceneElementsStore (never scene.characters which is always []) */}
-            {charactersCount > 0 && (
-              <>
-                <ellipse cx="45" cy="72" rx="14" ry="5" fill="var(--color-primary)" opacity="0.2" />
-                <rect x="36" y="45" width="18" height="28" rx="4" fill="var(--color-accent)" opacity="0.6" />
-                <circle cx="45" cy="40" r="9" fill="var(--color-accent)" opacity="0.7" />
-                {charactersCount > 1 && (
-                  <>
-                    <ellipse cx="110" cy="72" rx="14" ry="5" fill="var(--color-primary)" opacity="0.2" />
-                    <rect x="101" y="45" width="18" height="28" rx="4" fill="var(--color-secondary)" opacity="0.6" />
-                    <circle cx="110" cy="40" r="9" fill="var(--color-secondary)" opacity="0.7" />
-                  </>
-                )}
-              </>
-            )}
-          </svg>
+          <div className={bgClass} />
         )}
 
-        {/* Gradient overlay — apparaît doucement au survol */}
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-          aria-hidden="true"
-        />
+        {/* Overlay gradient bas→transparent */}
+        <div className="scene-overlay" aria-hidden="true" />
 
-        {/* Scene number — top-left overlay */}
-        <span className="absolute top-1 left-1 text-xs font-bold leading-none px-1 py-0.5 rounded bg-black/60 backdrop-blur-sm text-white tabular-nums">
-          {index + 1}
-        </span>
+        {/* Numéro de scène — top-left */}
+        <span className="scene-num">{index + 1}</span>
 
-        {/* Cinematic badge — top-right (hidden on hover, replaced by action buttons) */}
-        {isCinematic && (
+        {/* Indicateur actif — top-right (pulse violet) */}
+        {isSelected && <div className="scene-pulse" aria-hidden="true" />}
+
+        {/* Badge cinématique — top-right (non-sélectionné, masqué au hover) */}
+        {isCinematic && !isSelected && (
           <span
-            className="absolute top-1 right-1 flex items-center gap-0.5 text-[10px] font-bold px-1 py-0.5 rounded bg-violet-600/90 backdrop-blur-sm text-white group-hover:opacity-0 transition-opacity duration-200 pointer-events-none"
+            className="scene-badge"
             title="Double-cliquer pour ouvrir l'éditeur cinématique"
             aria-hidden="true"
           >
-            <Film className="w-2.5 h-2.5" />
+            <Film size={9} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 2 }} />
+            CIN
           </span>
         )}
 
-        {/* Hover actions — slide in depuis la droite au survol */}
-        <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-200">
+        {/* Silhouettes personnages */}
+        {charactersCount > 0 && (
+          <div className="scene-chars" aria-hidden="true">
+            <div className="scene-char sc1" />
+            {charactersCount > 1 && <div className="scene-char sc2" />}
+          </div>
+        )}
+
+        {/* Compteur de dialogues — bas droite */}
+        <span className="scene-dial-count">{dialogueCount} dial.</span>
+
+        {/* Actions au survol */}
+        <div className="scene-actions">
           {isCinematic && onOpenCinematic && (
             <button
-              className="w-5 h-5 rounded bg-violet-600/90 backdrop-blur-sm hover:bg-violet-500 text-white flex items-center justify-center"
+              className="scene-action"
               title="Éditer la cinématique"
               aria-label="Ouvrir l'éditeur cinématique"
               onClick={(e) => { e.stopPropagation(); onOpenCinematic(scene.id) }}
               onKeyDown={(e) => e.stopPropagation()}
             >
-              <Film className="w-3 h-3" />
+              <Film size={10} />
             </button>
           )}
           <button
-            className="w-5 h-5 rounded bg-black/60 backdrop-blur-sm hover:bg-black/80 text-white flex items-center justify-center"
+            className="scene-action"
             title="Dupliquer"
             aria-label="Dupliquer la scène"
             onClick={(e) => { e.stopPropagation(); onDuplicate(scene.id) }}
             onKeyDown={(e) => e.stopPropagation()}
           >
-            <Copy className="w-3 h-3" />
+            <Copy size={10} />
           </button>
           <button
-            className="w-5 h-5 rounded bg-black/60 backdrop-blur-sm hover:bg-red-600/90 text-white flex items-center justify-center"
+            className="scene-action danger"
             title="Supprimer"
             aria-label="Supprimer la scène"
             onClick={(e) => { e.stopPropagation(); onDelete(scene.id) }}
             onKeyDown={(e) => e.stopPropagation()}
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 size={10} />
           </button>
         </div>
-
-        {/* Selected indicator — left cyan bar */}
-        {isSelected && (
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-cyan-400" />
-        )}
       </div>
 
-      {/* Title row — toujours visible sous l'image */}
-      <p className="mt-1 text-[11px] font-medium text-[var(--color-text-secondary)] truncate leading-tight px-0.5">
-        {scene.title}
-      </p>
+      {/* Footer — pastille couleur + titre */}
+      <div className="scene-footer">
+        <div className="scene-color-label" style={{ background: 'var(--color-primary)' }} />
+        <span className="scene-name">{scene.title}</span>
+      </div>
     </div>
   )
 }
@@ -233,6 +210,9 @@ export default function ScenesSidebar({
 
   // Real character counts come from sceneElementsStore (not scene.characters which is always [])
   const elementsByScene = useSceneElementsStore(state => state.elementsByScene)
+
+  // Dialogue counts per scene
+  const dialoguesByScene = useDialoguesStore(state => state.dialoguesByScene)
 
   // Add scene dropdown
   const [addMenuOpen, setAddMenuOpen] = useState(false)
@@ -365,8 +345,8 @@ export default function ScenesSidebar({
         )}
       </div>
 
-      {/* Filmstrip — compact thumbnails, proportions Powtoon */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2" role="list" aria-label={`${scenes.length} scènes`}>
+      {/* Filmstrip — thumbnails premium 96px */}
+      <div className="flex-1 overflow-y-auto p-2" role="list" aria-label={`${scenes.length} scènes`}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -383,6 +363,7 @@ export default function ScenesSidebar({
                   index={index}
                   isSelected={selectedSceneId === scene.id}
                   charactersCount={elementsByScene[scene.id]?.characters?.length ?? 0}
+                  dialogueCount={dialoguesByScene[scene.id]?.length ?? 0}
                   onSelect={() => onSceneSelect(scene.id)}
                   onDuplicate={handleDuplicateScene}
                   onDelete={handleDeleteScene}

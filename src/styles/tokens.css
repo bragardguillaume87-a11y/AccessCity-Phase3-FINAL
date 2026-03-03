@@ -32,32 +32,32 @@
   --color-danger: #ef4444;            /* Red */
   --color-danger-hover: #DC2626;
 
-  /* ========== BACKGROUNDS - MIDNIGHT BLOOM DARK ========== */
+  /* ========== BACKGROUNDS - PREMIUM DARK (design v4) ========== */
 
-  --color-bg-base: #1a1d23;           /* Deep blue-gray - Base canvas */
-  --color-bg-elevated: #2f3436;       /* Cards, panels, modals */
-  --color-bg-hover: #444444;          /* Hover states */
-  --color-bg-active: #555555;         /* Active/selected */
-  --color-bg-overlay: rgba(26, 29, 35, 0.95);
+  --color-bg-base: #08090f;                      /* Noir profond — canvas principal */
+  --color-bg-elevated: #10131e;                  /* Panneaux, cartes, modales */
+  --color-bg-hover: #1e2438;                     /* Hover states */
+  --color-bg-active: #252d45;                    /* Active/selected */
+  --color-bg-overlay: rgba(8, 9, 15, 0.95);
 
   /* ========== TEXT - WCAG AA CONTRAST RATIOS ========== */
 
-  --color-text-primary: #ffffff;                   /* White - Primary text */
-  --color-text-secondary: rgb(255 255 255 / 0.85); /* White 85% - Section headers */
-  --color-text-muted: rgb(255 255 255 / 0.60);     /* White 60% - Inactive icons, secondary labels */
-  --color-text-disabled: #6e6e6e;                  /* Disabled text */
+  --color-text-primary: #eef0f8;                   /* Blanc chaud — texte principal */
+  --color-text-secondary: rgba(238,240,248,0.85);  /* 85% — section headers */
+  --color-text-muted: rgba(238,240,248,0.45);      /* 45% — icônes inactives, labels */
+  --color-text-disabled: #4e566e;                  /* Disabled text */
 
   /* ========== BORDERS ========== */
 
-  --color-border-base: #444444;       /* Standard border */
-  --color-border-hover: #555555;      /* Hover border */
-  --color-border-focus: #6c5ce7;      /* Focus - matches primary */
+  --color-border-base: rgba(255,255,255,0.08);   /* Bordure subtile */
+  --color-border-hover: rgba(255,255,255,0.14);  /* Hover border */
+  --color-border-focus: #6b5ce7;                 /* Focus - matches primary */
   --color-border-error: #ef4444;
 
   /* ========== TYPOGRAPHY ========== */
-  /* Réutilise Poppins déjà chargée dans index.css */
 
-  --font-family-base: 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-base: 'DM Sans', 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-display: 'Syne', 'Audiowide', system-ui, sans-serif; /* Titres / brand */
   --font-family-mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
   --font-size-xs: 0.75rem;      /* 12px */

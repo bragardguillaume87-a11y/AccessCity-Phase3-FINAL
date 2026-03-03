@@ -3,7 +3,6 @@ import { Users, Image, Settings, Download, Play, Network, Undo2, Redo2, AlertTri
 import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
 import { useUIStore } from "@/stores"
 import { useTranslation } from "@/i18n"
-import { ModeSwitcher } from "@/components/ui/ModeSwitcher"
 
 export interface TopBarValidation {
   hasIssues: boolean
@@ -41,6 +40,7 @@ export default function TopBar({
   const showProblemsPanel  = useUIStore(s => s.showProblemsPanel);
   const setShowProblemsPanel = useUIStore(s => s.setShowProblemsPanel);
   const editorMode = useUIStore(s => s.editorMode);
+  const setEditorMode = useUIStore(s => s.setEditorMode);
   const { kidMode: km } = useTranslation();
 
   const handleOpenCharacters = () => useUIStore.getState().setActiveModal('characters');
@@ -145,15 +145,35 @@ export default function TopBar({
             </button>
           </>
         )}
+
+        {/* Mode Élève / Avancé — inline topbar-mode dans le center nav */}
+        <div className="topbar-divider" aria-hidden="true" />
+        <div
+          className="topbar-mode"
+          role="group"
+          aria-label="Mode de l'éditeur"
+        >
+          <button
+            className={`topbar-mode-btn${editorMode === 'kid' ? ' active' : ''}`}
+            onClick={() => setEditorMode('kid')}
+            aria-pressed={editorMode === 'kid'}
+            title="Mode Élève — interface simplifiée"
+          >
+            {km.kidLabel}
+          </button>
+          <button
+            className={`topbar-mode-btn${editorMode === 'pro' ? ' active' : ''}`}
+            onClick={() => setEditorMode('pro')}
+            aria-pressed={editorMode === 'pro'}
+            title="Mode Avancé — toutes les fonctionnalités"
+          >
+            {km.proLabel}
+          </button>
+        </div>
       </nav>
 
-      {/* ── DROITE : ModeSwitcher + Undo/Redo + Validation + Save + Preview ── */}
+      {/* ── DROITE : Undo/Redo + Validation + Save + Preview ── */}
       <div className="topbar-right">
-        {/* Mode Élève / Avancé */}
-        <ModeSwitcher />
-
-        <div className="topbar-sep" aria-hidden="true" />
-
         {/* Undo / Redo */}
         <div role="group" aria-label="Historique" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <button

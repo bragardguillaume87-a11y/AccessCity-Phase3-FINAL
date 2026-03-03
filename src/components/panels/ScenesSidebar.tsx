@@ -22,10 +22,18 @@ import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2, Film } from 'lucide-react'
 import type { SceneMetadata } from '@/types'
 import { useUIStore } from '@/stores/uiStore'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { NarrativeThreads } from './NarrativeThreads'
 
 /** Cycle de backgrounds pour les scènes sans image (correspond aux classes scene-bg-* de studio.css) */
 const BG_CYCLE = ['scene-bg-city', 'scene-bg-interior', 'scene-bg-night', 'scene-bg-forest'] as const
+
+/** Palette couleurs pour la pastille de scène */
+const COLOR_PALETTE = [
+  '#6b5ce7', '#fa6d9a', '#4ade80', '#fbbf24',
+  '#f87171', '#67e8f9', '#a78bfa', '#fb923c',
+  '#e879f9', 'rgba(255,255,255,0.3)',
+]
 
 /**
  * SceneCard Props Interface
@@ -37,6 +45,8 @@ interface SceneCardProps {
   charactersCount: number
   dialogueCount: number
   onSelect: () => void
+  onHover: (id: string | null) => void
+  onUpdateColor: (sceneId: string, color: string) => void
   onDuplicate: (sceneId: string) => void
   onDelete: (sceneId: string) => void
   onOpenCinematic?: (sceneId: string) => void
@@ -46,12 +56,18 @@ interface SceneCardProps {
  * SceneCard — Template "Midnight Bloom" design
  *
  * Thumbnail 96px avec gradient par type, badges overlay,
- * compteur de dialogues, actions au survol.
+ * compteur de dialogues, color picker, actions au survol.
  *
  * DnD note: PointerSensor uses activationConstraint { distance: 8 } so
  * a simple click fires onClick normally before drag activates.
  */
-function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, onSelect, onDuplicate, onDelete, onOpenCinematic }: SceneCardProps) {
+function SceneCard({
+  scene, index, isSelected, charactersCount, dialogueCount,
+  onSelect, onHover, onUpdateColor, onDuplicate, onDelete, onOpenCinematic
+}: SceneCardProps) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
+
   const {
     attributes,
     listeners,
@@ -70,6 +86,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, o
   const hasBackground = !!scene.backgroundUrl
   const isCinematic = scene.sceneType === 'cinematic'
   const bgClass = BG_CYCLE[index % BG_CYCLE.length]
+  const sceneColor = scene.color ?? 'var(--color-primary)'
 
   return (
     <div
@@ -84,6 +101,8 @@ function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, o
       {...attributes}
       {...listeners}
       onClick={onSelect}
+      onMouseEnter={() => onHover(scene.id)}
+      onMouseLeave={() => onHover(null)}
       onDoubleClick={() => {
         if (isCinematic && onOpenCinematic) onOpenCinematic(scene.id)
       }}
@@ -116,8 +135,8 @@ function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, o
         {/* Indicateur actif — top-right (pulse violet) */}
         {isSelected && <div className="scene-pulse" aria-hidden="true" />}
 
-        {/* Badge cinématique — top-right (non-sélectionné, masqué au hover) */}
-        {isCinematic && !isSelected && (
+        {/* Badge cinématique OU color dot */}
+        {isCinematic ? (
           <span
             className="scene-badge"
             title="Double-cliquer pour ouvrir l'éditeur cinématique"
@@ -126,6 +145,33 @@ function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, o
             <Film size={9} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 2 }} />
             CIN
           </span>
+        ) : (
+          <>
+            <button
+              className="scene-color-dot"
+              style={{ background: sceneColor }}
+              onClick={(e) => { e.stopPropagation(); setPickerOpen(o => !o) }}
+              onKeyDown={(e) => e.stopPropagation()}
+              aria-label="Changer la couleur de la scène"
+            />
+            {pickerOpen && (
+              <div
+                ref={pickerRef}
+                className="scene-color-picker"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c}
+                    className="scene-color-swatch"
+                    style={{ background: c }}
+                    onClick={() => { onUpdateColor(scene.id, c); setPickerOpen(false) }}
+                    aria-label={`Couleur ${c}`}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Silhouettes personnages */}
@@ -175,7 +221,7 @@ function SceneCard({ scene, index, isSelected, charactersCount, dialogueCount, o
 
       {/* Footer — pastille couleur + titre */}
       <div className="scene-footer">
-        <div className="scene-color-label" style={{ background: 'var(--color-primary)' }} />
+        <div className="scene-color-label" style={{ background: sceneColor }} />
         <span className="scene-name">{scene.title}</span>
       </div>
     </div>
@@ -192,10 +238,7 @@ export interface ScenesSidebarProps {
 }
 
 /**
- * ScenesSidebar - Compact Powtoon-style scene filmstrip
- *
- * Ultra-compact column of scene thumbnails.
- * Scene title visible on hover via native tooltip.
+ * ScenesSidebar - Filmstrip premium avec NarrativeThreads SVG
  */
 export default function ScenesSidebar({
   scenes,
@@ -211,8 +254,24 @@ export default function ScenesSidebar({
   // Real character counts come from sceneElementsStore (not scene.characters which is always [])
   const elementsByScene = useSceneElementsStore(state => state.elementsByScene)
 
-  // Dialogue counts per scene
+  // Dialogue counts per scene + detection des scènes avec choix (pour NarrativeThreads)
   const dialoguesByScene = useDialoguesStore(state => state.dialoguesByScene)
+
+  const scenesWithChoices = useMemo<Set<string>>(() => {
+    const result = new Set<string>()
+    Object.entries(dialoguesByScene).forEach(([sceneId, dialogues]) => {
+      if (dialogues.some(d => d.choices && d.choices.length > 0)) {
+        result.add(sceneId)
+      }
+    })
+    return result
+  }, [dialoguesByScene])
+
+  // Hover tracking pour NarrativeThreads
+  const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null)
+
+  // Ref sur le container filmstrip (NarrativeThreads l'utilise pour les calculs DOM)
+  const filmstripRef = useRef<HTMLDivElement>(null)
 
   // Add scene dropdown
   const [addMenuOpen, setAddMenuOpen] = useState(false)
@@ -262,6 +321,10 @@ export default function ScenesSidebar({
     setCinematicEditorOpen(true, sceneId)
   }
 
+  const handleUpdateColor = (sceneId: string, color: string) => {
+    updateScene(sceneId, { color })
+  }
+
   const handleDuplicateScene = (sceneId: string) => {
     const scene = scenes.find(s => s.id === sceneId)
     if (!scene) return
@@ -275,6 +338,7 @@ export default function ScenesSidebar({
       title: `${scene.title} (copie)`,
       description: scene.description,
       backgroundUrl: scene.backgroundUrl,
+      color: scene.color,
       cinematicEvents: scene.cinematicEvents ? [...scene.cinematicEvents] : undefined,
     })
 
@@ -345,8 +409,24 @@ export default function ScenesSidebar({
         )}
       </div>
 
-      {/* Filmstrip — thumbnails premium 96px */}
-      <div className="flex-1 overflow-y-auto p-2" role="list" aria-label={`${scenes.length} scènes`}>
+      {/* Filmstrip — position:relative pour le SVG NarrativeThreads en absolu */}
+      <div
+        ref={filmstripRef}
+        className="flex-1 overflow-y-auto p-2"
+        style={{ position: 'relative' }}
+        role="list"
+        aria-label={`${scenes.length} scènes`}
+      >
+        {/* Fils narratifs SVG — derrière les scènes (z-index:0) */}
+        {scenes.length > 1 && (
+          <NarrativeThreads
+            scenes={scenes}
+            scenesWithChoices={scenesWithChoices}
+            hoveredSceneId={hoveredSceneId}
+            containerRef={filmstripRef}
+          />
+        )}
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -357,7 +437,7 @@ export default function ScenesSidebar({
             strategy={verticalListSortingStrategy}
           >
             {scenes.map((scene, index) => (
-              <div key={scene.id} role="listitem">
+              <div key={scene.id} role="listitem" style={{ position: 'relative', zIndex: 1 }}>
                 <SceneCard
                   scene={scene}
                   index={index}
@@ -365,6 +445,8 @@ export default function ScenesSidebar({
                   charactersCount={elementsByScene[scene.id]?.characters?.length ?? 0}
                   dialogueCount={dialoguesByScene[scene.id]?.length ?? 0}
                   onSelect={() => onSceneSelect(scene.id)}
+                  onHover={setHoveredSceneId}
+                  onUpdateColor={handleUpdateColor}
                   onDuplicate={handleDuplicateScene}
                   onDelete={handleDeleteScene}
                   onOpenCinematic={handleOpenCinematic}

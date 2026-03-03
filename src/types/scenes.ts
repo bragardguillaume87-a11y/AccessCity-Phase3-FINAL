@@ -48,6 +48,8 @@ export interface SceneMetadata {
   cinematicEvents?: CinematicEvent[];
   /** Multi-track timeline (nouveau format NLE). Remplace cinematicEvents quand présent. */
   cinematicTracks?: CinematicTracks;
+  /** Couleur de la pastille dans le filmstrip (hex). Défaut: --color-primary. */
+  color?: string;
 }
 
 /**

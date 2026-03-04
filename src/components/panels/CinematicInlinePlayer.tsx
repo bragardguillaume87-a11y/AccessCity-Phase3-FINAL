@@ -4,7 +4,7 @@
  * Remplace le placeholder statique d'EditorShell pour les scènes cinématiques.
  * Réutilise CinematicPreviewCanvas + CinematicPlaybackBar avec sa propre logique de lecture.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Film } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { CINEMATIC_SPEED_MS } from '@/types/cinematic';
@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function CinematicInlinePlayer({ scene, characters }: Props) {
-  const events = scene.cinematicEvents ?? [];
+  const events = useMemo(() => scene.cinematicEvents ?? [], [scene.cinematicEvents]);
   const [playheadIndex, setPlayheadIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 

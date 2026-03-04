@@ -214,6 +214,7 @@ export default function MainCanvas({
     setSelectedCharacterId: selection.setSelectedCharacterId
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleUpdateCharacterPosition = useCallback(
     (sceneCharId: string, updates: Partial<SceneCharacter>) => {
       if (selectedScene?.id) {
@@ -223,6 +224,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.updateSceneCharacter]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleUpdateProp = useCallback(
     (propId: string, updates: Partial<Prop>) => {
       if (selectedScene?.id) {
@@ -232,6 +234,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.updateProp]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleRemoveProp = useCallback(
     (propId: string) => {
       if (selectedScene?.id) {
@@ -241,6 +244,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.removePropFromScene]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleUpdateTextBox = useCallback(
     (textBoxId: string, updates: Partial<TextBox>) => {
       if (selectedScene?.id) {
@@ -250,6 +254,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.updateTextBox]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleRemoveTextBox = useCallback(
     (textBoxId: string) => {
       if (selectedScene?.id) {
@@ -327,6 +332,7 @@ export default function MainCanvas({
     }
     // Fallback : dialogue suivant (pas de nextDialogueId ou ID introuvable)
     selection.handleDialogueNavigate('next');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- selection.X est une méthode stable du store Zustand
   }, [selectedScene?.id, sceneDialogues, onSelectDialogue, selection.handleDialogueNavigate]);
 
   const handlePlayPause = useCallback(() => {
@@ -342,7 +348,7 @@ export default function MainCanvas({
         onSelectDialogue?.(selectedScene.id, 0);
       }
     }
-  }, [viewState.isPlaying, viewState.setIsPlaying, selectedScene, selectedElement, onSelectDialogue]);
+  }, [viewState, selectedScene, selectedElement, onSelectDialogue, dialoguesCount]);
 
   const handleCloseAddCharacterModal = useCallback(
     () => setShowAddCharacterModal(false),

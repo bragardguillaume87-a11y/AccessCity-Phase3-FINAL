@@ -127,6 +127,7 @@ export function useCharacterForm(
     setErrors({});
     setWarnings({});
     setHasChanges(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- initialCharacter complet intentionnellement omis : reset uniquement si l'ID change
   }, [initialCharacter.id]);
 
   /**

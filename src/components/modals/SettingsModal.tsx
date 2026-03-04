@@ -131,12 +131,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
   const { handleExport, handleImport } = useSettingsImportExport(formData, setFormData);
 
   // Sync form data when modal opens (capture current store values)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isOpen && projectSettings) {
       setFormData({ ...projectSettings, game: { ...projectSettings.game, enableStatsHUD } });
     }
-  }, [isOpen, projectSettings]); // enableStatsHUD intentionally omitted — sync on open only
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- enableStatsHUD intentionnellement omis : sync uniquement à l'ouverture
+  }, [isOpen, projectSettings]);
 
   // Field change handlers
   const handleFieldChange = (section: string, field: string, value: string | boolean | number): void => {

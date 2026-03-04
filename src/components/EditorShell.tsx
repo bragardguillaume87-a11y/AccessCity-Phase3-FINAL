@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useUIStore, useScenesStore, useCharactersStore, useDialoguesStore } from '../stores/index.ts';
 import { useSceneWithElements } from '../stores/selectors/index';
 import { isCinematicScene } from '../types/scenes';
@@ -24,6 +25,14 @@ import { isFirstLaunch, loadDefaultProject } from '../utils/loadDefaultProject';
 import type { ModalContext } from '../types';
 import { SectionContentPanel } from './panels/UnifiedPanel/SectionContentPanel';
 import { PANEL_WIDTHS, PANEL_MIN_WIDTHS } from '../config/panelConfig';
+
+// ⚠️ Module-level constants — zundo 2.x / Zustand 5 incompatibility guard.
+// Lors du démontage du composant, le middleware temporal peut brièvement retourner
+// undefined. Ces constantes stables évitent des crashes et des nouvelles références.
+import type { SceneMetadata } from '../types/scenes';
+import type { Character } from '../types/characters';
+const EMPTY_SCENES: SceneMetadata[] = [];
+const EMPTY_CHARACTERS: Character[] = [];
 
 const LeftPanel      = React.lazy(() => import('./panels/LeftPanel'));
 const PropertiesPanel = React.lazy(() => import('./panels/PropertiesPanel'));
@@ -62,8 +71,9 @@ interface EditorShellProps {
 
 export default function EditorShell({ onBack = null }: EditorShellProps) {
   // === DATA LAYER ===
-  const scenes = useScenesStore((state) => state.scenes);
-  const characters = useCharactersStore((state) => state.characters);
+  // Guard défensif : state?.scenes — zundo 2.x peut retourner undefined pendant le démontage.
+  const scenes = useScenesStore((state) => state?.scenes ?? EMPTY_SCENES);
+  const characters = useCharactersStore((state) => state?.characters ?? EMPTY_CHARACTERS);
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const lastSaved = useUIStore((state) => state.lastSaved);
@@ -113,7 +123,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     loadDefaultProject().then(loaded => {
       if (loaded) logger.info('[EditorShell] Projet par défaut chargé au premier lancement.');
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // État local résiduel (pas de gain à globaliser)
   const [leftPanelActiveTab, setLeftPanelActiveTab] = useState<'scenes' | 'dialogues'>('scenes');
@@ -136,12 +146,12 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const panel3Width = useMemo(() => {
     if (fullscreenMode) return 0;
     if (activeSection !== null) return PANEL_WIDTHS.CONTENT_SECTION;
-    // Panel 3 toujours visible (≥ 240px) conformément au design Powtoon.
-    // Quand aucun élément n'est sélectionné, le contenu affiche l'état vide
-    // (instruction « cliquez sur un outil »), ce qui évite que le panneau
-    // disparaisse après fermeture d'une section.
-    return PANEL_WIDTHS.CONTENT_PROPERTIES;
-  }, [fullscreenMode, activeSection]);
+    // Panel 3 visible uniquement si un élément canvas est sélectionné (PropertiesPanel).
+    // Sinon il se ferme — AnimatePresence joue l'animation exit width→0.
+    const hasElement = selectedElement && selectedElement.type !== null && selectedElement.type !== 'scene';
+    if (hasElement) return PANEL_WIDTHS.CONTENT_PROPERTIES;
+    return 0;
+  }, [fullscreenMode, activeSection, selectedElement]);
 
   // === RESET LAYOUT ===
   const handleResetLayout = useCallback(() => {
@@ -150,7 +160,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     // resize(300) = 300 / groupWidth * 100 → pourcentage correct en pixels.
     leftPanelRef.current?.resize(PANEL_WIDTHS.LEFT_DEFAULT);
     setActiveSection(null);
-  }, [setActiveSection]);
+  }, [setActiveSection, leftPanelRef]);
 
   // === KEYBOARD SHORTCUTS ===
   useKeyboardShortcuts({
@@ -383,27 +393,32 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
           </Group>
 
-          {/* ── Panel 3 : Section/Propriétés (div CSS, width contrôlée par useMemo) ──
-              panel3Width = 0 → fermé (overflow-hidden masque tout)
+          {/* ── Panel 3 : Section/Propriétés (SlidePanel Framer Motion) ──
+              panel3Width = 0 → fermé, AnimatePresence joue exit width→0
               panel3Width = 256 → section active (SectionContentPanel)
               panel3Width = 280 → élément canvas sélectionné (PropertiesPanel)
-              transition-[width] : animation fluide à l'ouverture/fermeture. */}
-          {!fullscreenMode && (
-            <div
-              className="flex-shrink-0 bg-card border-l border-border overflow-hidden transition-[width] duration-150"
-              style={{ width: `${panel3Width}px` }}
-              id="section-content-panel"
-              role="complementary"
-              aria-label="Contenu de la section ou propriétés de l'élément"
-              aria-hidden={panel3Width === 0}
-            >
-              <div className="h-full w-full overflow-hidden">
-                <ErrorBoundary name="ContentPanel">
-                  {panel3Content}
-                </ErrorBoundary>
-              </div>
-            </div>
-          )}
+              Montage/démontage animé : width 0→N (open) et N→0 (close). */}
+          <AnimatePresence initial={false}>
+            {panel3Width > 0 && (
+              <motion.div
+                key="panel3"
+                initial={{ width: 0 }}
+                animate={{ width: panel3Width }}
+                exit={{ width: 0 }}
+                transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                className="flex-shrink-0 bg-card border-l border-border overflow-hidden"
+                id="section-content-panel"
+                role="complementary"
+                aria-label="Contenu de la section ou propriétés de l'élément"
+              >
+                <div className="h-full overflow-hidden" style={{ width: panel3Width }}>
+                  <ErrorBoundary name="ContentPanel">
+                    {panel3Content}
+                  </ErrorBoundary>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* ── Panel 4 : Barre d'icônes (div CSS fixe ICON_BAR px) ──
               UnifiedPanel lit activeSection depuis uiStore directement.

@@ -86,7 +86,7 @@ export function getUsageText(
  */
 export function useCharacterUsage(
   scenes: SceneMetadata[],
-  characters: Character[]
+  _characters: Character[]
 ): Map<string, CharacterUsageData> {
   // Post-Phase 3 : les personnages de scène sont dans sceneElementsStore, pas dans scenes[]
   const elementsByScene = useSceneElementsStore((s) => s.elementsByScene);
@@ -116,7 +116,7 @@ export function useCharacterUsage(
     });
 
     return usage;
-  }, [scenes, elementsByScene, characters]);
+  }, [scenes, elementsByScene]);
 }
 
 export default useCharacterUsage;

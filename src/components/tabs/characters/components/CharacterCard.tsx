@@ -156,7 +156,9 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
             transition: 'background-color 0.2s'
           }}
           onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#7c3aed'}
+          onFocus={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#7c3aed'}
           onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#8b5cf6'}
+          onBlur={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#8b5cf6'}
           title="Dupliquer ce personnage"
         >
           📋
@@ -191,7 +193,17 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
               (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626';
             }
           }}
+          onFocus={(e) => {
+            if (!isSystemCharacter) {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626';
+            }
+          }}
           onMouseOut={(e) => {
+            if (!isSystemCharacter) {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444';
+            }
+          }}
+          onBlur={(e) => {
             if (!isSystemCharacter) {
               (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444';
             }

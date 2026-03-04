@@ -88,7 +88,7 @@ export function createAutoSaveSubscriber<TState, TSlice>(
 
           // Debug logging in development
           if (import.meta.env.DEV) {
-            console.debug(`[AutoSave] ${storeName} saved at`, new Date().toISOString());
+            console.debug(`[AutoSave] ${storeName} saved at`, new Date().toISOString()); // eslint-disable-line no-console
           }
         });
       }, debounceMs);

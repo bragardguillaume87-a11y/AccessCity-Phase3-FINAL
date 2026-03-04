@@ -128,7 +128,7 @@ export function CinematicPlayer({
       if (bgmAudioRef.current)      { bgmAudioRef.current.pause();      bgmAudioRef.current.src      = ''; bgmAudioRef.current      = null; }
       if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Dialogue typewriter ───────────────────────────────────────────────────
   const dialogueBoxConfig = useDialogueBoxConfig(undefined);

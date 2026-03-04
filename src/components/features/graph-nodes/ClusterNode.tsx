@@ -36,6 +36,7 @@ export const ClusterNode = React.memo(function ClusterNode({ data, selected }: C
       className="cluster-node"
       role="treeitem"
       aria-label={`Groupe replié: ${speaker} — ${responseCount} réponses. Cliquer pour déplier.`}
+      aria-selected={false}
       aria-expanded={false}
       tabIndex={0}
       onClick={handleExpand}

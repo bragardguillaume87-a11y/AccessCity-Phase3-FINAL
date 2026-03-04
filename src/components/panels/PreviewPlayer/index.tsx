@@ -216,7 +216,7 @@ export default function PreviewPlayer({
   // ── hasChoices (useMemo avant la garde — utilisé dans les useEffects UI sounds) ──
   const hasChoices = useMemo(
     () => !!(currentDialogue?.choices && currentDialogue.choices.length > 0),
-    [currentDialogue?.choices, currentDialogue]
+    [currentDialogue]
   );
 
   // ── Audio ─────────────────────────────────────────────────────────────────

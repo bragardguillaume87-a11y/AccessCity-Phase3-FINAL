@@ -155,7 +155,7 @@ export function useGraphKeyboardNav({
 
       switch (event.key) {
         // Tab navigation (sequential)
-        case 'Tab':
+        case 'Tab': {
           event.preventDefault();
           const nextId = navigateSequential(event.shiftKey ? 'prev' : 'next');
           if (nextId) {
@@ -164,9 +164,10 @@ export function useGraphKeyboardNav({
             announce(`Dialogue ${nodeIndex} selectionne`);
           }
           break;
+        }
 
         // Arrow key navigation (spatial)
-        case 'ArrowUp':
+        case 'ArrowUp': {
           event.preventDefault();
           const upId = findAdjacentNode('up');
           if (upId) {
@@ -174,8 +175,9 @@ export function useGraphKeyboardNav({
             announce('Navigation vers le haut');
           }
           break;
+        }
 
-        case 'ArrowDown':
+        case 'ArrowDown': {
           event.preventDefault();
           const downId = findAdjacentNode('down');
           if (downId) {
@@ -183,8 +185,9 @@ export function useGraphKeyboardNav({
             announce('Navigation vers le bas');
           }
           break;
+        }
 
-        case 'ArrowLeft':
+        case 'ArrowLeft': {
           event.preventDefault();
           const leftId = findAdjacentNode('left');
           if (leftId) {
@@ -192,8 +195,9 @@ export function useGraphKeyboardNav({
             announce('Navigation vers la gauche');
           }
           break;
+        }
 
-        case 'ArrowRight':
+        case 'ArrowRight': {
           event.preventDefault();
           const rightId = findAdjacentNode('right');
           if (rightId) {
@@ -201,6 +205,7 @@ export function useGraphKeyboardNav({
             announce('Navigation vers la droite');
           }
           break;
+        }
 
         // Enter: Confirm selection (focus node)
         case 'Enter':

@@ -1,45 +1,54 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronRight } from 'lucide-react';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { convertFileSrcIfNeeded } from '@/utils/tauri';
 import type { SceneCharacter } from '@/types';
 
-// ⚠️ Module-level constant — évite de créer un [] inline dans le sélecteur Zustand.
-// `|| []` dans un sélecteur crée une nouvelle référence à chaque getSnapshot →
-// React 18 useSyncExternalStore détecte un "snapshot instable" → boucle infinie.
-// Même pattern que MainCanvas.tsx lignes 50-55.
+// ⚠️ Module-level constant — évite || [] inline dans le sélecteur Zustand.
 const EMPTY_SCENE_CHARACTERS: SceneCharacter[] = [];
-
-/**
- * CharacterMoodPicker - Gallery avatars with mood preview
- * Style Powtoon - Hover sur personnage affiche bulles humeur
- *
- * Features:
- * - Character gallery (all available characters)
- * - Hover → show mood bubbles (sourire, triste, neutre, etc.)
- * - Drag to canvas → addCharacterToScene(sceneId, characterId, mood, position)
- * - Framer Motion animations (scale-110, rotate-3)
- */
 
 export interface CharacterMoodPickerProps {
   onDragStart?: (characterId: string, mood: string) => void;
 }
 
+/**
+ * CharacterMoodPicker — Liste accordéon des personnages SUR SCÈNE.
+ *
+ * - Affiche uniquement les personnages présents dans la scène courante.
+ * - Clic sur une ligne → expand inline → grille de moods.
+ * - Clic sur un mood → met à jour toutes les instances du perso dans la scène.
+ */
 export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
-  const characters = useCharactersStore(state => state.characters);
-  const [hoveredCharacterId, setHoveredCharacterId] = useState<string | null>(null);
-
-  // Lecture du contexte scène pour mettre à jour les personnages sur le canvas
+  const characters    = useCharactersStore(state => state.characters);
   const selectedSceneId = useUIStore(s => s.selectedSceneForEdit);
   const sceneCharacters = useSceneElementsStore(s =>
-    selectedSceneId ? (s.elementsByScene[selectedSceneId]?.characters || EMPTY_SCENE_CHARACTERS) : EMPTY_SCENE_CHARACTERS
+    selectedSceneId
+      ? (s.elementsByScene[selectedSceneId]?.characters || EMPTY_SCENE_CHARACTERS)
+      : EMPTY_SCENE_CHARACTERS
   );
   const updateSceneCharacter = useSceneElementsStore(s => s.updateSceneCharacter);
 
-  // Quand on clique un mood dans la galerie : met à jour toutes les instances
-  // de ce personnage dans la scène courante (cas nominal = 1 instance)
+  // IDs uniques des personnages sur la scène (1 perso peut être placé plusieurs fois)
+  const sceneCharacterIds = [...new Set(sceneCharacters.map(sc => sc.characterId))];
+  const sceneChars = sceneCharacterIds
+    .map(id => characters.find(c => c.id === id))
+    .filter(Boolean) as typeof characters;
+
+  // Accordion : quel perso est ouvert
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const toggleOpen = useCallback((id: string) => {
+    setOpenId(prev => prev === id ? null : id);
+  }, []);
+
+  // Mood actif pour un perso (1ère instance sur la scène)
+  const getActiveMood = useCallback((characterId: string): string => {
+    return sceneCharacters.find(sc => sc.characterId === characterId)?.mood ?? 'neutral';
+  }, [sceneCharacters]);
+
   const handleMoodClick = useCallback((characterId: string, mood: string) => {
     if (!selectedSceneId) return;
     sceneCharacters
@@ -47,139 +56,161 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
       .forEach(sc => updateSceneCharacter(selectedSceneId, sc.id, { mood }));
   }, [selectedSceneId, sceneCharacters, updateSceneCharacter]);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement | HTMLButtonElement>, characterId: string, mood: string) => {
-    // Set drag data for MainCanvas drop handler
-    const dragData = {
-      type: 'character',
-      characterId,
-      mood
-    };
+  const handleDragStart = useCallback((
+    e: React.DragEvent<HTMLDivElement>,
+    characterId: string,
+    mood: string,
+  ) => {
+    const dragData = { type: 'character', characterId, mood };
     e.dataTransfer.setData('text/x-drag-type', 'character');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
+    onDragStart?.(characterId, mood);
+  }, [onDragStart]);
 
-    if (onDragStart) {
-      onDragStart(characterId, mood);
-    }
-  };
+  // État vide
+  if (!selectedSceneId) {
+    return (
+      <section className="sp-sec">
+        <p className="text-xs text-[var(--color-text-muted)] text-center py-4">
+          Sélectionne une scène pour voir ses personnages.
+        </p>
+      </section>
+    );
+  }
+
+  if (sceneChars.length === 0) {
+    return (
+      <section className="sp-sec">
+        <h3 className="sp-lbl">SUR SCÈNE</h3>
+        <p className="text-xs text-[var(--color-text-muted)] text-center py-4">
+          Aucun personnage sur cette scène.<br />
+          Fais glisser un personnage depuis la bibliothèque.
+        </p>
+      </section>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {characters.map((character) => {
-        const moods = character.moods || ['neutral'];
-        const defaultMood = moods[0] || 'neutral';
-        const isHovered = hoveredCharacterId === character.id;
+    <section className="sp-sec" aria-label="Personnages sur la scène">
+      <h3 className="sp-lbl">SUR SCÈNE</h3>
+
+      {sceneChars.map(character => {
+        const moods = character.moods && character.moods.length > 0
+          ? character.moods
+          : ['neutral'];
+        const activeMood = getActiveMood(character.id);
+        const isOpen = openId === character.id;
+        const activeSprite = character.sprites?.[activeMood];
 
         return (
-          <div
-            key={character.id}
-            className="relative"
-            onMouseEnter={() => setHoveredCharacterId(character.id)}
-            onMouseLeave={() => setHoveredCharacterId(null)}
-          >
-            {/* Character Card */}
-            <motion.div
-              className="flex items-center gap-3 p-3 bg-[var(--color-bg-elevated)] border-2 border-[var(--color-border-base)] rounded-lg cursor-grab active:cursor-grabbing hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-game-glow)] transition-all"
+          <div key={character.id}>
+            {/* Ligne perso — sp-perso-row */}
+            <div
+              className="sp-perso-row"
+              onClick={() => toggleOpen(character.id)}
               draggable
-              onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent<HTMLDivElement>, character.id, defaultMood)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              onDragStart={(e) => handleDragStart(e, character.id, activeMood)}
+              role="button"
+              aria-expanded={isOpen}
+              aria-controls={`mood-grid-${character.id}`}
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleOpen(character.id); }}
             >
-              {/* Avatar Preview */}
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[var(--color-bg-base)] border-2 border-[var(--color-border-base)] overflow-hidden flex items-center justify-center">
-                {character.sprites?.[defaultMood] ? (
+              {/* Avatar */}
+              <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-[var(--color-bg-base)] border border-[var(--color-border-base)] flex items-center justify-center">
+                {activeSprite ? (
                   <img
-                    src={convertFileSrcIfNeeded(character.sprites[defaultMood])}
+                    src={convertFileSrcIfNeeded(activeSprite)}
                     alt={character.name}
                     className="w-full h-full object-cover"
                     draggable="false"
                   />
                 ) : (
-                  <span className="text-2xl" aria-hidden="true">👤</span>
+                  <span className="text-xl" aria-hidden="true">👤</span>
                 )}
               </div>
 
-              {/* Character Info */}
+              {/* Infos */}
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                <p className="text-[13px] font-semibold text-[var(--color-text-primary)] truncate">
                   {character.name}
-                </h4>
-                <p className="text-xs text-[var(--color-text-muted)]">
+                </p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
                   {moods.length} mood{moods.length !== 1 ? 's' : ''}
                 </p>
               </div>
 
-              {/* Drag Icon */}
-              <div className="flex-shrink-0 text-[var(--color-text-muted)]" aria-hidden="true">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                </svg>
-              </div>
-            </motion.div>
+              {/* Chevron */}
+              <ChevronRight
+                className="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)] transition-transform"
+                style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                aria-hidden="true"
+              />
+            </div>
 
-            {/* Mood Bubbles (hover reveal) */}
-            <AnimatePresence>
-              {isHovered && moods.length > 1 && (
+            {/* Grille moods — expand inline */}
+            <AnimatePresence initial={false}>
+              {isOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute left-0 right-0 -top-2 z-20 flex flex-wrap gap-2 justify-center p-2 bg-[var(--color-bg-overlay)] backdrop-blur-sm border-2 border-[var(--color-primary)] rounded-lg shadow-[var(--shadow-game-glow-lg)]"
+                  id={`mood-grid-${character.id}`}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                  style={{ overflow: 'hidden' }}
                 >
-                  <div className="text-xs font-semibold text-[var(--color-text-primary)] w-full text-center mb-1">
-                    Choose mood:
+                  <div className="px-2 pb-3 pt-1 border-b border-[var(--color-border-base)]">
+                    <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
+                      Humeur
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {moods.map(mood => {
+                        const sprite = character.sprites?.[mood];
+                        const isActive = activeMood === mood;
+                        return (
+                          <button
+                            key={mood}
+                            onClick={(e) => { e.stopPropagation(); handleMoodClick(character.id, mood); }}
+                            className={[
+                              'flex flex-col items-center gap-1.5 p-2 rounded-lg border transition-all text-center',
+                              isActive
+                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                                : 'border-[var(--color-border-base)] bg-[var(--color-bg-base)] hover:border-[var(--color-primary)]/50',
+                            ].join(' ')}
+                            aria-pressed={isActive}
+                            aria-label={`${character.name} — ${mood}`}
+                          >
+                            <div className="w-9 h-9 rounded-full overflow-hidden border border-[var(--color-border-base)] bg-[var(--color-bg-hover)] flex items-center justify-center">
+                              {sprite ? (
+                                <img
+                                  src={convertFileSrcIfNeeded(sprite)}
+                                  alt={`${character.name} ${mood}`}
+                                  className="w-full h-full object-cover"
+                                  draggable="false"
+                                />
+                              ) : (
+                                <span className="text-lg" aria-hidden="true">👤</span>
+                              )}
+                            </div>
+                            <span className={[
+                              'text-[10px] font-medium truncate w-full',
+                              isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]',
+                            ].join(' ')}>
+                              {mood}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {moods.map((mood) => (
-                    <motion.button
-                      key={mood}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent<HTMLButtonElement>, character.id, mood)}
-                      className="flex flex-col items-center gap-1 px-2 py-1.5 bg-[var(--color-bg-elevated)] hover:bg-[var(--color-primary)] border border-[var(--color-border-base)] hover:border-[var(--color-primary)] rounded-md transition-colors cursor-grab active:cursor-grabbing group"
-                      whileHover={{ scale: 1.1, rotate: 3 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => { e.stopPropagation(); handleMoodClick(character.id, mood); }}
-                      aria-label={`${character.name} - ${mood}`}
-                    >
-                      {/* Mood Avatar */}
-                      <div className="w-8 h-8 rounded-full overflow-hidden border border-[var(--color-border-base)] bg-[var(--color-bg-base)]">
-                        {character.sprites?.[mood] ? (
-                          <img
-                            src={convertFileSrcIfNeeded(character.sprites[mood])}
-                            alt={`${character.name} ${mood}`}
-                            className="w-full h-full object-cover"
-                            draggable="false"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs">
-                            👤
-                          </div>
-                        )}
-                      </div>
-                      {/* Mood Label */}
-                      <span className="text-xs font-medium text-[var(--color-text-secondary)] group-hover:text-white truncate max-w-[60px]">
-                        {mood}
-                      </span>
-                    </motion.button>
-                  ))}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         );
       })}
-
-      {/* Empty State */}
-      {characters.length === 0 && (
-        <div className="text-center py-8 text-[var(--color-text-muted)]">
-          <svg className="w-12 h-12 mx-auto mb-3 text-[var(--color-border-base)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <p className="text-sm font-medium">No characters yet</p>
-          <p className="text-xs mt-1">Create characters to add them to scenes</p>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 

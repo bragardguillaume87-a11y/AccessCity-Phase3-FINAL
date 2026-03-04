@@ -1,6 +1,6 @@
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { Network, Maximize2, Eye, Minimize2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import type { Scene, FullscreenMode } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -37,53 +37,26 @@ export function SceneHeader({ scene, fullscreenMode, onFullscreenChange }: Scene
 
         <div className="flex items-center gap-2">
 
-          {/* Fullscreen Mode Buttons */}
-          <div className="flex items-center gap-1">
-            {([
-              { mode: 'graph'  , Icon: Network,   label: 'Graphe'  , title: 'Vue graphe des dialogues'    },
-              { mode: 'canvas' , Icon: Maximize2,  label: 'Focus'   , title: 'Canvas plein écran'          },
-              { mode: 'preview', Icon: Eye,        label: 'Aperçu'  , title: 'Aperçu de la scène'          },
-            ] as const).map(({ mode, Icon, label, title }) => (
-              <motion.button
-                key={mode}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onFullscreenChange?.(fullscreenMode === mode ? null : mode)}
-                type="button"
-                title={title}
-                className={cn(
-                  'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-colors',
-                  fullscreenMode === mode
-                    ? 'bg-cyan-500/20 text-cyan-400'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                )}
-              >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                <span>{label}</span>
-              </motion.button>
-            ))}
-
-            {/* Exit fullscreen button (visible only when in fullscreen) */}
-            <AnimatePresence>
-              {fullscreenMode && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8, x: -10 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, x: -10 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onFullscreenChange?.(null)}
-                  type="button"
-                  title="Quitter Plein Écran"
-                  className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-colors text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                >
-                  <Minimize2 className="w-4 h-4" aria-hidden="true" />
-                  <span>Quitter</span>
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Bouton Focus — toggle plein écran canvas */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onFullscreenChange?.(fullscreenMode ? null : 'canvas')}
+            type="button"
+            title={fullscreenMode ? 'Quitter le plein écran' : 'Canvas plein écran'}
+            className={cn(
+              'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-colors',
+              fullscreenMode
+                ? 'text-red-400 hover:text-red-300 hover:bg-red-500/20'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            )}
+          >
+            {fullscreenMode
+              ? <Minimize2 className="w-4 h-4" aria-hidden="true" />
+              : <Maximize2 className="w-4 h-4" aria-hidden="true" />
+            }
+            <span>{fullscreenMode ? 'Quitter' : 'Focus'}</span>
+          </motion.button>
         </div>
       </div>
     </div>

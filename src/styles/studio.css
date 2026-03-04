@@ -549,6 +549,123 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
+   SLIDE PANEL — CONTENU SECTIONS (sp-*)
+   Classes génériques pour le contenu des panneaux outils
+   ══════════════════════════════════════════════════════════════ */
+
+.sp-sec { padding: 14px; }
+.sp-sec + .sp-sec { border-top: 1px solid var(--color-border-base); }
+
+.sp-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sp-lbl::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-base);
+}
+
+.sp-dia-preview {
+  background: rgba(4, 5, 12, 0.9);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.sp-row span { font-size: 12px; color: var(--color-text-muted); }
+.sp-row span:last-child { color: var(--color-primary); font-weight: 600; }
+
+.sp-slider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-bg-hover);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.sp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-bg-elevated);
+  box-shadow: 0 0 6px rgba(108, 92, 231, 0.35);
+  cursor: pointer;
+}
+
+.sp-seg {
+  display: flex;
+  background: var(--color-bg-hover);
+  border-radius: var(--r);
+  padding: 2px;
+  gap: 2px;
+}
+.sp-seg-btn {
+  flex: 1;
+  padding: 6px;
+  text-align: center;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: all 0.12s;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+.sp-seg-btn.active { background: var(--color-primary); color: #fff; }
+.sp-seg-btn:not(.active):hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sp-thumb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.sp-track {
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--r);
+  padding: 11px 12px;
+  margin-bottom: 7px;
+}
+
+.sp-perso-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--r);
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: all 0.12s;
+}
+.sp-perso-row:hover { border-color: var(--color-primary); }
+
+/* ══════════════════════════════════════════════════════════════
    SCROLLBARS GLOBALES — style premium minimal
    ══════════════════════════════════════════════════════════════ */
 

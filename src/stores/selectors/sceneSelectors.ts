@@ -33,7 +33,7 @@ import type { SceneMetadata } from '../../types';
 export function useSceneById(sceneId: string | null | undefined): SceneMetadata | undefined {
   return useScenesStore(
     useCallback(
-      (state) => (sceneId ? state.scenes.find((s) => s.id === sceneId) : undefined),
+      (state) => (sceneId ? state?.scenes?.find((s) => s.id === sceneId) : undefined),
       [sceneId]
     )
   );
@@ -45,8 +45,11 @@ export function useSceneById(sceneId: string | null | undefined): SceneMetadata 
  * ⚠️ Retourne SceneMetadata[] (pas Scene[]) — dialogues/characters ABSENTS.
  * Pour toutes les scènes complètes → useAllScenesWithElements()
  */
+// ⚠️ Module-level constant — évite créer un [] inline (instabilité de référence zundo/Zustand 5).
+const EMPTY_SCENES_ARRAY: SceneMetadata[] = [];
+
 export function useScenes(): SceneMetadata[] {
-  return useScenesStore((state) => state.scenes);
+  return useScenesStore((state) => state?.scenes ?? EMPTY_SCENES_ARRAY);
 }
 
 /**

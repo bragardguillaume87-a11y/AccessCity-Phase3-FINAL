@@ -114,7 +114,7 @@ export function CharacterContextMenu({
   // ── Keyboard navigation ───────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { activePanel !== 'menu' ? goBack() : onClose(); }
+      if (e.key === 'Escape') { if (activePanel !== 'menu') { goBack(); } else { onClose(); } }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);

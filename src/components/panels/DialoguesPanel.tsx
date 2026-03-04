@@ -67,7 +67,8 @@ export function DialoguesPanel({
   const dialogues = selectedScene?.dialogues || [];
   const dialogueIds = useMemo(
     () => dialogues.map((_, idx) => `dialogue-${idx}`),
-    [dialogues.length] // Recompute only when length changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute uniquement si la longueur change, pas les valeurs
+    [dialogues.length]
   );
 
   const handleDragEnd = (event: DragEndEvent) => {

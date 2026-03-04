@@ -608,7 +608,29 @@ Quand l'utilisateur demande "qualité maximale" ou "protocole code" :
   - S'arrête aux choix (user doit décider la branche) et au dernier dialogue
   - Play → auto-sélection premier dialogue si aucun sélectionné
 
+**Vague 13 (complétée 2026-03-04)** :
+
+- ✅ Refonte design 5 panneaux UnifiedPanel avec sp-* classes (studio.css)
+  - `DialogueBoxSection` : APERÇU top, iOS switch portrait, sections CAPS sans emoji
+  - `CharacterMoodPicker` : filtre SUR SCÈNE (sceneElementsStore), accordéon AnimatePresence inline
+  - `EffectsSection` : sp-row/sp-slider, EffectCard + SliderRow sub-composants
+  - `AudioSection` : sp-seg segmented control, iOS toggles, SFX section
+  - `BackgroundsSection` : fonds récents first, 3 filtres visuels (sans blur)
+- ✅ Crash fix "retour en arrière" — `state?.scenes ?? EMPTY_SCENES` guards défensifs
+  - `EditorShell.tsx` + `sceneSelectors.ts` : module-level EMPTY_* constants
+  - Pattern EMPTY_* confirmé (anti `|| []` inline → référence instable React 18/19)
+  - zundo 2.3.0 compatible Zustand 5 confirmé — migration inutile
+- ✅ ESLint : 12 erreurs → 0, 182 warnings → 93 (93 restants = a11y progressif)
+  - `Inspector.tsx` : `role="complementary"` redondant supprimé
+  - `logger.ts` : `/* eslint-disable no-console */` file-level
+  - `useGraphKeyboardNav.tsx` : 5 cases `no-case-declarations` → wrappés en `{}`
+  - `BackgroundsSection` : `filter` → `useMemo` (référence stable)
+  - `CinematicInlinePlayer` : `events` → `useMemo` (référence stable)
+  - `SkipToContent.tsx` : `\:` → `\\:` (double-escape pour CSS Tailwind)
+  - `MainCanvas.tsx` : 7 × eslint-disable (actions.X / selection.X stables Zustand)
+  - 8 × `onFocus`/`onBlur` ajoutés aux boutons (CharacterCard, CharactersExplorer)
+
 ---
 
-**Dernière mise à jour** : 2026-02-20 par Claude Sonnet 4.6
-**Longueur** : ~455 lignes
+**Dernière mise à jour** : 2026-03-04 par Claude Sonnet 4.6
+**Longueur** : ~480 lignes

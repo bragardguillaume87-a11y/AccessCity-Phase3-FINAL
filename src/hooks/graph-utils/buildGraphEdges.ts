@@ -56,7 +56,7 @@ export function buildGraphEdges(
       }
     : undefined;
 
-  // Does the theme provide a custom convergence edge (with its own label + fan routing)?
+  // Does the theme provide a custom convergence edge (with its own fan routing)?
   const hasCustomConvergence = typeOverrides?.convergence !== undefined
     && typeOverrides.convergence !== edgeType;
 
@@ -83,15 +83,15 @@ export function buildGraphEdges(
     const hasChoices = dialogue.choices && dialogue.choices.length > 0;
 
     // Convergence edge: dialogue has explicit nextDialogueId
-    if (dialogue.nextDialogueId) {
+    // Skip for choice nodes — their connections must come from choice-N handles only
+    if (dialogue.nextDialogueId && !hasChoices) {
       const targetIdx = dialogueIdToIndex.get(dialogue.nextDialogueId!) ?? -1;
       if (targetIdx !== -1) {
-        const convergenceLabel = hasCustomConvergence ? undefined : '↩ rejoint';
         pushEdge(
           `${sourceId}-converge-to-${sceneId}-d-${targetIdx}`,
           sourceId, HANDLE_ID.RIGHT,
           dialogueNodeId(sceneId, targetIdx),
-          'convergence', convergenceLabel,
+          'convergence', undefined,
           { isConvergence: true }
         );
       }
@@ -100,12 +100,11 @@ export function buildGraphEdges(
     else if (dialogue.isResponse) {
       for (let targetIdx = index + 1; targetIdx < dialogues.length; targetIdx++) {
         if (!dialogues[targetIdx].isResponse) {
-          const convergenceLabel = hasCustomConvergence ? undefined : '↩ rejoint';
           pushEdge(
             `${sourceId}-response-converge-to-${sceneId}-d-${targetIdx}`,
             sourceId, HANDLE_ID.RIGHT,
             dialogueNodeId(sceneId, targetIdx),
-            'convergence', convergenceLabel,
+            'convergence', undefined,
             { isConvergence: true }
           );
           break;
@@ -125,7 +124,29 @@ export function buildGraphEdges(
     // Choice edges
     if (hasChoices) {
       dialogue.choices.forEach((choice, choiceIdx) => {
-        if (choice.nextDialogueId) {
+        if (choice.diceCheck) {
+          // Dice check: collect all outcome targets (success, failure, fallback nextDialogueId)
+          // Deduplicate so we never draw two edges to the same node
+          const diceTargetIds = new Set<string>();
+          if (choice.nextDialogueId) diceTargetIds.add(choice.nextDialogueId);
+          if (choice.diceCheck.success?.nextDialogueId) diceTargetIds.add(choice.diceCheck.success.nextDialogueId);
+          if (choice.diceCheck.failure?.nextDialogueId) diceTargetIds.add(choice.diceCheck.failure.nextDialogueId);
+
+          diceTargetIds.forEach(targetDialogueId => {
+            const targetIdx = dialogueIdToIndex.get(targetDialogueId) ?? -1;
+            if (targetIdx !== -1) {
+              const targetId = dialogueNodeId(sceneId, targetIdx);
+              const edgeLabel = truncateEdgeLabel(choice.text, `Dés ${choiceIdx + 1}`);
+              pushEdge(
+                `${sourceId}-dice-${choiceIdx}-to-${targetId}`,
+                sourceId, choiceHandleId(choiceIdx),
+                targetId,
+                'choice', undefined,
+                { label: edgeLabel }
+              );
+            }
+          });
+        } else if (choice.nextDialogueId) {
           const targetIdx = dialogueIdToIndex.get(choice.nextDialogueId!) ?? -1;
           if (targetIdx !== -1) {
             const targetId = dialogueNodeId(sceneId, targetIdx);
@@ -134,8 +155,8 @@ export function buildGraphEdges(
               `${sourceId}-choice-${choiceIdx}-to-${targetId}`,
               sourceId, choiceHandleId(choiceIdx),
               targetId,
-              'choice', edgeLabel,
-              { label: edgeLabel }
+              'choice', undefined,
+              { label: edgeLabel }  // kept for cosmos hover tooltip
             );
           }
         }
@@ -160,8 +181,8 @@ export function buildGraphEdges(
             `${sourceId}-choice-${choiceIdx}-to-terminal`,
             sourceId, choiceHandleId(choiceIdx),
             terminalId,
-            'sceneJump', terminalLabel,
-            { label: terminalLabel }
+            'sceneJump', undefined,
+            { label: terminalLabel }  // kept for cosmos hover tooltip
           );
         }
       });

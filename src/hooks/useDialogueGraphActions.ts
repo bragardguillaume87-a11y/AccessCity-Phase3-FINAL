@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Connection } from '@xyflow/react';
+import type { Connection, Edge } from '@xyflow/react';
 import { useUIStore } from '@/stores';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
@@ -180,7 +180,45 @@ export function useDialogueGraphActions(sceneId: string) {
   );
 
   /**
-   * 7. Effet sparkle lors d'une connexion (PHASE 4 - Cosmos)
+   * 7. Supprimer une arête — efface nextDialogueId ou choice.nextDialogueId selon le type
+   */
+  const handleDeleteEdge = useCallback(
+    (deletedEdges: Edge[]) => {
+      const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
+      deletedEdges.forEach(edge => {
+        const sourceIndex = safeExtractDialogueIndex(edge.source);
+        if (sourceIndex < 0) return;
+
+        if (edge.sourceHandle?.startsWith(CHOICE_HANDLE_PREFIX)) {
+          // Choice edge: clear choice.nextDialogueId + diceCheck targets (if any)
+          const choiceIndex = parseInt(edge.sourceHandle.replace(CHOICE_HANDLE_PREFIX, ''), 10);
+          const dialogue = dialogues[sourceIndex];
+          if (!isNaN(choiceIndex) && dialogue?.choices?.[choiceIndex]) {
+            const updatedChoices = dialogue.choices.map((c, i) => {
+              if (i !== choiceIndex) return c;
+              const cleared = { ...c, nextDialogueId: undefined };
+              if (cleared.diceCheck) {
+                cleared.diceCheck = {
+                  ...cleared.diceCheck,
+                  success: cleared.diceCheck.success ? { ...cleared.diceCheck.success, nextDialogueId: undefined } : undefined,
+                  failure: cleared.diceCheck.failure ? { ...cleared.diceCheck.failure, nextDialogueId: undefined } : undefined,
+                };
+              }
+              return cleared;
+            });
+            updateDialogue(sceneId, sourceIndex, { choices: updatedChoices });
+          }
+        } else {
+          // Linear/convergence edge: clear nextDialogueId
+          updateDialogue(sceneId, sourceIndex, { nextDialogueId: undefined });
+        }
+      });
+    },
+    [sceneId, updateDialogue]
+  );
+
+  /**
+   * 8. Effet sparkle lors d'une connexion (PHASE 4 - Cosmos)
    */
   const handleConnectionEffect = useCallback(
     (x: number, y: number) => {
@@ -194,6 +232,7 @@ export function useDialogueGraphActions(sceneId: string) {
   return {
     handleNodeDoubleClick,
     handleDeleteNode,
+    handleDeleteEdge,
     handleDuplicateNode,
     handleCreateDialogue,
     handleReconnectChoice,

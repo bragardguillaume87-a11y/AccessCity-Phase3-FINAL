@@ -115,6 +115,19 @@ export default function TimelinePlayhead({
   }, [dialogueMarkers, seekToPct, fireRipple])
 
   // Handlers drag
+  // Prev / Next dialogue marker
+  const handlePrevDialogue = useCallback(() => {
+    if (dialogueMarkers.length === 0) { onSeek(0); return; }
+    const prev = [...dialogueMarkers].reverse().find(m => m.time < currentTime - 0.1);
+    onSeek(prev ? prev.time : 0);
+  }, [dialogueMarkers, currentTime, onSeek]);
+
+  const handleNextDialogue = useCallback(() => {
+    if (dialogueMarkers.length === 0) { onSeek(duration); return; }
+    const next = dialogueMarkers.find(m => m.time > currentTime + 0.1);
+    onSeek(next ? next.time : duration);
+  }, [dialogueMarkers, currentTime, duration, onSeek]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true)
     seekToPct(getPct(e.clientX))
@@ -150,9 +163,9 @@ export default function TimelinePlayhead({
       <div className="tl-ctrl">
         <button
           className="tl-btn"
-          onClick={() => { onSeek(0); }}
-          title="Début"
-          aria-label="Retour au début"
+          onClick={handlePrevDialogue}
+          title="Dialogue précédent"
+          aria-label="Dialogue précédent"
         >
           <SkipBack size={11} aria-hidden="true" />
         </button>
@@ -168,9 +181,9 @@ export default function TimelinePlayhead({
         </button>
         <button
           className="tl-btn"
-          onClick={() => onSeek(duration)}
-          title="Fin"
-          aria-label="Aller à la fin"
+          onClick={handleNextDialogue}
+          title="Dialogue suivant"
+          aria-label="Dialogue suivant"
         >
           <SkipForward size={11} aria-hidden="true" />
         </button>

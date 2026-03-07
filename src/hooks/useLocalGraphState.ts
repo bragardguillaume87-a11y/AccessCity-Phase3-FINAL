@@ -3,7 +3,9 @@ import {
   Node,
   Edge,
   NodeChange,
+  EdgeChange,
   applyNodeChanges,
+  applyEdgeChanges,
   reconnectEdge,
   Connection,
 } from '@xyflow/react';
@@ -16,6 +18,7 @@ interface UseLocalGraphStateReturn {
   localNodes: GraphNode[];
   localEdges: Edge[];
   onNodesChange: (changes: NodeChange<GraphNode>[]) => void;
+  onEdgesChange: (changes: EdgeChange<Edge>[]) => void;
   onNodeDragStop: (event: React.MouseEvent, node: Node, nodes: Node[]) => void;
   reconnectLocalEdge: (oldEdge: Edge, newConnection: Connection) => void;
 }
@@ -70,6 +73,17 @@ export function useLocalGraphState(
     setLocalNodes((nds) => applyNodeChanges(changes, nds) as GraphNode[]);
   }, []);
 
+  // Handle edge changes — selection only (removal is handled by store actions, not visual patch)
+  const onEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
+    const nonRemoveChanges = changes.filter(c => c.type !== 'remove');
+    if (nonRemoveChanges.length === 0) return;
+    setLocalEdges((eds) => {
+      const updated = applyEdgeChanges(nonRemoveChanges, eds);
+      localEdgesRef.current = updated;
+      return updated;
+    });
+  }, []);
+
   // Handle node drag stop — recalculate serpentine edge handles
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, _node: Node, nodes: Node[]) => {
@@ -91,5 +105,5 @@ export function useLocalGraphState(
     []
   );
 
-  return { localNodes, localEdges, onNodesChange, onNodeDragStop, reconnectLocalEdge };
+  return { localNodes, localEdges, onNodesChange, onEdgesChange, onNodeDragStop, reconnectLocalEdge };
 }

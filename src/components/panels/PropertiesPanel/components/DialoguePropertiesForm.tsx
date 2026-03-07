@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { ChoiceEditor } from './ChoiceEditor';
-import { Copy, Plus, Volume2, X, Sparkles, User, MessageSquare, ChevronDown, SlidersHorizontal, GitBranch } from 'lucide-react';
+import { Copy, Plus, Volume2, X, Sparkles, User, MessageSquare, ChevronDown, SlidersHorizontal, GitBranch, Type, Eye, Palette } from 'lucide-react';
 import { useUIStore } from '@/stores';
 import { useIsKidMode } from '@/hooks/useIsKidMode';
 import { AUDIO_DEFAULTS } from '@/config/constants';
@@ -24,7 +24,7 @@ export interface DialoguePropertiesFormProps {
   isSaving?: boolean;
 }
 
-type TabType = 'properties' | 'choices';
+type TabType = 'properties' | 'text' | 'choices';
 
 // ── Helpers visuels locaux (pattern Audio panel) ──────────────────────────────
 function SectionCard({ children }: { children: React.ReactNode }) {
@@ -108,9 +108,18 @@ export function DialoguePropertiesForm({
   isSaving,
 }: DialoguePropertiesFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('properties');
-  // Accordéon — SFX ouvert si un son est déjà assigné, Humeurs fermé par défaut
-  const [sfxOpen,   setSfxOpen]   = useState(!!dialogue.sfx?.url);
-  const [moodsOpen, setMoodsOpen] = useState(false);
+  // Accordéons Propriétés
+  const [sfxOpen,       setSfxOpen]       = useState(!!dialogue.sfx?.url);
+  const [moodsOpen,     setMoodsOpen]     = useState(false);
+  // Accordéons Texte
+  const [apparenceOpen, setApparenceOpen] = useState(false);
+  const [aperçuOpen,    setAperçuOpen]    = useState(false);
+
+  // Helper — mise à jour partielle de boxStyle
+  const handleUpdateBoxStyle = (patch: Partial<NonNullable<typeof dialogue.boxStyle>>) => {
+    handleUpdate({ boxStyle: { ...dialogue.boxStyle, ...patch } });
+  };
+  const boxStyle = dialogue.boxStyle ?? {};
   const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore(state => state.setDialogueWizardEditIndex);
   const { t } = useTranslation();
@@ -162,12 +171,12 @@ export function DialoguePropertiesForm({
 
       {/* Tabs — Pro mode only */}
       {!isKid && (
-        <div className="flex-shrink-0 border-b border-border bg-transparent p-1 grid grid-cols-2 gap-1">
+        <div className="flex-shrink-0 border-b border-border bg-transparent p-1 grid grid-cols-3 gap-1">
           <button
             role="tab"
             aria-selected={activeTab === 'properties'}
             onClick={() => setActiveTab('properties')}
-            className={`rounded-lg h-11 flex flex-col items-center justify-center gap-1 px-2 transition-all duration-200 ${
+            className={`rounded-lg h-11 flex flex-col items-center justify-center gap-1 px-1 transition-all duration-200 ${
               activeTab === 'properties'
                 ? 'bg-[var(--color-primary)] text-white shadow-none'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -178,9 +187,22 @@ export function DialoguePropertiesForm({
           </button>
           <button
             role="tab"
+            aria-selected={activeTab === 'text'}
+            onClick={() => setActiveTab('text')}
+            className={`rounded-lg h-11 flex flex-col items-center justify-center gap-1 px-1 transition-all duration-200 ${
+              activeTab === 'text'
+                ? 'bg-[var(--color-primary)] text-white shadow-none'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            <Type className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            <span className="text-xs leading-none font-semibold">Texte</span>
+          </button>
+          <button
+            role="tab"
             aria-selected={activeTab === 'choices'}
             onClick={() => setActiveTab('choices')}
-            className={`rounded-lg h-11 flex flex-col items-center justify-center gap-1 px-2 transition-all duration-200 ${
+            className={`rounded-lg h-11 flex flex-col items-center justify-center gap-1 px-1 transition-all duration-200 ${
               activeTab === 'choices'
                 ? 'bg-[var(--color-primary)] text-white shadow-none'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -197,6 +219,26 @@ export function DialoguePropertiesForm({
       {/* ── Properties tab ─────────────────────────────────────────────────── */}
       {(isKid || activeTab === 'properties') && (
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
+
+          {/* ── Texte — visible uniquement en mode kid (en Pro, c'est dans l'onglet Texte) ── */}
+          {isKid && (
+            <SectionCard>
+              <SectionHeader
+                icon={<MessageSquare className="h-3.5 w-3.5" />}
+                label="Ce qu'il dit :"
+                colorClass="text-violet-400"
+              />
+              <div className="px-3 py-2.5">
+                <textarea
+                  value={dialogue.text || ''}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleUpdate({ text: e.target.value })}
+                  rows={6}
+                  className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                  placeholder="Saisir le texte du dialogue…"
+                />
+              </div>
+            </SectionCard>
+          )}
 
           {/* ── Personnage ── */}
           <SectionCard>
@@ -217,25 +259,6 @@ export function DialoguePropertiesForm({
                   <option key={char.id} value={char.id}>{char.name}</option>
                 ))}
               </select>
-            </div>
-          </SectionCard>
-
-          {/* ── Texte ── */}
-          <SectionCard>
-            <SectionHeader
-              icon={<MessageSquare className="h-3.5 w-3.5" />}
-              label={isKid ? "Ce qu'il dit :" : t('dialogueEditor.text')}
-              colorClass="text-violet-400"
-            />
-            <div className="px-3 py-2.5">
-              <textarea
-                id="dialogue-text"
-                value={dialogue.text || ''}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleUpdate({ text: e.target.value })}
-                rows={isKid ? 6 : 4}
-                className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-                placeholder={t('dialogueEditor.text')}
-              />
             </div>
           </SectionCard>
 
@@ -374,6 +397,181 @@ export function DialoguePropertiesForm({
               </span>
             </div>
           </div>
+
+        </div>
+      )}
+
+      {/* ── Text tab ───────────────────────────────────────────────────────── */}
+      {!isKid && activeTab === 'text' && (
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+
+          {/* Textarea principale */}
+          <SectionCard>
+            <SectionHeader
+              icon={<MessageSquare className="h-3.5 w-3.5" />}
+              label={t('dialogueEditor.text')}
+              colorClass="text-violet-400"
+            />
+            <div className="px-3 py-2.5">
+              <textarea
+                value={dialogue.text || ''}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleUpdate({ text: e.target.value })}
+                rows={4}
+                className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                placeholder={t('dialogueEditor.text')}
+              />
+            </div>
+          </SectionCard>
+
+          {/* Apparence — accordéon fermé par défaut */}
+          <SectionCard>
+            <SectionHeader
+              icon={<Palette className="h-3.5 w-3.5" />}
+              label="Apparence"
+              colorClass="text-fuchsia-400"
+              isCollapsible
+              isOpen={apparenceOpen}
+              onToggle={() => setApparenceOpen(v => !v)}
+            />
+            <Collapsible isOpen={apparenceOpen}>
+              <div className="px-3 py-3 space-y-4">
+
+                {/* Taille du texte */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Taille du texte</span>
+                    <span className="text-xs font-semibold text-fuchsia-400">{boxStyle.fontSize ?? 15} px</span>
+                  </div>
+                  <Slider
+                    value={[boxStyle.fontSize ?? 15]}
+                    onValueChange={([v]) => handleUpdateBoxStyle({ fontSize: v })}
+                    min={10} max={24} step={1}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Vitesse de frappe */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Vitesse de frappe</span>
+                    <span className="text-xs font-semibold text-fuchsia-400">
+                      {(boxStyle.typewriterSpeed ?? 40) <= 20 ? 'Rapide' : (boxStyle.typewriterSpeed ?? 40) <= 55 ? 'Normal' : 'Lent'}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[boxStyle.typewriterSpeed ?? 40]}
+                    onValueChange={([v]) => handleUpdateBoxStyle({ typewriterSpeed: v })}
+                    min={10} max={100} step={5}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Position */}
+                <div className="space-y-1.5">
+                  <span className="text-xs text-muted-foreground">Position</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(['top', 'center', 'bottom'] as const).map(pos => (
+                      <button
+                        key={pos}
+                        type="button"
+                        onClick={() => handleUpdateBoxStyle({ position: pos })}
+                        className={`py-1.5 rounded text-xs font-medium transition-colors ${
+                          (boxStyle.position ?? 'bottom') === pos
+                            ? 'bg-[var(--color-primary)] text-white'
+                            : 'bg-muted/40 text-muted-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {pos === 'top' ? 'Haut' : pos === 'center' ? 'Centre' : 'Bas'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Opacité du fond */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Opacité du fond</span>
+                    <span className="text-xs font-semibold text-fuchsia-400">
+                      {Math.round((boxStyle.boxOpacity ?? 0.75) * 100)} %
+                    </span>
+                  </div>
+                  <Slider
+                    value={[(boxStyle.boxOpacity ?? 0.75) * 100]}
+                    onValueChange={([v]) => handleUpdateBoxStyle({ boxOpacity: v / 100 })}
+                    min={0} max={100} step={5}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Bordure */}
+                <div className="space-y-1.5">
+                  <span className="text-xs text-muted-foreground">Bordure</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(['none', 'subtle', 'prominent'] as const).map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => handleUpdateBoxStyle({ borderStyle: s })}
+                        className={`py-1.5 rounded text-xs font-medium transition-colors ${
+                          (boxStyle.borderStyle ?? 'subtle') === s
+                            ? 'bg-[var(--color-primary)] text-white'
+                            : 'bg-muted/40 text-muted-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {s === 'none' ? 'Aucune' : s === 'subtle' ? 'Subtile' : 'Forte'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </Collapsible>
+          </SectionCard>
+
+          {/* Aperçu — accordéon fermé par défaut */}
+          <SectionCard>
+            <SectionHeader
+              icon={<Eye className="h-3.5 w-3.5" />}
+              label="Aperçu"
+              colorClass="text-sky-400"
+              isCollapsible
+              isOpen={aperçuOpen}
+              onToggle={() => setAperçuOpen(v => !v)}
+            />
+            <Collapsible isOpen={aperçuOpen}>
+              <div className="px-3 py-3 space-y-2">
+                {/* Simulation boîte de dialogue */}
+                <div
+                  className="rounded-lg p-3"
+                  style={{
+                    background: `rgba(0,0,0,${boxStyle.boxOpacity ?? 0.75})`,
+                    border: (boxStyle.borderStyle ?? 'subtle') === 'none'
+                      ? '1px solid transparent'
+                      : (boxStyle.borderStyle ?? 'subtle') === 'prominent'
+                        ? '2px solid var(--color-primary)'
+                        : '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  <p className="text-xs font-bold mb-1.5" style={{ color: 'var(--color-primary)' }}>
+                    {characters.find(c => c.id === dialogue.speaker)?.name || '—'}
+                  </p>
+                  <p style={{
+                    fontSize: `${boxStyle.fontSize ?? 15}px`,
+                    color: 'rgba(255,255,255,0.9)',
+                    lineHeight: 1.55,
+                  }}>
+                    {dialogue.text || '(aucun texte)'}
+                  </p>
+                </div>
+                {/* Indicateur position */}
+                <div className="flex justify-center">
+                  <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
+                    {(boxStyle.position ?? 'bottom') === 'top' ? '▲ Haut' : (boxStyle.position ?? 'bottom') === 'center' ? '● Centre' : '▼ Bas'}
+                  </span>
+                </div>
+              </div>
+            </Collapsible>
+          </SectionCard>
 
         </div>
       )}

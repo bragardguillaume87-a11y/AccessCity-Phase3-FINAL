@@ -3,7 +3,7 @@ import { GitBranch } from 'lucide-react';
 import type { DialogueNodeData } from '@/types';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { useNodeLayout } from '@/hooks/useNodeLayout';
-import { truncateChoicePreview, getIssueStatus } from '@/utils/textHelpers';
+import { truncate, truncateChoicePreview, getIssueStatus } from '@/utils/textHelpers';
 import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
 import { COLORS } from '@/config/colors';
 import { BaseNode } from './BaseNode';
@@ -53,28 +53,64 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
       choices={choices}
       choiceHandlePosition={layout.choiceHandles.position}
     >
-      {/* Choices preview */}
-      <div style={CHOICE_PREVIEW_CONTAINER_STYLE}>
-        {choices.slice(0, 3).map((choice, i) => (
-          <span
-            key={choice.id}
-            style={{
-              ...CHOICE_BADGE_BASE_STYLE,
-              backgroundColor: `${CHOICE_COLORS[i % CHOICE_COLORS.length]}20`,
-              border: `2px solid ${CHOICE_COLORS[i % CHOICE_COLORS.length]}`,
-              color: CHOICE_COLORS[i % CHOICE_COLORS.length],
-            }}
-          >
-            {theme.icons?.useEmoji && <span>✨</span>}
-            {truncateChoicePreview(choice.text, `Choix ${i + 1}`)}
-          </span>
-        ))}
-        {choices.length > 3 && (
-          <span style={{ fontSize: `${NODE_FONT.badge}px`, color: textColor, opacity: 0.7, padding: '4px 8px' }}>
-            +{choices.length - 3}
-          </span>
-        )}
-      </div>
+      {/* Choices — Blender-style full-width rows or legacy badges */}
+      {choices.length > 0 && (
+        themeColors.headerBg ? (
+          // Blender theme: full-width rows with colored dot + full text
+          <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}25` }}>
+            {choices.map((choice, i) => {
+              const dotColor = CHOICE_COLORS[i % CHOICE_COLORS.length];
+              return (
+                <div
+                  key={choice.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '5px 2px',
+                    borderBottom: i < choices.length - 1 ? `1px solid ${borderColor}15` : undefined,
+                  }}
+                >
+                  <span style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    backgroundColor: dotColor,
+                    flexShrink: 0,
+                    boxShadow: `0 0 5px ${dotColor}80`,
+                  }} />
+                  <span style={{ fontSize: 12, color: textColor, flex: 1, lineHeight: 1.4 }}>
+                    {truncate(choice.text, 42, `Choix ${i + 1}`)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // Legacy themes: badge layout
+          <div style={CHOICE_PREVIEW_CONTAINER_STYLE}>
+            {choices.slice(0, 3).map((choice, i) => (
+              <span
+                key={choice.id}
+                style={{
+                  ...CHOICE_BADGE_BASE_STYLE,
+                  backgroundColor: `${CHOICE_COLORS[i % CHOICE_COLORS.length]}20`,
+                  border: `2px solid ${CHOICE_COLORS[i % CHOICE_COLORS.length]}`,
+                  color: CHOICE_COLORS[i % CHOICE_COLORS.length],
+                }}
+              >
+                {theme.icons?.useEmoji && <span>✨</span>}
+                {truncateChoicePreview(choice.text, `Choix ${i + 1}`)}
+              </span>
+            ))}
+            {choices.length > 3 && (
+              <span style={{ fontSize: `${NODE_FONT.badge}px`, color: textColor, opacity: 0.7, padding: '4px 8px' }}>
+                +{choices.length - 3}
+              </span>
+            )}
+          </div>
+        )
+      )}
 
       {/* Y-shape indicator */}
       <div

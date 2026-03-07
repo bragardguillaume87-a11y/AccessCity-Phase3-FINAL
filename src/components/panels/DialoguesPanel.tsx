@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus, MessageSquare, Sparkles, Network } from 'lucide-react';
+import { Plus, MessageSquare } from 'lucide-react';
+
 import { Button } from '../ui/button';
 import { useUIStore } from '@/stores';
-import { useIsKidMode } from '@/hooks/useIsKidMode';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneWithElements } from '@/stores/selectors';
 import { useSelectionStore } from '@/stores/selectionStore';
@@ -32,8 +32,7 @@ export function DialoguesPanel({
   onDialogueSelect,
 }: DialoguesPanelProps) {
   const selectedSceneForEdit = useUIStore(state => state.selectedSceneForEdit);
-  const isKid = useIsKidMode();
-  const selectedScene = useSceneWithElements(selectedSceneForEdit);
+const selectedScene = useSceneWithElements(selectedSceneForEdit);
   const reorderDialogues = useDialoguesStore(state => state.reorderDialogues);
   const addDialogue = useDialoguesStore(state => state.addDialogue);
   const selectedElement = useSelectionStore(state => state.selectedElement);
@@ -50,10 +49,6 @@ export function DialoguesPanel({
   // DialogueWizard state from UIStore
   const setWizardOpen = useUIStore(state => state.setDialogueWizardOpen);
   const setEditDialogueIndex = useUIStore(state => state.setDialogueWizardEditIndex);
-
-  // DialogueGraph modal state from UIStore
-  const setGraphModalOpen = useUIStore(state => state.setDialogueGraphModalOpen);
-  const setGraphSelectedScene = useUIStore(state => state.setDialogueGraphSelectedScene);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -94,12 +89,6 @@ export function DialoguesPanel({
   const handleEditWithWizard = (index: number) => {
     setEditDialogueIndex(index);
     setWizardOpen(true);
-  };
-
-  const handleOpenGraphModal = () => {
-    if (!selectedScene) return;
-    setGraphSelectedScene(selectedScene.id);
-    setGraphModalOpen(true);
   };
 
   if (!selectedScene) {
@@ -167,53 +156,17 @@ export function DialoguesPanel({
         )}
       </div>
 
-      {/* Footer — simplifié en mode kid, complet en mode pro */}
+      {/* Footer — bouton unifié dans les deux modes */}
       <div className="flex-shrink-0 p-3 border-t-2 border-[var(--color-border-base)]">
-        {isKid ? (
-          // Mode Élève : un seul bouton proéminent
-          <Button
-            variant="gaming-primary"
-            size="kid"
-            onClick={handleAddDialogue}
-            className="w-full"
-          >
-            <Plus className="w-5 h-5 mr-2" aria-hidden="true" />
-            Nouveau dialogue
-          </Button>
-        ) : (
-          // Mode Avancé : tous les boutons
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Button
-                variant="token-primary"
-                size="sm"
-                onClick={handleOpenWizard}
-                className="flex-1"
-              >
-                <Sparkles className="w-4 h-4 mr-2" aria-hidden="true" />
-                Assistant Dialogue
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddDialogue}
-                className="flex-1"
-              >
-                <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
-                Mode Expert
-              </Button>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenGraphModal}
-              className="w-full"
-            >
-              <Network className="w-4 h-4 mr-2" aria-hidden="true" />
-              Vue Graphe (Éditeur Nodal)
-            </Button>
-          </div>
-        )}
+        <Button
+          variant="gaming-primary"
+          size="kid"
+          onClick={handleOpenWizard}
+          className="w-full"
+        >
+          <Plus className="w-5 h-5 mr-2" aria-hidden="true" />
+          Nouveau dialogue
+        </Button>
       </div>
     </div>
   );

@@ -225,6 +225,22 @@ function groupNodesWithBranchAwareness(
 ): GraphNode[][] {
   const sorted = sortByDialogueIndex(nodes);
 
+  // Pre-compute dice response IDs: nodes targeted by diceCheck success/failure branches
+  // (these may lack isResponse:true on their dialogue object in hand-written data)
+  const diceResponseIds = new Set<string>();
+  sorted.forEach(node => {
+    const data = node.data as DialogueNodeData;
+    data.choices?.forEach(choice => {
+      if (choice.diceCheck) {
+        if (choice.diceCheck.success?.nextDialogueId) diceResponseIds.add(choice.diceCheck.success.nextDialogueId);
+        if (choice.diceCheck.failure?.nextDialogueId) diceResponseIds.add(choice.diceCheck.failure.nextDialogueId);
+      }
+    });
+  });
+
+  const isResponseNode = (data: DialogueNodeData) =>
+    !!(data.dialogue?.isResponse || (data.dialogue?.id && diceResponseIds.has(data.dialogue.id)));
+
   // Step 1: Build clusters (groups of related nodes)
   const clusters: GraphNode[][] = [];
   let i = 0;
@@ -240,7 +256,7 @@ function groupNodesWithBranchAwareness(
       let j = i + 1;
       while (j < sorted.length) {
         const nextData = sorted[j].data as DialogueNodeData;
-        if (nextData.dialogue?.isResponse) {
+        if (isResponseNode(nextData)) {
           cluster.push(sorted[j]);
           j++;
         } else {
@@ -249,7 +265,7 @@ function groupNodesWithBranchAwareness(
       }
       clusters.push(cluster);
       i = j;
-    } else if (data.dialogue?.isResponse) {
+    } else if (isResponseNode(data)) {
       // Orphan response (shouldn't happen, but handle gracefully):
       // attach to previous cluster if possible, else make standalone
       if (clusters.length > 0) {

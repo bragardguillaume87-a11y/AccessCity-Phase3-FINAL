@@ -85,7 +85,7 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
                     aria-pressed={isActive}
                     aria-label={label}
                   >
-                    <Icon size={20} aria-hidden="true" />
+                    <Icon size={22} aria-hidden="true" />
                     <span>{label}</span>
                   </button>
                 </Tooltip.Trigger>

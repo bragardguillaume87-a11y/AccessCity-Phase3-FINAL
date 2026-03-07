@@ -113,7 +113,7 @@ function SceneCard({
         }
       }}
     >
-      {/* Thumbnail 96px */}
+      {/* ── Zone image principale ── */}
       <div className="scene-thumb">
         {hasBackground ? (
           <img
@@ -126,13 +126,15 @@ function SceneCard({
           <div className={bgClass} />
         )}
 
-        {/* Overlay gradient bas→transparent */}
+        {/* Gradient overlay */}
         <div className="scene-overlay" aria-hidden="true" />
 
-        {/* Numéro de scène — top-left */}
-        <span className="scene-num">{index + 1}</span>
+        {/* Numéro — badge prominent top-left */}
+        <span className="scene-num" aria-hidden="true">
+          {String(index + 1).padStart(2, '0')}
+        </span>
 
-        {/* Indicateur actif — top-right (pulse violet) */}
+        {/* Pulse actif — top-right */}
         {isSelected && <div className="scene-pulse" aria-hidden="true" />}
 
         {/* Badge cinématique OU color dot */}
@@ -174,18 +176,7 @@ function SceneCard({
           </>
         )}
 
-        {/* Silhouettes personnages */}
-        {charactersCount > 0 && (
-          <div className="scene-chars" aria-hidden="true">
-            <div className="scene-char sc1" />
-            {charactersCount > 1 && <div className="scene-char sc2" />}
-          </div>
-        )}
-
-        {/* Compteur de dialogues — bas droite */}
-        <span className="scene-dial-count">{dialogueCount} dial.</span>
-
-        {/* Actions au survol */}
+        {/* Actions au survol — top-right */}
         <div className="scene-actions">
           {isCinematic && onOpenCinematic && (
             <button
@@ -219,10 +210,12 @@ function SceneCard({
         </div>
       </div>
 
-      {/* Footer — pastille couleur + titre */}
+      {/* ── Footer : couleur + nom + infos ── */}
       <div className="scene-footer">
         <div className="scene-color-label" style={{ background: sceneColor }} />
         <span className="scene-name">{scene.title}</span>
+        <span className="scene-meta">{dialogueCount} dial.</span>
+        {charactersCount > 0 && <span className="scene-meta">· {charactersCount} perso.</span>}
       </div>
     </div>
   )
@@ -412,7 +405,7 @@ export default function ScenesSidebar({
       {/* Filmstrip — position:relative pour le SVG NarrativeThreads en absolu */}
       <div
         ref={filmstripRef}
-        className="flex-1 overflow-y-auto p-2"
+        className="flex-1 overflow-y-auto px-4 py-3"
         style={{ position: 'relative' }}
         role="list"
         aria-label={`${scenes.length} scènes`}
@@ -456,6 +449,7 @@ export default function ScenesSidebar({
           </SortableContext>
         </DndContext>
       </div>
+
     </div>
   )
 }

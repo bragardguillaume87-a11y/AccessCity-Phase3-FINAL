@@ -1,4 +1,4 @@
-import { Trash2, Copy, Workflow, ArrowDown, ArrowRight, Undo2, Redo2 } from 'lucide-react';
+import { Trash2, Copy, Workflow, ArrowDown, ArrowRight, Undo2, Redo2, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SerpentineControls } from './SerpentineControls'; // SERP-6: Serpentine layout controls
 import { ProModeControls } from './ProModeControls';
@@ -43,6 +43,12 @@ export interface DialogueGraphToolbarProps {
   canRedo: boolean;
   /** Is the properties panel currently open? Adjusts toolbar position */
   isPanelOpen?: boolean;
+  /** Number of integrity issues found (shows badge on bell) */
+  integrityIssueCount?: number;
+  /** Callback when bell is clicked */
+  onToggleIntegrityPanel?: () => void;
+  /** Whether the integrity panel is currently open */
+  integrityPanelOpen?: boolean;
 }
 
 export function DialogueGraphToolbar({
@@ -57,6 +63,9 @@ export function DialogueGraphToolbar({
   canUndo,
   canRedo,
   isPanelOpen = false,
+  integrityIssueCount = 0,
+  onToggleIntegrityPanel,
+  integrityPanelOpen = false,
 }: DialogueGraphToolbarProps) {
   return (
     <div
@@ -174,6 +183,33 @@ export function DialogueGraphToolbar({
 
       {/* Pro Mode Controls */}
       <ProModeControls />
+
+      {/* Séparateur visuel */}
+      <div className="h-6 w-px bg-border" aria-hidden="true" />
+
+      {/* Integrity checker bell */}
+      {onToggleIntegrityPanel && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleIntegrityPanel}
+          title="Cherche les oublis"
+          aria-label="Vérifier les éléments incomplets ou vides"
+          aria-pressed={integrityPanelOpen}
+          className={`relative hover:bg-accent transition-colors ${integrityPanelOpen ? 'bg-accent' : ''}`}
+        >
+          <Bell className={`w-4 h-4 ${integrityIssueCount > 0 ? 'text-orange-400' : ''}`} aria-hidden="true" />
+          {integrityIssueCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none"
+              aria-label={`${integrityIssueCount} oublis`}
+            >
+              {integrityIssueCount > 9 ? '9+' : integrityIssueCount}
+            </span>
+          )}
+          <span className="ml-2 text-xs font-medium">Oublis</span>
+        </Button>
+      )}
 
     </div>
   );

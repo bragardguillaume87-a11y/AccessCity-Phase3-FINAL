@@ -9,8 +9,9 @@
  *   - Sons UI : typewriter, boutons, transitions
  */
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { RotateCcw } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
 import { useSettingsStore, DEFAULT_CHARACTER_FX } from '@/stores/settingsStore';
 import type { CharacterFxSettings } from '@/stores/settingsStore';
 
@@ -57,13 +58,22 @@ function EffectCard({ emoji, label, description, enabled, onToggle, children }: 
   return (
     <div className="sp-track">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[13px] font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-          <span aria-hidden="true">{emoji}</span>
-          {label}
-        </span>
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <span className="text-[12px] font-semibold text-[var(--color-text-secondary)] flex items-center gap-1.5 cursor-help select-none">
+              <span aria-hidden="true">{emoji}</span>
+              {label}
+            </span>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content side="top" className="toolbar-tooltip" sideOffset={6}>
+              {description}
+              <Tooltip.Arrow className="toolbar-tooltip-arrow" />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
         <IosToggle enabled={enabled} onToggle={onToggle} label={label} />
       </div>
-      <p className="text-[11px] text-[var(--color-text-muted)] mb-2">{description}</p>
       {children}
     </div>
   );
@@ -120,6 +130,7 @@ export function EffectsSection() {
   }, [setFx, setUiSoundsVolume]);
 
   return (
+    <Tooltip.Provider delayDuration={400}>
     <section className="sp-sec">
 
       <EffectCard
@@ -202,5 +213,6 @@ export function EffectsSection() {
       </button>
 
     </section>
+    </Tooltip.Provider>
   );
 }

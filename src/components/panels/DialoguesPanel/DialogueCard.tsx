@@ -173,7 +173,7 @@ export function DialogueCard({
       ref={setNodeRef}
       style={style}
       data-dialogue-id={`${sceneId}-${index}`}
-      className={`group relative ${cardBg} border rounded-lg px-3 py-2.5 transition-all cursor-pointer hover:shadow-[var(--shadow-game-glow)] ${borderCls}`}
+      className={`group relative ${cardBg} border rounded-lg transition-all cursor-pointer hover:shadow-[var(--shadow-game-glow)] ${borderCls}`}
       onClick={handleClick}
       role="button"
       tabIndex={0}
@@ -191,76 +191,81 @@ export function DialogueCard({
         <GripVertical className={`w-3.5 h-3.5 ${isSelected ? 'text-white/50' : 'text-[var(--color-text-muted)]'}`} />
       </div>
 
-      {/* ── Contenu ────────────────────────────────────────────────────── */}
-      <div className="ml-4">
+      {/* ── Layout principal : colonne gauche + contenu ─────────────────── */}
+      <div className="flex items-stretch pl-5 pr-2 py-2">
 
-        {/* Ligne 1 : speaker dot + nom + index */}
-        <div className="flex items-center gap-1.5 mb-1 min-w-0">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isSelected ? 'bg-white/80' : speakerBg}`} aria-hidden="true" />
-          <span className={`${isKid ? 'text-[15px]' : 'text-[13px]'} font-semibold truncate flex-1 leading-tight ${isSelected ? 'text-white' : 'text-[var(--color-text-primary)]'}`}>
-            {speakerName}
-          </span>
-          {isResponse && (
-            <span className={`flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded border flex-shrink-0 ${
-              isSelected
-                ? 'border-white/40 text-white'
-                : responseIndex === 0
-                  ? 'border-emerald-500/60 text-emerald-400'
-                  : 'border-rose-500/60 text-rose-400'
-            }`}>
-              <MessageCircleReply className="w-3 h-3" aria-hidden="true" />
-              {responseIndex === 0 ? 'A' : 'B'}
-            </span>
-          )}
-          <span className={`text-xs font-bold tabular-nums flex-shrink-0 px-1.5 py-0.5 rounded-md border ${
-            isSelected
-              ? 'bg-white/20 text-white border-white/30'
-              : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] border-[var(--color-border-base)]'
-          }`}>
+        {/* Colonne gauche : numéro + pastille speaker */}
+        <div className="flex flex-col items-center justify-center gap-1.5 w-7 flex-shrink-0 mr-2">
+          <span className={`text-[11px] font-bold tabular-nums leading-none ${isSelected ? 'text-white/60' : 'text-[var(--color-text-muted)]'}`}>
             {String(index + 1).padStart(2, '0')}
           </span>
+          <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white/70' : speakerBg}`} aria-hidden="true" />
         </div>
 
-        {/* Ligne 2 : texte (2 lignes max) */}
-        <p className={`${isKid ? 'text-[15px]' : 'text-[13px]'} line-clamp-2 leading-snug mb-1.5 ${isSelected ? 'text-white/90' : 'text-[var(--color-text-secondary)]'}`}>
-          {dialogue.text || '(vide)'}
-        </p>
+        {/* Contenu principal */}
+        <div className="flex-1 min-w-0">
 
-        {/* Ligne 3 : badge type + actions */}
-        <div className="flex items-center justify-between gap-1">
-          <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border min-w-0 ${isSelected ? 'border-white/30 text-white/80' : typeInfo.colorClass}`}>
-            {typeInfo.icon}
-            {typeInfo.label}
-          </span>
+          {/* Ligne 1 : speaker + badge réponse */}
+          <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
+            <span className={`${isKid ? 'text-[15px]' : 'text-[12px]'} font-semibold truncate flex-1 leading-tight ${isSelected ? 'text-white' : 'text-[var(--color-text-primary)]'}`}>
+              {speakerName}
+            </span>
+            {isResponse && (
+              <span className={`flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded border flex-shrink-0 ${
+                isSelected
+                  ? 'border-white/40 text-white'
+                  : responseIndex === 0
+                    ? 'border-emerald-500/60 text-emerald-400'
+                    : 'border-rose-500/60 text-rose-400'
+              }`}>
+                <MessageCircleReply className="w-3 h-3" aria-hidden="true" />
+                {responseIndex === 0 ? 'A' : 'B'}
+              </span>
+            )}
+          </div>
 
-          <div className="flex gap-1 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`${isKid ? 'h-9 w-9' : 'h-7 w-7'} ${isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'hover:text-primary hover:bg-primary/10'}`}
-              onClick={e => { e.stopPropagation(); onEditWithWizard?.(index); }}
-              aria-label="Modifier avec l'assistant"
-            >
-              <Wand2 className={isKid ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`${isKid ? 'h-9 w-9' : 'h-7 w-7'} ${isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'hover:bg-[var(--color-bg-hover)]'}`}
-              onClick={handleDuplicate}
-              aria-label="Dupliquer"
-            >
-              <Copy className={isKid ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`${isKid ? 'h-9 w-9' : 'h-7 w-7'} ${isSelected ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-red-500 hover:text-red-400 hover:bg-red-500/10'}`}
-              onClick={handleDelete}
-              aria-label="Supprimer"
-            >
-              <Trash2 className={isKid ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
-            </Button>
+          {/* Ligne 2 : texte (2 lignes max) */}
+          <p className={`${isKid ? 'text-[14px]' : 'text-[12px]'} line-clamp-2 leading-snug mb-1 ${isSelected ? 'text-white/90' : 'text-[var(--color-text-secondary)]'}`}>
+            {dialogue.text || '(vide)'}
+          </p>
+
+          {/* Ligne 3 : badge type + actions (hover seulement) */}
+          <div className="flex items-center justify-between gap-1">
+            <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border min-w-0 ${isSelected ? 'border-white/30 text-white/80' : typeInfo.colorClass}`}>
+              {typeInfo.icon}
+              {typeInfo.label}
+            </span>
+
+            {/* Actions : visibles seulement au survol (toujours en mode kid ou sélectionné) */}
+            <div className={`flex gap-1 flex-shrink-0 transition-opacity duration-150 ${isSelected || isKid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isKid ? 'h-9 w-9' : 'h-6 w-6'} ${isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'hover:text-primary hover:bg-primary/10'}`}
+                onClick={e => { e.stopPropagation(); onEditWithWizard?.(index); }}
+                aria-label="Modifier avec l'assistant"
+              >
+                <Wand2 className={isKid ? 'w-4 h-4' : 'w-3 h-3'} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isKid ? 'h-9 w-9' : 'h-6 w-6'} ${isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'hover:bg-[var(--color-bg-hover)]'}`}
+                onClick={handleDuplicate}
+                aria-label="Dupliquer"
+              >
+                <Copy className={isKid ? 'w-4 h-4' : 'w-3 h-3'} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isKid ? 'h-9 w-9' : 'h-6 w-6'} ${isSelected ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-red-500 hover:text-red-400 hover:bg-red-500/10'}`}
+                onClick={handleDelete}
+                aria-label="Supprimer"
+              >
+                <Trash2 className={isKid ? 'w-4 h-4' : 'w-3 h-3'} />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

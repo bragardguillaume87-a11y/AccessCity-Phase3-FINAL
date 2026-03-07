@@ -31,6 +31,12 @@ interface NodeHandlesProps {
   showLinkEmoji?: boolean;
   /** Position for choice handles (from layout hook) */
   choiceHandlePosition?: Position;
+  /** Color for input (target) handles — defaults to color */
+  inputColor?: string;
+  /** Color for output (source) handles — defaults to color */
+  outputColor?: string;
+  /** Opacity for handles (0–1). Default 0.2 (legacy). Use 0.85 for always-visible Blender style. */
+  handleOpacity?: number;
 }
 
 /** Handle positions for horizontal/vertical centering */
@@ -50,6 +56,9 @@ export const NodeHandles = React.memo(function NodeHandles({
   choices,
   showLinkEmoji = false,
   choiceHandlePosition = Position.Right,
+  inputColor,
+  outputColor,
+  handleOpacity = 0.2,
 }: NodeHandlesProps) {
   const boxShadow = showDragIndicators
     ? '0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)'
@@ -63,6 +72,10 @@ export const NodeHandles = React.memo(function NodeHandles({
         // SERP-FIX handles (left-out, right-in) don't need boxShadow or drag indicators
         const isSerpFix = handleDef.id === HANDLE_ID.LEFT_OUT || handleDef.id === HANDLE_ID.RIGHT_IN;
 
+        const handleColor = handleDef.type === 'target'
+          ? (inputColor ?? color)
+          : (outputColor ?? color);
+
         return (
           <Handle
             key={handleDef.id}
@@ -72,12 +85,12 @@ export const NodeHandles = React.memo(function NodeHandles({
             className="react-flow__handle-hover"
             style={{
               ...posStyle,
-              background: color,
+              background: handleColor,
               width: `${handleSize}px`,
               height: `${handleSize}px`,
               border: `${borderWidth}px solid ${bgColor}`,
               boxShadow: isSerpFix ? undefined : boxShadow,
-              opacity: 0.2,
+              opacity: handleOpacity,
               transition: 'all 0.2s ease',
             }}
             aria-label={getHandleAriaLabel(handleDef.id)}

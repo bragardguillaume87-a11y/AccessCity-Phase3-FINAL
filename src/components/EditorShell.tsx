@@ -147,8 +147,10 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     if (fullscreenMode) return 0;
     if (activeSection !== null) return PANEL_WIDTHS.CONTENT_SECTION;
     // Panel 3 visible uniquement si un élément canvas est sélectionné (PropertiesPanel).
-    // Sinon il se ferme — AnimatePresence joue l'animation exit width→0.
-    const hasElement = selectedElement && selectedElement.type !== null && selectedElement.type !== 'scene';
+    // Les dialogues sont édités inline dans le panel gauche — pas de panel 3 pour eux.
+    const hasElement = selectedElement && selectedElement.type !== null
+      && selectedElement.type !== 'scene'
+      && selectedElement.type !== 'dialogue';
     if (hasElement) return PANEL_WIDTHS.CONTENT_PROPERTIES;
     return 0;
   }, [fullscreenMode, activeSection, selectedElement]);
@@ -206,8 +208,10 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const handleTabChange = (tab: 'scenes' | 'dialogues') => {
     setLeftPanelActiveTab(tab);
     editorLogic.handleTabChange(tab);
-    // ⚠️ Ne pas appeler leftPanelRef.resize() ici — cela écrase le redimensionnement manuel
-    // de l'utilisateur. La largeur est contrôlée par react-resizable-panels (minSize=260px).
+    // Redimensionnement automatique selon l'onglet — animé via transition CSS sur flex-basis.
+    // Scènes = compact (240px), Dialogues = largeur confortable (300px).
+    const targetWidth = tab === 'dialogues' ? PANEL_WIDTHS.LEFT_DIALOGUES : PANEL_WIDTHS.LEFT_DEFAULT;
+    leftPanelRef.current?.resize(targetWidth);
   };
 
   // handleOpenModal reste nécessaire pour PropertiesPanel (prop) et le cas graph (spécial)
@@ -337,13 +341,14 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               minSize={PANEL_MIN_WIDTHS.LEFT}
               collapsible={true}
               collapsedSize={0}
-              className="bg-card border-r border-border overflow-y-auto"
+              className="bg-card border-r border-border overflow-hidden"
+              style={{ transition: 'flex-basis 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}
               id="explorer-panel"
               role="complementary"
               aria-label="Explorateur de scènes et personnages"
             >
               <h3 className="sr-only">Explorateur de scènes</h3>
-              <Sidebar>
+              <Sidebar className="h-full">
                 <ErrorBoundary name="LeftPanel">
                   <LeftPanel
                     activeTab={leftPanelActiveTab}
@@ -445,11 +450,6 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         </React.Suspense>
       </main>
 
-      <footer className="bg-card border-t border-border flex-shrink-0">
-        <div className="px-6 py-2 text-center text-xs text-muted-foreground">
-          AccessCity Studio - Accessible scenario editor
-        </div>
-      </footer>
 
       {/* Modales — activeModal et modalContext lus depuis uiStore */}
       <React.Suspense fallback={null}>

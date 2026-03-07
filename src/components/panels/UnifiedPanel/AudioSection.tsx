@@ -1,11 +1,108 @@
 import { useCallback, useRef, useState } from 'react';
-import { Music, Library, Play, Square, Trash2, RefreshCw, AlertCircle, Wind } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, Music, Library, Play, Square, Trash2, RefreshCw, AlertCircle, Wind } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { SfxGeneratorPanel } from './SfxGeneratorPanel';
 import type { SceneAudio, AmbientAudio } from '@/types/audio';
+
+// ============================================================================
+// COLLAPSIBLE SECTION
+// ============================================================================
+
+interface CollapsibleSectionProps {
+  title: string;
+  badge?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  id: string;
+}
+
+function CollapsibleSection({ title, badge, defaultOpen = true, children, id }: CollapsibleSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = `${id}-panel`;
+  return (
+    <section className="sp-sec">
+      <button
+        className="sp-lbl w-full"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+      >
+        <span>{title}</span>
+        {badge && (
+          <span className="ml-2 text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full normal-case tracking-normal">
+            {badge}
+          </span>
+        )}
+        <ChevronDown
+          size={12}
+          aria-hidden="true"
+          style={{
+            marginLeft: 'auto',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.18s ease',
+            flexShrink: 0,
+          }}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={panelId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="pt-2">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+// ============================================================================
+// ICON BUTTON WITH TOOLTIP
+// ============================================================================
+
+interface IconBtnProps {
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  variant?: 'default' | 'active' | 'danger';
+  className?: string;
+}
+
+function IconBtn({ onClick, icon, label, variant = 'default', className = '' }: IconBtnProps) {
+  const base = 'p-1.5 rounded-lg border transition-all flex items-center justify-center';
+  const variants: Record<string, string> = {
+    default: 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]',
+    active:  'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]',
+    danger:  'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40',
+  };
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <button onClick={onClick} className={`${base} ${variants[variant]} ${className}`} aria-label={label}>
+          {icon}
+        </button>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content side="top" className="toolbar-tooltip" sideOffset={6}>
+          {label}
+          <Tooltip.Arrow className="toolbar-tooltip-arrow" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
 
 // ============================================================================
 // TYPES
@@ -124,39 +221,30 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
 
       {/* Actions : Écouter | Changer | Supprimer */}
       <div className="flex gap-2 mb-0">
-        <button
+        <IconBtn
           onClick={handlePreview}
-          className={[
-            'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border transition-all',
-            isPlaying
-              ? 'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]'
-              : playError
-                ? 'bg-red-500/10 border-red-500/40 text-red-400'
-                : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]',
-          ].join(' ')}
-          aria-label={isPlaying ? 'Arrêter la lecture' : 'Écouter un extrait'}
-        >
-          {playError
-            ? <><AlertCircle className="w-3 h-3" aria-hidden="true" /> Erreur</>
+          icon={playError
+            ? <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
             : isPlaying
-              ? <><Square className="w-3 h-3" aria-hidden="true" /> Arrêter</>
-              : <><Play className="w-3 h-3" aria-hidden="true" /> Écouter</>
+              ? <Square className="w-3.5 h-3.5" aria-hidden="true" />
+              : <Play className="w-3.5 h-3.5" aria-hidden="true" />
           }
-        </button>
-        <button
+          label={playError ? 'Erreur de lecture' : isPlaying ? 'Arrêter' : 'Écouter'}
+          variant={isPlaying ? 'active' : 'default'}
+          className="flex-1"
+        />
+        <IconBtn
           onClick={onOpenLibrary}
-          className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border border-[var(--color-border-base)] bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-all"
-          aria-label="Changer de musique"
-        >
-          <RefreshCw className="w-3 h-3" aria-hidden="true" /> Changer
-        </button>
-        <button
+          icon={<RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />}
+          label="Changer de musique"
+          className="flex-1"
+        />
+        <IconBtn
           onClick={onRemove}
-          className="p-1.5 rounded-lg border border-[var(--color-border-base)] bg-[var(--color-bg-base)] text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40 transition-colors"
-          aria-label="Supprimer la musique"
-        >
-          <Trash2 className="w-3 h-3" aria-hidden="true" />
-        </button>
+          icon={<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
+          label="Supprimer la musique"
+          variant="danger"
+        />
       </div>
 
       {/* Durée — segmented control */}
@@ -194,11 +282,8 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
         )}
       </div>
 
-      {/* Options — toggles iOS */}
+      {/* Toggles */}
       <div className="mt-3 space-y-2">
-        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
-          Options
-        </p>
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--color-text-secondary)]">Musique en boucle</span>
           <IosToggle
@@ -306,24 +391,18 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
         className="sp-slider mb-2"
         aria-label={`Volume ambiance ${slot + 1} : ${Math.round(volume * 100)} %`}
       />
-      <button
+      <IconBtn
         onClick={handlePreview}
-        className={[
-          'w-full flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border transition-all',
-          isPlaying
-            ? 'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]'
-            : playError
-              ? 'bg-red-500/10 border-red-500/40 text-red-400'
-              : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40',
-        ].join(' ')}
-      >
-        {playError
-          ? <><AlertCircle className="w-3 h-3" aria-hidden="true" /> Fichier introuvable</>
+        icon={playError
+          ? <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
           : isPlaying
-            ? <><Square className="w-3 h-3" aria-hidden="true" /> Arrêter</>
-            : <><Play className="w-3 h-3" aria-hidden="true" /> Écouter</>
+            ? <Square className="w-3.5 h-3.5" aria-hidden="true" />
+            : <Play className="w-3.5 h-3.5" aria-hidden="true" />
         }
-      </button>
+        label={playError ? 'Fichier introuvable' : isPlaying ? 'Arrêter' : 'Écouter l\'ambiance'}
+        variant={isPlaying ? 'active' : 'default'}
+        className="w-full"
+      />
     </div>
   );
 }
@@ -387,66 +466,63 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   }
 
   return (
-    <div>
+    <Tooltip.Provider delayDuration={400}>
+      <div>
 
-      {/* === Musique de fond === */}
-      <section className="sp-sec" aria-labelledby="audio-bgm-heading">
-        <h3 id="audio-bgm-heading" className="sp-lbl">MUSIQUE DE FOND</h3>
-        {audio?.url ? (
-          <MusicControls
-            audio={audio}
-            onUpdate={handleBgmUpdate}
-            onRemove={handleBgmRemove}
-            onOpenLibrary={handleOpenMusicLibrary}
-          />
-        ) : (
-          <button
-            onClick={handleOpenMusicLibrary}
-            className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2.5 px-3 rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity"
-            aria-label="Parcourir la bibliothèque musicale"
-          >
-            <Library className="w-4 h-4" aria-hidden="true" />
-            Parcourir la bibliothèque
-          </button>
-        )}
-      </section>
-
-      {/* === Ambiance sonore === */}
-      <section className="sp-sec" aria-labelledby="audio-ambient-heading">
-        <h3 id="audio-ambient-heading" className="sp-lbl">
-          AMBIANCE SONORE
-          {ambientCount > 0 && (
-            <span className="ml-auto text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full normal-case tracking-normal">
-              {ambientCount} piste{ambientCount > 1 ? 's' : ''}
-            </span>
-          )}
-        </h3>
-        <div className="space-y-2">
-          <AmbientTrackSlot
-            slot={0}
-            track={ambientTracks?.[0]}
-            onUpdate={(patch) => handleAmbientUpdate(0, patch)}
-            onRemove={() => handleAmbientRemove(0)}
-            onOpenLibrary={() => handleOpenAmbientLibrary(0)}
-          />
-          {ambientTracks?.[0] && (
-            <AmbientTrackSlot
-              slot={1}
-              track={ambientTracks?.[1]}
-              onUpdate={(patch) => handleAmbientUpdate(1, patch)}
-              onRemove={() => handleAmbientRemove(1)}
-              onOpenLibrary={() => handleOpenAmbientLibrary(1)}
+        {/* === Musique de fond === */}
+        <CollapsibleSection title="MUSIQUE DE FOND" id="audio-bgm" defaultOpen>
+          {audio?.url ? (
+            <MusicControls
+              audio={audio}
+              onUpdate={handleBgmUpdate}
+              onRemove={handleBgmRemove}
+              onOpenLibrary={handleOpenMusicLibrary}
             />
+          ) : (
+            <button
+              onClick={handleOpenMusicLibrary}
+              className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2.5 px-3 rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity"
+              aria-label="Parcourir la bibliothèque musicale"
+            >
+              <Library className="w-4 h-4" aria-hidden="true" />
+              Parcourir la bibliothèque
+            </button>
           )}
-        </div>
-      </section>
+        </CollapsibleSection>
 
-      {/* === Générateur SFX 8-bit === */}
-      <section className="sp-sec" aria-labelledby="audio-sfx-heading">
-        <h3 id="audio-sfx-heading" className="sp-lbl">GÉNÉRATEUR SFX 8-BIT</h3>
-        <SfxGeneratorPanel />
-      </section>
+        {/* === Ambiance sonore === */}
+        <CollapsibleSection
+          title="AMBIANCE SONORE"
+          badge={ambientCount > 0 ? `${ambientCount} piste${ambientCount > 1 ? 's' : ''}` : undefined}
+          id="audio-ambient"
+          defaultOpen
+        >
+          <div className="space-y-2">
+            <AmbientTrackSlot
+              slot={0}
+              track={ambientTracks?.[0]}
+              onUpdate={(patch) => handleAmbientUpdate(0, patch)}
+              onRemove={() => handleAmbientRemove(0)}
+              onOpenLibrary={() => handleOpenAmbientLibrary(0)}
+            />
+            {ambientTracks?.[0] && (
+              <AmbientTrackSlot
+                slot={1}
+                track={ambientTracks?.[1]}
+                onUpdate={(patch) => handleAmbientUpdate(1, patch)}
+                onRemove={() => handleAmbientRemove(1)}
+                onOpenLibrary={() => handleOpenAmbientLibrary(1)}
+              />
+            )}
+          </div>
+        </CollapsibleSection>
 
-    </div>
+        {/* === Générateur SFX 8-bit === */}
+        <CollapsibleSection title="GÉNÉRATEUR SFX 8-BIT" id="audio-sfx" defaultOpen={false}>
+          <SfxGeneratorPanel />
+        </CollapsibleSection>
+
+      </div>
+    </Tooltip.Provider>
   );
 }

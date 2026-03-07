@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertCircle, AlertTriangle, User } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { AlertCircle, AlertTriangle, User, Pencil } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getNodeColorTheme } from '@/hooks/useDialogueGraph';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
@@ -7,6 +7,7 @@ import { COLORS } from '@/config/colors';
 import type { DialogueNodeData, DialogueChoice, ValidationProblem } from '@/types';
 import type { Position } from '@xyflow/react';
 import { truncateNodeText, truncateStageDirections, getIssueStatus } from '@/utils/textHelpers';
+import { useUIStore } from '@/stores';
 import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
 import { SerpentineBadge } from '../SerpentineBadge';
 import { FlowDirectionIndicator } from '../FlowDirectionIndicator';
@@ -74,7 +75,7 @@ export const BaseNode = React.memo(function BaseNode({
   choiceHandlePosition,
   children,
 }: BaseNodeProps): React.JSX.Element {
-  const { index, speaker, text, speakerMood, stageDirections, issues = [] } = data;
+  const { index, speaker, text, speakerMood, stageDirections, issues = [], responseLabel } = data;
   const theme = useGraphTheme();
   const layout = useNodeLayout(data.serpentine, theme);
   const colors = getNodeColorTheme(nodeType, issues);
@@ -82,12 +83,32 @@ export const BaseNode = React.memo(function BaseNode({
   const sizes = theme.sizes;
 
   const avatarUrl = useCharacterAvatar(speaker, speakerMood || 'neutral');
+  const setWizardOpen = useUIStore(s => s.setDialogueWizardOpen);
+  const setEditIndex = useUIStore(s => s.setDialogueWizardEditIndex);
+
+  const handleEditClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditIndex(index);
+    setWizardOpen(true);
+  }, [index, setEditIndex, setWizardOpen]);
 
   const { hasErrors, hasWarnings } = getIssueStatus(issues);
 
-  const bgColor = hasErrors || hasWarnings ? colors.bg : (themeColors.bgGradient || themeColors.bg);
+  const bgColor = themeColors.headerBg
+    ? (hasErrors || hasWarnings ? colors.bg : themeColors.bg)
+    : (hasErrors || hasWarnings ? colors.bg : (themeColors.bgGradient || themeColors.bg));
   const borderColor = hasErrors || hasWarnings ? colors.border : themeColors.border;
+  // Blender-style header: colored strip at top, flush with node edges
+  const headerWrapperStyle: React.CSSProperties = themeColors.headerBg ? {
+    margin: '-12px -12px 10px -12px',
+    padding: '10px 12px',
+    background: hasErrors || hasWarnings ? colors.border : themeColors.headerBg,
+    borderRadius: `${sizes.nodeBorderRadius}px ${sizes.nodeBorderRadius}px 0 0`,
+    display: 'flex', alignItems: 'flex-start', gap: '10px',
+  } : HEADER_ROW_STYLE;
   const textColor = hasErrors || hasWarnings ? colors.text : themeColors.text;
+  // On a colored header (Blender), always use white text for maximum contrast
+  const headerTextColor = themeColors.headerBg ? '#ffffff' : textColor;
   const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
 
   const displayText = truncateNodeText(text);
@@ -141,15 +162,18 @@ export const BaseNode = React.memo(function BaseNode({
         showLinkEmoji={!!theme.interactions?.showDragIndicators}
         choices={choices}
         choiceHandlePosition={choiceHandlePosition}
+        inputColor={themeColors.headerBg ? '#8a9ba8' : undefined}
+        outputColor={themeColors.headerBg ? (themeColors.headerBg) : undefined}
+        handleOpacity={themeColors.headerBg ? 0.85 : 0.2}
       />
 
       {/* Header: Avatar + Speaker + Index */}
-      <div style={HEADER_ROW_STYLE}>
-        <div style={{ ...AVATAR_BASE_STYLE, border: `2px solid ${borderColor}` }}>
+      <div style={headerWrapperStyle}>
+        <div style={{ ...AVATAR_BASE_STYLE, border: `2px solid ${themeColors.headerBg ? 'rgba(255,255,255,0.3)' : borderColor}` }}>
           {avatarUrl ? (
             <img src={avatarUrl} alt={speaker} style={AVATAR_IMG_STYLE} />
           ) : (
-            <User size={20} color={textColor} style={{ opacity: 0.5 }} />
+            <User size={20} color={headerTextColor} style={{ opacity: 0.6 }} />
           )}
         </div>
 
@@ -161,30 +185,52 @@ export const BaseNode = React.memo(function BaseNode({
                   {theme.icons[themeEmojiKey]}
                 </span>
               ) : (
-                <Icon size={14} color={textColor} />
+                <Icon size={14} color={headerTextColor} />
               )}
-              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '600', color: textColor }}>
+              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '700', color: headerTextColor }}>
                 {speaker || 'Narrator'}
               </span>
               {speakerMood && speakerMood !== 'neutral' && (
-                <span style={{ fontSize: `${NODE_FONT.meta}px`, color: textColor, opacity: 0.7, fontStyle: 'italic' }}>
+                <span style={{ fontSize: `${NODE_FONT.meta}px`, color: headerTextColor, opacity: 0.75, fontStyle: 'italic' }}>
                   ({speakerMood})
                 </span>
               )}
             </div>
 
-            <span
-              style={{
-                ...INDEX_BADGE_BASE_STYLE,
-                fontSize: theme.icons?.useEmoji ? '16px' : '15px',
-                color: COLORS.TEXT_DARK,
-                backgroundColor: textColor,
-                padding: theme.icons?.useEmoji ? '4px 12px' : '3px 10px',
-              }}
-            >
-              {theme.icons?.useEmoji && indexBadgeEmoji && <span>{indexBadgeEmoji}</span>}
-              {index + 1}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span
+                style={{
+                  ...INDEX_BADGE_BASE_STYLE,
+                  fontSize: theme.icons?.useEmoji ? '16px' : '15px',
+                  color: themeColors.headerBg ? headerTextColor : COLORS.TEXT_DARK,
+                  backgroundColor: themeColors.headerBg ? 'rgba(0,0,0,0.25)' : textColor,
+                  padding: theme.icons?.useEmoji ? '4px 12px' : '3px 10px',
+                }}
+              >
+                {theme.icons?.useEmoji && indexBadgeEmoji && <span>{indexBadgeEmoji}</span>}
+                {responseLabel ?? (index + 1)}
+              </span>
+              <button
+                onClick={handleEditClick}
+                title="Éditer ce dialogue"
+                style={{
+                  background: 'rgba(0,0,0,0.2)',
+                  border: 'none',
+                  borderRadius: 4,
+                  padding: '3px 5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: headerTextColor,
+                  opacity: 0.7,
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; }}
+              >
+                <Pencil size={11} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -234,6 +280,7 @@ export const BaseNode = React.memo(function BaseNode({
       {theme.shapes?.speechBubbleTail && (
         <SpeechBubbleTail color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg} />
       )}
+
     </div>
   );
 });

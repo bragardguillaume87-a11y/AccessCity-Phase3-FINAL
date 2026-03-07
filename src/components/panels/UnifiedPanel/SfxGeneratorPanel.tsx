@@ -82,10 +82,6 @@ export function SfxGeneratorPanel() {
   return (
     <div className="space-y-3">
 
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Clique un preset pour l'entendre. Télécharge le WAV puis importe-le dans ta bibliothèque.
-      </p>
-
       {/* Grille de presets */}
       <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Presets SFX">
         {PRESETS.map((p) => (

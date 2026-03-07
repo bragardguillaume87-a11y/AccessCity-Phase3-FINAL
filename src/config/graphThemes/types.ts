@@ -14,6 +14,8 @@ export interface NodeColorSet {
   bg: string;
   /** Background gradient (optional, overrides bg) */
   bgGradient?: string;
+  /** Header bar color (optional — if present, renders a colored header strip à la Blender) */
+  headerBg?: string;
   /** Border color */
   border: string;
   /** Text color */

@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo } from 'react';
-import { Image } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Image, ChevronDown } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useAssets } from '@/hooks/useAssets';
 import { useUIStore } from '@/stores/uiStore';
@@ -17,6 +18,50 @@ interface BackgroundsSectionProps {
 
 // ⚠️ Module-level constant — évite `?? {}` inline qui crée une nouvelle référence à chaque render.
 const EMPTY_FILTER: BackgroundFilter = {};
+
+// ============================================================================
+// COLLAPSIBLE SECTION
+// ============================================================================
+
+function CollapsibleSection({ title, id, defaultOpen = true, children }: {
+  title: string;
+  id: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="sp-sec">
+      <button
+        className="sp-lbl w-full flex items-center"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls={`${id}-panel`}
+      >
+        <span className="flex-1">{title}</span>
+        <ChevronDown
+          size={12}
+          aria-hidden="true"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.18s ease' }}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={`${id}-panel`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="pt-2">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
 
 // ============================================================================
 // IOS TOGGLE (inline)
@@ -154,8 +199,7 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
       </section>
 
       {/* === Filtres visuels === */}
-      <section className="sp-sec" aria-labelledby="bg-filters-heading">
-        <h3 id="bg-filters-heading" className="sp-lbl">FILTRES VISUELS</h3>
+      <CollapsibleSection title="FILTRES VISUELS" id="bg-filters" defaultOpen={false}>
 
         {/* Toggle Activer */}
         <div className="flex items-center justify-between mb-3">
@@ -226,7 +270,7 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
             ↩ Réinitialiser les filtres
           </button>
         )}
-      </section>
+      </CollapsibleSection>
 
     </div>
   );

@@ -121,7 +121,7 @@ export default function TopBar({
           </>
         )}
 
-        {/* Réglages + Export — mode pro uniquement */}
+        {/* Réglages — mode pro uniquement */}
         {editorMode === 'pro' && (
           <>
             <div className="topbar-divider" aria-hidden="true" />
@@ -134,20 +134,26 @@ export default function TopBar({
               <Settings size={14} aria-hidden="true" />
               Réglages
             </button>
-            <button
-              className="topbar-nav"
-              onClick={handleOpenExport}
-              title="Exporter le projet"
-              aria-label="Exporter le projet"
-            >
-              <Download size={14} aria-hidden="true" />
-              Exporter
-            </button>
           </>
         )}
 
-        {/* Mode Élève / Avancé — inline topbar-mode dans le center nav */}
+        {/* Aperçu — toujours visible, juste à droite de Réglages */}
         <div className="topbar-divider" aria-hidden="true" />
+        <button
+          className="btn-preview"
+          onClick={handleOpenPreview}
+          title={`${editorMode === 'kid' ? km.preview : 'Aperçu'} (Ctrl+R)`}
+          aria-label={editorMode === 'kid' ? km.preview : 'Prévisualiser le jeu'}
+        >
+          <Play size={14} aria-hidden="true" />
+          {editorMode === 'kid' ? km.preview : 'Aperçu'}
+        </button>
+
+      </nav>
+
+      {/* ── DROITE : Mode + Undo/Redo + Validation + Save + Export ── */}
+      <div className="topbar-right">
+        {/* Mode Élève / Avancé */}
         <div
           className="topbar-mode"
           role="group"
@@ -170,10 +176,8 @@ export default function TopBar({
             {km.proLabel}
           </button>
         </div>
-      </nav>
+        <div className="topbar-sep" aria-hidden="true" />
 
-      {/* ── DROITE : Undo/Redo + Validation + Save + Preview ── */}
-      <div className="topbar-right">
         {/* Undo / Redo */}
         <div role="group" aria-label="Historique" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <button
@@ -235,16 +239,18 @@ export default function TopBar({
           )}
         </div>
 
-        {/* Bouton Preview — toujours visible */}
-        <button
-          className="btn-preview"
-          onClick={handleOpenPreview}
-          title={`${editorMode === 'kid' ? km.preview : 'Aperçu'} (Ctrl+R)`}
-          aria-label={editorMode === 'kid' ? km.preview : 'Prévisualiser le jeu'}
-        >
-          <Play size={14} aria-hidden="true" />
-          {editorMode === 'kid' ? km.preview : 'Aperçu'}
-        </button>
+        {/* Exporter — far right, mode pro uniquement */}
+        {editorMode === 'pro' && (
+          <button
+            className="btn-export"
+            onClick={handleOpenExport}
+            title="Exporter le projet"
+            aria-label="Exporter le projet"
+          >
+            <Download size={14} aria-hidden="true" />
+            Exporter
+          </button>
+        )}
       </div>
     </header>
   )

@@ -12,6 +12,8 @@ import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useIsCosmosTheme, useGraphTheme } from '@/hooks/useGraphTheme';
 import { dialogueNodeId, extractDialogueIndex } from '@/config/handleConfig';
 import { GraphPagination } from './components/GraphPagination';
+import { GraphIntegrityPanel } from './components/GraphIntegrityPanel';
+import { useGraphIntegrityCheck } from '@/hooks/useGraphIntegrityCheck';
 
 // PHASE 4 (Option 4): Lazy load CosmosBackground for bundle optimization
 // Only loaded when Cosmos theme is active (~117KB with canvas-confetti)
@@ -42,6 +44,9 @@ export function DialogueGraphModal() {
 
   // State for auto-layout: increment to force graph recalculation
   const [layoutVersion, setLayoutVersion] = useState(0);
+
+  // Integrity panel visibility
+  const [integrityPanelOpen, setIntegrityPanelOpen] = useState(false);
 
   // PHASE 3.5: State for layout direction (TB = vertical, LR = horizontal)
   // PHASE 3.6: Default to LR (horizontal) for better readability
@@ -183,6 +188,15 @@ export function DialogueGraphModal() {
   // Undo/Redo
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
+  // Graph integrity check
+  const integrityIssues = useGraphIntegrityCheck(selectedScene?.dialogues ?? []);
+  const handleToggleIntegrityPanel = useCallback(() => setIntegrityPanelOpen(v => !v), []);
+  const handleIntegritySelectDialogue = useCallback((dialogueIndex: number) => {
+    if (selectedScene) {
+      setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index: dialogueIndex });
+    }
+  }, [selectedScene]);
+
   // Keyboard shortcuts for undo/redo (Ctrl+Z / Ctrl+Y)
   useEffect(() => {
     if (!isOpen) return;
@@ -268,6 +282,9 @@ export function DialogueGraphModal() {
                 canUndo={canUndo}
                 canRedo={canRedo}
                 isPanelOpen={selectedElement !== null && selectedElement.index !== undefined}
+                integrityIssueCount={integrityIssues.length}
+                onToggleIntegrityPanel={handleToggleIntegrityPanel}
+                integrityPanelOpen={integrityPanelOpen}
               />
 
               {/* PHASE 2: Palette (flottant en haut à gauche) */}
@@ -281,8 +298,8 @@ export function DialogueGraphModal() {
                   transition: 'background-color 0.3s ease',
                 }}
               >
-                {/* PHASE 4: Animated background for Cosmos theme (lazy loaded) */}
-                {isCosmosTheme && (
+                {/* PHASE 4: Animated background for Cosmos + Blender themes (lazy loaded) */}
+                {(isCosmosTheme || theme.background.type === 'animated') && (
                   <Suspense fallback={null}>
                     <CosmosBackground />
                   </Suspense>
@@ -297,6 +314,15 @@ export function DialogueGraphModal() {
                   editMode={true}
                   layoutDirection={effectiveLayoutDirection}
                 />
+
+                {/* Integrity panel */}
+                {integrityPanelOpen && (
+                  <GraphIntegrityPanel
+                    issues={integrityIssues}
+                    onClose={() => setIntegrityPanelOpen(false)}
+                    onSelectDialogue={handleIntegritySelectDialogue}
+                  />
+                )}
 
                 {/* Pro mode: Pagination bar */}
                 {proModeEnabled && proPaginationEnabled && (

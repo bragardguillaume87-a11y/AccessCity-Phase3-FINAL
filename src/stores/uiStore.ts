@@ -271,8 +271,8 @@ export const useUIStore = create<UIState>()(
         // Pro mode state (persisted)
         proModeEnabled: proConfig.enabled,
         proModeDirection: proConfig.direction,
-        proCollapseEnabled: true,  // Clusters collapsed by default in Pro mode
-        proExpandedClusters: [],   // All collapsed initially
+        proCollapseEnabled: false, // Nodes expanded by default — clustering is opt-in
+        proExpandedClusters: [],
         proPaginationEnabled: false,
         proPageSize: 8,
         proCurrentPage: 0,

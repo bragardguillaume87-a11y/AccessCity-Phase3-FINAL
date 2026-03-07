@@ -102,7 +102,7 @@ function DialogueGraphInner({
   );
 
   // Local graph state (nodes + edges + drag/reconnect handlers)
-  const { localNodes, localEdges, onNodesChange, onNodeDragStop, reconnectLocalEdge } =
+  const { localNodes, localEdges, onNodesChange, onEdgesChange, onNodeDragStop, reconnectLocalEdge } =
     useLocalGraphState(dagreNodes, edges, dialogues.length, serpentineEnabled, editMode, recalculateEdges);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -175,13 +175,18 @@ function DialogueGraphInner({
   // Validate connection before allowing it
   const isValidConnection = useCallback(
     (connection: Connection): boolean => {
-      const { source, target } = connection;
+      const { source, target, sourceHandle } = connection;
       if (!source || !target) return false;
       if (source === target) return false;
       if (target.includes('-terminal')) return false;
+      // Choice nodes must only connect via their choice-N handles (not standard right/bottom)
+      const sourceNode = localNodes.find(n => n.id === source);
+      if (sourceNode?.type === 'choiceNode' && !sourceHandle?.startsWith(CHOICE_HANDLE_PREFIX)) {
+        return false;
+      }
       return true;
     },
-    []
+    [localNodes]
   );
 
   // Keyboard navigation (scoped to graph container)
@@ -215,10 +220,18 @@ function DialogueGraphInner({
         onSelectDialogue(sceneId, -1);
         break;
       case 'Delete':
-        if (editMode && selectedNodeId) {
+        if (editMode) {
           event.preventDefault();
-          actions.handleDeleteNode(selectedNodeId);
-          setSelectedNodeId(null);
+          // Delete selected node
+          if (selectedNodeId) {
+            actions.handleDeleteNode(selectedNodeId);
+            setSelectedNodeId(null);
+          }
+          // Delete selected edges (click on edge → Delete)
+          const selectedEdges = localEdges.filter(e => e.selected);
+          if (selectedEdges.length > 0) {
+            actions.handleDeleteEdge(selectedEdges);
+          }
         }
         break;
       case 'd':
@@ -237,7 +250,7 @@ function DialogueGraphInner({
       const targetNodeIndex = (targetNode.data as DialogueNodeData).index;
       if (targetNodeIndex !== undefined) onSelectDialogue(sceneId, targetNodeIndex);
     }
-  }, [selectedNodeId, localNodes, sceneId, onSelectDialogue, editMode, actions]);
+  }, [selectedNodeId, localNodes, localEdges, sceneId, onSelectDialogue, editMode, actions]);
 
   const nodesWithSelection = useMemo(
     () => localNodes.map((node: GraphNode) => ({ ...node, selected: node.id === selectedNodeId })),
@@ -262,6 +275,7 @@ function DialogueGraphInner({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}

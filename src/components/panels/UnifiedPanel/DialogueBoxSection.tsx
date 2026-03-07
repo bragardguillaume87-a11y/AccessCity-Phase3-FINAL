@@ -1,86 +1,245 @@
-import { useCallback } from 'react';
-import { Eye, EyeOff, RotateCcw } from 'lucide-react';
-import { useSettingsStore } from '@/stores';
-import type { DialogueBoxStyle } from '@/types/scenes';
-
-/** Défauts affichés dans les contrôles quand la valeur n'est pas encore définie */
-const UI_DEFAULTS: Required<DialogueBoxStyle> = {
-  typewriterSpeed: 40,
-  fontSize: 15,
-  boxOpacity: 0.75,
-  position: 'bottom',
-  showPortrait: true,
-  speakerAlign: 'auto',
-  borderStyle: 'subtle',
-  portraitOffsetX: 50,
-  portraitOffsetY: 0,
-  portraitScale: 1,
-};
+import React, { useState } from 'react';
+import { ChevronDown, User, MessageSquare, GitBranch, Volume2, X, Plus } from 'lucide-react';
+import { useSelectionStore } from '@/stores/selectionStore';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useCharactersStore } from '@/stores/charactersStore';
+import { useScenesStore } from '@/stores/scenesStore';
+import { useSceneWithElements } from '@/stores/selectors';
+import { isDialogueSelection } from '@/stores/selectionStore.types';
+import { ChoiceEditor } from '../PropertiesPanel/components/ChoiceEditor';
+import type { Dialogue } from '@/types';
 
 // ============================================================================
-// SUB-COMPONENTS
+// DIALOGUE COURANT — propriétés du dialogue sélectionné
 // ============================================================================
 
-interface SliderRowProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  onChange: (v: number) => void;
-  ariaLabel: string;
-}
-
-/** SliderRow — étiquette + valeur (sp-row) + curseur stylisé (sp-slider) */
-function SliderRow({ label, value, min, max, step, unit, onChange, ariaLabel }: SliderRowProps) {
+/** Accordéon CSS pur (grid-template-rows 0fr ↔ 1fr) */
+function InlineAccordion({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) {
   return (
-    <div className="mb-3">
-      <div className="sp-row">
-        <span>{label}</span>
-        <span>{value} {unit}</span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="sp-slider"
-        aria-label={ariaLabel}
-      />
+    <div
+      className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+      style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+    >
+      <div className="overflow-hidden">{children}</div>
     </div>
   );
 }
 
-interface ToggleGroupProps<T extends string> {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
+/**
+ * DialogueEditorInner — lit le dialogue sélectionné depuis les stores et permet son édition.
+ * Monté uniquement quand un dialogue est actif (via DialogueCurrentSection).
+ */
+function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: number }) {
+  const updateDialogue = useDialoguesStore(s => s.updateDialogue);
+  const dialogue       = useDialoguesStore(s => s.getDialoguesByScene(sceneId)[index]);
+  const characters     = useCharactersStore(s => s.characters);
+  const scenes         = useScenesStore(s => s.scenes);
+  const scene          = useSceneWithElements(sceneId);
+
+  const [choicesOpen, setChoicesOpen] = useState(false);
+  const [sfxOpen,     setSfxOpen]     = useState(false);
+  const [moodsOpen,   setMoodsOpen]   = useState(false);
+
+  if (!dialogue) return null;
+
+  const handleUpdate = (updates: Partial<Dialogue>) => {
+    updateDialogue(sceneId, index, updates);
+  };
+
+  const choiceCount = dialogue.choices?.length ?? 0;
+  const sceneChars  = scene?.characters ?? [];
+
+  return (
+    <>
+      {/* Personnage */}
+      <div className="mb-3">
+        <div className="sp-row mb-1">
+          <span className="flex items-center gap-1">
+            <User className="w-3 h-3 text-blue-400" aria-hidden="true" />
+            Personnage
+          </span>
+        </div>
+        <select
+          value={dialogue.speaker || ''}
+          onChange={e => handleUpdate({ speaker: e.target.value })}
+          className="w-full px-2.5 py-1.5 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+        >
+          <option value="">— Aucun —</option>
+          {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      {/* Texte */}
+      <div className="mb-3">
+        <div className="sp-row mb-1">
+          <span className="flex items-center gap-1">
+            <MessageSquare className="w-3 h-3 text-violet-400" aria-hidden="true" />
+            Texte
+          </span>
+        </div>
+        <textarea
+          value={dialogue.text || ''}
+          onChange={e => handleUpdate({ text: e.target.value })}
+          rows={4}
+          className="w-full px-2.5 py-2 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded-lg text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
+          placeholder="Saisir le texte du dialogue…"
+        />
+      </div>
+
+      {/* Choix */}
+      <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setChoicesOpen(v => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        >
+          <GitBranch className="w-3 h-3 text-purple-400 flex-shrink-0" aria-hidden="true" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-400 flex-1">
+            Choix {choiceCount > 0 ? `(${choiceCount})` : ''}
+          </span>
+          <ChevronDown className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${choicesOpen ? 'rotate-180' : ''}`} />
+        </button>
+        <InlineAccordion isOpen={choicesOpen}>
+          <div className="px-3 pb-3 pt-1 space-y-2">
+            <button
+              type="button"
+              onClick={() => handleUpdate({
+                choices: [...(dialogue.choices || []), { id: `choice-${Date.now()}`, text: 'Nouveau choix', nextSceneId: '', effects: [] }]
+              })}
+              className="w-full flex items-center justify-center gap-1 py-1.5 rounded border border-dashed border-[var(--color-border-base)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Ajouter un choix
+            </button>
+            {choiceCount > 0 && dialogue.choices.map((choice, ci) => (
+              <ChoiceEditor
+                key={ci}
+                choice={choice}
+                choiceIndex={ci}
+                onUpdate={(idx, updated) => {
+                  const next = [...dialogue.choices];
+                  next[idx] = updated;
+                  handleUpdate({ choices: next });
+                }}
+                onDelete={(idx) => handleUpdate({ choices: dialogue.choices.filter((_, i) => i !== idx) })}
+                scenes={scenes}
+                currentSceneId={sceneId}
+              />
+            ))}
+          </div>
+        </InlineAccordion>
+      </div>
+
+      {/* SFX */}
+      <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setSfxOpen(v => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        >
+          <Volume2 className="w-3 h-3 text-amber-400 flex-shrink-0" aria-hidden="true" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex-1">
+            Effet sonore {dialogue.sfx?.url ? '· 1 son' : ''}
+          </span>
+          <ChevronDown className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${sfxOpen ? 'rotate-180' : ''}`} />
+        </button>
+        <InlineAccordion isOpen={sfxOpen}>
+          <div className="px-3 pb-3 pt-1">
+            {dialogue.sfx?.url ? (
+              <div className="flex items-center gap-2 p-2 bg-[var(--color-bg-base)] rounded-lg border border-[var(--color-border-base)]">
+                <Volume2 className="h-3 w-3 text-amber-400 flex-shrink-0" />
+                <span className="text-xs text-[var(--color-text-primary)] truncate flex-1">
+                  {dialogue.sfx.url.split('/').pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleUpdate({ sfx: undefined })}
+                  className="h-5 w-5 flex items-center justify-center text-red-400 hover:text-red-300 rounded"
+                  aria-label="Supprimer le son"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--color-text-muted)] text-center py-1">Aucun effet sonore</p>
+            )}
+          </div>
+        </InlineAccordion>
+      </div>
+
+      {/* Humeurs */}
+      {sceneChars.length > 0 && (
+        <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMoodsOpen(v => !v)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+          >
+            <span className="text-xs" aria-hidden="true">😊</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex-1">
+              Humeurs ({sceneChars.length})
+            </span>
+            <ChevronDown className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${moodsOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <InlineAccordion isOpen={moodsOpen}>
+            <div className="px-3 pb-3 pt-1 space-y-2">
+              {sceneChars.map(sc => {
+                const char = characters.find(c => c.id === sc.characterId);
+                if (!char) return null;
+                const mood = dialogue.characterMoods?.[sc.id] ?? '';
+                return (
+                  <div key={sc.id} className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--color-text-primary)] flex-1 truncate">{char.name}</span>
+                    <select
+                      value={mood}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const next = { ...(dialogue.characterMoods || {}) };
+                        if (val) { next[sc.id] = val; } else { delete next[sc.id]; }
+                        handleUpdate({ characterMoods: Object.keys(next).length > 0 ? next : undefined });
+                      }}
+                      className="w-28 px-2 py-1 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded text-xs text-[var(--color-text-primary)]"
+                      aria-label={`Humeur de ${char.name}`}
+                    >
+                      <option value="">Défaut</option>
+                      {(char.moods || ['neutral']).map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          </InlineAccordion>
+        </div>
+      )}
+    </>
+  );
 }
 
-/** ToggleGroup — groupe de boutons segmentés (sp-seg + sp-seg-btn) */
-function ToggleGroup<T extends string>({ label, value, options, onChange }: ToggleGroupProps<T>) {
-  return (
-    <div className="mb-3">
-      <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
-        {label}
-      </p>
-      <div className="sp-seg">
-        {options.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={`sp-seg-btn${value === opt.value ? ' active' : ''}`}
-            aria-pressed={value === opt.value}
-          >
-            {opt.label}
-          </button>
-        ))}
+/**
+ * DialogueCurrentSection — wrapper conditionnel.
+ * Monte DialogueEditorInner uniquement quand un dialogue est actif dans selectionStore.
+ */
+function DialogueCurrentSection() {
+  const selectedElement = useSelectionStore(s => s.selectedElement);
+
+  if (!isDialogueSelection(selectedElement)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+        <MessageSquare className="w-8 h-8 text-[var(--color-text-muted)] mb-3 opacity-40" aria-hidden="true" />
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Sélectionne un dialogue dans la liste pour éditer ses propriétés
+        </p>
       </div>
-    </div>
+    );
+  }
+
+  const { sceneId, index } = selectedElement;
+
+  return (
+    <section className="sp-sec" aria-label="Dialogue sélectionné">
+      <h3 className="sp-lbl">DIALOGUE {String(index + 1).padStart(2, '00')}</h3>
+      <DialogueEditorInner sceneId={sceneId} index={index} />
+    </section>
   );
 }
 
@@ -89,189 +248,15 @@ function ToggleGroup<T extends string>({ label, value, options, onChange }: Togg
 // ============================================================================
 
 /**
- * DialogueBoxSection — Panneau de personnalisation globale de la boîte de dialogue.
+ * DialogueBoxSection — Panneau d'édition du dialogue sélectionné.
  *
- * Les valeurs modifiées ici s'appliquent à toutes les scènes du projet.
- * Chaque dialogue peut ensuite les écraser via `dialogue.boxStyle` (override dans le wizard).
- *
- * Persisté dans : settingsStore.projectSettings.game.dialogueBoxDefaults
+ * Affiche les propriétés du dialogue actif : Personnage, Texte, Choix, SFX, Humeurs.
+ * Les paramètres globaux (Aperçu, Texte, Apparence, Portrait) sont dans TextSection.
  */
 export function DialogueBoxSection() {
-  const dialogueBoxDefaults = useSettingsStore(s => s.projectSettings.game.dialogueBoxDefaults);
-  const updateDialogueBoxDefaults = useSettingsStore(s => s.updateDialogueBoxDefaults);
-
-  // Valeurs effectives (defaults du store ou UI_DEFAULTS si non défini)
-  const cfg: Required<DialogueBoxStyle> = { ...UI_DEFAULTS, ...dialogueBoxDefaults };
-
-  const update = useCallback((patch: Partial<DialogueBoxStyle>) => {
-    updateDialogueBoxDefaults(patch);
-  }, [updateDialogueBoxDefaults]);
-
-  const resetPortrait = useCallback(() => {
-    update({ portraitOffsetX: 50, portraitOffsetY: 0, portraitScale: 1 });
-  }, [update]);
-
   return (
     <div>
-
-      {/* Aperçu temps réel — en premier */}
-      <section className="sp-sec" aria-label="Aperçu de la boîte de dialogue">
-        <h3 className="sp-lbl">APERÇU</h3>
-        <div className="sp-dia-preview" aria-hidden="true">
-          <div style={{ color: 'var(--color-primary)', fontWeight: 700, fontSize: 11, letterSpacing: '0.04em', marginBottom: 4 }}>
-            — BONJOUR ! JE SUIS LÉA, TON GUIDE.
-          </div>
-          <span style={{ fontSize: cfg.fontSize }}>Bonjour ! Je suis Léa, ton guide.</span>
-        </div>
-      </section>
-
-      {/* Texte */}
-      <section className="sp-sec" aria-labelledby="dlgbox-text-heading">
-        <h3 id="dlgbox-text-heading" className="sp-lbl">TEXTE</h3>
-        <SliderRow
-          label="Vitesse de frappe"
-          value={cfg.typewriterSpeed}
-          min={20} max={120} step={5} unit="ms/car"
-          onChange={(v) => update({ typewriterSpeed: v })}
-          ariaLabel={`Vitesse de frappe : ${cfg.typewriterSpeed} ms par caractère`}
-        />
-        <SliderRow
-          label="Taille du texte"
-          value={cfg.fontSize}
-          min={12} max={24} step={1} unit="px"
-          onChange={(v) => update({ fontSize: v })}
-          ariaLabel={`Taille du texte : ${cfg.fontSize} pixels`}
-        />
-      </section>
-
-      {/* Apparence */}
-      <section className="sp-sec" aria-labelledby="dlgbox-style-heading">
-        <h3 id="dlgbox-style-heading" className="sp-lbl">APPARENCE</h3>
-        <SliderRow
-          label="Opacité du fond"
-          value={Math.round(cfg.boxOpacity * 100)}
-          min={40} max={95} step={5} unit="%"
-          onChange={(v) => update({ boxOpacity: v / 100 })}
-          ariaLabel={`Opacité du fond : ${Math.round(cfg.boxOpacity * 100)} %`}
-        />
-        <ToggleGroup
-          label="BORDURE"
-          value={cfg.borderStyle}
-          options={[
-            { value: 'none',      label: 'Aucune'  },
-            { value: 'subtle',    label: 'Subtile' },
-            { value: 'prominent', label: 'Marquée' },
-          ]}
-          onChange={(v) => update({ borderStyle: v })}
-        />
-        <ToggleGroup
-          label="POSITION"
-          value={cfg.position}
-          options={[
-            { value: 'bottom', label: 'Bas'    },
-            { value: 'center', label: 'Centre' },
-            { value: 'top',    label: 'Haut'   },
-          ]}
-          onChange={(v) => update({ position: v })}
-        />
-      </section>
-
-      {/* Speaker */}
-      <section className="sp-sec" aria-labelledby="dlgbox-speaker-heading">
-        <h3 id="dlgbox-speaker-heading" className="sp-lbl">SPEAKER</h3>
-
-        {/* Portrait toggle — iOS switch */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1.5">
-            {cfg.showPortrait
-              ? <><Eye className="w-3.5 h-3.5" aria-hidden="true" /> Portrait affiché (48×48px)</>
-              : <><EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> Portrait masqué</>
-            }
-          </span>
-          <button
-            onClick={() => update({ showPortrait: !cfg.showPortrait })}
-            className={[
-              'relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]',
-              cfg.showPortrait ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-hover)]',
-            ].join(' ')}
-            role="switch"
-            aria-checked={cfg.showPortrait}
-            aria-label={cfg.showPortrait ? 'Masquer le portrait' : 'Afficher le portrait'}
-          >
-            <span className={[
-              'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-              cfg.showPortrait ? 'translate-x-4' : 'translate-x-0.5',
-            ].join(' ')} />
-          </button>
-        </div>
-
-        {/* Cadrage portrait — visible uniquement si portrait activé */}
-        {cfg.showPortrait && (
-          <div className="space-y-1 pl-2 border-l-2 border-[var(--color-primary)]/30 mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-[var(--color-text-secondary)]">🖼️ Cadrage portrait</p>
-              <button
-                onClick={resetPortrait}
-                className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                title="Réinitialiser le cadrage"
-                aria-label="Réinitialiser le cadrage du portrait"
-              >
-                <RotateCcw className="w-2.5 h-2.5" aria-hidden="true" />
-                Réinitialiser
-              </button>
-            </div>
-            <SliderRow
-              label="Pan horizontal" value={cfg.portraitOffsetX}
-              min={0} max={100} step={5} unit="%"
-              onChange={(v) => update({ portraitOffsetX: v })}
-              ariaLabel={`Pan horizontal du portrait : ${cfg.portraitOffsetX} %`}
-            />
-            <SliderRow
-              label="Pan vertical" value={cfg.portraitOffsetY}
-              min={0} max={100} step={5} unit="%"
-              onChange={(v) => update({ portraitOffsetY: v })}
-              ariaLabel={`Pan vertical du portrait : ${cfg.portraitOffsetY} %`}
-            />
-            <SliderRow
-              label="Zoom" value={cfg.portraitScale}
-              min={1} max={3} step={0.1} unit="×"
-              onChange={(v) => update({ portraitScale: Math.round(v * 10) / 10 })}
-              ariaLabel={`Zoom du portrait : ${cfg.portraitScale} ×`}
-            />
-            <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
-              Masque non-destructif — déplace et zoome sans recadrer l'image originale.
-            </p>
-          </div>
-        )}
-
-        {/* Alignement du nom du speaker */}
-        <div>
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
-            Alignement du nom
-          </p>
-          <div className="sp-seg">
-            <button
-              onClick={() => update({ speakerAlign: 'auto' })}
-              className={`sp-seg-btn${cfg.speakerAlign === 'auto' ? ' active' : ''}`}
-              aria-pressed={cfg.speakerAlign === 'auto'}
-              title="Gauche si sprite x<50%, droite sinon"
-            >
-              Auto
-            </button>
-            <button
-              onClick={() => update({ speakerAlign: 'left' })}
-              className={`sp-seg-btn${cfg.speakerAlign === 'left' ? ' active' : ''}`}
-              aria-pressed={cfg.speakerAlign === 'left'}
-            >
-              Toujours gauche
-            </button>
-          </div>
-          <p className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">
-            Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
-          </p>
-        </div>
-      </section>
-
+      <DialogueCurrentSection />
     </div>
   );
 }

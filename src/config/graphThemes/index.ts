@@ -7,6 +7,7 @@
 import type { GraphTheme } from './types';
 import { defaultTheme } from './themes/default';
 import { cosmosTheme } from './themes/cosmos';
+import { blenderTheme } from './themes/blender';
 
 /**
  * All available graph themes
@@ -14,6 +15,7 @@ import { cosmosTheme } from './themes/cosmos';
 export const GRAPH_THEMES: Record<string, GraphTheme> = {
   default: defaultTheme,
   cosmos: cosmosTheme,
+  blender: blenderTheme,
 };
 
 /**
@@ -36,5 +38,5 @@ export function getAvailableThemeIds(): string[] {
 }
 
 // Re-export everything for convenience
-export { defaultTheme, cosmosTheme };
+export { defaultTheme, cosmosTheme, blenderTheme };
 export type { GraphTheme, NodeColorSet, EdgeStyle } from './types';

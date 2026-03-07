@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import { Save, Network } from 'lucide-react';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
 import { DEFAULTS } from '@/config/constants';
@@ -20,6 +20,7 @@ interface DialogueComposerProps {
   scenes: Scene[];
   onSave: (dialogues: Dialogue[]) => void;
   onClose: () => void;
+  onOpenGraph?: () => void;
 }
 
 /**
@@ -39,6 +40,7 @@ export function DialogueComposer({
   scenes,
   onSave,
   onClose,
+  onOpenGraph,
 }: DialogueComposerProps) {
   // ── Store integration ────────────────────────────────────────────────────
   const initialComplexity  = useUIStore((state) => state.dialogueWizardInitialComplexity);
@@ -166,7 +168,7 @@ export function DialogueComposer({
     // overflow-hidden clip le contenu pendant la transition (comportement attendu).
     <motion.div
       animate={{ height: contentHeight }}
-      transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+      transition={{ duration: 0.48, ease: [0.4, 0, 0.2, 1] }}
       className="overflow-hidden"
     >
       {/* contentRef : div mesuré par ResizeObserver — pas de h-full ni overflow ici */}
@@ -185,29 +187,39 @@ export function DialogueComposer({
             max-h évite de dépasser max-h-[90vh] du Dialog parent (5rem ≈ pill row). */}
         <div className="flex-[55] border-r overflow-y-auto max-h-[calc(90vh-5rem)]">
           <div className="p-6">
-            {formData.complexityLevel ? (
-              <ComposerFormPanel
-                speaker={formData.speaker || ''}
-                text={formData.text}
-                complexityLevel={formData.complexityLevel}
-                choices={formData.choices}
-                responses={formData.responses}
-                scenes={scenes}
-                currentSceneId={sceneId}
-                onSpeakerChange={handleSpeakerChange}
-                onTextChange={handleTextChange}
-                onUpdateChoice={formActions.updateChoice}
-                onUpdateResponse={formActions.updateResponse}
-                onAddChoice={formActions.addChoice}
-                onRemoveChoice={formActions.removeChoice}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-36 text-center">
-                <p className="text-sm text-muted-foreground">
-                  ← Choisis un type de dialogue pour commencer
-                </p>
-              </div>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={formData.complexityLevel ?? '__empty__'}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.32, ease: 'easeInOut' }}
+              >
+                {formData.complexityLevel ? (
+                  <ComposerFormPanel
+                    speaker={formData.speaker || ''}
+                    text={formData.text}
+                    complexityLevel={formData.complexityLevel}
+                    choices={formData.choices}
+                    responses={formData.responses}
+                    scenes={scenes}
+                    currentSceneId={sceneId}
+                    onSpeakerChange={handleSpeakerChange}
+                    onTextChange={handleTextChange}
+                    onUpdateChoice={formActions.updateChoice}
+                    onUpdateResponse={formActions.updateResponse}
+                    onAddChoice={formActions.addChoice}
+                    onRemoveChoice={formActions.removeChoice}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-36 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      ← Choisis un type de dialogue pour commencer
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 
@@ -228,6 +240,17 @@ export function DialogueComposer({
             <Save className="w-4 h-4" aria-hidden="true" />
             Sauvegarder
           </Button>
+          {onOpenGraph && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenGraph}
+              className="w-full gap-2 text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <Network className="w-3.5 h-3.5" aria-hidden="true" />
+              Vue Graphe (éditeur nodal)
+            </Button>
+          )}
         </div>
 
       </div>

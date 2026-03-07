@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>AccessCity — Choix UI Dé</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f13;
+      color: #e2e2e2;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 1.4rem; color: #a78bfa; margin-bottom: 8px; }
+    .subtitle { font-size: 0.85rem; color: #6b6b8a; margin-bottom: 40px; }
+    .question {
+      background: #1a1a28;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .question h2 {
+      font-size: 0.95rem;
+      color: #c4b5fd;
+      margin-bottom: 14px;
+      letter-spacing: 0.02em;
+    }
+    .options { display: flex; flex-direction: column; gap: 10px; }
+    .option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #12121e;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .option:hover { border-color: #7c3aed; background: #1a1228; }
+    .option input[type="radio"] { display: none; }
+    .option.selected {
+      border-color: #7c3aed;
+      background: #1e1035;
+    }
+    .radio-circle {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid #4a4a6a;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s;
+    }
+    .option.selected .radio-circle {
+      border-color: #7c3aed;
+      background: #7c3aed;
+    }
+    .radio-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .option.selected .radio-dot { opacity: 1; }
+    .option-label { font-size: 0.9rem; }
+    .option-label strong { color: #fff; display: block; margin-bottom: 2px; }
+    .option-label span { font-size: 0.8rem; color: #7a7a9a; }
+    .submit-area { margin-top: 32px; text-align: center; }
+    button#submit {
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    button#submit:hover { background: #6d28d9; }
+    button#submit:disabled { background: #3a3a5a; cursor: not-allowed; }
+    #result {
+      display: none;
+      margin-top: 24px;
+      background: #0d1f12;
+      border: 1px solid #2a5a30;
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-size: 0.85rem;
+      color: #86efac;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎲 Redesign Wizard Dé — Choix de conception</h1>
+  <p class="subtitle">Sélectionne une option par question, puis clique sur Valider.</p>
+
+  <form id="form">
+
+    <!-- Q1 -->
+    <div class="question">
+      <h2>1 — Récompense en cas de succès</h2>
+      <div class="options" data-name="q1">
+        <label class="option">
+          <input type="radio" name="q1" value="A" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>A — Presets simples</strong>
+            <span>+5 Corps, +10 Esprit, Objet obtenu... Liste fixe, conçue pour les 8-15 ans. Rapide à utiliser.</span>
+          </div>
+        </label>
+        <label class="option">
+          <input type="radio" name="q1" value="B" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>B — Variables de jeu</strong>
+            <span>Basé sur les variables du projet (comme onglet Expert). Puissant, mais plus technique.</span>
+          </div>
+        </label>
+        <label class="option">
+          <input type="radio" name="q1" value="C" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>C — Les deux</strong>
+            <span>Presets par défaut + bouton "Avancé" qui expose les variables de jeu.</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question">
+      <h2>2 — Vocabulaire des stats</h2>
+      <div class="options" data-name="q2">
+        <label class="option">
+          <input type="radio" name="q2" value="A" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>A — Labels UI seulement</strong>
+            <span>"Physique" → "Le Corps 💪", "Mentale" → "L'Esprit 🧠". Les valeurs internes restent intactes.</span>
+          </div>
+        </label>
+        <label class="option">
+          <input type="radio" name="q2" value="B" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>B — Labels + constantes internes</strong>
+            <span>Renommer aussi GAME_STATS.PHYSIQUE / GAME_STATS.MENTALE dans le code.</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question">
+      <h2>3 — Badge de difficulté</h2>
+      <div class="options" data-name="q3">
+        <label class="option">
+          <input type="radio" name="q3" value="A" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>A — Actuel</strong>
+            <span>Très facile / Facile / Moyen / Difficile / Très difficile</span>
+          </div>
+        </label>
+        <label class="option">
+          <input type="radio" name="q3" value="B" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>B — Narratif</strong>
+            <span>Facile / Possible / Risqué / Difficile / Extrême — plus évocateur pour les ados.</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question">
+      <h2>4 — Pénalité en cas d'échec</h2>
+      <div class="options" data-name="q4">
+        <label class="option">
+          <input type="radio" name="q4" value="A" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>A — Oui</strong>
+            <span>Ajouter un champ "Ce qui change si ça rate" (pénalité symétrique à la récompense).</span>
+          </div>
+        </label>
+        <label class="option">
+          <input type="radio" name="q4" value="B" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>B — Non</strong>
+            <span>L'échec reste purement narratif : on choisit juste le dialogue suivant.</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question">
+      <h2>5 — Commencer maintenant ?</h2>
+      <div class="options" data-name="q5">
+        <label class="option">
+          <input type="radio" name="q5" value="A" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>A — Oui</strong>
+            <span>Commencer la compression de layout + tooltips + vocabulaire en attendant les réponses.</span>
+          </div>
+        </label>
+        <label class="option">
+          <input type="radio" name="q5" value="B" />
+          <div class="radio-circle"><div class="radio-dot"></div></div>
+          <div class="option-label">
+            <strong>B — Non</strong>
+            <span>Attendre toutes les réponses avant de coder quoi que ce soit.</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="submit-area">
+      <button type="button" id="submit" disabled>Valider mes choix</button>
+    </div>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const form = document.getElementById('form');
+    const submitBtn = document.getElementById('submit');
+    const result = document.getElementById('result');
+    const questions = ['q1','q2','q3','q4','q5'];
+
+    // Click on option div to select radio
+    document.querySelectorAll('.option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const radio = opt.querySelector('input[type="radio"]');
+        radio.checked = true;
+        // Deselect siblings
+        const name = radio.name;
+        document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+          r.closest('.option').classList.toggle('selected', r === radio);
+        });
+        checkAllAnswered();
+      });
+    });
+
+    function checkAllAnswered() {
+      const allDone = questions.every(q => document.querySelector(`input[name="${q}"]:checked`));
+      submitBtn.disabled = !allDone;
+    }
+
+    submitBtn.addEventListener('click', () => {
+      const answers = {};
+      questions.forEach(q => {
+        const checked = document.querySelector(`input[name="${q}"]:checked`);
+        answers[q] = checked ? checked.value : '?';
+      });
+
+      const labels = {
+        q1: { A: 'Presets simples', B: 'Variables de jeu', C: 'Les deux (presets + avancé)' },
+        q2: { A: 'Labels UI seulement', B: 'Labels + constantes internes' },
+        q3: { A: 'Actuel (Très facile...)', B: 'Narratif (Facile / Risqué / Extrême...)' },
+        q4: { A: 'Oui — pénalité symétrique', B: 'Non — échec purement narratif' },
+        q5: { A: 'Oui, commencer maintenant', B: 'Non, attendre toutes les réponses' },
+      };
+
+      const summary = [
+        '✅ Tes choix — copie-les dans Claude Code :',
+        '',
+        `1. Récompense : ${answers.q1} — ${labels.q1[answers.q1]}`,
+        `2. Vocabulaire : ${answers.q2} — ${labels.q2[answers.q2]}`,
+        `3. Difficulté  : ${answers.q3} — ${labels.q3[answers.q3]}`,
+        `4. Pénalité    : ${answers.q4} — ${labels.q4[answers.q4]}`,
+        `5. Commencer   : ${answers.q5} — ${labels.q5[answers.q5]}`,
+      ].join('\n');
+
+      result.style.display = 'block';
+      result.textContent = summary;
+      result.scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>

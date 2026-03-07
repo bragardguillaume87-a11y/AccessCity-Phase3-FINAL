@@ -1,13 +1,11 @@
-
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { GAME_STATS } from '@/i18n';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface StatSelectorProps {
   value: string;
@@ -15,33 +13,51 @@ interface StatSelectorProps {
 }
 
 const STATS = [
-  { value: GAME_STATS.PHYSIQUE, label: 'Physique', emoji: '🏥', description: 'Barre de santé' },
-  { value: GAME_STATS.MENTALE, label: 'Mentale', emoji: '🧠', description: 'Barre mentale' },
+  {
+    value: GAME_STATS.PHYSIQUE,
+    label: 'Le Corps',
+    emoji: '💪',
+    tooltip: 'Le personnage agit physiquement : courir, grimper, résister...',
+  },
+  {
+    value: GAME_STATS.MENTALE,
+    label: "L'Esprit",
+    emoji: '🧠',
+    tooltip: 'Le personnage réfléchit ou convainc : argumenter, observer, se souvenir...',
+  },
 ];
 
 export function StatSelector({ value, onChange }: StatSelectorProps) {
   return (
-    <div className="space-y-2">
-      <Label className="text-sm font-semibold">Caractéristique testée</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-12 text-base">
-          <SelectValue placeholder="Choisir une stat" />
-        </SelectTrigger>
-        <SelectContent>
-          {STATS.map((stat) => (
-            <SelectItem key={stat.value} value={stat.value} className="py-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{stat.emoji}</span>
-                <div>
-                  <span className="font-medium">{stat.label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{stat.description}</span>
-                </div>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <TooltipProvider delayDuration={300}>
+      <div className="flex gap-2">
+          {STATS.map((stat) => {
+            const isSelected = value === stat.value;
+            return (
+              <Tooltip key={stat.value}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onChange(stat.value)}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-2 h-9 rounded-lg border text-sm font-medium transition-all',
+                      isSelected
+                        ? 'border-purple-500 bg-purple-500/20 text-purple-200'
+                        : 'border-border bg-background/40 text-muted-foreground hover:border-purple-500/50 hover:bg-purple-500/10'
+                    )}
+                  >
+                    <span>{stat.emoji}</span>
+                    <span>{stat.label}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[180px] text-center">
+                  {stat.tooltip}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+    </TooltipProvider>
   );
 }
 

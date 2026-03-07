@@ -90,13 +90,13 @@ export function ComposerFormPanel({
   // Tab labels — expert shows dynamic text preview (updates as user types)
   const tabLabels = choices.map((c, i) => {
     if (complexityLevel === 'binary') return i === 0 ? '👍 A' : '👎 B';
-    if (complexityLevel === 'dice')   return `🎲 Test ${i + 1}`;
+    if (complexityLevel === 'dice')   return choices.length === 1 ? '🎲 Dé' : `🎲 Dé ${String.fromCharCode(65 + i)}`;
     // Expert: show first 10 chars of choice text, else "Choix N"
     const preview = c.text?.trim();
     if (preview && preview.length > 0) {
       return preview.length > 10 ? `${preview.substring(0, 10)}…` : preview;
     }
-    return `Choix ${i + 1}`;
+    return `⚡ Choix ${String.fromCharCode(65 + i)}`;
   });
 
   const canAddChoice =
@@ -242,7 +242,7 @@ export function ComposerFormPanel({
               {complexityLevel === 'dice' && choices[safeTab] && (
                 <DiceChoiceCard
                   choice={choices[safeTab]}
-                  index={safeTab}
+                  title={choices.length === 1 ? 'Dé' : `Dé ${String.fromCharCode(65 + safeTab)}`}
                   onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
                   onRemove={() => handleRemoveChoice(safeTab)}
                   canRemove={choices.length > 1}
@@ -255,6 +255,7 @@ export function ComposerFormPanel({
                 <ComplexChoiceCard
                   choice={choices[safeTab]}
                   index={safeTab}
+                  title={`Choix ${String.fromCharCode(65 + safeTab)}`}
                   onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
                   onRemove={() => handleRemoveChoice(safeTab)}
                   canRemove={choices.length > 2}

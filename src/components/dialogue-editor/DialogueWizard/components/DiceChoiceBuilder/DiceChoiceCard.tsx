@@ -12,7 +12,7 @@ import { CARD_SLIDE_UP } from '@/constants/animations';
 
 interface DiceChoiceCardProps {
   choice: DialogueChoice;
-  index: number;
+  title: string;
   onUpdate: (updates: Partial<DialogueChoice>) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -21,7 +21,7 @@ interface DiceChoiceCardProps {
 
 export function DiceChoiceCard({
   choice,
-  index,
+  title,
   onUpdate,
   onRemove,
   canRemove,
@@ -44,21 +44,21 @@ export function DiceChoiceCard({
       <ChoiceCardHeader
         icon={<span className="text-xl">🎲</span>}
         iconGradient="from-purple-500 to-pink-500"
-        title={`Test #${index + 1}`}
+        title={title}
         canRemove={canRemove}
         onRemove={onRemove}
-        removeAriaLabel={`Supprimer le test #${index + 1}`}
+        removeAriaLabel={`Supprimer ${title}`}
       />
 
       <div className="space-y-2">
         <Label htmlFor={`dice-text-${choice.id}`} className="text-sm font-medium text-muted-foreground">
-          Texte du choix
+          Ce que le joueur choisit
         </Label>
         <Input
           id={`dice-text-${choice.id}`}
           value={choice.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
-          placeholder="Ex: Tenter de convaincre le gardien"
+          placeholder="Ex : Tenter de convaincre le gardien"
           className="h-9 text-sm"
         />
       </div>

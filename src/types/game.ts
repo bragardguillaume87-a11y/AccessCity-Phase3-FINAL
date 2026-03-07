@@ -6,6 +6,11 @@ export interface GameStats {
 export interface DiceCheckBranch {
   nextSceneId?: string;
   nextDialogueId?: string;
+  /** Effet simple sur une stat : positif = récompense, négatif = pénalité */
+  statEffect?: {
+    stat: string;
+    amount: number;
+  };
 }
 
 export interface DiceCheck {

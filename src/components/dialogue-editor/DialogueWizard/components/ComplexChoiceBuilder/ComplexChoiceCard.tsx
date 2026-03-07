@@ -11,22 +11,26 @@ import { EffectsEditor } from './EffectsEditor';
 
 interface ComplexChoiceCardProps {
   choice: DialogueChoice;
+  /** Index numérique — uniquement pour la couleur de la carte */
   index: number;
+  /** Titre affiché : "Choix A", "Choix B", etc. */
+  title: string;
   onUpdate: (updates: Partial<DialogueChoice>) => void;
   onRemove: () => void;
   canRemove: boolean;
 }
 
 const CARD_COLORS = [
-  { border: 'border-emerald-500/40', bg: 'from-emerald-500/5 to-green-500/5', accent: 'from-emerald-500 to-green-500' },
-  { border: 'border-rose-500/40', bg: 'from-rose-500/5 to-red-500/5', accent: 'from-rose-500 to-red-500' },
-  { border: 'border-amber-500/40', bg: 'from-amber-500/5 to-orange-500/5', accent: 'from-amber-500 to-orange-500' },
-  { border: 'border-violet-500/40', bg: 'from-violet-500/5 to-purple-500/5', accent: 'from-violet-500 to-purple-500' },
+  { border: 'border-emerald-500/40', bg: 'from-emerald-500/5 to-green-500/5',  accent: 'from-emerald-500 to-green-500' },
+  { border: 'border-rose-500/40',    bg: 'from-rose-500/5 to-red-500/5',       accent: 'from-rose-500 to-red-500' },
+  { border: 'border-amber-500/40',   bg: 'from-amber-500/5 to-orange-500/5',   accent: 'from-amber-500 to-orange-500' },
+  { border: 'border-violet-500/40',  bg: 'from-violet-500/5 to-purple-500/5',  accent: 'from-violet-500 to-purple-500' },
 ];
 
 export function ComplexChoiceCard({
   choice,
   index,
+  title,
   onUpdate,
   onRemove,
   canRemove,
@@ -45,27 +49,25 @@ export function ComplexChoiceCard({
       <ChoiceCardHeader
         icon={<Sparkles className="w-5 h-5 text-white" />}
         iconGradient={colors.accent}
-        title={`Choix #${index + 1}`}
+        title={title}
         canRemove={canRemove}
         onRemove={onRemove}
-        removeAriaLabel={`Supprimer le choix #${index + 1}`}
+        removeAriaLabel={`Supprimer ${title}`}
       />
 
-      {/* Choice text */}
       <div className="space-y-2">
         <Label htmlFor={`expert-text-${choice.id}`} className="text-sm font-medium text-muted-foreground">
-          Texte du choix
+          Ce que le joueur choisit
         </Label>
         <Input
           id={`expert-text-${choice.id}`}
           value={choice.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
-          placeholder="Ex: Accepter la quête dangereuse"
+          placeholder="Ex : Accepter la quête dangereuse"
           className="h-9 text-sm"
         />
       </div>
 
-      {/* Effects editor */}
       <EffectsEditor
         effects={choice.effects || []}
         onChange={(effects: Effect[]) => onUpdate({ effects })}

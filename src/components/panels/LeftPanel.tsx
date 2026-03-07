@@ -3,6 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Film, MessageSquare } from 'lucide-react';
 import ScenesSidebar from './ScenesSidebar';
 import DialoguesPanel from './DialoguesPanel';
+import { LeftPanelJumpBar } from './LeftPanelJumpBar';
 import { useScenesStore, useUIStore } from '../../stores/index';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneWithElements, useAllScenesWithElements } from '@/stores/selectors';
@@ -60,6 +61,10 @@ export default function LeftPanel({
   const editDialogueIndex = useUIStore((state) => state.dialogueWizardEditIndex);
   const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
 
+  // DialogueGraph modal
+  const setGraphModalOpen = useUIStore((state) => state.setDialogueGraphModalOpen);
+  const setGraphSelectedScene = useUIStore((state) => state.setDialogueGraphSelectedScene);
+
   // PHASE 4: Cosmos theme effects for node creation celebration
   const isCosmosTheme = useIsCosmosTheme();
   const { celebrateNodeCreation } = useCosmosEffects();
@@ -106,10 +111,11 @@ export default function LeftPanel({
 
   return (
     <>
+      <div className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
-        className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
+        className="flex-1 min-h-0 flex flex-col"
       >
         {/* Tabs Header — compact vertical (icon + micro-label) pour tenir dans 160px */}
         <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-[var(--color-border-base)] bg-transparent p-1 h-auto gap-1">
@@ -129,43 +135,51 @@ export default function LeftPanel({
           </TabsTrigger>
         </TabsList>
 
-        {/* Tabs Content avec animations fade-in */}
-        <TabsContent value="scenes" className="flex-1 m-0 animate-in fade-in duration-200">
-          <div className="h-full overflow-y-auto overflow-x-hidden">
-            <ScenesSidebar
-              scenes={scenes}
-              selectedSceneId={selectedSceneForEdit}
-              onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
-            />
-          </div>
+        {/* Tabs Content avec animations fade-in
+            ⚠️ min-h-0 obligatoire : sans lui, min-height:auto sur TabsContent permet au contenu
+            de dépasser la hauteur flex allouée → JumpBar clippé par overflow-hidden du Panel.
+            Pas de wrapper h-full overflow-y-auto : ScenesSidebar et DialoguesPanel gèrent
+            leur propre scroll en interne (filmstrip/list flex-1 overflow-y-auto). */}
+        <TabsContent value="scenes" className="flex-1 min-h-0 overflow-hidden m-0 animate-in fade-in duration-200">
+          <ScenesSidebar
+            scenes={scenes}
+            selectedSceneId={selectedSceneForEdit}
+            onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
+          />
         </TabsContent>
 
-        <TabsContent value="dialogues" className="flex-1 m-0 animate-in fade-in duration-200">
-          <div className="h-full overflow-y-auto overflow-x-hidden">
-            {isCinematicSelected ? (
-              <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
-                <Film className="w-8 h-8 text-violet-400 opacity-40" aria-hidden="true" />
-                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Scène cinématique</p>
-                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                  Les dialogues ne sont pas disponibles pour ce type de scène.
-                  Utilisez l&apos;Éditeur Cinématique pour créer des événements.
-                </p>
-              </div>
-            ) : (
-              <DialoguesPanel
-                onDialogueSelect={onDialogueSelect}
-              />
-            )}
-          </div>
+        <TabsContent value="dialogues" className="flex-1 min-h-0 overflow-hidden m-0 animate-in fade-in duration-200">
+          {isCinematicSelected ? (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
+              <Film className="w-8 h-8 text-violet-400 opacity-40" aria-hidden="true" />
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">Scène cinématique</p>
+              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                Les dialogues ne sont pas disponibles pour ce type de scène.
+                Utilisez l&apos;Éditeur Cinématique pour créer des événements.
+              </p>
+            </div>
+          ) : (
+            <DialoguesPanel
+              onDialogueSelect={onDialogueSelect}
+            />
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* HUD Compact 110px — nav scènes/dialogues + info row, aligné avec la zone timeline */}
+      <LeftPanelJumpBar
+        activeTab={activeTab}
+        onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
+        onDialogueSelect={onDialogueSelect}
+      />
+      </div>
 
       {/* DialogueWizard Modal - Outside Tabs to survive unmounts */}
       <Dialog open={wizardOpen} onOpenChange={(open) => {
         setWizardOpen(open);
         if (!open) setEditDialogueIndex(undefined);
       }}>
-        <DialogContent className="max-w-4xl p-0 gap-0 max-h-[90vh]">
+        <DialogContent className="max-w-6xl p-0 gap-0 max-h-[90vh]">
           <DialogHeader className="sr-only">
             <DialogTitle>
               {editDialogueIndex !== undefined
@@ -185,6 +199,11 @@ export default function LeftPanel({
               scenes={scenesWithElements}
               onSave={handleWizardSave}
               onClose={() => setWizardOpen(false)}
+              onOpenGraph={() => {
+                setWizardOpen(false);
+                setGraphSelectedScene(selectedScene.id);
+                setGraphModalOpen(true);
+              }}
             />
           ) : (
             <div className="p-8 text-center">Aucune scène sélectionnée</div>

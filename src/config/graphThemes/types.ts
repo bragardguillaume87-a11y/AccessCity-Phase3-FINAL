@@ -14,8 +14,12 @@ export interface NodeColorSet {
   bg: string;
   /** Background gradient (optional, overrides bg) */
   bgGradient?: string;
-  /** Header bar color (optional — if present, renders a colored header strip à la Blender) */
+  /** Header bar color — solid CSS color, used for handles/SVG strokes */
   headerBg?: string;
+  /** Header bar gradient — CSS gradient for the visual header background.
+   *  When present, overrides headerBg for the rendered header strip.
+   *  headerBg (solid) is still used for handle colors (SVG stroke requires a plain color). */
+  headerBgGradient?: string;
   /** Border color */
   border: string;
   /** Text color */

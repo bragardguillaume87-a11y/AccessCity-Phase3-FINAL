@@ -150,7 +150,7 @@ export function buildGraphEdges(
           const targetIdx = dialogueIdToIndex.get(choice.nextDialogueId!) ?? -1;
           if (targetIdx !== -1) {
             const targetId = dialogueNodeId(sceneId, targetIdx);
-            const edgeLabel = truncateEdgeLabel(choice.text, `Choice ${choiceIdx + 1}`);
+            const edgeLabel = truncateEdgeLabel(choice.text, `Choix ${choiceIdx + 1}`);
             pushEdge(
               `${sourceId}-choice-${choiceIdx}-to-${targetId}`,
               sourceId, choiceHandleId(choiceIdx),
@@ -176,7 +176,7 @@ export function buildGraphEdges(
             }
           });
 
-          const terminalLabel = truncateEdgeLabel(choice.text, 'Jump to scene');
+          const terminalLabel = truncateEdgeLabel(choice.text, 'Saut de scène');
           pushEdge(
             `${sourceId}-choice-${choiceIdx}-to-terminal`,
             sourceId, choiceHandleId(choiceIdx),

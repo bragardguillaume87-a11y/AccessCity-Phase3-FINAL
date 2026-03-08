@@ -104,6 +104,10 @@
   --radius-xl: 1rem;      /* 16px */
   --radius-full: 9999px;
 
+  /* ── Aliases studio.css (utilisés via --r, --r-sm, --r-lg) ── */
+  /* --r-sm: 5px intentionnel — valeur intermédiaire pour petits éléments UI
+     (badges, topbar-icon) — distinct de --radius-sm (4px, composants shadcn) */
+
   /* ========== SHADOWS - GAMING DEPTH ========== */
   /* Réutilise shadows existantes */
 
@@ -170,6 +174,36 @@
   /* Cyan & Yellow */
   --accent-cyan: #06b6d4;
   --accent-yellow: #eab308;
+
+  /* ========== DIALOGUE GRAPH NODE COLORS ========== */
+  /* Miroir des constantes TypeScript dans config/colors.ts.
+     Ces variables permettent le theming CSS sans modifier les 17 fichiers consommateurs.
+     Usage futur : remplacer NODE_COLORS.dialogueNode.bg par var(--node-dialogue-bg) dans les nodes. */
+
+  --node-dialogue-bg: #1e293b;
+  --node-dialogue-border: #334155;
+  --node-dialogue-text: #e2e8f0;
+
+  --node-choice-bg: rgba(139, 92, 246, 0.2);
+  --node-choice-border: #8b5cf6;
+  --node-choice-text: #c4b5fd;
+
+  --node-terminal-bg: #1e293b;
+  --node-terminal-border: #475569;
+  --node-terminal-text: #94a3b8;
+
+  --node-error-bg: #7f1d1d;
+  --node-error-border: #dc2626;
+  --node-error-text: #fecaca;
+
+  --node-warning-bg: #78350f;
+  --node-warning-border: #f59e0b;
+  --node-warning-text: #fde68a;
+
+  --graph-grid-color: #475569;
+  --graph-minimap-dialogue: #3b82f6;
+  --graph-minimap-choice: #8b5cf6;
+  --graph-minimap-terminal: #f59e0b;
 
   /* ========== LEGACY ALIASES ========== */
   /* For backwards compatibility with theme.css consumers */

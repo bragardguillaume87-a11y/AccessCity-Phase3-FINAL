@@ -65,18 +65,4 @@ export const fr: Translations = {
     kidLabel: "Mode Élève",
     proLabel: "Mode Avancé",
   },
-
-  graph: {
-    startBadge: 'START',
-    endBadge: 'FIN',
-    startAriaLabel: 'Début du dialogue',
-    endAriaLabel: 'Fin du dialogue',
-    rowLabel: 'Rangée',
-    nextBelow: 'La suite est en dessous',
-    flowContinues: 'Suite',
-    convergenceLabel: '↩ rejoint',
-    choiceAriaLabel: 'Choix : ',
-    emptyDialogue: '(Dialogue vide)',
-    sceneJumpLabel: 'Saut vers scene',
-  },
 };

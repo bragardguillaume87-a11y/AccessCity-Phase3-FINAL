@@ -51,7 +51,6 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
       ariaExpanded={choices.length > 0}
       textMarginBottom="8px"
       choices={choices}
-      choiceHandlePosition={layout.choiceHandles.position}
     >
       {/* Choices — Blender-style full-width rows or legacy badges */}
       {choices.length > 0 && (
@@ -121,7 +120,7 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
           [layout.branchLines.indicatorSide]: '8px',
           width: `${NODE_FONT.icon}px`,
           height: `${NODE_FONT.icon}px`,
-          opacity: 0.5,
+          opacity: 0.7,
           transition: COSMOS_ANIMATIONS.transitionNormal,
           pointerEvents: 'none',
           zIndex: 10,
@@ -131,7 +130,7 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
           <path
             d="M12 4 L12 10 M8 16 L12 10 M16 16 L12 10"
             stroke={borderColor}
-            strokeWidth="2.5"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
           />

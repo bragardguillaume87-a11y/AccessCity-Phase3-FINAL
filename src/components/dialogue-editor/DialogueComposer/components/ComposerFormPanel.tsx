@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
-import { Plus, User, MessageSquare } from 'lucide-react';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { Plus, User, MessageSquare, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,12 +15,17 @@ import type { ResponseData } from '../../DialogueWizard/hooks/useDialogueForm';
 import { BinaryChoiceField } from './BinaryChoiceField';
 import { DiceChoiceCard } from '../../DialogueWizard/components/DiceChoiceBuilder/DiceChoiceCard';
 import { ComplexChoiceCard } from '../../DialogueWizard/components/ComplexChoiceBuilder/ComplexChoiceCard';
+import { VoicePresetPicker, VoicePresetBadge } from './VoicePresetPicker';
+import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
+import { MoodCard } from '@/components/ui/MoodCard';
 
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ComposerFormPanelProps {
   speaker: string;
   text: string;
+  voicePreset?: string;
+  speakerMood?: string;
   complexityLevel: ComplexityLevel | null;
   choices: DialogueChoice[];
   responses: ResponseData[];
@@ -28,6 +33,8 @@ interface ComposerFormPanelProps {
   currentSceneId: string;
   onSpeakerChange: (speaker: string) => void;
   onTextChange: (text: string) => void;
+  onVoicePresetChange: (presetId: string | undefined) => void;
+  onSpeakerMoodChange: (mood: string | undefined) => void;
   onUpdateChoice: (index: number, updates: Partial<DialogueChoice>) => void;
   onUpdateResponse: (index: number, updates: Partial<ResponseData>) => void;
   onAddChoice: () => void;
@@ -47,6 +54,8 @@ interface ComposerFormPanelProps {
 export function ComposerFormPanel({
   speaker,
   text,
+  voicePreset,
+  speakerMood,
   complexityLevel,
   choices,
   responses,
@@ -54,6 +63,8 @@ export function ComposerFormPanel({
   currentSceneId,
   onSpeakerChange,
   onTextChange,
+  onVoicePresetChange,
+  onSpeakerMoodChange,
   onUpdateChoice,
   onUpdateResponse,
   onAddChoice,
@@ -61,6 +72,8 @@ export function ComposerFormPanel({
 }: ComposerFormPanelProps) {
   const characters = useCharactersStore(state => state.characters);
   const [activeTab, setActiveTab] = useState(0);
+  const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+  const voiceBtnRef = useRef<HTMLButtonElement>(null);
 
   const currentScene = useMemo(() => scenes.find(s => s.id === currentSceneId), [scenes, currentSceneId]);
   const textLen      = text.trim().length;
@@ -108,9 +121,54 @@ export function ComposerFormPanel({
 
       {/* ── Speaker ──────────────────────────────────────────────────────── */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-          <User className="w-3.5 h-3.5" aria-hidden="true" /> Qui parle ?
-        </Label>
+        {/* Label row — "Qui parle ?" + icône voix */}
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5" aria-hidden="true" /> Qui parle ?
+          </Label>
+          {/* Voice preset badge + bouton */}
+          <div className="flex items-center gap-1.5">
+            {voicePreset && <VoicePresetBadge presetId={voicePreset} />}
+            <div style={{ position: 'relative' }}>
+              <button
+                ref={voiceBtnRef}
+                type="button"
+                onClick={() => setVoicePickerOpen(v => !v)}
+                title={voicePreset ? 'Changer la voix' : 'Ajouter une voix'}
+                aria-expanded={voicePickerOpen}
+                aria-haspopup="true"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 26,
+                  height: 26,
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${voicePreset ? 'rgba(139,92,246,0.5)' : 'var(--color-border-base)'}`,
+                  background: voicePreset ? 'rgba(139,92,246,0.12)' : 'transparent',
+                  color: voicePreset ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, background 0.15s',
+                  flexShrink: 0,
+                }}
+              >
+                <Volume2 size={13} aria-hidden="true" />
+              </button>
+              {/* Picker — portal dans document.body pour passer au premier plan */}
+              <AnimatePresence>
+                {voicePickerOpen && (
+                  <VoicePresetPicker
+                    anchorRef={voiceBtnRef}
+                    value={voicePreset}
+                    onChange={onVoicePresetChange}
+                    onClose={() => setVoicePickerOpen(false)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
         <Select
           value={speaker || DEFAULTS.DIALOGUE_SPEAKER}
           onValueChange={onSpeakerChange}
@@ -137,6 +195,50 @@ export function ComposerFormPanel({
             )}
           </SelectContent>
         </Select>
+
+        {/* ── Mood picker — Nintendo card style, inline sous le select ─── */}
+        {(() => {
+          const char = characters.find(c => c.id === speaker);
+          if (!char) return null;
+          const moods = char.moods && char.moods.length > 0 ? char.moods : ['neutral'];
+          const activeMood = speakerMood || moods[0];
+          return (
+            <div style={{ marginTop: 8 }}>
+              <p style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: 'var(--color-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: 6,
+              }}>
+                Humeur
+              </p>
+              {/* Scroll horizontal si +5 humeurs */}
+              <div style={{
+                display: 'flex',
+                gap: 6,
+                overflowX: 'auto',
+                paddingBottom: 4,
+                scrollbarWidth: 'none',
+              }}>
+                {moods.map((mood, idx) => (
+                  <MoodCard
+                    key={mood}
+                    mood={mood}
+                    emoji={getMoodEmoji(mood)}
+                    label={getMoodLabel(mood)}
+                    sprite={char.sprites?.[mood]}
+                    isActive={activeMood === mood}
+                    onClick={() => onSpeakerMoodChange(activeMood === mood ? undefined : mood)}
+                    size={44}
+                    entryDelay={idx * 0.04}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Dialogue text ────────────────────────────────────────────────── */}

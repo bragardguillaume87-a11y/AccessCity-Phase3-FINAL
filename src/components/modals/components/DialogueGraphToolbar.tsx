@@ -41,8 +41,6 @@ export interface DialogueGraphToolbarProps {
   canUndo: boolean;
   /** Whether redo is available */
   canRedo: boolean;
-  /** Is the properties panel currently open? Adjusts toolbar position */
-  isPanelOpen?: boolean;
   /** Number of integrity issues found (shows badge on bell) */
   integrityIssueCount?: number;
   /** Callback when bell is clicked */
@@ -62,7 +60,6 @@ export function DialogueGraphToolbar({
   onRedo,
   canUndo,
   canRedo,
-  isPanelOpen = false,
   integrityIssueCount = 0,
   onToggleIntegrityPanel,
   integrityPanelOpen = false,
@@ -70,10 +67,7 @@ export function DialogueGraphToolbar({
   return (
     <div
       className="absolute top-4 flex items-center gap-2 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl px-3 py-2 z-10 shadow-xl transition-all duration-300"
-      style={{
-        // When panel is open (30% width), position toolbar to the left of the panel
-        right: isPanelOpen ? 'calc(30% + 1rem)' : '1rem',
-      }}
+      style={{ right: '1rem' }}
       role="toolbar"
       aria-label="Actions de l'éditeur nodal"
     >

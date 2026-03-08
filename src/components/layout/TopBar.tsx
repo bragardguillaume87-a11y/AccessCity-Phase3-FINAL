@@ -1,8 +1,9 @@
 
-import { Users, Image, Settings, Download, Play, Network, Undo2, Redo2, AlertTriangle, Check, Loader2, ChevronLeft } from "lucide-react"
+import { Users, Image, Settings, Download, Play, Network, Undo2, Redo2, AlertTriangle, Check, Loader2, ChevronLeft, Sparkles } from "lucide-react"
 import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
 import { useUIStore } from "@/stores"
 import { useTranslation } from "@/i18n"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 
 export interface TopBarValidation {
   hasIssues: boolean
@@ -22,10 +23,12 @@ export interface TopBarProps {
 }
 
 /**
- * TopBar — Design premium "Midnight Bloom" (50px, studio.css classes)
+ * TopBar — Access Studio
  *
- * Structure : Brand | Nav center | Undo+Mode+Validation+Save+Preview right
- * Toutes les fonctionnalités existantes sont conservées, seul le rendu change.
+ * Structure :
+ *   GAUCHE  : ← Retour | ✦ Access Studio | ↩ ↪
+ *   CENTRE  : Réglages (pro) | Personnages | Ressources | Graphe (pro) | ▶ Aperçu
+ *   DROITE  : [Mode Élève toggle] | validation | save | Exporter (pro)
  */
 export default function TopBar({
   onBack,
@@ -37,9 +40,9 @@ export default function TopBar({
   isSaving,
   lastSaved
 }: TopBarProps) {
-  const showProblemsPanel  = useUIStore(s => s.showProblemsPanel);
+  const showProblemsPanel   = useUIStore(s => s.showProblemsPanel);
   const setShowProblemsPanel = useUIStore(s => s.setShowProblemsPanel);
-  const editorMode = useUIStore(s => s.editorMode);
+  const editorMode  = useUIStore(s => s.editorMode);
   const setEditorMode = useUIStore(s => s.setEditorMode);
   const { kidMode: km } = useTranslation();
 
@@ -62,7 +65,7 @@ export default function TopBar({
       role="banner"
       aria-label="Application header"
     >
-      {/* ── GAUCHE : Brand + Retour ── */}
+      {/* ── GAUCHE : Logo + Undo/Redo ── */}
       <div className="topbar-brand">
         {onBack && (
           <button
@@ -76,109 +79,13 @@ export default function TopBar({
           </button>
         )}
         <div className="topbar-sep" aria-hidden="true" />
-        <span className="topbar-title" aria-label="AccessCity Studio">
-          AccessCity Studio
+        <span className="topbar-title" aria-label="Access Studio">
+          <Sparkles size={15} className="topbar-title-icon" aria-hidden="true" />
+          <span className="topbar-title-accent">Access</span>
+          <span>Studio</span>
         </span>
-      </div>
-
-      {/* ── CENTRE : Navigation ── */}
-      <nav className="topbar-center" aria-label="Actions principales">
-        {/* Personnages */}
-        <button
-          className="topbar-nav"
-          onClick={handleOpenCharacters}
-          title="Gérer les personnages (Ctrl+Shift+C)"
-          aria-label="Gérer les personnages"
-        >
-          <Users size={14} aria-hidden="true" />
-          Personnages
-        </button>
-
-        {/* Ressources */}
-        <button
-          className="topbar-nav"
-          onClick={handleOpenAssets}
-          title="Bibliothèque de ressources (Ctrl+Shift+A)"
-          aria-label="Bibliothèque de ressources"
-        >
-          <Image size={14} aria-hidden="true" />
-          {editorMode === 'kid' ? km.resources : 'Ressources'}
-        </button>
-
-        {/* Vue Graphe — mode pro uniquement */}
-        {editorMode === 'pro' && (
-          <>
-            <div className="topbar-divider" aria-hidden="true" />
-            <button
-              className="topbar-nav"
-              onClick={handleOpenGraph}
-              title="Vue Graphe — éditeur nodal (Ctrl+Shift+G)"
-              aria-label="Vue Graphe"
-            >
-              <Network size={14} aria-hidden="true" />
-              Graphe
-            </button>
-          </>
-        )}
-
-        {/* Réglages — mode pro uniquement */}
-        {editorMode === 'pro' && (
-          <>
-            <div className="topbar-divider" aria-hidden="true" />
-            <button
-              className="topbar-nav"
-              onClick={handleOpenProject}
-              title="Paramètres du projet"
-              aria-label="Paramètres du projet"
-            >
-              <Settings size={14} aria-hidden="true" />
-              Réglages
-            </button>
-          </>
-        )}
-
-        {/* Aperçu — toujours visible, juste à droite de Réglages */}
-        <div className="topbar-divider" aria-hidden="true" />
-        <button
-          className="btn-preview"
-          onClick={handleOpenPreview}
-          title={`${editorMode === 'kid' ? km.preview : 'Aperçu'} (Ctrl+R)`}
-          aria-label={editorMode === 'kid' ? km.preview : 'Prévisualiser le jeu'}
-        >
-          <Play size={14} aria-hidden="true" />
-          {editorMode === 'kid' ? km.preview : 'Aperçu'}
-        </button>
-
-      </nav>
-
-      {/* ── DROITE : Mode + Undo/Redo + Validation + Save + Export ── */}
-      <div className="topbar-right">
-        {/* Mode Élève / Avancé */}
-        <div
-          className="topbar-mode"
-          role="group"
-          aria-label="Mode de l'éditeur"
-        >
-          <button
-            className={`topbar-mode-btn${editorMode === 'kid' ? ' active' : ''}`}
-            onClick={() => setEditorMode('kid')}
-            aria-pressed={editorMode === 'kid'}
-            title="Mode Élève — interface simplifiée"
-          >
-            {km.kidLabel}
-          </button>
-          <button
-            className={`topbar-mode-btn${editorMode === 'pro' ? ' active' : ''}`}
-            onClick={() => setEditorMode('pro')}
-            aria-pressed={editorMode === 'pro'}
-            title="Mode Avancé — toutes les fonctionnalités"
-          >
-            {km.proLabel}
-          </button>
-        </div>
         <div className="topbar-sep" aria-hidden="true" />
-
-        {/* Undo / Redo */}
+        {/* Undo / Redo — proches du titre */}
         <div role="group" aria-label="Historique" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <button
             className="topbar-icon"
@@ -201,20 +108,121 @@ export default function TopBar({
             <Redo2 size={15} aria-hidden="true" />
           </button>
         </div>
+      </div>
+
+      {/* ── CENTRE : Navigation ── */}
+      <nav className="topbar-center" aria-label="Actions principales">
+
+        {/* Réglages — pro only, en premier */}
+        {editorMode === 'pro' && (
+          <>
+            <button
+              className="topbar-nav"
+              onClick={handleOpenProject}
+              title="Paramètres du projet"
+              aria-label="Paramètres du projet"
+            >
+              <Settings size={14} aria-hidden="true" />
+              Réglages
+            </button>
+            <div className="topbar-divider" aria-hidden="true" />
+          </>
+        )}
+
+        {/* Personnages */}
+        <button
+          className="topbar-nav"
+          onClick={handleOpenCharacters}
+          title="Gérer les personnages (Ctrl+Shift+C)"
+          aria-label="Gérer les personnages"
+        >
+          <Users size={14} aria-hidden="true" />
+          Personnages
+        </button>
+
+        {/* Ressources */}
+        <button
+          className="topbar-nav"
+          onClick={handleOpenAssets}
+          title="Bibliothèque de ressources (Ctrl+Shift+A)"
+          aria-label="Bibliothèque de ressources"
+        >
+          <Image size={14} aria-hidden="true" />
+          {editorMode === 'kid' ? km.resources : 'Ressources'}
+        </button>
+
+        {/* Graphe — pro only */}
+        {editorMode === 'pro' && (
+          <>
+            <div className="topbar-divider" aria-hidden="true" />
+            <button
+              className="topbar-nav"
+              onClick={handleOpenGraph}
+              title="Vue Graphe — éditeur nodal (Ctrl+Shift+G)"
+              aria-label="Vue Graphe"
+            >
+              <Network size={14} aria-hidden="true" />
+              Graphe
+            </button>
+          </>
+        )}
+
+        {/* Aperçu — toujours visible */}
+        <div className="topbar-divider" aria-hidden="true" />
+        <button
+          className="btn-preview"
+          onClick={handleOpenPreview}
+          title={`${editorMode === 'kid' ? km.preview : 'Aperçu'} (Ctrl+R)`}
+          aria-label={editorMode === 'kid' ? km.preview : 'Prévisualiser le jeu'}
+        >
+          <Play size={14} aria-hidden="true" />
+          {editorMode === 'kid' ? km.preview : 'Aperçu'}
+        </button>
+
+      </nav>
+
+      {/* ── DROITE : Toggle Mode + Validation + Save + Export ── */}
+      <div className="topbar-right">
+
+        {/* Toggle Mode Élève — label + piste avec curseur glissant */}
+        <button
+          className={`topbar-mode-toggle${editorMode === 'kid' ? ' active' : ''}`}
+          onClick={() => setEditorMode(editorMode === 'kid' ? 'pro' : 'kid')}
+          aria-pressed={editorMode === 'kid'}
+          title={editorMode === 'kid' ? 'Passer en Mode Avancé' : 'Passer en Mode Élève'}
+        >
+          <span className="topbar-mode-toggle-label">{km.kidLabel}</span>
+          <span className="topbar-mode-toggle-track" aria-hidden="true">
+            <span className="topbar-mode-toggle-thumb" />
+          </span>
+        </button>
 
         {/* Validation badge — visible si problèmes */}
         {validation?.hasIssues && (
-          <button
-            className="topbar-warn"
-            onClick={() => setShowProblemsPanel(!showProblemsPanel)}
-            title="Cliquer pour voir les détails"
-            aria-label={`${validation.totalErrors} erreurs, ${validation.totalWarnings} avertissements`}
-            aria-expanded={showProblemsPanel}
-          >
-            <AlertTriangle size={13} aria-hidden="true" />
-            {validation.totalErrors > 0 && <span>{validation.totalErrors}e</span>}
-            {validation.totalWarnings > 0 && <span>{validation.totalWarnings}w</span>}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="topbar-warn"
+                onClick={() => setShowProblemsPanel(!showProblemsPanel)}
+                aria-label={`${validation.totalErrors} erreur${validation.totalErrors > 1 ? 's' : ''}, ${validation.totalWarnings} avertissement${validation.totalWarnings > 1 ? 's' : ''} — cliquer pour voir les détails`}
+                aria-expanded={showProblemsPanel}
+              >
+                <AlertTriangle size={13} aria-hidden="true" />
+                {validation.totalErrors > 0 && (
+                  <span>{validation.totalErrors} err.</span>
+                )}
+                {validation.totalWarnings > 0 && (
+                  <span>{validation.totalWarnings} avert.</span>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p style={{ fontWeight: 600 }}>
+                {validation.totalErrors} erreur{validation.totalErrors > 1 ? 's' : ''} · {validation.totalWarnings} avertissement{validation.totalWarnings > 1 ? 's' : ''}
+              </p>
+              <p style={{ opacity: 0.7, marginTop: 2 }}>Cliquer pour voir les détails</p>
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Indicateur sauvegarde */}

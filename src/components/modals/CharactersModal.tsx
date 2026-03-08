@@ -206,7 +206,7 @@ export function CharactersModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
-        <DialogContent className="max-w-[1200px] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
+        <DialogContent className="max-w-[min(1200px,95vw)] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-slate-700/50 bg-slate-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

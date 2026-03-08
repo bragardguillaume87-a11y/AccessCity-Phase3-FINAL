@@ -52,22 +52,6 @@ export function useScenes(): SceneMetadata[] {
   return useScenesStore((state) => state?.scenes ?? EMPTY_SCENES_ARRAY);
 }
 
-/**
- * Select scenes count (optimized - doesn't re-render on scene content changes).
- */
-export function useScenesCount(): number {
-  return useScenesStore((state) => state.scenes.length);
-}
-
-/**
- * Select scene IDs only (lightweight selector for lists).
- */
-export function useSceneIds(): string[] {
-  return useScenesStore(
-    useCallback((state) => state.scenes.map((s) => s.id), [])
-  );
-}
-
 // ============================================================================
 // ACTIONS SELECTORS (stable references)
 // ============================================================================

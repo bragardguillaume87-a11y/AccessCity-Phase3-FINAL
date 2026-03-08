@@ -5,7 +5,6 @@ import { getNodeColorTheme } from '@/hooks/useDialogueGraph';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { COLORS } from '@/config/colors';
 import type { DialogueNodeData, DialogueChoice, ValidationProblem } from '@/types';
-import type { Position } from '@xyflow/react';
 import { truncateNodeText, truncateStageDirections, getIssueStatus } from '@/utils/textHelpers';
 import { useUIStore } from '@/stores';
 import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
@@ -53,8 +52,6 @@ interface BaseNodeProps {
   textMarginBottom?: string;
   /** Choices for NodeHandles (choice nodes only) */
   choices?: DialogueChoice[];
-  /** Choice handle position from layout (choice nodes only) */
-  choiceHandlePosition?: Position;
   /** Additional content rendered after main text */
   children?: React.ReactNode;
 }
@@ -72,7 +69,6 @@ export const BaseNode = React.memo(function BaseNode({
   ariaExpanded,
   textMarginBottom = '0',
   choices,
-  choiceHandlePosition,
   children,
 }: BaseNodeProps): React.JSX.Element {
   const { index, speaker, text, speakerMood, stageDirections, issues = [], responseLabel } = data;
@@ -93,23 +89,40 @@ export const BaseNode = React.memo(function BaseNode({
   }, [index, setEditIndex, setWizardOpen]);
 
   const { hasErrors, hasWarnings } = getIssueStatus(issues);
+  const hasIssues = hasErrors || hasWarnings;
 
   const bgColor = themeColors.headerBg
-    ? (hasErrors || hasWarnings ? colors.bg : themeColors.bg)
-    : (hasErrors || hasWarnings ? colors.bg : (themeColors.bgGradient || themeColors.bg));
-  const borderColor = hasErrors || hasWarnings ? colors.border : themeColors.border;
-  // Blender-style header: colored strip at top, flush with node edges
+    ? (hasIssues ? colors.bg : themeColors.bg)
+    : (hasIssues ? colors.bg : (themeColors.bgGradient || themeColors.bg));
+  const borderColor = hasIssues ? colors.border : themeColors.border;
+
+  // Header strip: uses headerBgGradient (CSS gradient) when available, falls back to solid headerBg.
+  // Note: outputColor (SVG handles) still receives headerBg (solid) — CSS gradients aren't valid SVG stroke colors.
+  const headerVisualBg = hasIssues
+    ? colors.border
+    : (themeColors.headerBgGradient || themeColors.headerBg);
   const headerWrapperStyle: React.CSSProperties = themeColors.headerBg ? {
     margin: '-12px -12px 10px -12px',
     padding: '10px 12px',
-    background: hasErrors || hasWarnings ? colors.border : themeColors.headerBg,
+    background: headerVisualBg,
     borderRadius: `${sizes.nodeBorderRadius}px ${sizes.nodeBorderRadius}px 0 0`,
     display: 'flex', alignItems: 'flex-start', gap: '10px',
+    boxShadow: 'inset 0 -1px 0 rgba(0,0,0,0.2)',
   } : HEADER_ROW_STYLE;
-  const textColor = hasErrors || hasWarnings ? colors.text : themeColors.text;
-  // On a colored header (Blender), always use white text for maximum contrast
+  const textColor = hasIssues ? colors.text : themeColors.text;
+  // On a colored header, always use white text for maximum contrast
   const headerTextColor = themeColors.headerBg ? '#ffffff' : textColor;
   const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
+
+  // Choice nodes get a thicker left accent border for instant visual differentiation (n8n/Unreal pattern)
+  const isChoiceAccent = themeNodeKey === 'choice' && themeColors.headerBg && !hasIssues;
+  const accentLeftBorder = isChoiceAccent
+    ? `4px solid ${selected ? COLORS.SELECTED : (themeColors.headerBg || borderColor)}`
+    : undefined;
+
+  // Floating index chip: used when headerBg is present (default + blender themes).
+  // Cosmos/legacy themes keep the in-header badge (no headerBg).
+  const showFloatingChip = !!themeColors.headerBg;
 
   const displayText = truncateNodeText(text);
   const displayStageDirections = truncateStageDirections(stageDirections) || null;
@@ -135,6 +148,7 @@ export const BaseNode = React.memo(function BaseNode({
         borderColor: selected ? COLORS.SELECTED : borderColor,
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'solid',
+        borderLeft: accentLeftBorder,
         borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',
         width: `${sizes.nodeWidth}px`,
@@ -161,14 +175,40 @@ export const BaseNode = React.memo(function BaseNode({
         showDragIndicators={!!theme.interactions?.showDragIndicators}
         showLinkEmoji={!!theme.interactions?.showDragIndicators}
         choices={choices}
-        choiceHandlePosition={choiceHandlePosition}
+        choiceHandlePosition={layout.choiceHandles.position}
         inputColor={themeColors.headerBg ? '#8a9ba8' : undefined}
         outputColor={themeColors.headerBg ? (themeColors.headerBg) : undefined}
         handleOpacity={themeColors.headerBg ? 0.85 : 0.2}
       />
 
-      {/* Header: Avatar + Speaker + Index */}
+      {/* Header: Index + Avatar + Speaker */}
       <div style={headerWrapperStyle}>
+        {/* Grand numéro à gauche de l'avatar — visible uniquement sur les thèmes avec header coloré */}
+        {showFloatingChip && (
+          <div
+            aria-hidden="true"
+            style={{
+              alignSelf: 'center',
+              minWidth: '28px',
+              textAlign: 'center',
+              flexShrink: 0,
+              paddingRight: '10px',
+              marginRight: '2px',
+              borderRight: '1px solid rgba(255,255,255,0.18)',
+              fontSize: '22px',
+              fontWeight: 900,
+              lineHeight: 1,
+              color: 'rgba(255,255,255,0.95)',
+              letterSpacing: '-0.01em',
+              fontVariantNumeric: 'tabular-nums' as React.CSSProperties['fontVariantNumeric'],
+              fontFeatureSettings: '"tnum" 1, "lnum" 1',
+              textShadow: '0 1px 6px rgba(0,0,0,0.5)',
+            }}
+          >
+            {responseLabel ?? (index + 1)}
+          </div>
+        )}
+
         <div style={{ ...AVATAR_BASE_STYLE, border: `2px solid ${themeColors.headerBg ? 'rgba(255,255,255,0.3)' : borderColor}` }}>
           {avatarUrl ? (
             <img src={avatarUrl} alt={speaker} style={AVATAR_IMG_STYLE} />
@@ -187,29 +227,32 @@ export const BaseNode = React.memo(function BaseNode({
               ) : (
                 <Icon size={14} color={headerTextColor} />
               )}
-              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '700', color: headerTextColor }}>
+              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '700', color: headerTextColor, letterSpacing: '0.02em' }}>
                 {speaker || 'Narrator'}
               </span>
               {speakerMood && speakerMood !== 'neutral' && (
-                <span style={{ fontSize: `${NODE_FONT.meta}px`, color: headerTextColor, opacity: 0.75, fontStyle: 'italic' }}>
+                <span style={{ fontSize: `${NODE_FONT.meta}px`, color: headerTextColor, opacity: 0.9, fontStyle: 'italic' }}>
                   ({speakerMood})
                 </span>
               )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span
-                style={{
-                  ...INDEX_BADGE_BASE_STYLE,
-                  fontSize: theme.icons?.useEmoji ? '16px' : '15px',
-                  color: themeColors.headerBg ? headerTextColor : COLORS.TEXT_DARK,
-                  backgroundColor: themeColors.headerBg ? 'rgba(0,0,0,0.25)' : textColor,
-                  padding: theme.icons?.useEmoji ? '4px 12px' : '3px 10px',
-                }}
-              >
-                {theme.icons?.useEmoji && indexBadgeEmoji && <span>{indexBadgeEmoji}</span>}
-                {responseLabel ?? (index + 1)}
-              </span>
+              {/* In-header badge: only for themes without floating chip (Cosmos/legacy) */}
+              {!showFloatingChip && (
+                <span
+                  style={{
+                    ...INDEX_BADGE_BASE_STYLE,
+                    fontSize: theme.icons?.useEmoji ? '16px' : '15px',
+                    color: COLORS.TEXT_DARK,
+                    backgroundColor: textColor,
+                    padding: theme.icons?.useEmoji ? '4px 12px' : '3px 10px',
+                  }}
+                >
+                  {theme.icons?.useEmoji && indexBadgeEmoji && <span>{indexBadgeEmoji}</span>}
+                  {responseLabel ?? (index + 1)}
+                </span>
+              )}
               <button
                 onClick={handleEditClick}
                 title="Éditer ce dialogue"
@@ -244,11 +287,11 @@ export const BaseNode = React.memo(function BaseNode({
       <p
         style={{
           fontSize: `${sizes.fontSizeText}px`,
-          lineHeight: '1.6',
+          lineHeight: '1.5', // 1.5 vs 1.6 : densité professionnelle (n8n, Blender standard)
           color: textColor,
           margin: `0 0 ${textMarginBottom} 0`,
           wordWrap: 'break-word',
-          opacity: 0.95
+          opacity: 0.88,
         }}
       >
         {displayText}

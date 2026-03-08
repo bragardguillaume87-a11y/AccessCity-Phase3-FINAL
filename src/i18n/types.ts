@@ -89,23 +89,6 @@ export interface DialogueEditorTranslations {
 }
 
 /**
- * Graph-specific translations (node/edge labels, accessibility)
- */
-export interface GraphTranslations {
-  startBadge: string;
-  endBadge: string;
-  startAriaLabel: string;
-  endAriaLabel: string;
-  rowLabel: string;
-  nextBelow: string;
-  flowContinues: string;
-  convergenceLabel: string;
-  choiceAriaLabel: string;
-  emptyDialogue: string;
-  sceneJumpLabel: string;
-}
-
-/**
  * Kid mode UI translations (simplified labels for 8-10 year old users)
  */
 export interface KidModeTranslations {
@@ -124,7 +107,6 @@ export interface Translations {
   gameStats: GameStatsTranslations;
   common: CommonTranslations;
   editor: EditorTranslations;
-  graph: GraphTranslations;
   dialogueEditor: DialogueEditorTranslations;
   kidMode: KidModeTranslations;
 }
@@ -150,6 +132,5 @@ export type TranslationPath =
   | `gameStats.${keyof GameStatsTranslations}`
   | `common.${keyof CommonTranslations}`
   | `editor.${keyof EditorTranslations}`
-  | `graph.${keyof GraphTranslations}`
   | `dialogueEditor.${keyof DialogueEditorTranslations}`
   | `kidMode.${keyof KidModeTranslations}`;

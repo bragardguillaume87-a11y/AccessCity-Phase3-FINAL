@@ -97,10 +97,14 @@ export function useLocalGraphState(
   );
 
   // Helper for drag-to-reconnect on existing edges
+  // ✅ Un seul calcul — ref et state mis à jour ensemble (même pattern que onEdgesChange)
   const reconnectLocalEdge = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      setLocalEdges((els) => reconnectEdge(oldEdge, newConnection, els));
-      localEdgesRef.current = reconnectEdge(oldEdge, newConnection, localEdgesRef.current);
+      setLocalEdges((els) => {
+        const updated = reconnectEdge(oldEdge, newConnection, els);
+        localEdgesRef.current = updated;
+        return updated;
+      });
     },
     []
   );

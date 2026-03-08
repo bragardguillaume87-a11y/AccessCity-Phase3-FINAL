@@ -80,10 +80,10 @@ export function useAllScenesWithElements(): Scene[] {
 
   return useMemo(() => scenes.map((scene) => ({
     ...scene,
-    dialogues: dialoguesByScene[scene.id] || [],
-    characters: elementsByScene[scene.id]?.characters || [],
-    textBoxes: elementsByScene[scene.id]?.textBoxes || [],
-    props: elementsByScene[scene.id]?.props || [],
+    dialogues: dialoguesByScene[scene.id] ?? EMPTY_DIALOGUES,
+    characters: elementsByScene[scene.id]?.characters ?? EMPTY_CHARACTERS,
+    textBoxes: elementsByScene[scene.id]?.textBoxes ?? EMPTY_TEXTBOXES,
+    props: elementsByScene[scene.id]?.props ?? EMPTY_PROPS,
   })), [scenes, dialoguesByScene, elementsByScene]);
 }
 
@@ -92,13 +92,6 @@ export function useAllScenesWithElements(): Scene[] {
  */
 export function useSceneDialogues(sceneId: string) {
   return useDialoguesStore((s) => s.dialoguesByScene[sceneId] || EMPTY_DIALOGUES);
-}
-
-/**
- * Récupère les personnages d'une scène (shortcut)
- */
-export function useSceneCharacters(sceneId: string) {
-  return useSceneElementsStore((s) => s.elementsByScene[sceneId]?.characters || EMPTY_CHARACTERS);
 }
 
 /**
@@ -193,7 +186,6 @@ export default {
   useSceneWithElements,
   useAllScenesWithElements,
   useSceneDialogues,
-  useSceneCharacters,
   useSceneElements,
   useSceneActions,
 };

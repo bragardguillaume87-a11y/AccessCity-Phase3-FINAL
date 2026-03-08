@@ -1,8 +1,8 @@
-import type { Edge, MarkerType } from '@xyflow/react';
+import type { Edge } from '@xyflow/react';
 import type { SerpentineNodeData, DialogueNodeData, TerminalNodeData } from '@/types';
 import { SERPENTINE_Y_THRESHOLD, extractSceneId, recalculateSerpentineEdges, buildNodeRowMap } from '@/config/handleConfig';
 import { SERPENTINE_LAYOUT } from '@/config/layoutConfig';
-import { COSMOS_COLORS, COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
+import { COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
 import { isTerminalNode, isRowSeparatorNode } from '@/utils/textHelpers';
 import type { RowSeparatorNodeData } from '@/components/features/graph-nodes/RowSeparatorNode';
 import type { GraphNode } from './types';
@@ -385,65 +385,4 @@ export function applySerpentineEdgeRouting(
     }
     return edge;
   });
-}
-
-/**
- * Build visual U-turn connector edges between serpentine rows.
- *
- * When the layout turns from one row to the next, no data edge usually
- * exists between the last node of row N and the first node of row N+1
- * (they may be connected via a choice, a scene jump, or not at all).
- * This function adds a visual-only dashed connector so the reader sees
- * where the flow "turns the corner".
- *
- * Edge format: `<sourceId>-serp-turn-<targetId>` — purely decorative.
- */
-export function buildSerpentineTurnEdges(nodes: GraphNode[], edges: Edge[]): Edge[] {
-  // Collect only nodes that have serpentine data, sorted by dialogue index
-  const serpNodes = nodes
-    .filter(n => !!(n.data as DialogueNodeData).serpentine)
-    .sort((a, b) => (a.data as DialogueNodeData).index - (b.data as DialogueNodeData).index);
-
-  if (serpNodes.length < 2) return edges;
-
-  const existingEdgeIds = new Set(edges.map(e => e.id));
-  const turnEdges: Edge[] = [];
-
-  for (let i = 0; i < serpNodes.length - 1; i++) {
-    const curr = serpNodes[i];
-    const next = serpNodes[i + 1];
-    const currSerp = (curr.data as DialogueNodeData).serpentine!;
-    const nextSerp = (next.data as DialogueNodeData).serpentine!;
-
-    // Only add a turn edge at row boundaries (last of row N → first of row N+1)
-    if (currSerp.isLastInRow && nextSerp.isFirstInRow) {
-      const turnId = `${curr.id}-serp-turn-${next.id}`;
-      if (!existingEdgeIds.has(turnId)) {
-        turnEdges.push({
-          id: turnId,
-          source: curr.id,
-          target: next.id,
-          sourceHandle: 'bottom',
-          targetHandle: 'top',
-          type: 'straight',
-          style: {
-            stroke: COSMOS_COLORS.turnConnector.stroke,
-            strokeWidth: COSMOS_DIMENSIONS.turnConnector.strokeWidth,
-            strokeDasharray: COSMOS_DIMENSIONS.turnConnector.strokeDasharray,
-            opacity: COSMOS_DIMENSIONS.turnConnector.opacity,
-          },
-          markerEnd: {
-            type: 'arrowclosed' as unknown as MarkerType,
-            color: COSMOS_COLORS.turnConnector.stroke,
-            width: COSMOS_DIMENSIONS.turnConnector.arrowWidth,
-            height: COSMOS_DIMENSIONS.turnConnector.arrowHeight,
-          },
-          animated: false,
-          data: { isTurnConnector: true },
-        } as Edge);
-      }
-    }
-  }
-
-  return [...edges, ...turnEdges];
 }

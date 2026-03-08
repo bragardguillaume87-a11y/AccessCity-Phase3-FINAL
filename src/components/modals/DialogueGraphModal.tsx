@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useEffect, Suspense } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef, Suspense } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { useUIStore } from '@/stores';
 import { useSceneWithElements } from '@/stores/selectors';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
 import DialogueGraph from '../features/DialogueGraph';
 import { DialogueGraphToolbar } from './components/DialogueGraphToolbar';
 import { DialogueGraphPalette } from './components/DialogueGraphPalette';
@@ -42,6 +43,9 @@ export function DialogueGraphModal() {
     index?: number;
   } | null>(null);
 
+  // Persist properties panel position across node selections (drag behavior)
+  const [propertiesPanelPos, setPropertiesPanelPos] = useState<{ x: number; y: number } | undefined>(undefined);
+
   // State for auto-layout: increment to force graph recalculation
   const [layoutVersion, setLayoutVersion] = useState(0);
 
@@ -69,6 +73,15 @@ export function DialogueGraphModal() {
   const proModeEnabled = useUIStore((state) => state.proModeEnabled);
   const proModeDirection = useUIStore((state) => state.proModeDirection);
   const proPaginationEnabled = useUIStore((state) => state.proPaginationEnabled);
+  const setProCurrentPage = useUIStore((state) => state.setProCurrentPage);
+
+  // Animation slide+fade lors du changement de page
+  const [graphAnimStyle, setGraphAnimStyle] = useState<React.CSSProperties>({
+    opacity: 1,
+    transform: 'translateX(0)',
+    transition: 'opacity 0.22s ease, transform 0.25s ease',
+  });
+  const isAnimating = useRef(false);
 
   // Scene with full data from all 3 stores (see CLAUDE.md §6.6)
   const selectedScene = useSceneWithElements(selectedSceneId ?? undefined);
@@ -86,13 +99,52 @@ export function DialogueGraphModal() {
     setSelectedElement(null);
   }, [setIsOpen, setSelectedSceneId]);
 
+  // Reset page 0 à chaque changement de scène ou ouverture de la modale
+  useEffect(() => {
+    setProCurrentPage(0);
+  }, [selectedSceneId, setProCurrentPage]);
+
+  // Animation slide+fade lors du changement de page (public jeune)
+  const handlePageChange = useCallback((newPage: number, direction: 'forward' | 'backward') => {
+    if (isAnimating.current) return;
+    isAnimating.current = true;
+    setSelectedElement(null); // Désélectionner le nœud courant
+
+    const exitX = direction === 'forward' ? '-50px' : '50px';
+    const enterX = direction === 'forward' ? '50px' : '-50px';
+
+    // Phase 1 : sortie (slide + fondu)
+    setGraphAnimStyle({ opacity: 0, transform: `translateX(${exitX})`, transition: 'opacity 0.18s ease, transform 0.18s ease' });
+
+    setTimeout(() => {
+      // Phase 2 : changer la page + position initiale d'entrée (sans transition)
+      setProCurrentPage(newPage);
+      setGraphAnimStyle({ opacity: 0, transform: `translateX(${enterX})`, transition: 'none' });
+
+      // Phase 3 : animer l'entrée au prochain frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setGraphAnimStyle({ opacity: 1, transform: 'translateX(0)', transition: 'opacity 0.25s ease, transform 0.28s ease' });
+          setTimeout(() => { isAnimating.current = false; }, 300);
+        });
+      });
+    }, 200);
+  }, [setProCurrentPage]);
+
   // PHASE 5: Accessibility hooks
   // Get nodes from scene for keyboard navigation (simplified type for navigation only)
-  const graphNodes = selectedScene?.dialogues.map((_d, i) => ({
-    id: dialogueNodeId(selectedScene.id, i),
-    position: { x: i * 400, y: 0 }, // Approximate positions for navigation
-    data: {} as Record<string, unknown> // Type-safe for Node interface
-  })) || [];
+  // ✅ useMemo + EMPTY_GRAPH_NODES — évite une nouvelle référence à chaque render
+  //    (|| [] inline crée un tableau différent à chaque fois → instabilité deps useGraphKeyboardNav)
+  const EMPTY_GRAPH_NODES = useMemo(() => [], []);
+  const graphNodes = useMemo(
+    () => selectedScene?.dialogues.map((_d, i) => ({
+      id: dialogueNodeId(selectedScene.id, i),
+      position: { x: i * 400, y: 0 }, // Approximate positions for navigation
+      data: {} as Record<string, unknown> // Type-safe for Node interface
+    })) ?? EMPTY_GRAPH_NODES,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedScene?.id, selectedScene?.dialogues.length, EMPTY_GRAPH_NODES]
+  );
 
   // Keyboard navigation handlers
   const handleKeyboardSelectNode = useCallback((nodeId: string | null) => {
@@ -148,7 +200,7 @@ export function DialogueGraphModal() {
     }
   }, [selectedScene, actions]);
 
-  const handleSelectDialogue = (sceneId: string, dialogueIndex: number) => {
+  const handleSelectDialogue = useCallback((sceneId: string, dialogueIndex: number) => {
     // Set selected element for properties panel (PHASE 3)
     // Also used for keyboard shortcuts (Delete, Duplicate)
     if (dialogueIndex >= 0) {
@@ -157,7 +209,7 @@ export function DialogueGraphModal() {
       // Deselect if index is -1
       setSelectedElement(null);
     }
-  };
+  }, []);
 
   // PHASE 2: Toolbar actions
   const handleDelete = () => {
@@ -196,6 +248,24 @@ export function DialogueGraphModal() {
       setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index: dialogueIndex });
     }
   }, [selectedScene]);
+
+  // Terminal node actions (last node panel)
+  const updateDialogue = useDialoguesStore((state) => state.updateDialogue);
+
+  const handleTerminalAddDialogue = useCallback(() => {
+    actions.handleCreateDialogue('linear');
+  }, [actions]);
+
+  const handleTerminalOpenWizard = useCallback(() => {
+    if (!selectedElement) return;
+    const nodeId = dialogueNodeId(selectedElement.sceneId!, selectedElement.index!);
+    actions.handleNodeDoubleClick(nodeId);
+  }, [selectedElement, actions]);
+
+  const handleTerminalConcludeStory = useCallback(() => {
+    if (!selectedElement || selectedElement.index === undefined) return;
+    updateDialogue(selectedElement.sceneId!, selectedElement.index, { isConclusion: true });
+  }, [selectedElement, updateDialogue]);
 
   // Keyboard shortcuts for undo/redo (Ctrl+Z / Ctrl+Y)
   useEffect(() => {
@@ -281,7 +351,6 @@ export function DialogueGraphModal() {
                 onRedo={redo}
                 canUndo={canUndo}
                 canRedo={canRedo}
-                isPanelOpen={selectedElement !== null && selectedElement.index !== undefined}
                 integrityIssueCount={integrityIssues.length}
                 onToggleIntegrityPanel={handleToggleIntegrityPanel}
                 integrityPanelOpen={integrityPanelOpen}
@@ -298,24 +367,33 @@ export function DialogueGraphModal() {
                   transition: 'background-color 0.3s ease',
                 }}
               >
-                {/* PHASE 4: Animated background for Cosmos + Blender themes (lazy loaded) */}
-                {(isCosmosTheme || theme.background.type === 'animated') && (
-                  <Suspense fallback={null}>
-                    <CosmosBackground />
-                  </Suspense>
-                )}
+                {/* Couche animée : slide+fade lors du changement de page */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    ...graphAnimStyle,
+                    pointerEvents: isAnimating.current ? 'none' : 'auto',
+                  }}
+                >
+                  {/* PHASE 4: Animated background for Cosmos + Blender themes (lazy loaded) */}
+                  {(isCosmosTheme || theme.background.type === 'animated') && (
+                    <Suspense fallback={null}>
+                      <CosmosBackground />
+                    </Suspense>
+                  )}
 
-                {/* ReactFlow Graph */}
-                <DialogueGraph
-                  key={layoutVersion}
-                  selectedScene={selectedScene}
-                  selectedElement={selectedElement}
-                  onSelectDialogue={handleSelectDialogue}
-                  editMode={true}
-                  layoutDirection={effectiveLayoutDirection}
-                />
+                  {/* ReactFlow Graph */}
+                  <DialogueGraph
+                    key={layoutVersion}
+                    selectedScene={selectedScene}
+                    selectedElement={selectedElement}
+                    onSelectDialogue={handleSelectDialogue}
+                    editMode={true}
+                    layoutDirection={effectiveLayoutDirection}
+                  />
+                </div>
 
-                {/* Integrity panel */}
+                {/* Panneaux flottants — toujours visibles (non animés) */}
                 {integrityPanelOpen && (
                   <GraphIntegrityPanel
                     issues={integrityIssues}
@@ -324,9 +402,26 @@ export function DialogueGraphModal() {
                   />
                 )}
 
-                {/* Pro mode: Pagination bar */}
-                {proModeEnabled && proPaginationEnabled && (
-                  <GraphPagination totalDialogues={selectedScene.dialogues.length} />
+                {selectedElement && selectedElement.index !== undefined && (
+                  <DialoguePropertiesPanel
+                    sceneId={selectedElement.sceneId || ''}
+                    dialogueIndex={selectedElement.index}
+                    onClose={() => setSelectedElement(null)}
+                    isLastNode={selectedElement.index === (selectedScene?.dialogues.length ?? 0) - 1}
+                    onAddDialogue={handleTerminalAddDialogue}
+                    onOpenWizard={handleTerminalOpenWizard}
+                    onConcludeStory={handleTerminalConcludeStory}
+                    initialPosition={propertiesPanelPos}
+                    onPositionChange={setPropertiesPanelPos}
+                  />
+                )}
+
+                {/* Pagination — active pour tous dès que le nombre de nœuds dépasse la taille de page */}
+                {proPaginationEnabled && (
+                  <GraphPagination
+                    totalDialogues={selectedScene.dialogues.length}
+                    onPageChange={handlePageChange}
+                  />
                 )}
               </div>
             </>
@@ -337,15 +432,6 @@ export function DialogueGraphModal() {
             currentMode={accessibilityMode}
             onModeChange={setAccessibilityMode}
           />
-
-          {/* PHASE 3: Properties Panel */}
-          {selectedElement && selectedElement.index !== undefined && (
-            <DialoguePropertiesPanel
-              sceneId={selectedElement.sceneId || ''}
-              dialogueIndex={selectedElement.index}
-              onClose={() => setSelectedElement(null)}
-            />
-          )}
         </div>
       </DialogContent>
     </Dialog>

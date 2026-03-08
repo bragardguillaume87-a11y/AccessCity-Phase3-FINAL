@@ -21,6 +21,8 @@ export interface DialogueFormData {
   speaker: string;
   text: string;
   sfx?: DialogueAudio;
+  voicePreset?: string;
+  speakerMood?: string;
   choices: DialogueChoice[];
   complexityLevel: ComplexityLevel | null;
   responses: ResponseData[];
@@ -152,6 +154,8 @@ export function useDialogueForm(
         speaker: initialDialogue.speaker,
         text: initialDialogue.text,
         sfx: initialDialogue.sfx,
+        voicePreset: initialDialogue.voicePreset,
+        speakerMood: initialDialogue.speakerMood,
         choices: initialDialogue.choices,
         complexityLevel: complexity,
         responses: []

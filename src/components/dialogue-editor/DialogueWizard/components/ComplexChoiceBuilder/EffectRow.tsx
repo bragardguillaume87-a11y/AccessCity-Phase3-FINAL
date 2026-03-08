@@ -1,7 +1,6 @@
 
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -24,90 +23,155 @@ interface EffectRowProps {
   onRemove: () => void;
 }
 
-const OPERATIONS = [
-  { value: 'add'      as const, label: '+ Ajouter',   tooltip: 'Ajoute (ou soustrait) une valeur. Ex : Corps + 10' },
-  { value: 'set'      as const, label: '= Fixer',     tooltip: 'Définit la valeur exactement. Ex : Corps = 50' },
-  { value: 'multiply' as const, label: '× Multiplier', tooltip: 'Multiplie la valeur actuelle. Ex : Corps × 0.5' },
+const OPERATIONS: Array<{
+  value: 'add' | 'set' | 'multiply';
+  symbol: string;
+  tooltip: string;
+}> = [
+  { value: 'add',      symbol: '+',  tooltip: 'Ajouter (ex : Corps + 10)' },
+  { value: 'set',      symbol: '=',  tooltip: 'Fixer (ex : Corps = 50)' },
+  { value: 'multiply', symbol: '×',  tooltip: 'Multiplier (ex : Corps × 0.5)' },
 ];
 
 const VARIABLES = [
-  { value: GAME_STATS.PHYSIQUE, label: '💪 Le Corps' },
-  { value: GAME_STATS.MENTALE,  label: '🧠 L\'Esprit' },
+  { value: GAME_STATS.PHYSIQUE, label: '💪 Corps' },
+  { value: GAME_STATS.MENTALE,  label: "🧠 Esprit" },
 ];
 
+function getValueColor(op: string, value: number): string {
+  if (op === 'set') return 'var(--accent-blue)';
+  if (op === 'multiply') return value >= 1 ? 'var(--color-success)' : 'var(--color-danger)';
+  return value >= 0 ? 'var(--color-success)' : 'var(--color-danger)';
+}
+
+function getPreviewLabel(effect: Effect): string {
+  const varLabel = VARIABLES.find(v => v.value === effect.variable)?.label ?? effect.variable;
+  const sym = OPERATIONS.find(o => o.value === effect.operation)?.symbol ?? effect.operation;
+  return `${varLabel} ${sym} ${effect.value}`;
+}
+
 export function EffectRow({ effect, onUpdate, onRemove }: EffectRowProps) {
-  const currentOp = OPERATIONS.find(op => op.value === effect.operation);
+  const valueColor = getValueColor(effect.operation, effect.value);
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-2 bg-background p-2 rounded-lg border">
-        {/* Variable */}
-        <Select
-          value={effect.variable}
-          onValueChange={(value) => onUpdate({ variable: value })}
-        >
-          <SelectTrigger className="flex-1 text-sm h-9">
-            <SelectValue placeholder="Stat..." />
-          </SelectTrigger>
-          <SelectContent>
-            {VARIABLES.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+      <div
+        className="flex flex-col gap-1 bg-background rounded-lg border p-2"
+        style={{ borderColor: 'var(--color-border-base)' }}
+      >
+        {/* Ligne principale */}
+        <div className="flex items-center gap-1.5">
+
+          {/* Variable */}
+          <Select
+            value={effect.variable}
+            onValueChange={(value) => onUpdate({ variable: value })}
+          >
+            <SelectTrigger className="flex-1 min-w-0 text-xs h-8">
+              <SelectValue placeholder="Stat…" />
+            </SelectTrigger>
+            <SelectContent>
+              {VARIABLES.map((v) => (
+                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Opération — 3 boutons toggle compacts */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            {OPERATIONS.map((op) => (
+              <Tooltip key={op.value}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onUpdate({ operation: op.value })}
+                    style={{
+                      width: '1.75rem',
+                      height: '2rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)',
+                      border: `1px solid ${effect.operation === op.value ? 'var(--accent-purple)' : 'var(--color-border-base)'}`,
+                      background: effect.operation === op.value ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                      color: effect.operation === op.value ? 'var(--accent-purple)' : 'var(--color-text-muted)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'var(--transition-fast)',
+                      fontFamily: 'var(--font-family-mono)',
+                    }}
+                    aria-pressed={effect.operation === op.value}
+                    aria-label={op.tooltip}
+                  >
+                    {op.symbol}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {op.tooltip}
+                </TooltipContent>
+              </Tooltip>
             ))}
-          </SelectContent>
-        </Select>
+          </div>
 
-        {/* Operation — avec tooltip explicatif */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="w-32">
-              <Select
-                value={effect.operation}
-                onValueChange={(value) =>
-                  onUpdate({ operation: value as 'add' | 'set' | 'multiply' })
-                }
-              >
-                <SelectTrigger className="w-full text-sm h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPERATIONS.map((op) => (
-                    <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs max-w-[180px]">
-            {currentOp?.tooltip ?? ''}
-          </TooltipContent>
-        </Tooltip>
+          {/* Valeur — couleur verte/rouge selon signe */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <input
+                type="number"
+                value={effect.value}
+                onChange={(e) => onUpdate({ value: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                style={{
+                  width: '3.25rem',
+                  flexShrink: 0,
+                  padding: '0 var(--space-2)',
+                  height: '2rem',
+                  background: 'var(--color-bg-base)',
+                  border: `1px solid ${valueColor}`,
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 'var(--font-size-xs)',
+                  color: valueColor,
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  transition: 'var(--transition-fast)',
+                  outline: 'none',
+                }}
+                aria-label="Valeur de l'effet"
+              />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Positif = gain · Négatif = perte
+            </TooltipContent>
+          </Tooltip>
 
-        {/* Value */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Input
-              type="number"
-              value={effect.value}
-              onChange={(e) => onUpdate({ value: parseFloat(e.target.value) || 0 })}
-              placeholder="0"
-              className="w-20 text-sm h-9"
-            />
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Positif = gain · Négatif = perte
-          </TooltipContent>
-        </Tooltip>
+          {/* Supprimer */}
+          <Button
+            onClick={onRemove}
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0 flex-shrink-0"
+            aria-label="Supprimer cet effet"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
 
-        {/* Remove */}
-        <Button
-          onClick={onRemove}
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0 flex-shrink-0"
-          aria-label="Supprimer cet effet"
+        {/* Aperçu live — style Nintendo : résultat immédiat, lisible en un coup d'œil */}
+        <div
+          style={{
+            fontSize: '0.6875rem',
+            color: valueColor,
+            fontWeight: 600,
+            paddingLeft: 'var(--space-1)',
+            opacity: 0.85,
+            letterSpacing: '0.02em',
+          }}
+          aria-live="polite"
+          aria-label={`Effet : ${getPreviewLabel(effect)}`}
         >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
+          → {getPreviewLabel(effect)}
+        </div>
       </div>
     </TooltipProvider>
   );

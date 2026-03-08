@@ -74,13 +74,25 @@ export function useGraphIntegrityCheck(dialogues: Dialogue[]): IntegrityIssue[] 
       }
 
       // 2 & 3. Choice-specific checks
+      // Skip "missing destination" checks for intentional terminal nodes:
+      // — dialogue.isConclusion: explicitly marked as conclusion by the user
+      // — last dialogue in array: implicitly the end of the story
+      const isTerminalNode = dialogue.isConclusion || index === dialogues.length - 1;
+
       if (dialogue.choices && dialogue.choices.length > 0) {
         dialogue.choices.forEach((choice, ci) => {
           const choiceLabel = choice.text?.trim()
             ? `"${choice.text.slice(0, 25)}${choice.text.length > 25 ? '…' : ''}"`
             : `Choix ${ci + 1}`;
 
-          if (!choice.nextDialogueId) {
+          // A choice has a valid destination if it links to another dialogue,
+          // jumps to a scene, or has a diceCheck with outcomes.
+          const hasDestination =
+            !!choice.nextDialogueId ||
+            !!choice.nextSceneId ||
+            !!choice.diceCheck;
+
+          if (!hasDestination && !isTerminalNode) {
             issues.push({
               id: `missing-link-${index}-${ci}`,
               dialogueIndex: index,

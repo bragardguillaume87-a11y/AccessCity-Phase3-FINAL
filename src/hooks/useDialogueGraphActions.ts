@@ -8,6 +8,14 @@ import type { ComplexityLevel } from '@/types';
 import { CHOICE_HANDLE_PREFIX, safeExtractDialogueIndex } from '@/config/handleConfig';
 import { logger } from '@/utils/logger';
 
+// ── Constante module-level — évite la recréation à chaque appel handleCreateDialogue
+const PALETTE_TO_COMPLEXITY: Record<string, ComplexityLevel> = {
+  'linear':     'linear',
+  'binary':     'binary',
+  'magic-dice': 'dice',
+  'expert':     'expert',
+};
+
 /**
  * useDialogueGraphActions - Hook centralisant les actions d'édition du graphe de dialogues
  *
@@ -84,15 +92,7 @@ export function useDialogueGraphActions(sceneId: string) {
    */
   const handleCreateDialogue = useCallback(
     (paletteComplexity: 'linear' | 'binary' | 'magic-dice' | 'expert') => {
-      // Mapping palette → wizard complexity (PHASE 2.3: Now 1:1 mapping)
-      const complexityMap: Record<string, ComplexityLevel> = {
-        'linear': 'linear',      // Simples → Linear (pas de choix)
-        'binary': 'binary',      // À choisir → Binary (2 choix)
-        'magic-dice': 'dice',    // Dés Magiques → Dice (1-2 tests)
-        'expert': 'expert'       // Expert → Expert (2-4 choix + effets)
-      };
-
-      const wizardComplexity = complexityMap[paletteComplexity];
+      const wizardComplexity = PALETTE_TO_COMPLEXITY[paletteComplexity];
 
       // Définir la complexité initiale dans le store
       setDialogueWizardInitialComplexity(wizardComplexity);

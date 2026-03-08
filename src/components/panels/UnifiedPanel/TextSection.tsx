@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Eye, EyeOff, RotateCcw, ChevronDown } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback } from 'react';
+import { Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { useSettingsStore } from '@/stores';
+import { PanelSection } from '@/components/ui/CollapsibleSection';
 import type { DialogueBoxStyle } from '@/types/scenes';
 
 // ============================================================================
@@ -60,34 +60,6 @@ function ToggleGroup<T extends string>({ label, value, options, onChange }: {
   );
 }
 
-function CollapsibleSection({ title, id, defaultOpen = true, children }: {
-  title: string; id: string; defaultOpen?: boolean; children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <section className="sp-sec">
-      <button className="sp-lbl w-full flex items-center"
-        onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`${id}-panel`}
-      >
-        <span className="flex-1">{title}</span>
-        <ChevronDown size={12} aria-hidden="true"
-          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.18s ease' }}
-        />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div id={`${id}-panel`}
-            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="pt-2">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -168,7 +140,7 @@ export function TextSection() {
       </section>
 
       {/* Portrait */}
-      <CollapsibleSection title="PORTRAIT" id="dlgbox-portrait" defaultOpen={false}>
+      <PanelSection title="PORTRAIT" id="dlgbox-portrait" defaultOpen={false}>
 
         {/* Afficher / masquer */}
         <div className="flex items-center justify-between mb-3">
@@ -260,7 +232,7 @@ export function TextSection() {
             Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
           </p>
         </div>
-      </CollapsibleSection>
+      </PanelSection>
 
     </div>
   );

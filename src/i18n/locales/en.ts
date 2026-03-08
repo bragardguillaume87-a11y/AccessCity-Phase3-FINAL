@@ -65,18 +65,4 @@ export const en: Translations = {
     kidLabel: "Student Mode",
     proLabel: "Advanced Mode",
   },
-
-  graph: {
-    startBadge: 'START',
-    endBadge: 'END',
-    startAriaLabel: 'Start of dialogue',
-    endAriaLabel: 'End of dialogue',
-    rowLabel: 'Row',
-    nextBelow: 'Continues below',
-    flowContinues: 'Next',
-    convergenceLabel: '↩ joins',
-    choiceAriaLabel: 'Choice: ',
-    emptyDialogue: '(Empty dialogue)',
-    sceneJumpLabel: 'Jump to scene',
-  },
 };

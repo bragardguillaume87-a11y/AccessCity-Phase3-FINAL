@@ -113,10 +113,18 @@ export interface Dialogue {
   speakerMood?: string;
   /** Overrides mood per character for this specific dialogue. Key = sceneCharacterId, value = mood id. */
   characterMoods?: Record<string, string>;
+  /**
+   * Profil vocal procédural pour le typewriter blip (ex: 'homme-neutre', 'femme-joyeuse', 'robot').
+   * Aucun fichier audio requis — synthèse Web Audio API.
+   * @see src/utils/voiceProfiles.ts
+   */
+  voicePreset?: string;
   stageDirections?: string;
   conditions?: Condition[];
   /** Per-dialogue dialogue box style override (merged with project defaults). */
   boxStyle?: DialogueBoxStyle;
+  /** Marque ce dialogue comme nœud de conclusion intentionnel (fin de l'histoire). */
+  isConclusion?: boolean;
 }
 
 export type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';

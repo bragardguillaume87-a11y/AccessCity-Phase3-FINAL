@@ -46,9 +46,9 @@ interface PanelMinWidths {
  */
 export const PANEL_WIDTHS: PanelWidths = {
   LEFT_DEFAULT: 240,     // onglet Scènes — compact
-  LEFT_DIALOGUES: 300,   // onglet Dialogues — ancienne largeur, plus confortable pour les cartes
-  CONTENT_SECTION: 320,
-  CONTENT_PROPERTIES: 300,
+  LEFT_DIALOGUES: 320,   // onglet Dialogues — plus confortable pour les cartes
+  CONTENT_SECTION: 420,  // section active (Dialogue, Texte, Fond…) — 420px pour EffectRow sans débordement
+  CONTENT_PROPERTIES: 320,
   ICON_BAR: 72,
 } as const;
 

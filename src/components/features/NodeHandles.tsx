@@ -60,9 +60,13 @@ export const NodeHandles = React.memo(function NodeHandles({
   outputColor,
   handleOpacity = 0.2,
 }: NodeHandlesProps) {
-  const boxShadow = showDragIndicators
+  // Blender-style: always-visible handles use a dedicated CSS class that doesn't
+  // apply opacity: 0.2. Legacy/cosmos themes keep react-flow__handle-hover (hidden until hover).
+  const handleClass = handleOpacity >= 0.6 ? 'react-flow__handle-visible' : 'react-flow__handle-hover';
+
+  const baseShadow = showDragIndicators
     ? '0 0 0 8px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)'
-    : '0 2px 4px rgba(0,0,0,0.2)';
+    : '0 2px 6px rgba(0,0,0,0.4)';
 
   return (
     <>
@@ -76,20 +80,28 @@ export const NodeHandles = React.memo(function NodeHandles({
           ? (inputColor ?? color)
           : (outputColor ?? color);
 
+        // Output (source) handles get a colored glow for Blender-style depth cue
+        const isSource = handleDef.type === 'source';
+        const boxShadow = isSerpFix
+          ? undefined
+          : isSource && !showDragIndicators
+            ? `0 0 0 1px ${handleColor}40, 0 0 8px ${handleColor}60, ${baseShadow}`
+            : baseShadow;
+
         return (
           <Handle
             key={handleDef.id}
             type={handleDef.type}
             position={handleDef.position}
             id={handleDef.id}
-            className="react-flow__handle-hover"
+            className={handleClass}
             style={{
               ...posStyle,
               background: handleColor,
               width: `${handleSize}px`,
               height: `${handleSize}px`,
               border: `${borderWidth}px solid ${bgColor}`,
-              boxShadow: isSerpFix ? undefined : boxShadow,
+              boxShadow,
               opacity: handleOpacity,
               transition: 'all 0.2s ease',
             }}
@@ -127,18 +139,18 @@ export const NodeHandles = React.memo(function NodeHandles({
             type="source"
             position={choiceHandlePosition}
             id={choiceHandleId(choiceIndex)}
-            className="react-flow__handle-hover"
+            className={handleClass}
             style={{
               top: `${topPosition}%`,
               transform: 'translateY(-50%)',
               background: handleColor,
               width: `${handleSize}px`,
               height: `${handleSize}px`,
-              border: '3px solid white',
+              border: `${borderWidth}px solid ${bgColor}`,
               boxShadow: showDragIndicators
                 ? '0 0 0 6px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4)'
-                : `0 0 8px ${handleColor}cc, 0 0 16px ${handleColor}80, 0 2px 4px rgba(0,0,0,0.3)`,
-              opacity: 0.2,
+                : `0 0 0 1px ${handleColor}40, 0 0 10px ${handleColor}70, 0 2px 6px rgba(0,0,0,0.4)`,
+              opacity: handleOpacity,
               transition: 'all 0.2s ease',
               cursor: 'pointer',
               zIndex: 10,

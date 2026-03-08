@@ -400,8 +400,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
 
           {/* ── Panel 3 : Section/Propriétés (SlidePanel Framer Motion) ──
               panel3Width = 0 → fermé, AnimatePresence joue exit width→0
-              panel3Width = 256 → section active (SectionContentPanel)
-              panel3Width = 280 → élément canvas sélectionné (PropertiesPanel)
+              panel3Width = 380 → section active (SectionContentPanel)
+              panel3Width = 320 → élément canvas sélectionné (PropertiesPanel)
               Montage/démontage animé : width 0→N (open) et N→0 (close). */}
           <AnimatePresence initial={false}>
             {panel3Width > 0 && (

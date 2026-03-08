@@ -250,6 +250,63 @@ export function CollapsibleGroup({ children, className, showExpandAll = true }: 
 }
 
 /**
+ * PanelSection — Section accordéon pour les panneaux latéraux (UnifiedPanel).
+ *
+ * Utilise les classes CSS `sp-sec` / `sp-lbl` définies dans studio.css.
+ * Remplace les définitions locales dupliquées dans AudioSection, BackgroundsSection, TextSection.
+ *
+ * @example
+ * <PanelSection title="Musique" id="audio-music" badge="2 pistes">
+ *   ...
+ * </PanelSection>
+ */
+export function PanelSection({
+  title, id, badge, defaultOpen = true, children,
+}: {
+  title: string;
+  id: string;
+  badge?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="sp-sec">
+      <button
+        type="button"
+        className="sp-lbl w-full flex items-center"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls={`${id}-panel`}
+      >
+        <span className="flex-1">{title}</span>
+        {badge && (
+          <span className="ml-2 text-[10px] font-semibold text-[var(--color-primary)] bg-[rgba(139,92,246,0.1)] px-2 py-0.5 rounded-full normal-case tracking-normal">
+            {badge}
+          </span>
+        )}
+        <svg
+          aria-hidden="true"
+          style={{ width: 12, height: 12, flexShrink: 0, marginLeft: badge ? 4 : 'auto', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.18s ease' }}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div
+        id={`${id}-panel`}
+        className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="pt-2">{children}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
  * FormField - Reusable form field with label, error, and description
  * Works great inside CollapsibleSection
  */

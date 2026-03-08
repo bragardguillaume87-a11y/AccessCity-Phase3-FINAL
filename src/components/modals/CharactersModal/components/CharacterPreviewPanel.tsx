@@ -6,6 +6,7 @@ import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
 import type { CharacterUsageData } from '../hooks/useCharacterUsage';
 import { getPreviewImage } from '../utils/characterUtils';
+import { getMoodLabel, getMoodEmoji } from '@/hooks/useMoodPresets';
 
 /**
  * Validation error interface
@@ -209,24 +210,25 @@ export function CharacterPreviewPanel({
             </div>
           </div>
 
-          {/* ✨ AMÉLIORÉ : Moods List avec badges plus vivants */}
+          {/* Humeurs disponibles — emoji + label traduit */}
           {character.moods && character.moods.length > 0 && (
             <div className="space-y-2">
               <h5 className="text-xs font-semibold text-slate-300">Humeurs disponibles</h5>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {character.moods.map((mood) => (
                   <Badge
                     key={mood}
                     variant="outline"
-                    className={`text-xs px-2.5 py-1 font-medium border ${
+                    className={`text-xs px-2 py-0.5 font-medium border gap-1 ${
                       character.sprites?.[mood]
                         ? 'bg-blue-500/20 border-blue-400/50 text-blue-200'
                         : 'bg-slate-500/20 border-slate-400/50 text-slate-300'
                     }`}
                   >
-                    {mood}
+                    <span aria-hidden="true">{getMoodEmoji(mood)}</span>
+                    {getMoodLabel(mood)}
                     {character.sprites?.[mood] && (
-                      <span className="ml-1 text-green-400 font-bold">✓</span>
+                      <span className="text-green-400 font-bold" aria-label="sprite assigné">✓</span>
                     )}
                   </Badge>
                 ))}

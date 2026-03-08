@@ -30,13 +30,6 @@ export function getGraphTheme(themeId: string): GraphTheme {
   return GRAPH_THEMES[themeId] || GRAPH_THEMES[DEFAULT_THEME_ID];
 }
 
-/**
- * Get all available theme IDs
- */
-export function getAvailableThemeIds(): string[] {
-  return Object.keys(GRAPH_THEMES);
-}
-
 // Re-export everything for convenience
 export { defaultTheme, cosmosTheme, blenderTheme };
 export type { GraphTheme, NodeColorSet, EdgeStyle } from './types';

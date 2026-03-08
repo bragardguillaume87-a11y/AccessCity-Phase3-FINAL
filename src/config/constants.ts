@@ -10,15 +10,6 @@
 // TYPES
 // ============================================================================
 
-interface Limits {
-  readonly MAX_FREE_STORIES: number;
-  readonly MAX_UPLOAD_FILES: number;
-  readonly MAX_FILE_SIZE_MB: number;
-  readonly MAX_SCENES_PER_STORY: number;
-  readonly MAX_DIALOGUES_PER_SCENE: number;
-  readonly MAX_CHARACTERS: number;
-}
-
 interface ValidationRules {
   readonly CHARACTER_NAME_MIN_LENGTH: number;
   readonly CHARACTER_NAME_MAX_LENGTH: number;
@@ -63,45 +54,9 @@ interface ApiConfig {
   readonly TIMEOUT: number;
 }
 
-interface AssetCategories {
-  readonly BACKGROUND: string;
-  readonly CHARACTER: string;
-  readonly PROP: string;
-  readonly AUDIO: string;
-  readonly ATMOSPHERE: string;
-  readonly OTHER: string;
-}
-
-interface FileTypeConfig {
-  readonly accept: string;
-  readonly extensions: readonly string[];
-}
-
-interface FileTypes {
-  readonly IMAGES: FileTypeConfig;
-  readonly AUDIO: FileTypeConfig;
-}
-
-interface AppMetadata {
-  readonly NAME: string;
-  readonly VERSION: string;
-  readonly DESCRIPTION: string;
-  readonly AUTHOR: string;
-}
-
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-// Application Limits
-export const LIMITS: Limits = {
-  MAX_FREE_STORIES: 5,          // Maximum number of free stories in scenario editor
-  MAX_UPLOAD_FILES: 20,         // Maximum files per upload batch
-  MAX_FILE_SIZE_MB: 10,         // Maximum file size in MB
-  MAX_SCENES_PER_STORY: 100,    // Maximum scenes per story
-  MAX_DIALOGUES_PER_SCENE: 50,  // Maximum dialogues per scene
-  MAX_CHARACTERS: 20,           // Maximum characters per project
-} as const;
 
 // Validation Rules
 export const VALIDATION_RULES: ValidationRules = {
@@ -139,7 +94,7 @@ export const DEFAULTS: Defaults = {
 export const LAYOUT: Layout = {
   SIDEBAR_WIDTH: 240,
   INSPECTOR_WIDTH: 320,
-  TOPBAR_HEIGHT: 60,
+  TOPBAR_HEIGHT: 64,
   PANEL_MIN_WIDTH: 200,
   PANEL_MIN_HEIGHT: 100,
 
@@ -162,44 +117,6 @@ export const API: ApiConfig = {
 
 // System Characters (protected, cannot be deleted)
 export const SYSTEM_CHARACTERS = ['player', 'narrator', 'counsellor'] as const;
-export type SystemCharacter = typeof SYSTEM_CHARACTERS[number];
-
-// Game Engine Thresholds
-// NOTE: Stat color thresholds (66/33) live in gameConstants.ts → STAT_THRESHOLDS
-export const GAME_THRESHOLDS = {
-  VICTORY_SCORE: 60,        // Average score needed for victory (confetti)
-  INITIAL_STAT_VALUE: 50,   // Default starting value for game stats
-} as const;
-
-// Grade system thresholds for getEndingMessage()
-export const GRADE_THRESHOLDS = {
-  EXCEPTIONAL: 80,  // A+ — exemplary performance
-  GOOD: 60,         // B  — good performance
-  AVERAGE: 40,      // C  — below AVERAGE → D
-} as const;
-
-// Asset Categories
-export const ASSET_CATEGORIES: AssetCategories = {
-  BACKGROUND: 'background',
-  CHARACTER: 'character',
-  PROP: 'prop',
-  AUDIO: 'audio',
-  /** Sons d'ambiance environnementaux (vent, pluie, foule…) */
-  ATMOSPHERE: 'atmosphere',
-  OTHER: 'other',
-} as const;
-
-// File Type Filters
-export const FILE_TYPES: FileTypes = {
-  IMAGES: {
-    accept: 'image/*',
-    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
-  },
-  AUDIO: {
-    accept: 'audio/*',
-    extensions: ['.mp3', '.wav', '.ogg', '.m4a'],
-  },
-} as const;
 
 // Audio Default Volumes
 export const AUDIO_DEFAULTS = {
@@ -211,10 +128,3 @@ export const AUDIO_DEFAULTS = {
   AMBIENT_VOLUME: 0.4,
 } as const;
 
-// App Metadata
-export const APP_METADATA: AppMetadata = {
-  NAME: 'AccessCity Studio',
-  VERSION: '6.0.0',
-  DESCRIPTION: 'Éditeur de visual novels accessible',
-  AUTHOR: 'APF France Handicap Limousin',
-} as const;

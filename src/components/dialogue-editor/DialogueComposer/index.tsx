@@ -104,6 +104,14 @@ export function DialogueComposer({
     formActions.updateField('text', text);
   }, [formActions]);
 
+  const handleVoicePresetChange = useCallback((presetId: string | undefined) => {
+    formActions.updateField('voicePreset', presetId);
+  }, [formActions]);
+
+  const handleSpeakerMoodChange = useCallback((mood: string | undefined) => {
+    formActions.updateField('speakerMood', mood);
+  }, [formActions]);
+
   // ── Save logic (identical to DialogueWizard.handleWizardSave) ────────────
   const handleSave = useCallback(() => {
     if (!canSave) return;
@@ -126,6 +134,8 @@ export function DialogueComposer({
           text: formData.text,
           choices: linkedChoices,
           sfx: formData.sfx,
+          voicePreset: formData.voicePreset,
+          speakerMood: formData.speakerMood,
         });
 
         const dialogues: Dialogue[] = [mainDialogue];
@@ -149,6 +159,8 @@ export function DialogueComposer({
           text: formData.text,
           choices: formData.choices,
           sfx: formData.sfx,
+          voicePreset: formData.voicePreset,
+          speakerMood: formData.speakerMood,
         });
         onSave([newDialogue]);
       }
@@ -200,6 +212,8 @@ export function DialogueComposer({
                   <ComposerFormPanel
                     speaker={formData.speaker || ''}
                     text={formData.text}
+                    voicePreset={formData.voicePreset}
+                    speakerMood={formData.speakerMood}
                     complexityLevel={formData.complexityLevel}
                     choices={formData.choices}
                     responses={formData.responses}
@@ -207,6 +221,8 @@ export function DialogueComposer({
                     currentSceneId={sceneId}
                     onSpeakerChange={handleSpeakerChange}
                     onTextChange={handleTextChange}
+                    onVoicePresetChange={handleVoicePresetChange}
+                    onSpeakerMoodChange={handleSpeakerMoodChange}
                     onUpdateChoice={formActions.updateChoice}
                     onUpdateResponse={formActions.updateResponse}
                     onAddChoice={formActions.addChoice}

@@ -274,14 +274,12 @@ export default function MainCanvas({
   //       pas le mood "base" de la scène qui peut différer du mood initial du jeu
   const activeMoodOverrides = useMemo<Record<string, string>>(() => {
     if (selectedElement?.type === 'dialogue' && selectedElement.sceneId === selectedScene?.id) {
-      // Mode Dialogues : afficher les moods du dialogue sélectionné
+      // Mode Dialogues : appliquer les moods du dialogue sélectionné
       const dialogue = sceneDialogues[selectedElement.index];
       return dialogue?.characterMoods || {};
     }
-    // Mode Scènes (ou aucun dialogue sélectionné) : afficher les moods du premier dialogue
-    // pour que le canvas soit cohérent avec ce que le joueur verra au lancement
-    const firstDialogue = sceneDialogues[0];
-    return firstDialogue?.characterMoods || {};
+    // Mode Scènes : pas d'override — sceneChar.mood (géré par CharacterMoodPicker) fait foi
+    return {};
   }, [selectedElement, selectedScene?.id, sceneDialogues]);
 
   // ID du sceneCharacter qui parle dans le dialogue sélectionné

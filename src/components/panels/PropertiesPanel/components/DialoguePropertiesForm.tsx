@@ -1,10 +1,16 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { Dialogue, Scene, SceneMetadata, Character, ModalType, DialogueAudio } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AutoSaveIndicator } from '../../../ui/AutoSaveIndicator';
 import { ChoiceEditor } from './ChoiceEditor';
+import { VoicePresetPicker, VoicePresetBadge } from '@/components/dialogue-editor/DialogueComposer/components/VoicePresetPicker';
+import { VOICE_PROFILES, playVoicePreview } from '@/utils/voiceProfiles';
+import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
+import { InlineAccordion } from '@/components/ui/InlineAccordion';
+import { MoodCard } from '@/components/ui/MoodCard';
 import { Copy, Plus, Volume2, X, Sparkles, User, MessageSquare, ChevronDown, SlidersHorizontal, GitBranch, Type, Eye, Palette } from 'lucide-react';
 import { useUIStore } from '@/stores';
 import { useIsKidMode } from '@/hooks/useIsKidMode';
@@ -73,17 +79,7 @@ function SectionHeader({
   return inner;
 }
 
-/** Accordéon CSS pur — grid-template-rows 0fr↔1fr, zéro JS pour l'animation */
-function Collapsible({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) {
-  return (
-    <div
-      className="grid transition-[grid-template-rows] duration-200 ease-in-out"
-      style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
-    >
-      <div className="overflow-hidden">{children}</div>
-    </div>
-  );
-}
+// InlineAccordion et MoodCard importés depuis ui/ — pas de redéfinition locale.
 
 /**
  * DialoguePropertiesForm - Edit dialogue properties
@@ -109,8 +105,10 @@ export function DialoguePropertiesForm({
 }: DialoguePropertiesFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('properties');
   // Accordéons Propriétés
-  const [sfxOpen,       setSfxOpen]       = useState(!!dialogue.sfx?.url);
-  const [moodsOpen,     setMoodsOpen]     = useState(false);
+  const [sfxOpen,          setSfxOpen]          = useState(!!dialogue.sfx?.url);
+  const [moodsOpen,        setMoodsOpen]        = useState(false);
+  const [voicePickerOpen,  setVoicePickerOpen]  = useState(false);
+  const voiceBtnRef = useRef<HTMLButtonElement>(null);
   // Accordéons Texte
   const [apparenceOpen, setApparenceOpen] = useState(false);
   const [aperçuOpen,    setAperçuOpen]    = useState(false);
@@ -269,13 +267,101 @@ export function DialoguePropertiesForm({
                 icon={<Volume2 className="h-3.5 w-3.5" />}
                 label={t('dialogueEditor.sfxLabel')}
                 colorClass="text-amber-400"
-                badge={dialogue.sfx?.url ? '1 son' : undefined}
+                badge={dialogue.voicePreset ? '🎙️' : dialogue.sfx?.url ? '1 son' : undefined}
                 isCollapsible
                 isOpen={sfxOpen}
                 onToggle={() => setSfxOpen(v => !v)}
               />
-              <Collapsible isOpen={sfxOpen}>
+              <InlineAccordion isOpen={sfxOpen}>
                 <div className="px-3 py-3 space-y-3">
+
+                  {/* ── Voix procédurale ── */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Voix du personnage
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {dialogue.voicePreset && <VoicePresetBadge presetId={dialogue.voicePreset} />}
+                        <button
+                          ref={voiceBtnRef}
+                          type="button"
+                          onClick={() => setVoicePickerOpen(v => !v)}
+                          title={dialogue.voicePreset ? 'Changer la voix' : 'Ajouter une voix'}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: 24, height: 24,
+                            borderRadius: 'var(--radius-sm)',
+                            border: `1.5px solid ${dialogue.voicePreset ? 'rgba(139,92,246,0.5)' : 'var(--color-border-base)'}`,
+                            background: dialogue.voicePreset ? 'rgba(139,92,246,0.12)' : 'transparent',
+                            color: dialogue.voicePreset ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                            cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >
+                          <Volume2 size={11} />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Chips rapides — profils principaux */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {VOICE_PROFILES.filter(p => p.category !== 'animal').slice(0, 6).map(profile => {
+                        const isActive = dialogue.voicePreset === profile.id;
+                        return (
+                          <motion.button
+                            key={profile.id}
+                            type="button"
+                            onClick={() => handleUpdate({ voicePreset: isActive ? undefined : profile.id })}
+                            onMouseEnter={() => playVoicePreview(profile.id)}
+                            whileHover={{ y: -1, scale: 1.03 }}
+                            whileTap={{ scale: 0.95 }}
+                            aria-pressed={isActive}
+                            title={profile.label}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 3,
+                              padding: '3px 7px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: `1.5px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                              background: isActive ? 'rgba(139,92,246,0.18)' : 'var(--color-bg-base)',
+                              color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                              fontSize: '10px', fontWeight: isActive ? 700 : 500,
+                              cursor: 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <span>{profile.emoji}</span>
+                            <span>{profile.label}</span>
+                          </motion.button>
+                        );
+                      })}
+                      <motion.button
+                        type="button"
+                        onClick={() => setVoicePickerOpen(v => !v)}
+                        whileHover={{ y: -1 }}
+                        title="Voir toutes les voix"
+                        style={{
+                          padding: '3px 7px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1.5px solid var(--color-border-base)',
+                          background: 'transparent',
+                          color: 'var(--color-text-muted)',
+                          fontSize: '10px', cursor: 'pointer',
+                        }}
+                      >
+                        +
+                      </motion.button>
+                    </div>
+                    <AnimatePresence>
+                      {voicePickerOpen && (
+                        <VoicePresetPicker
+                          anchorRef={voiceBtnRef}
+                          value={dialogue.voicePreset}
+                          onChange={(presetId) => handleUpdate({ voicePreset: presetId })}
+                          onClose={() => setVoicePickerOpen(false)}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* ── SFX fichier custom ── */}
                   {dialogue.sfx?.url ? (
                     <>
                       <div className="flex items-center gap-2 p-2 bg-background/60 rounded-lg border border-border/40">
@@ -324,60 +410,87 @@ export function DialoguePropertiesForm({
                   ) : (
                     <button
                       onClick={() => onOpenModal?.('assets', { category: 'sfx' })}
-                      className="w-full h-14 rounded-lg border-2 border-dashed border-amber-500/30 hover:border-amber-400/60 hover:bg-amber-500/5 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-amber-400 transition-colors"
+                      className="w-full h-10 rounded-lg border border-dashed border-amber-500/30 hover:border-amber-400/60 hover:bg-amber-500/5 flex items-center justify-center gap-2 text-muted-foreground hover:text-amber-400 transition-colors"
                     >
-                      <Volume2 className="w-4 h-4" />
-                      <span className="text-xs font-medium">{t('dialogueEditor.sfxAdd')}</span>
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium">Ajouter un son custom</span>
                     </button>
                   )}
                 </div>
-              </Collapsible>
+              </InlineAccordion>
             </SectionCard>
           )}
 
           {/* ── Humeurs (accordéon) ── Pro mode only */}
+          {/* Nintendo principle: "universal symbols" — emoji chips vs raw text dropdown */}
           {!isKid && scene.characters && scene.characters.length > 0 && (
             <SectionCard>
               <SectionHeader
                 emoji="😊"
                 label={t('dialogueEditor.moodsLabel')}
                 colorClass="text-emerald-400"
-                badge={`${scene.characters.length} perso.`}
+                badge={String(scene.characters.length)}
                 isCollapsible
                 isOpen={moodsOpen}
                 onToggle={() => setMoodsOpen(v => !v)}
               />
-              <Collapsible isOpen={moodsOpen}>
-                <div className="px-3 py-2.5 space-y-2">
+              <InlineAccordion isOpen={moodsOpen}>
+                <div className="px-3 py-3 space-y-3">
                   {scene.characters.map(sceneChar => {
                     const character = characters.find(c => c.id === sceneChar.characterId);
                     if (!character) return null;
                     const overrideMood = dialogue.characterMoods?.[sceneChar.id] ?? '';
-                    const availableMoods: string[] = character.moods || ['neutral'];
+                    const availableMoods: string[] = character.moods?.length ? character.moods : ['neutral'];
+                    const setMood = (val: string) => {
+                      const next = { ...(dialogue.characterMoods || {}) };
+                      if (val) { next[sceneChar.id] = val; } else { delete next[sceneChar.id]; }
+                      handleUpdate({ characterMoods: Object.keys(next).length > 0 ? next : undefined });
+                    };
                     return (
-                      <div key={sceneChar.id} className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-foreground flex-1 truncate">{character.name}</span>
-                        <select
-                          value={overrideMood}
-                          onChange={e => {
-                            const val = e.target.value;
-                            const next = { ...(dialogue.characterMoods || {}) };
-                            if (val) { next[sceneChar.id] = val; } else { delete next[sceneChar.id]; }
-                            handleUpdate({ characterMoods: Object.keys(next).length > 0 ? next : undefined });
-                          }}
-                          className="w-28 px-2 py-1.5 bg-background border border-border/60 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          aria-label={`Humeur de ${character.name}`}
-                        >
-                          <option value="">{t('dialogueEditor.moodDefault')}</option>
-                          {availableMoods.map(mood => (
-                            <option key={mood} value={mood}>{mood}</option>
+                      <div key={sceneChar.id}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 6 }}>
+                          {character.name}
+                        </span>
+                        {/* Cartes humeur — Nintendo style, scroll horizontal */}
+                        <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 3, scrollbarWidth: 'none' }}>
+                          {/* Chip "Défaut" */}
+                          <motion.button
+                            type="button"
+                            onClick={() => setMood('')}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.93 }}
+                            aria-pressed={!overrideMood}
+                            style={{
+                              flexShrink: 0, padding: '3px 8px', borderRadius: 6,
+                              border: `2px solid ${!overrideMood ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                              background: !overrideMood ? 'rgba(139,92,246,0.15)' : 'transparent',
+                              color: !overrideMood ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                              fontSize: '9.5px', fontWeight: 700, cursor: 'pointer',
+                              boxShadow: !overrideMood ? '0 3px 10px rgba(139,92,246,0.3)' : 'none',
+                            }}
+                          >
+                            ✦ Défaut
+                          </motion.button>
+                          {/* Cartes par humeur */}
+                          {availableMoods.map((mood, idx) => (
+                            <MoodCard
+                              key={mood}
+                              mood={mood}
+                              emoji={getMoodEmoji(mood)}
+                              label={getMoodLabel(mood)}
+                              sprite={character.sprites?.[mood]}
+                              isActive={overrideMood === mood}
+                              onClick={() => setMood(overrideMood === mood ? '' : mood)}
+                              size={40}
+                              entryDelay={idx * 0.04}
+                            />
                           ))}
-                        </select>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-              </Collapsible>
+              </InlineAccordion>
             </SectionCard>
           )}
 
@@ -433,7 +546,7 @@ export function DialoguePropertiesForm({
               isOpen={apparenceOpen}
               onToggle={() => setApparenceOpen(v => !v)}
             />
-            <Collapsible isOpen={apparenceOpen}>
+            <InlineAccordion isOpen={apparenceOpen}>
               <div className="px-3 py-3 space-y-4">
 
                 {/* Taille du texte */}
@@ -525,7 +638,7 @@ export function DialoguePropertiesForm({
                 </div>
 
               </div>
-            </Collapsible>
+            </InlineAccordion>
           </SectionCard>
 
           {/* Aperçu — accordéon fermé par défaut */}
@@ -538,7 +651,7 @@ export function DialoguePropertiesForm({
               isOpen={aperçuOpen}
               onToggle={() => setAperçuOpen(v => !v)}
             />
-            <Collapsible isOpen={aperçuOpen}>
+            <InlineAccordion isOpen={aperçuOpen}>
               <div className="px-3 py-3 space-y-2">
                 {/* Simulation boîte de dialogue */}
                 <div
@@ -570,7 +683,7 @@ export function DialoguePropertiesForm({
                   </span>
                 </div>
               </div>
-            </Collapsible>
+            </InlineAccordion>
           </SectionCard>
 
         </div>
@@ -578,7 +691,7 @@ export function DialoguePropertiesForm({
 
       {/* Choices tab — Pro mode only */}
       {!isKid && activeTab === 'choices' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Edit with assistant */}
           <Button
             variant="gaming-primary"

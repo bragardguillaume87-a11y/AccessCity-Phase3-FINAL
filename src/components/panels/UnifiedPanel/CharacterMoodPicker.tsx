@@ -4,7 +4,11 @@ import { ChevronRight } from 'lucide-react';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import { useSelectionStore } from '@/stores/selectionStore';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { isDialogueSelection } from '@/stores/selectionStore.types';
 import { convertFileSrcIfNeeded } from '@/utils/tauri';
+import { getMoodLabel, getMoodEmoji } from '@/hooks/useMoodPresets';
 import type { SceneCharacter } from '@/types';
 
 // ⚠️ Module-level constant — évite || [] inline dans le sélecteur Zustand.
@@ -22,7 +26,7 @@ export interface CharacterMoodPickerProps {
  * - Clic sur un mood → met à jour toutes les instances du perso dans la scène.
  */
 export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
-  const characters    = useCharactersStore(state => state.characters);
+  const characters      = useCharactersStore(state => state.characters);
   const selectedSceneId = useUIStore(s => s.selectedSceneForEdit);
   const sceneCharacters = useSceneElementsStore(s =>
     selectedSceneId
@@ -31,30 +35,64 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
   );
   const updateSceneCharacter = useSceneElementsStore(s => s.updateSceneCharacter);
 
-  // IDs uniques des personnages sur la scène (1 perso peut être placé plusieurs fois)
+  // Dialogue sélectionné (mode Dialogues)
+  const selectedElement  = useSelectionStore(s => s.selectedElement);
+  const updateDialogue   = useDialoguesStore(s => s.updateDialogue);
+  const dialoguesByScene = useDialoguesStore(s => s.dialoguesByScene);
+
+  const dialogueSelection = isDialogueSelection(selectedElement) ? selectedElement : null;
+
+  const isDialogueMode =
+    dialogueSelection !== null &&
+    dialogueSelection.sceneId === selectedSceneId;
+
+  const selectedDialogue = isDialogueMode && dialogueSelection
+    ? dialoguesByScene[dialogueSelection.sceneId]?.[dialogueSelection.index]
+    : null;
+
+  // IDs uniques des personnages sur la scène
   const sceneCharacterIds = [...new Set(sceneCharacters.map(sc => sc.characterId))];
   const sceneChars = sceneCharacterIds
     .map(id => characters.find(c => c.id === id))
     .filter(Boolean) as typeof characters;
 
-  // Accordion : quel perso est ouvert
   const [openId, setOpenId] = useState<string | null>(null);
 
   const toggleOpen = useCallback((id: string) => {
     setOpenId(prev => prev === id ? null : id);
   }, []);
 
-  // Mood actif pour un perso (1ère instance sur la scène)
+  /**
+   * Mood actif :
+   * - mode dialogue → characterMoods du dialogue sélectionné (fallback : sceneChar.mood)
+   * - mode scène    → sceneChar.mood
+   */
   const getActiveMood = useCallback((characterId: string): string => {
-    return sceneCharacters.find(sc => sc.characterId === characterId)?.mood ?? 'neutral';
-  }, [sceneCharacters]);
+    const sc = sceneCharacters.find(s => s.characterId === characterId);
+    if (!sc) return 'neutral';
+    if (isDialogueMode && selectedDialogue) {
+      return selectedDialogue.characterMoods?.[sc.id] ?? sc.mood ?? 'neutral';
+    }
+    return sc.mood ?? 'neutral';
+  }, [sceneCharacters, isDialogueMode, selectedDialogue]);
 
+  /**
+   * Clic sur une carte :
+   * - mode dialogue → met à jour characterMoods du dialogue sélectionné
+   * - mode scène    → met à jour sceneChar.mood (reflété immédiatement sur le canvas)
+   */
   const handleMoodClick = useCallback((characterId: string, mood: string) => {
     if (!selectedSceneId) return;
-    sceneCharacters
-      .filter(sc => sc.characterId === characterId)
-      .forEach(sc => updateSceneCharacter(selectedSceneId, sc.id, { mood }));
-  }, [selectedSceneId, sceneCharacters, updateSceneCharacter]);
+    const targets = sceneCharacters.filter(sc => sc.characterId === characterId);
+    if (isDialogueMode && dialogueSelection) {
+      const prev = selectedDialogue?.characterMoods || {};
+      const next = { ...prev };
+      targets.forEach(sc => { next[sc.id] = mood; });
+      updateDialogue(dialogueSelection.sceneId, dialogueSelection.index, { characterMoods: next });
+    } else {
+      targets.forEach(sc => updateSceneCharacter(selectedSceneId, sc.id, { mood }));
+    }
+  }, [selectedSceneId, sceneCharacters, isDialogueMode, dialogueSelection, selectedDialogue, updateDialogue, updateSceneCharacter]);
 
   const handleDragStart = useCallback((
     e: React.DragEvent<HTMLDivElement>,
@@ -137,7 +175,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                   {character.name}
                 </p>
                 <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {moods.length} mood{moods.length !== 1 ? 's' : ''}
+                  {moods.length} humeur{moods.length !== 1 ? 's' : ''}
                 </p>
               </div>
 
@@ -164,42 +202,103 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                     <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
                       Humeur
                     </p>
+                    {/* Deck de cartes — style Pokémon/Hearthstone */}
                     <div className="grid grid-cols-3 gap-2">
-                      {moods.map(mood => {
+                      {moods.map((mood, idx) => {
                         const sprite = character.sprites?.[mood];
                         const isActive = activeMood === mood;
+                        const moodEmoji = getMoodEmoji(mood);
+                        const moodLabel = getMoodLabel(mood);
                         return (
-                          <button
+                          <motion.button
                             key={mood}
                             onClick={(e) => { e.stopPropagation(); handleMoodClick(character.id, mood); }}
-                            className={[
-                              'flex flex-col items-center gap-1.5 p-2 rounded-lg border transition-all text-center',
-                              isActive
-                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                                : 'border-[var(--color-border-base)] bg-[var(--color-bg-base)] hover:border-[var(--color-primary)]/50',
-                            ].join(' ')}
+                            /* Entrée : les cartes sont distribuées une par une */
+                            initial={{ opacity: 0, y: 12, rotateZ: -2 }}
+                            animate={{ opacity: 1, y: isActive ? -5 : 0, rotateZ: 0 }}
+                            transition={{
+                              type: 'spring', stiffness: 380, damping: 22,
+                              delay: idx * 0.05,
+                            }}
+                            whileHover={{ y: isActive ? -7 : -5, transition: { duration: 0.12 } }}
+                            whileTap={{ scale: 0.93, y: 0 }}
                             aria-pressed={isActive}
-                            aria-label={`${character.name} — ${mood}`}
+                            aria-label={`${character.name} — ${moodLabel}`}
+                            style={{
+                              position: 'relative',
+                              aspectRatio: '3 / 4',
+                              borderRadius: '10px',
+                              overflow: 'hidden',
+                              border: `2px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                              boxShadow: isActive
+                                ? '0 6px 20px rgba(139,92,246,0.45), 0 0 0 1px rgba(139,92,246,0.25)'
+                                : '0 3px 10px rgba(0,0,0,0.35)',
+                              cursor: 'pointer',
+                              background: 'var(--color-bg-elevated)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                            }}
                           >
-                            <div className="w-9 h-9 rounded-full overflow-hidden border border-[var(--color-border-base)] bg-[var(--color-bg-hover)] flex items-center justify-center">
-                              {sprite ? (
-                                <img
-                                  src={convertFileSrcIfNeeded(sprite)}
-                                  alt={`${character.name} ${mood}`}
-                                  className="w-full h-full object-cover"
-                                  draggable="false"
-                                />
-                              ) : (
-                                <span className="text-lg" aria-hidden="true">👤</span>
-                              )}
-                            </div>
-                            <span className={[
-                              'text-[10px] font-medium truncate w-full',
-                              isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]',
-                            ].join(' ')}>
-                              {mood}
+                            {/* Image pleine carte — pas de crop circulaire */}
+                            {sprite ? (
+                              <img
+                                src={convertFileSrcIfNeeded(sprite)}
+                                alt={`${character.name} ${moodLabel}`}
+                                style={{
+                                  position: 'absolute', inset: 0,
+                                  width: '100%', height: '100%',
+                                  objectFit: 'contain',
+                                }}
+                                draggable="false"
+                              />
+                            ) : (
+                              /* Pas de sprite : grand emoji centré sur fond dégradé */
+                              <div style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '1.75rem',
+                                background: isActive
+                                  ? 'linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(139,92,246,0.05) 100%)'
+                                  : 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 100%)',
+                              }}>
+                                {moodEmoji}
+                              </div>
+                            )}
+
+                            {/* Badge emoji — coin haut-droit */}
+                            <span
+                              aria-hidden="true"
+                              style={{
+                                position: 'absolute', top: 3, right: 4,
+                                fontSize: '11px', lineHeight: 1,
+                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+                              }}
+                            >
+                              {moodEmoji}
                             </span>
-                          </button>
+
+                            {/* Label — overlay gradient au bas, style carte */}
+                            <div style={{
+                              position: 'absolute', bottom: 0, left: 0, right: 0,
+                              padding: '14px 5px 5px',
+                              background: isActive
+                                ? 'linear-gradient(to top, rgba(88,28,235,0.92) 0%, rgba(139,92,246,0.5) 55%, transparent 100%)'
+                                : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)',
+                              textAlign: 'center',
+                            }}>
+                              <span style={{
+                                display: 'block',
+                                fontSize: '9.5px',
+                                fontWeight: 700,
+                                color: 'white',
+                                lineHeight: 1.2,
+                                textShadow: '0 1px 3px rgba(0,0,0,0.7)',
+                                letterSpacing: '0.02em',
+                              }}>
+                                {moodLabel}
+                              </span>
+                            </div>
+                          </motion.button>
                         );
                       })}
                     </div>

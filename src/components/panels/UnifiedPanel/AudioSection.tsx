@@ -1,72 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Music, Library, Play, Square, Trash2, RefreshCw, AlertCircle, Wind } from 'lucide-react';
+import { Music, Library, Play, Square, Trash2, RefreshCw, AlertCircle, Wind } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { SfxGeneratorPanel } from './SfxGeneratorPanel';
+import { PanelSection } from '@/components/ui/CollapsibleSection';
 import type { SceneAudio, AmbientAudio } from '@/types/audio';
-
-// ============================================================================
-// COLLAPSIBLE SECTION
-// ============================================================================
-
-interface CollapsibleSectionProps {
-  title: string;
-  badge?: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-  id: string;
-}
-
-function CollapsibleSection({ title, badge, defaultOpen = true, children, id }: CollapsibleSectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
-  const panelId = `${id}-panel`;
-  return (
-    <section className="sp-sec">
-      <button
-        className="sp-lbl w-full"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        aria-controls={panelId}
-        style={{ cursor: 'pointer', userSelect: 'none' }}
-      >
-        <span>{title}</span>
-        {badge && (
-          <span className="ml-2 text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full normal-case tracking-normal">
-            {badge}
-          </span>
-        )}
-        <ChevronDown
-          size={12}
-          aria-hidden="true"
-          style={{
-            marginLeft: 'auto',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.18s ease',
-            flexShrink: 0,
-          }}
-        />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            id={panelId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="pt-2">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
 
 // ============================================================================
 // ICON BUTTON WITH TOOLTIP
@@ -470,7 +411,7 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
       <div>
 
         {/* === Musique de fond === */}
-        <CollapsibleSection title="MUSIQUE DE FOND" id="audio-bgm" defaultOpen>
+        <PanelSection title="MUSIQUE DE FOND" id="audio-bgm" defaultOpen>
           {audio?.url ? (
             <MusicControls
               audio={audio}
@@ -488,10 +429,10 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
               Parcourir la bibliothèque
             </button>
           )}
-        </CollapsibleSection>
+        </PanelSection>
 
         {/* === Ambiance sonore === */}
-        <CollapsibleSection
+        <PanelSection
           title="AMBIANCE SONORE"
           badge={ambientCount > 0 ? `${ambientCount} piste${ambientCount > 1 ? 's' : ''}` : undefined}
           id="audio-ambient"
@@ -515,12 +456,12 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
               />
             )}
           </div>
-        </CollapsibleSection>
+        </PanelSection>
 
         {/* === Générateur SFX 8-bit === */}
-        <CollapsibleSection title="GÉNÉRATEUR SFX 8-BIT" id="audio-sfx" defaultOpen={false}>
+        <PanelSection title="GÉNÉRATEUR SFX 8-BIT" id="audio-sfx" defaultOpen={false}>
           <SfxGeneratorPanel />
-        </CollapsibleSection>
+        </PanelSection>
 
       </div>
     </Tooltip.Provider>

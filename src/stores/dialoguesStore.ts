@@ -76,6 +76,9 @@ function generateChoiceId(index: number): string {
 // SAMPLE DATA - Dialogues de démonstration
 // ============================================================================
 
+// ⚠️ Référence stable — évite || [] inline dans getDialoguesByScene (selector réactif).
+const EMPTY_DIALOGUES: Dialogue[] = [];
+
 const SAMPLE_DIALOGUES: Record<string, Dialogue[]> = {
   scenetest01: [
     { id: 'd01-00', speaker: 'narrator', text: "Vous arrivez devant la mairie pour présenter AccessCity — une initiative pour rendre la ville accessible à tous.", choices: [], stageDirections: "Le joueur s'arrête devant l'entrée principale." },
@@ -124,7 +127,7 @@ export const useDialoguesStore = create<DialoguesState>()(
           // ============================================================
 
           getDialoguesByScene: (sceneId) => {
-            return get().dialoguesByScene[sceneId] || [];
+            return get().dialoguesByScene[sceneId] ?? EMPTY_DIALOGUES;
           },
 
           getDialogueByIndex: (sceneId, index) => {

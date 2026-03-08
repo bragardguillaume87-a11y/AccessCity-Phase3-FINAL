@@ -47,6 +47,7 @@ const ExportModal         = React.lazy(() => import('./modals/ExportModal'));
 const CinematicEditorModal = React.lazy(() =>
   import('./modals/CinematicEditor').then(m => ({ default: m.CinematicEditor }))
 );
+const TopdownEditor = React.lazy(() => import('./modules/TopdownEditor/TopdownEditor'));
 
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
@@ -69,6 +70,21 @@ const CinematicEditorModal = React.lazy(() =>
  */
 interface EditorShellProps {
   onBack?: (() => void) | null;
+}
+
+// ============================================================================
+// MODULE LOADING FALLBACK
+// ============================================================================
+
+function ModuleLoadingFallback() {
+  return (
+    <div className="flex-1 flex items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500 mx-auto" />
+        <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>Chargement du module…</p>
+      </div>
+    </div>
+  );
 }
 
 // ============================================================================
@@ -397,8 +413,13 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         </div>
       )}
 
-      {/* ── Non-VN modules : placeholders (Sprints 2-5) ── */}
-      {activeModule !== 'vn-editor' && (
+      {/* ── Non-VN modules ── */}
+      {activeModule === 'topdown' && (
+        <React.Suspense fallback={<ModuleLoadingFallback />}>
+          <TopdownEditor />
+        </React.Suspense>
+      )}
+      {(activeModule === 'ui-builder' || activeModule === 'preview') && (
         <StudioModulePlaceholder module={activeModule} />
       )}
 

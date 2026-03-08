@@ -74,6 +74,4 @@ export function getIssueStatus(issues: ValidationProblem[]): { hasErrors: boolea
  * - `n.type !== 'terminalNode'` in applySerpentineLayout, useSerpentineSync (4+ places)
  */
 export const isTerminalNode = (n: { type?: string }): boolean => n.type === 'terminalNode';
-export const isDialogueNode = (n: { type?: string }): boolean => n.type === 'dialogueNode';
-export const isChoiceNode = (n: { type?: string }): boolean => n.type === 'choiceNode';
 export const isRowSeparatorNode = (n: { type?: string }): boolean => n.type === 'rowSeparatorNode';

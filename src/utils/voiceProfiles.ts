@@ -161,17 +161,6 @@ export function getVoiceProfile(id: string): VoiceProfile | undefined {
   return VOICE_PROFILES.find(p => p.id === id);
 }
 
-/** Retourne l'emoji du profil, fallback '🔊'. */
-export function getVoiceEmoji(id: string): string {
-  return getVoiceProfile(id)?.emoji ?? '🔊';
-}
-
-/** Retourne le label du profil, fallback ID capitalisé. */
-export function getVoiceLabel(id: string): string {
-  const p = getVoiceProfile(id);
-  if (p) return p.label;
-  return id.charAt(0).toUpperCase() + id.slice(1);
-}
 
 /**
  * Joue un court blip de prévisualisation pour un profil vocal.

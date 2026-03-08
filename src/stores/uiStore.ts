@@ -210,7 +210,6 @@ interface UIState {
   setSerpentineMode: (mode: 'auto-y' | 'by-count' | 'branch-aware') => void;
   setSerpentineDirection: (direction: 'zigzag' | 'grid') => void;
   setSerpentineGroupSize: (size: number) => void;
-  updateSerpentineConfig: (updates: Partial<SerpentineConfig>) => void;
   // Pro mode actions
   setProModeEnabled: (enabled: boolean) => void;
   setProModeDirection: (direction: 'TB' | 'LR') => void;
@@ -365,24 +364,6 @@ export const useUIStore = create<UIState>()(
       },
 
       // SERP-5: Serpentine layout actions
-      updateSerpentineConfig: (updates) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = {
-            enabled: updates.enabled ?? state.serpentineEnabled,
-            mode: updates.mode ?? state.serpentineMode,
-            direction: updates.direction ?? state.serpentineDirection,
-            groupSize: updates.groupSize ?? state.serpentineGroupSize,
-          };
-          persistSerpentineConfig(newConfig);
-          return {
-            serpentineEnabled: newConfig.enabled,
-            serpentineMode: newConfig.mode,
-            serpentineDirection: newConfig.direction,
-            serpentineGroupSize: newConfig.groupSize,
-          };
-        }, false, 'ui/updateSerpentineConfig');
-      },
-
       setSerpentineEnabled: (enabled) => {
         set((state) => {
           const newConfig: SerpentineConfig = { enabled, mode: state.serpentineMode, direction: state.serpentineDirection, groupSize: state.serpentineGroupSize };

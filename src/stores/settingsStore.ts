@@ -95,12 +95,9 @@ interface SettingsState {
   assetCollections: AssetCollection[];
 
   // Actions
-  setContextField: (key: keyof ProjectData, value: string) => void;
   updateProjectData: (updates: Partial<ProjectData>) => void;
   updateProjectSettings: (updates: Partial<ProjectSettings>) => void;
-  setVariable: (name: string, value: number) => void;
   modifyVariable: (name: string, delta: number) => void;
-  setLanguage: (lang: SupportedLocale) => void;
   setEnableStatsHUD: (enabled: boolean) => void;
   updateDialogueBoxDefaults: (style: Partial<DialogueBoxStyle>) => void;
   setCharacterFx: (patch: Partial<CharacterFxSettings>) => void;
@@ -177,13 +174,6 @@ export const useSettingsStore = create<SettingsState>()(
         assetCollections: [],
         assetDisplayNames: {},
 
-        // Actions: Project Data (context)
-        setContextField: (key, value) => {
-          set((state) => ({
-            projectData: { ...state.projectData, [key]: value },
-          }), false, 'settings/setContextField');
-        },
-
         updateProjectData: (updates) => {
           set((state) => ({
             projectData: { ...state.projectData, ...updates },
@@ -213,12 +203,6 @@ export const useSettingsStore = create<SettingsState>()(
         },
 
         // Actions: Variables
-        setVariable: (name, value) => {
-          set((state) => ({
-            variables: { ...state.variables, [name]: value },
-          }), false, 'settings/setVariable');
-        },
-
         modifyVariable: (name, delta) => {
           set((state) => {
             const current = typeof state.variables[name] === 'number'
@@ -229,11 +213,6 @@ export const useSettingsStore = create<SettingsState>()(
               variables: { ...state.variables, [name]: clamped },
             };
           }, false, 'settings/modifyVariable');
-        },
-
-        // Actions: Language
-        setLanguage: (lang) => {
-          set({ language: lang }, false, 'settings/setLanguage');
         },
 
         // Actions: Stats HUD

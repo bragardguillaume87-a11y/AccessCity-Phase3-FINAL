@@ -3,7 +3,7 @@ import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zus
 import { temporal } from 'zundo';
 import { shallow } from 'zustand/shallow';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
-import type { SceneMetadata, SceneType, CinematicEvent, CinematicTracks } from '../types';
+import type { SceneMetadata, SceneType, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
 
@@ -50,7 +50,6 @@ interface ScenesState {
   deleteScene: (sceneId: string) => void;
   reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
-  updateCinematicEvents: (sceneId: string, events: CinematicEvent[]) => void;
   /** Met à jour les pistes multi-canaux (nouveau format NLE). */
   updateCinematicTracks: (sceneId: string, tracks: CinematicTracks) => void;
 
@@ -260,23 +259,6 @@ export const useScenesStore = create<ScenesState>()(
               },
               false,
               'scenes/batchUpdateScenes'
-            );
-          },
-
-          /**
-           * Met à jour la séquence d'events d'une scène cinématique
-           *
-           * Remplace la liste complète — utiliser pour drag-to-reorder et add/remove event.
-           */
-          updateCinematicEvents: (sceneId, events) => {
-            set(
-              (state) => ({
-                scenes: state.scenes.map((s) =>
-                  s.id === sceneId ? { ...s, cinematicEvents: events } : s
-                ),
-              }),
-              false,
-              'scenes/updateCinematicEvents'
             );
           },
 

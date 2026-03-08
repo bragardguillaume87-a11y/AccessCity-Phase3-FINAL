@@ -30,8 +30,6 @@ export const en: Translations = {
     assets: 'Assets',
     preview: 'Preview',
     settings: 'Settings',
-    noScene: 'No scene selected',
-    noDialogue: 'No dialogue',
     addScene: 'Add scene',
     addDialogue: 'Add dialogue',
     addCharacter: 'Add character',
@@ -47,9 +45,7 @@ export const en: Translations = {
     sfxLabel: 'Sound Effect',
     sfxVolume: 'Volume',
     sfxChange: 'Change effect',
-    sfxAdd: 'Add a sound effect',
     moodsLabel: 'Moods for this dialogue',
-    moodDefault: '(scene default)',
     infoLabel: 'Info',
     noChoices: 'No choices for this dialogue',
     noChoicesHint: '"+ Add choice" creates a branch',
@@ -58,11 +54,9 @@ export const en: Translations = {
   },
 
   kidMode: {
-    viewGraph: "Story Map",
     preview: "Test the Story",
     resources: "Images & Sounds",
     more: "More...",
     kidLabel: "Student Mode",
-    proLabel: "Advanced Mode",
   },
 };

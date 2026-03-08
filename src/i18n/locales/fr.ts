@@ -30,8 +30,6 @@ export const fr: Translations = {
     assets: 'Assets',
     preview: 'Apercu',
     settings: 'Parametres',
-    noScene: 'Aucune scene selectionnee',
-    noDialogue: 'Aucun dialogue',
     addScene: 'Ajouter une scene',
     addDialogue: 'Ajouter un dialogue',
     addCharacter: 'Ajouter un personnage',
@@ -47,9 +45,7 @@ export const fr: Translations = {
     sfxLabel: 'Effet sonore',
     sfxVolume: 'Volume',
     sfxChange: "Changer l'effet",
-    sfxAdd: 'Ajouter un effet sonore',
     moodsLabel: 'Humeurs pour ce dialogue',
-    moodDefault: '(défaut de scène)',
     infoLabel: 'Infos',
     noChoices: 'Aucun choix pour ce dialogue',
     noChoicesHint: '« + Ajouter un choix » crée un embranchement',
@@ -58,11 +54,9 @@ export const fr: Translations = {
   },
 
   kidMode: {
-    viewGraph: "Carte de l'histoire",
     preview: "Tester l'histoire",
     resources: "Images & sons",
     more: "Plus...",
     kidLabel: "Mode Élève",
-    proLabel: "Mode Avancé",
   },
 };

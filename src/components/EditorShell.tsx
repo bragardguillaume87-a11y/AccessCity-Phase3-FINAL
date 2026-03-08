@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, Map, LayoutDashboard, Play, type LucideIcon } from 'lucide-react';
+import { BookOpen, Map, LayoutDashboard, Play, GitBranch, type LucideIcon } from 'lucide-react';
 import { useUIStore, useScenesStore, useCharactersStore, useDialoguesStore } from '../stores/index.ts';
 import type { StudioModule } from '../types';
 import { useSceneWithElements } from '../stores/selectors/index';
@@ -47,8 +47,9 @@ const ExportModal         = React.lazy(() => import('./modals/ExportModal'));
 const CinematicEditorModal = React.lazy(() =>
   import('./modals/CinematicEditor').then(m => ({ default: m.CinematicEditor }))
 );
-const TopdownEditor = React.lazy(() => import('./modules/TopdownEditor/TopdownEditor'));
+const TopdownEditor  = React.lazy(() => import('./modules/TopdownEditor/TopdownEditor'));
 const GamePreview    = React.lazy(() => import('./modules/GamePreview/GamePreview'));
+const BehaviorGraph  = React.lazy(() => import('./modules/BehaviorGraph/BehaviorGraph'));
 
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
@@ -93,10 +94,11 @@ function ModuleLoadingFallback() {
 // ============================================================================
 
 const MODULE_TABS: Array<{ id: StudioModule; label: string; Icon: LucideIcon }> = [
-  { id: 'vn-editor',   label: 'Visual Novel', Icon: BookOpen },
-  { id: 'topdown',     label: 'Carte 2D',     Icon: Map },
-  { id: 'ui-builder',  label: 'Interface',    Icon: LayoutDashboard },
-  { id: 'preview',     label: 'Prévisualiser', Icon: Play },
+  { id: 'vn-editor',   label: 'Visual Novel',   Icon: BookOpen },
+  { id: 'topdown',     label: 'Carte 2D',       Icon: Map },
+  { id: 'behavior',    label: 'Comportements',  Icon: GitBranch },
+  { id: 'ui-builder',  label: 'Interface',      Icon: LayoutDashboard },
+  { id: 'preview',     label: 'Prévisualiser',  Icon: Play },
 ];
 
 function StudioModuleSwitcher({
@@ -142,6 +144,7 @@ function StudioModuleSwitcher({
 const MODULE_PLACEHOLDER_LABELS: Record<StudioModule, { emoji: string; title: string; description: string }> = {
   'vn-editor':  { emoji: '📖', title: 'Visual Novel',  description: '' },
   'topdown':    { emoji: '🗺️',  title: 'Éditeur de carte 2D', description: 'Placez des tuiles, définissez les zones de collision et les triggers de dialogue.' },
+  'behavior':   { emoji: '🔗', title: 'Graphe de comportements', description: 'Définissez la logique du jeu en reliant des nodes visuels.' },
   'ui-builder': { emoji: '🎨', title: 'Constructeur d\'interface', description: 'Construisez les HUD, menus et écrans du jeu par glisser-déposer.' },
   'preview':    { emoji: '🎮', title: 'Prévisualisation', description: 'Jouez votre jeu topdown avec les dialogues intégrés.' },
 };
@@ -158,7 +161,7 @@ function StudioModulePlaceholder({ module }: { module: StudioModule }) {
         {info.description}
       </p>
       <p className="text-xs px-3 py-1 rounded-full border border-border" style={{ color: 'var(--color-text-muted)' }}>
-        En développement — Sprint {module === 'topdown' ? 2 : module === 'preview' ? 3 : 5}
+        En développement — Sprint {module === 'topdown' ? 2 : module === 'preview' ? 3 : module === 'behavior' ? 4 : 5}
       </p>
     </div>
   );
@@ -423,6 +426,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
       {activeModule === 'preview' && (
         <React.Suspense fallback={<ModuleLoadingFallback />}>
           <GamePreview />
+        </React.Suspense>
+      )}
+      {activeModule === 'behavior' && (
+        <React.Suspense fallback={<ModuleLoadingFallback />}>
+          <BehaviorGraph />
         </React.Suspense>
       )}
       {activeModule === 'ui-builder' && (

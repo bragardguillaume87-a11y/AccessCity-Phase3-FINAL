@@ -5,8 +5,9 @@ import { Save, Network } from 'lucide-react';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
 import { DEFAULTS } from '@/config/constants';
-import type { Dialogue, Scene } from '@/types';
+import type { Dialogue } from '@/types';
 import { useUIStore, useCharactersStore } from '@/stores';
+import { useAllScenesWithElements } from '@/stores/selectors';
 import { useDialogueForm } from '../DialogueWizard/hooks/useDialogueForm';
 import type { ComplexityLevel } from '@/types';
 import { TypePillSelector } from './components/TypePillSelector';
@@ -17,7 +18,6 @@ interface DialogueComposerProps {
   sceneId: string;
   dialogueIndex?: number;
   dialogue?: Dialogue;
-  scenes: Scene[];
   onSave: (dialogues: Dialogue[]) => void;
   onClose: () => void;
   onOpenGraph?: () => void;
@@ -37,7 +37,6 @@ export function DialogueComposer({
   sceneId,
   dialogueIndex: _dialogueIndex,
   dialogue,
-  scenes,
   onSave,
   onClose,
   onOpenGraph,
@@ -46,6 +45,8 @@ export function DialogueComposer({
   const initialComplexity  = useUIStore((state) => state.dialogueWizardInitialComplexity);
   const clearInitialCompl  = useUIStore((state) => state.clearDialogueWizardInitialComplexity);
   const characters         = useCharactersStore((state) => state.characters);
+  // Subscription ici (et non dans LeftPanel) → active seulement quand la modale est ouverte
+  const scenes             = useAllScenesWithElements();
 
   // ── Form state (reuses exact same hook as DialogueWizard) ────────────────
   const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);

@@ -6,7 +6,7 @@ import DialoguesPanel from './DialoguesPanel';
 import { LeftPanelJumpBar } from './LeftPanelJumpBar';
 import { useScenesStore, useUIStore } from '../../stores/index';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
-import { useSceneWithElements, useAllScenesWithElements } from '@/stores/selectors';
+import { useSceneWithElements } from '@/stores/selectors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DialogueComposer } from '../dialogue-editor/DialogueComposer';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
@@ -45,7 +45,6 @@ export default function LeftPanel({
 }: LeftPanelProps) {
   // Zustand stores
   const scenes = useScenesStore((state) => state.scenes); // SceneMetadata[] (pour ScenesSidebar)
-  const scenesWithElements = useAllScenesWithElements(); // Scene[] avec dialogues (pour DialogueWizard)
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
@@ -196,7 +195,6 @@ export default function LeftPanel({
                   ? selectedScene.dialogues[editDialogueIndex]
                   : undefined
               }
-              scenes={scenesWithElements}
               onSave={handleWizardSave}
               onClose={() => setWizardOpen(false)}
               onOpenGraph={() => {

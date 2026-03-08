@@ -73,34 +73,6 @@ export function useSceneIds(): string[] {
 // ============================================================================
 
 /**
- * Select scene actions (stable references).
- * Use object destructuring for specific actions.
- *
- * Note: updateScene et reorderScenes acceptent SceneMetadata (plus Partial<Scene>).
- * Pour modifier dialogues → dialoguesStore | Pour characters → sceneElementsStore
- */
-export function useSceneActions() {
-  const addScene = useScenesStore((state) => state.addScene);
-  const updateScene = useScenesStore((state) => state.updateScene);
-  const deleteScene = useScenesStore((state) => state.deleteScene);
-  const reorderScenes = useScenesStore((state) => state.reorderScenes);
-  const setSceneBackground = useScenesStore((state) => state.setSceneBackground);
-  const updateCinematicEvents = useScenesStore((state) => state.updateCinematicEvents);
-
-  return useMemo(
-    () => ({
-      addScene,
-      updateScene,
-      deleteScene,
-      reorderScenes,
-      setSceneBackground,
-      updateCinematicEvents,
-    }),
-    [addScene, updateScene, deleteScene, reorderScenes, setSceneBackground, updateCinematicEvents]
-  );
-}
-
-/**
  * Select dialogue actions (stable references).
  */
 export function useDialogueActions() {

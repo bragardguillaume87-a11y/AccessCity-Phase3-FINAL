@@ -4,7 +4,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import type { DiceCheckBranch } from '@/types';
 import { GAME_STATS } from '@/i18n';
-import { useDialoguesStore } from '@/stores/dialoguesStore';
+// useSceneDialogues utilise EMPTY_DIALOGUES (référence stable) — évite boucle infinie
+// ⚠️ NE PAS utiliser useDialoguesStore(s => s.getDialoguesByScene(...)) ici :
+//    getDialoguesByScene retourne || [] inline → nouvelle référence → re-render infini
+import { useSceneDialogues } from '@/stores/selectors';
 
 interface OutcomeEditorProps {
   type: 'success' | 'failure';
@@ -62,7 +65,7 @@ export function OutcomeEditor({ type, branch, onChange, currentSceneId }: Outcom
   const presets = isSuccess ? SUCCESS_PRESETS : FAILURE_PRESETS;
   const effectPlaceholder = isSuccess ? '— Rien de spécial —' : '— Aucune conséquence —';
 
-  const dialogues = useDialoguesStore(s => s.getDialoguesByScene(currentSceneId));
+  const dialogues = useSceneDialogues(currentSceneId);
 
   const getDialoguePreview = useCallback((text: string, idx: number) => {
     if (!text?.trim()) return `Dialogue ${idx + 1} (vide)`;

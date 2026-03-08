@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -69,7 +70,7 @@ export function BinaryChoiceField({
   const cfg         = SLOT_CONFIG[choiceIndex];
   const charCount   = choice.text?.length ?? 0;
   const isValid     = charCount >= 5;
-  const otherScenes = scenes.filter(s => s.id !== currentSceneId);
+  const otherScenes = useMemo(() => scenes.filter(s => s.id !== currentSceneId), [scenes, currentSceneId]);
   const speakerVal  = response?.speaker || defaultSpeaker || DEFAULTS.DIALOGUE_SPEAKER;
 
   return (

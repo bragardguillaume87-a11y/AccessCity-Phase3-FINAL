@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Plus, User, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/components/ui/label';
@@ -62,7 +62,7 @@ export function ComposerFormPanel({
   const characters = useCharactersStore(state => state.characters);
   const [activeTab, setActiveTab] = useState(0);
 
-  const currentScene = scenes.find(s => s.id === currentSceneId);
+  const currentScene = useMemo(() => scenes.find(s => s.id === currentSceneId), [scenes, currentSceneId]);
   const textLen      = text.trim().length;
   const safeTab      = Math.min(activeTab, Math.max(choices.length - 1, 0));
 
@@ -88,7 +88,7 @@ export function ComposerFormPanel({
   }, [choices, complexityLevel]);
 
   // Tab labels — expert shows dynamic text preview (updates as user types)
-  const tabLabels = choices.map((c, i) => {
+  const tabLabels = useMemo(() => choices.map((c, i) => {
     if (complexityLevel === 'binary') return i === 0 ? '👍 A' : '👎 B';
     if (complexityLevel === 'dice')   return choices.length === 1 ? '🎲 Dé' : `🎲 Dé ${String.fromCharCode(65 + i)}`;
     // Expert: show first 10 chars of choice text, else "Choix N"
@@ -97,7 +97,7 @@ export function ComposerFormPanel({
       return preview.length > 10 ? `${preview.substring(0, 10)}…` : preview;
     }
     return `⚡ Choix ${String.fromCharCode(65 + i)}`;
-  });
+  }), [choices, complexityLevel]);
 
   const canAddChoice =
     (complexityLevel === 'dice'   && choices.length < 2) ||

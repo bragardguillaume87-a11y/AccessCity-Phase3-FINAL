@@ -180,7 +180,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
             flex: 1,
             padding: '6px',
             fontSize: '0.75rem',
-            backgroundColor: isSystemCharacter ? '#e2e8f0' : '#ef4444',
+            backgroundColor: isSystemCharacter ? '#e2e8f0' : 'var(--color-danger)',
             color: isSystemCharacter ? '#94a3b8' : 'white',
             border: 'none',
             borderRadius: '4px',
@@ -190,22 +190,22 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
           }}
           onMouseOver={(e) => {
             if (!isSystemCharacter) {
-              (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626';
+              (e.target as HTMLButtonElement).style.backgroundColor = 'var(--color-danger-hover)';
             }
           }}
           onFocus={(e) => {
             if (!isSystemCharacter) {
-              (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626';
+              (e.target as HTMLButtonElement).style.backgroundColor = 'var(--color-danger-hover)';
             }
           }}
           onMouseOut={(e) => {
             if (!isSystemCharacter) {
-              (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444';
+              (e.target as HTMLButtonElement).style.backgroundColor = 'var(--color-danger)';
             }
           }}
           onBlur={(e) => {
             if (!isSystemCharacter) {
-              (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444';
+              (e.target as HTMLButtonElement).style.backgroundColor = 'var(--color-danger)';
             }
           }}
           title={isSystemCharacter ? 'Personnage système protégé' : 'Supprimer ce personnage'}

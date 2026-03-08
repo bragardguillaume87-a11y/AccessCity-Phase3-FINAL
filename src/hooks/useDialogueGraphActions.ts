@@ -4,7 +4,7 @@ import { useUIStore } from '@/stores';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
-import type { ComplexityLevel } from '@/components/dialogue-editor/DialogueWizard/hooks/useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 import { CHOICE_HANDLE_PREFIX, safeExtractDialogueIndex } from '@/config/handleConfig';
 import { logger } from '@/utils/logger';
 

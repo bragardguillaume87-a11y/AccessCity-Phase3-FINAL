@@ -8,8 +8,9 @@
  * Users can skip and start from scratch at any time.
  */
 
-import type { ComplexityLevel } from '@/components/dialogue-editor/DialogueWizard/hooks/useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 import type { Effect } from '@/types';
+import { GAME_STATS } from '@/i18n';
 
 // ============================================================================
 // TYPES
@@ -52,7 +53,7 @@ const DICE_TEMPLATES: SituationTemplate[] = [
         {
           text: "Je respire profondément et j'avance.",
           effects: [],
-          diceCheck: { stat: 'mentale', difficulty: 12 },
+          diceCheck: { stat: GAME_STATS.MENTALE, difficulty: 12 },
         },
       ],
     },
@@ -70,7 +71,7 @@ const DICE_TEMPLATES: SituationTemplate[] = [
         {
           text: "Je prends mon élan et je tente le passage.",
           effects: [],
-          diceCheck: { stat: 'physique', difficulty: 14 },
+          diceCheck: { stat: GAME_STATS.PHYSIQUE, difficulty: 14 },
         },
       ],
     },
@@ -94,11 +95,11 @@ const EXPERT_TEMPLATES: SituationTemplate[] = [
       choices: [
         {
           text: "Expliquer calmement ma situation et demander une exception.",
-          effects: [{ variable: 'mentale', value: 5, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.MENTALE, value: 5, operation: 'add' }],
         },
         {
           text: "Insister fermement en invoquant mes droits.",
-          effects: [{ variable: 'physique', value: -5, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.PHYSIQUE, value: -5, operation: 'add' }],
         },
         {
           text: "Demander à parler au responsable.",
@@ -119,11 +120,11 @@ const EXPERT_TEMPLATES: SituationTemplate[] = [
       choices: [
         {
           text: "Rester calme et répondre avec assurance.",
-          effects: [{ variable: 'mentale', value: 10, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.MENTALE, value: 10, operation: 'add' }],
         },
         {
           text: "Ignorer la remarque et continuer son chemin.",
-          effects: [{ variable: 'mentale', value: -5, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.MENTALE, value: -5, operation: 'add' }],
         },
         {
           text: "Demander de l'aide à quelqu'un à proximité.",
@@ -132,8 +133,8 @@ const EXPERT_TEMPLATES: SituationTemplate[] = [
         {
           text: "Répondre avec colère.",
           effects: [
-            { variable: 'mentale', value: -10, operation: 'add' },
-            { variable: 'physique', value: -5, operation: 'add' },
+            { variable: GAME_STATS.MENTALE, value: -10, operation: 'add' },
+            { variable: GAME_STATS.PHYSIQUE, value: -5, operation: 'add' },
           ],
         },
       ],
@@ -151,11 +152,11 @@ const EXPERT_TEMPLATES: SituationTemplate[] = [
       choices: [
         {
           text: "Accepter d'aider malgré mes propres difficultés.",
-          effects: [{ variable: 'physique', value: -10, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.PHYSIQUE, value: -10, operation: 'add' }],
         },
         {
           text: "Expliquer honnêtement mes limites du moment.",
-          effects: [{ variable: 'mentale', value: 5, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.MENTALE, value: 5, operation: 'add' }],
         },
         {
           text: "Proposer une alternative adaptée à mes capacités.",
@@ -176,15 +177,15 @@ const EXPERT_TEMPLATES: SituationTemplate[] = [
       choices: [
         {
           text: "Prendre le passage accessible signalé sur la gauche.",
-          effects: [{ variable: 'physique', value: 5, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.PHYSIQUE, value: 5, operation: 'add' }],
         },
         {
           text: "Tenter le chemin principal malgré les obstacles.",
-          effects: [{ variable: 'physique', value: -10, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.PHYSIQUE, value: -10, operation: 'add' }],
         },
         {
           text: "Demander son chemin à un passant.",
-          effects: [{ variable: 'mentale', value: 3, operation: 'add' }],
+          effects: [{ variable: GAME_STATS.MENTALE, value: 3, operation: 'add' }],
         },
       ],
     },

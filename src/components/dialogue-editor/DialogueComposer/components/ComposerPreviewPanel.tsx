@@ -1,7 +1,7 @@
 import { GitBranch, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DialogueChoice } from '@/types';
-import type { ComplexityLevel } from '../../DialogueWizard/hooks/useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 
 // ── Speaker color hash — same algorithm as DialogueCard ──────────────────────
 const SPEAKER_PALETTE = [

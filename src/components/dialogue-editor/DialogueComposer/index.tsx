@@ -8,7 +8,7 @@ import { DEFAULTS } from '@/config/constants';
 import type { Dialogue, Scene } from '@/types';
 import { useUIStore, useCharactersStore } from '@/stores';
 import { useDialogueForm } from '../DialogueWizard/hooks/useDialogueForm';
-import type { ComplexityLevel } from '../DialogueWizard/hooks/useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 import { TypePillSelector } from './components/TypePillSelector';
 import { ComposerFormPanel } from './components/ComposerFormPanel';
 import { ComposerPreviewPanel } from './components/ComposerPreviewPanel';

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { ComplexityLevel } from '../../DialogueWizard/hooks/useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 
 interface TypePillSelectorProps {
   value: ComplexityLevel | null;

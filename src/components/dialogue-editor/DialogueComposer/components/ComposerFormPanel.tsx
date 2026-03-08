@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useCharactersStore } from '@/stores';
 import { DEFAULTS } from '@/config/constants';
 import type { DialogueChoice, Scene } from '@/types';
-import type { ComplexityLevel } from '../../DialogueWizard/hooks/useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 import type { ResponseData } from '../../DialogueWizard/hooks/useDialogueForm';
 import { BinaryChoiceField } from './BinaryChoiceField';
 import { DiceChoiceCard } from '../../DialogueWizard/components/DiceChoiceBuilder/DiceChoiceCard';

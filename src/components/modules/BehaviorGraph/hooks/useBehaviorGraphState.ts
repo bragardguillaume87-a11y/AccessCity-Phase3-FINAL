@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   applyNodeChanges,
   applyEdgeChanges,
@@ -16,18 +16,25 @@ import type { BehaviorNodeType } from '@/types/behavior';
  * useBehaviorGraphState
  *
  * Synchronise l'état local ReactFlow avec le behaviorsStore.
- * Pattern : état local pour les interactions fluides → save au store sur chaque changement.
  *
- * ⚠️ Ne pas appeler useBehaviorsStore.getState() pendant le render — handler uniquement.
+ * ⚠️ INVARIANT : Ne jamais appeler setNodes() DANS setEdges() ou vice-versa.
+ *    Utiliser des useRef pour accéder aux valeurs courantes dans les callbacks.
+ *    Les setState imbriqués dans des updater-functions déclenchent une boucle infinie
+ *    avec @xyflow/react (Maximum update depth exceeded).
  */
 export function useBehaviorGraphState(mapId: string | null) {
-  const graph = useBehaviorsStore(s => mapId ? s.getGraphForMap(mapId) : null);
   const setGraphForMap = useBehaviorsStore(s => s.setGraphForMap);
 
-  // Local ReactFlow state — source de vérité pour l'affichage
-  // Double cast via unknown : BehaviorNode et Node partagent la forme mais leurs types data divergent
-  const [nodes, setNodes] = useState<Node[]>(() => (graph?.nodes as unknown as Node[]) ?? []);
-  const [edges, setEdges] = useState<Edge[]>(() => (graph?.edges as unknown as Edge[]) ?? []);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+
+  // Refs pour accéder aux valeurs courantes sans setState imbriqués
+  const nodesRef = useRef<Node[]>(nodes);
+  const edgesRef = useRef<Edge[]>(edges);
+
+  // Maintenir les refs synchronisées avec l'état
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
 
   // Sync store → local quand mapId change
   useEffect(() => {
@@ -37,11 +44,13 @@ export function useBehaviorGraphState(mapId: string | null) {
       return;
     }
     const g = useBehaviorsStore.getState().getGraphForMap(mapId);
-    setNodes((g.nodes as unknown as Node[]) ?? []);
-    setEdges((g.edges as unknown as Edge[]) ?? []);
+    const loadedNodes = (g.nodes as unknown as Node[]) ?? [];
+    const loadedEdges = (g.edges as unknown as Edge[]) ?? [];
+    setNodes(loadedNodes);
+    setEdges(loadedEdges);
   }, [mapId]);
 
-  // Save locale → store
+  // Save locale → store (appelé directement dans les handlers, jamais dans les updaters)
   const persistToStore = useCallback((updatedNodes: Node[], updatedEdges: Edge[]) => {
     if (!mapId) return;
     setGraphForMap(mapId, {
@@ -52,69 +61,44 @@ export function useBehaviorGraphState(mapId: string | null) {
   }, [mapId, setGraphForMap]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes(ns => {
-      const updated = applyNodeChanges(changes, ns);
-      // Persist position + deletion changes
-      const hasPositionOrDelete = changes.some(c => c.type === 'position' || c.type === 'remove');
-      if (hasPositionOrDelete) {
-        setEdges(es => {
-          persistToStore(updated, es);
-          return es;
-        });
-      }
-      return updated;
-    });
+    const updated = applyNodeChanges(changes, nodesRef.current);
+    setNodes(updated);
+    const hasPositionOrDelete = changes.some(c => c.type === 'position' || c.type === 'remove');
+    if (hasPositionOrDelete) {
+      persistToStore(updated, edgesRef.current);
+    }
   }, [persistToStore]);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdges(es => {
-      const updated = applyEdgeChanges(changes, es);
-      setNodes(ns => {
-        persistToStore(ns, updated);
-        return ns;
-      });
-      return updated;
-    });
+    const updated = applyEdgeChanges(changes, edgesRef.current);
+    setEdges(updated);
+    persistToStore(nodesRef.current, updated);
   }, [persistToStore]);
 
   const onConnect = useCallback((connection: Connection) => {
-    setEdges(es => {
-      const edgeLabel = connection.sourceHandle === 'yes' ? 'Oui'
-        : connection.sourceHandle === 'no' ? 'Non'
-        : undefined;
-      const newEdge: Edge = {
-        ...connection,
-        id: `e-${connection.source}-${connection.sourceHandle ?? ''}-${connection.target}-${Date.now()}`,
-        source: connection.source ?? '',
-        target: connection.target ?? '',
-        ...(edgeLabel ? { label: edgeLabel } : {}),
-      };
-      const updated = addEdge(newEdge, es);
-      setNodes(ns => {
-        persistToStore(ns, updated);
-        return ns;
-      });
-      return updated;
-    });
+    const edgeLabel = connection.sourceHandle === 'yes' ? 'Oui'
+      : connection.sourceHandle === 'no' ? 'Non'
+      : undefined;
+    const newEdge: Edge = {
+      ...connection,
+      id: `e-${connection.source}-${connection.sourceHandle ?? ''}-${connection.target}-${Date.now()}`,
+      source: connection.source ?? '',
+      target: connection.target ?? '',
+      ...(edgeLabel ? { label: edgeLabel } : {}),
+    };
+    const updated = addEdge(newEdge, edgesRef.current);
+    setEdges(updated);
+    persistToStore(nodesRef.current, updated);
   }, [persistToStore]);
 
   /** Ajoute un node au centre visible du canvas */
   const addNode = useCallback((type: BehaviorNodeType, position = { x: 200, y: 200 }) => {
     if (!mapId) return;
-
     const id = `${type}-${Date.now()}`;
-    const data = getDefaultData(type);
-
-    const newNode: Node = { id, type, position, data: data as never };
-
-    setNodes(ns => {
-      const updated = [...ns, newNode];
-      setEdges(es => {
-        persistToStore(updated, es);
-        return es;
-      });
-      return updated;
-    });
+    const newNode: Node = { id, type, position, data: getDefaultData(type) as never };
+    const updated = [...nodesRef.current, newNode];
+    setNodes(updated);
+    persistToStore(updated, edgesRef.current);
   }, [mapId, persistToStore]);
 
   return { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode };

@@ -20,7 +20,7 @@ export interface DiceCheck {
   failure?: DiceCheckBranch;
 }
 
-export type ConditionOperator = '>=' | '<=' | '>' | '<' | '==' | '!=';
+type ConditionOperator = '>=' | '<=' | '>' | '<' | '==' | '!=';
 
 export interface Condition {
   variable: string;

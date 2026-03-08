@@ -127,7 +127,7 @@ export interface Dialogue {
   isConclusion?: boolean;
 }
 
-export type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
+type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
 
 export interface DialogueChoice {
   id: string;
@@ -139,14 +139,6 @@ export interface DialogueChoice {
   diceCheck?: DiceCheck;
 }
 
-/** Determine the action type of a choice from its data (backwards compatible) */
-export function getChoiceActionType(choice: DialogueChoice): ChoiceActionType | 'none' {
-  if (choice.actionType) return choice.actionType;
-  if (choice.diceCheck) return 'diceCheck';
-  if (choice.nextSceneId) return 'sceneJump';
-  if (choice.nextDialogueId) return 'continue';
-  return 'none';
-}
 
 export interface SceneCharacter {
   id: string;

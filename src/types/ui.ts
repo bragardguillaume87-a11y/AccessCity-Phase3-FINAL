@@ -45,10 +45,6 @@ export type ModalType =
   | 'addCharacter'
   | null;
 
-export interface ModalBaseProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
 export interface ModalContext {
   characterId?: string;

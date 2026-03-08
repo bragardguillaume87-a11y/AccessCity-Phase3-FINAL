@@ -49,18 +49,8 @@ export function useMoodPresets(): readonly MoodPreset[] {
  * console.log(happy?.emoji); // '😊'
  * ```
  */
-export function getMoodPreset(id: string): MoodPreset | undefined {
+function getMoodPreset(id: string): MoodPreset | undefined {
   return MOOD_PRESETS.find((preset) => preset.id === id);
-}
-
-/**
- * Vérifie si un ID correspond à un preset connu.
- *
- * @param {string} id - L'ID à vérifier
- * @returns {boolean} true si l'ID correspond à un preset
- */
-export function isPresetMood(id: string): boolean {
-  return MOOD_PRESETS.some((preset) => preset.id === id);
 }
 
 /**

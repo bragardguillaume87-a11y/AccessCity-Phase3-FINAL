@@ -1,9 +1,8 @@
 /**
  * useGameEngine — Gestion du cycle de vie du moteur Excalibur
  *
- * Crée et démarre un Engine Excalibur dans un useEffect.
- * Le moteur est lié à une <div> container (pas directement au canvas React).
- * Cleanup : engine.stop() sur démontage.
+ * Pré-charge toutes les images nécessaires (tuiles décor + sprite joueur)
+ * via ex.Loader avant de démarrer le moteur. Passe l'imageCache à TopdownScene.
  *
  * Dépendance sur `selectedMapId` seulement (pas sur mapData) pour éviter
  * de redémarrer le moteur à chaque peinture de tuile dans l'éditeur.
@@ -35,16 +34,38 @@ export function useGameEngine({
   useEffect(() => {
     if (!selectedMapId) return;
 
-    // Read snapshot of mapData at preview launch (not reactive — correct for a game)
-    const mapData = useMapsStore.getState().mapDataById[selectedMapId];
+    const storeState  = useMapsStore.getState();
+    const mapData     = storeState.mapDataById[selectedMapId];
     if (!mapData) return;
+
+    const mapMetadata  = storeState.getMapById(selectedMapId);
+    const playerSpritePath = mapMetadata?.playerSpritePath;
 
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Create canvas element and append to container
+    // ── Collect all image URLs to preload ──────────────────────────────────
+    const uniqueUrls = new Set<string>();
+
+    // Tile images from décor layer
+    for (const layer of mapData.layerInstances) {
+      for (const tile of layer.gridTiles ?? []) {
+        if (tile.src) uniqueUrls.add(tile.src);
+      }
+    }
+
+    // Player sprite
+    if (playerSpritePath) uniqueUrls.add(playerSpritePath);
+
+    // Create ImageSource map (url → source)
+    const imageCache = new Map<string, ex.ImageSource>();
+    for (const url of uniqueUrls) {
+      imageCache.set(url, new ex.ImageSource(url));
+    }
+
+    // ── Engine setup ───────────────────────────────────────────────────────
     const canvas = document.createElement('canvas');
-    canvas.style.width = '100%';
+    canvas.style.width  = '100%';
     canvas.style.height = '100%';
     canvas.style.display = 'block';
     container.appendChild(canvas);
@@ -55,7 +76,7 @@ export function useGameEngine({
       suppressPlayButton: true,
       suppressConsoleBootMessage: true,
       backgroundColor: ex.Color.fromHex('#0d0d1a'),
-      antialiasing: false,         // Pixel-art style
+      antialiasing: false,
       pixelArt: true,
     });
 
@@ -67,20 +88,21 @@ export function useGameEngine({
       onTriggerMapExit: onMapExit,
     });
 
-    const scene = new TopdownScene(mapData, bridge);
+    const scene = new TopdownScene(mapData, bridge, playerSpritePath, imageCache);
     engine.addScene('topdown', scene);
 
-    engine.start().then(() => {
-      engine.goToScene('topdown');
-    });
+    // Start with loader if there are images, else start directly
+    const resources = [...imageCache.values()];
+    const startPromise = resources.length > 0
+      ? engine.start(new ex.Loader(resources))
+      : engine.start();
+
+    startPromise.then(() => engine.goToScene('topdown'));
 
     return () => {
       engine.stop();
       engineRef.current = null;
-      // Remove the canvas we created
-      if (canvas.parentNode === container) {
-        container.removeChild(canvas);
-      }
+      if (canvas.parentNode === container) container.removeChild(canvas);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId, selectedMapId]);

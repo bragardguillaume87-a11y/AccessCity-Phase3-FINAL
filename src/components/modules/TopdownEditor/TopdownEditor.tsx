@@ -25,6 +25,70 @@ import LayerPanel from './LayerPanel';
 import TilePalette from './TilePalette';
 import type { MapData } from '@/types/map';
 
+// ── PlayerSpritePanel ──────────────────────────────────────────────────────
+
+function PlayerSpritePanel({ mapId }: { mapId: string | null }) {
+  const updateMapMetadata = useMapsStore(s => s.updateMapMetadata);
+  const playerSpritePath = useMapsStore(s =>
+    mapId ? (s.getMapById(mapId)?.playerSpritePath ?? '') : ''
+  );
+  const { assets } = useAssets();
+  const imageAssets = assets.filter(a =>
+    a.category !== 'audio' &&
+    (a.type?.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(a.path))
+  );
+
+  if (!mapId) return null;
+
+  return (
+    <div style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border-base)' }}>
+      <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
+        🎮 Joueur
+      </p>
+
+      {playerSpritePath && (
+        <div style={{ marginBottom: 6, height: 40, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <img
+            src={playerSpritePath}
+            alt="Sprite joueur"
+            style={{ height: 38, width: 38, objectFit: 'contain', imageRendering: 'pixelated', border: '1px solid var(--color-border-base)', borderRadius: 4, background: 'rgba(0,0,0,0.3)' }}
+            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+          <span style={{ fontSize: 10, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {playerSpritePath.split('/').pop()}
+          </span>
+        </div>
+      )}
+
+      <select
+        value={playerSpritePath}
+        onChange={e => updateMapMetadata(mapId, { playerSpritePath: e.target.value || undefined })}
+        style={{
+          width: '100%',
+          background: 'var(--color-bg-base)',
+          border: '1px solid var(--color-border-base)',
+          borderRadius: 4,
+          color: 'var(--color-text-base)',
+          fontSize: 11,
+          padding: '3px 4px',
+        }}
+        title="Spritesheet LPC (4 rangées × 9 colonnes, 64×64px/frame)"
+      >
+        <option value="">— Carré violet (défaut) —</option>
+        {imageAssets.map(a => (
+          <option key={a.path} value={a.url ?? a.path}>
+            {a.name ?? a.path.split('/').pop()}
+          </option>
+        ))}
+      </select>
+
+      <p style={{ margin: '4px 0 0', fontSize: 9, color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+        Format LPC : 4 rangées × 9 cols, 64×64px
+      </p>
+    </div>
+  );
+}
+
 // Empty MapData for when no map is selected
 const EMPTY_MAP_DATA: MapData = {
   identifier: '',
@@ -121,6 +185,9 @@ export default function TopdownEditor() {
             onToolChange={editor.setActiveTool}
           />
         </div>
+
+        {/* Player sprite panel */}
+        <PlayerSpritePanel mapId={editor.selectedMapId} />
       </aside>
 
       {/* ── Canvas center ── */}

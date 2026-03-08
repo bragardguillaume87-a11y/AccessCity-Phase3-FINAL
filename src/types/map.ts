@@ -38,6 +38,12 @@ export interface MapMetadata {
   tileSize: number;
   /** Base64 thumbnail (generated on save) */
   thumbnail?: string;
+  /**
+   * Spritesheet du joueur (format LPC : 4 rangées × 9 colonnes, 64×64px/frame).
+   * URL display-ready (asset.url ?? asset.path). Absent → carré violet (fallback).
+   * Rangées : 0=bas, 1=gauche, 2=droite, 3=haut.
+   */
+  playerSpritePath?: string;
   createdAt: string;
   updatedAt: string;
 }

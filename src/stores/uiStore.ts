@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext, EditorMode } from '@/types';
+import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext, EditorMode, StudioModule } from '@/types';
 
 /**
  * UI Store
@@ -223,6 +223,10 @@ interface UIState {
   // Editor mode (kid/pro)
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
+
+  // Studio module switcher (non-persistent — resets to 'vn-editor' on each launch)
+  activeModule: StudioModule;
+  setActiveModule: (module: StudioModule) => void;
 }
 
 // ============================================================================
@@ -267,6 +271,8 @@ export const useUIStore = create<UIState>()(
         serpentineGroupSize: serpentineConfig.groupSize,
         // Editor mode state (persisted)
         editorMode: getPersistedEditorMode(),
+        // Studio module (non-persistent — always start on vn-editor)
+        activeModule: 'vn-editor' as StudioModule,
         // Pro mode state (persisted)
         proModeEnabled: proConfig.enabled,
         proModeDirection: proConfig.direction,
@@ -464,6 +470,10 @@ export const useUIStore = create<UIState>()(
       setEditorMode: (mode) => {
         persistEditorMode(mode);
         set({ editorMode: mode }, false, 'ui/setEditorMode');
+      },
+
+      setActiveModule: (module) => {
+        set({ activeModule: module }, false, 'ui/setActiveModule');
       },
     };
     }),

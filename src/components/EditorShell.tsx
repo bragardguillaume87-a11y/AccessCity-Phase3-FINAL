@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BookOpen, Map, LayoutDashboard, Play, type LucideIcon } from 'lucide-react';
 import { useUIStore, useScenesStore, useCharactersStore, useDialoguesStore } from '../stores/index.ts';
+import type { StudioModule } from '../types';
 import { useSceneWithElements } from '../stores/selectors/index';
 import { isCinematicScene } from '../types/scenes';
 import { useSelection, toSelectedElementType } from '../hooks/useSelection.ts';
@@ -69,6 +71,86 @@ interface EditorShellProps {
   onBack?: (() => void) | null;
 }
 
+// ============================================================================
+// STUDIO MODULE SWITCHER
+// ============================================================================
+
+const MODULE_TABS: Array<{ id: StudioModule; label: string; Icon: LucideIcon }> = [
+  { id: 'vn-editor',   label: 'Visual Novel', Icon: BookOpen },
+  { id: 'topdown',     label: 'Carte 2D',     Icon: Map },
+  { id: 'ui-builder',  label: 'Interface',    Icon: LayoutDashboard },
+  { id: 'preview',     label: 'Prévisualiser', Icon: Play },
+];
+
+function StudioModuleSwitcher({
+  activeModule,
+  onModuleChange,
+}: {
+  activeModule: StudioModule;
+  onModuleChange: (m: StudioModule) => void;
+}) {
+  return (
+    <nav
+      className="flex-shrink-0 flex items-center gap-1 px-3 h-9 bg-card border-b border-border"
+      aria-label="Modules du studio"
+    >
+      {MODULE_TABS.map(({ id, label, Icon }) => {
+        const isActive = activeModule === id;
+        return (
+          <button
+            key={id}
+            onClick={() => onModuleChange(id)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors"
+            style={{
+              color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              background: isActive ? 'rgba(139,92,246,0.12)' : 'transparent',
+              border: isActive ? '1px solid rgba(139,92,246,0.35)' : '1px solid transparent',
+            }}
+            aria-pressed={isActive}
+            aria-label={label}
+          >
+            <Icon size={13} aria-hidden="true" />
+            {label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ============================================================================
+// STUDIO MODULE PLACEHOLDER (Sprints 2-5)
+// ============================================================================
+
+const MODULE_PLACEHOLDER_LABELS: Record<StudioModule, { emoji: string; title: string; description: string }> = {
+  'vn-editor':  { emoji: '📖', title: 'Visual Novel',  description: '' },
+  'topdown':    { emoji: '🗺️',  title: 'Éditeur de carte 2D', description: 'Placez des tuiles, définissez les zones de collision et les triggers de dialogue.' },
+  'ui-builder': { emoji: '🎨', title: 'Constructeur d\'interface', description: 'Construisez les HUD, menus et écrans du jeu par glisser-déposer.' },
+  'preview':    { emoji: '🎮', title: 'Prévisualisation', description: 'Jouez votre jeu topdown avec les dialogues intégrés.' },
+};
+
+function StudioModulePlaceholder({ module }: { module: StudioModule }) {
+  const info = MODULE_PLACEHOLDER_LABELS[module];
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-background select-none">
+      <span style={{ fontSize: 48 }} aria-hidden="true">{info.emoji}</span>
+      <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-base)' }}>
+        {info.title}
+      </h2>
+      <p className="text-sm max-w-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
+        {info.description}
+      </p>
+      <p className="text-xs px-3 py-1 rounded-full border border-border" style={{ color: 'var(--color-text-muted)' }}>
+        En développement — Sprint {module === 'topdown' ? 2 : module === 'preview' ? 3 : 5}
+      </p>
+    </div>
+  );
+}
+
+// ============================================================================
+// EDITOR SHELL
+// ============================================================================
+
 export default function EditorShell({ onBack = null }: EditorShellProps) {
   // === DATA LAYER ===
   // Guard défensif : state?.scenes — zundo 2.x peut retourner undefined pendant le démontage.
@@ -114,6 +196,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   const cinematicEditorOpen = useUIStore(s => s.cinematicEditorOpen);
   const activeSection = useUIStore(s => s.activeSection);
   const setActiveSection = useUIStore(s => s.setActiveSection);
+  const activeModule = useUIStore(s => s.activeModule);
+  const setActiveModule = useUIStore(s => s.setActiveModule);
 
   // === PREMIER LANCEMENT — chargement du projet par défaut bundlé ===
   // Si /public/default-project.json est présent et que c'est la première ouverture
@@ -304,10 +388,18 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         lastSaved={lastSaved}
       />
 
-      {showProblemsPanel && (
+      {/* ── Studio Module Switcher ── */}
+      <StudioModuleSwitcher activeModule={activeModule} onModuleChange={setActiveModule} />
+
+      {showProblemsPanel && activeModule === 'vn-editor' && (
         <div className="bg-card border-b border-border animate-fadeIn flex-shrink-0">
           <ProblemsPanel onNavigateTo={handleNavigateTo} />
         </div>
+      )}
+
+      {/* ── Non-VN modules : placeholders (Sprints 2-5) ── */}
+      {activeModule !== 'vn-editor' && (
+        <StudioModulePlaceholder module={activeModule} />
       )}
 
       {/* Layout 4-panneaux style Powtoon
@@ -315,7 +407,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
           Panel 3 et 4 sont des divs CSS — width contrôlée par useMemo.
           Cela évite les limitations de react-resizable-panels (resize() ignoré
           sur un panel collapsed), et donne des transitions CSS fluides. */}
-      <main className="flex-1 overflow-hidden relative flex" id="main-content" tabIndex={-1}>
+      <main className="flex-1 overflow-hidden relative flex" id="main-content" tabIndex={-1} style={{ display: activeModule === 'vn-editor' ? undefined : 'none' }}>
         <h2 className="sr-only">Zone d'édition principale</h2>
 
         <React.Suspense

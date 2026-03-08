@@ -62,3 +62,4 @@ export interface ModalContext {
   /** Ambient track slot (0 or 1). Only used when purpose === 'ambientTrack'. */
   slot?: 0 | 1;
 }
+export type StudioModule = 'vn-editor' | 'topdown' | 'ui-builder' | 'preview';

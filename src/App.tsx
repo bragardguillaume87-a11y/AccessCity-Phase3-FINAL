@@ -29,7 +29,7 @@ function App() {
   const [currentView, setCurrentView] = useState(
     isTokensMode ? "tokens-demo" :
     "home"
-  ); // 'home' | 'editor' | 'tokens-demo'
+  ); // 'home' | 'studio' | 'tokens-demo'
 
   // Créer une nouvelle quête
   function handleCreateQuest() {
@@ -51,10 +51,10 @@ function App() {
     setSelectedQuestId(id);
   }
 
-  // Lancer l'éditeur pour la quête sélectionnée
+  // Lancer le studio pour la quête sélectionnée
   function handleLaunchEditor() {
     if (!selectedQuestId) return;
-    setCurrentView("editor");
+    setCurrentView("studio");
   }
 
   // Supprimer la quête sélectionnée
@@ -74,7 +74,7 @@ function App() {
       <SkipToContent />
       {currentView === "tokens-demo" ? (
         <TokensDemo />
-      ) : currentView === "editor" ? (
+      ) : currentView === "studio" ? (
         <EditorShell onBack={handleBackHome} />
       ) : (
         <HomePage

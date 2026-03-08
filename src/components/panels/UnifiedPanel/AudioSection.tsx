@@ -4,7 +4,6 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { AUDIO_DEFAULTS } from '@/config/constants';
-import { logger } from '@/utils/logger';
 import { SfxGeneratorPanel } from './SfxGeneratorPanel';
 import { PanelSection } from '@/components/ui/CollapsibleSection';
 import type { SceneAudio, AmbientAudio } from '@/types/audio';
@@ -90,6 +89,39 @@ function IosToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: (
 }
 
 // ============================================================================
+// AUDIO PREVIEW HOOK (local)
+// ============================================================================
+
+function useAudioPreview(url: string | undefined, volume: number) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playError, setPlayError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePreview = useCallback(() => {
+    if (!url) return;
+    setPlayError(false);
+    if (isPlaying) {
+      audioRef.current?.pause();
+      if (audioRef.current) audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+      return;
+    }
+    const player = new Audio(url);
+    player.volume = volume;
+    player.play().then(() => {
+      setIsPlaying(true);
+      player.onended = () => setIsPlaying(false);
+    }).catch(() => {
+      setPlayError(true);
+      setIsPlaying(false);
+    });
+    audioRef.current = player;
+  }, [url, volume, isPlaying]);
+
+  return { isPlaying, playError, handlePreview, audioRef };
+}
+
+// ============================================================================
 // BGM CONTROLS
 // ============================================================================
 
@@ -101,30 +133,10 @@ interface MusicControlsProps {
 }
 
 function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicControlsProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playError, setPlayError] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const handlePreview = useCallback(() => {
-    setPlayError(false);
-    if (isPlaying) {
-      audioRef.current?.pause();
-      if (audioRef.current) audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      return;
-    }
-    const player = new Audio(audio.url);
-    player.volume = audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME;
-    player.play().then(() => {
-      setIsPlaying(true);
-      player.onended = () => setIsPlaying(false);
-    }).catch((err) => {
-      logger.warn('[AudioSection] Preview playback failed:', audio.url, err);
-      setPlayError(true);
-      setIsPlaying(false);
-    });
-    audioRef.current = player;
-  }, [audio.url, audio.volume, isPlaying]);
+  const { isPlaying, playError, handlePreview, audioRef } = useAudioPreview(
+    audio.url,
+    audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME,
+  );
 
   const volume = audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME;
   const durationMode = audio.durationMode ?? 'scene';
@@ -259,30 +271,10 @@ interface AmbientTrackSlotProps {
 }
 
 function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: AmbientTrackSlotProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playError, setPlayError] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const handlePreview = useCallback(() => {
-    if (!track) return;
-    setPlayError(false);
-    if (isPlaying) {
-      audioRef.current?.pause();
-      if (audioRef.current) audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      return;
-    }
-    const player = new Audio(track.url);
-    player.volume = track.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME;
-    player.play().then(() => {
-      setIsPlaying(true);
-      player.onended = () => setIsPlaying(false);
-    }).catch(() => {
-      setPlayError(true);
-      setIsPlaying(false);
-    });
-    audioRef.current = player;
-  }, [track, isPlaying]);
+  const { isPlaying, playError, handlePreview, audioRef } = useAudioPreview(
+    track?.url,
+    track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME,
+  );
 
   const volume = track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME;
 

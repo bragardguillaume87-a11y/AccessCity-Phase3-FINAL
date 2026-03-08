@@ -6,7 +6,7 @@ import type { SceneCharacter, TextBox, Prop } from '../types';
 
 /** Scene Elements Store — Repository pattern for visual elements per scene */
 
-export interface SceneElements {
+interface SceneElements {
   characters: SceneCharacter[];
   textBoxes: TextBox[];
   props: Prop[];

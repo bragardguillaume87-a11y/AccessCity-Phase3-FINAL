@@ -39,19 +39,6 @@ export function useSceneById(sceneId: string | null | undefined): SceneMetadata 
   );
 }
 
-/**
- * Select all scenes — métadonnées uniquement (stable reference).
- *
- * ⚠️ Retourne SceneMetadata[] (pas Scene[]) — dialogues/characters ABSENTS.
- * Pour toutes les scènes complètes → useAllScenesWithElements()
- */
-// ⚠️ Module-level constant — évite créer un [] inline (instabilité de référence zundo/Zustand 5).
-const EMPTY_SCENES_ARRAY: SceneMetadata[] = [];
-
-export function useScenes(): SceneMetadata[] {
-  return useScenesStore((state) => state?.scenes ?? EMPTY_SCENES_ARRAY);
-}
-
 // ============================================================================
 // ACTIONS SELECTORS (stable references)
 // ============================================================================

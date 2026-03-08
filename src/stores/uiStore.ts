@@ -42,7 +42,7 @@ function persistThemeId(themeId: string): void {
 /**
  * SERP-5: Serpentine configuration type
  */
-export interface SerpentineConfig {
+interface SerpentineConfig {
   enabled: boolean;
   mode: 'auto-y' | 'by-count' | 'branch-aware';
   direction: 'zigzag' | 'grid';
@@ -90,7 +90,7 @@ function persistSerpentineConfig(config: SerpentineConfig): void {
 /**
  * Pro mode configuration type
  */
-export interface ProModeConfig {
+interface ProModeConfig {
   enabled: boolean;
   direction: 'TB' | 'LR';
 }

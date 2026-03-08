@@ -30,7 +30,6 @@ const EMPTY_DIALOGUES: Dialogue[] = [];
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
-const EMPTY_ELEMENTS = { characters: EMPTY_CHARACTERS, textBoxes: EMPTY_TEXTBOXES, props: EMPTY_PROPS };
 
 // Re-export all selectors from sceneSelectors and characterSelectors
 export * from './sceneSelectors';
@@ -92,13 +91,6 @@ export function useAllScenesWithElements(): Scene[] {
  */
 export function useSceneDialogues(sceneId: string) {
   return useDialoguesStore((s) => s.dialoguesByScene[sceneId] || EMPTY_DIALOGUES);
-}
-
-/**
- * Récupère les éléments visuels d'une scène (shortcut)
- */
-export function useSceneElements(sceneId: string) {
-  return useSceneElementsStore((s) => s.elementsByScene[sceneId] || EMPTY_ELEMENTS);
 }
 
 // ============================================================================
@@ -186,6 +178,5 @@ export default {
   useSceneWithElements,
   useAllScenesWithElements,
   useSceneDialogues,
-  useSceneElements,
   useSceneActions,
 };

@@ -48,6 +48,7 @@ const CinematicEditorModal = React.lazy(() =>
   import('./modals/CinematicEditor').then(m => ({ default: m.CinematicEditor }))
 );
 const TopdownEditor = React.lazy(() => import('./modules/TopdownEditor/TopdownEditor'));
+const GamePreview    = React.lazy(() => import('./modules/GamePreview/GamePreview'));
 
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
@@ -419,7 +420,12 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
           <TopdownEditor />
         </React.Suspense>
       )}
-      {(activeModule === 'ui-builder' || activeModule === 'preview') && (
+      {activeModule === 'preview' && (
+        <React.Suspense fallback={<ModuleLoadingFallback />}>
+          <GamePreview />
+        </React.Suspense>
+      )}
+      {activeModule === 'ui-builder' && (
         <StudioModulePlaceholder module={activeModule} />
       )}
 

@@ -10,6 +10,9 @@ import {
   Connection,
 } from '@xyflow/react';
 import type { GraphNode } from './graph-utils/types';
+import { useUIStore } from '@/stores/uiStore';
+import { recalculateSerpentineEdges } from '@/config/handleConfig';
+import { isTerminalNode } from '@/utils/textHelpers';
 
 /**
  * Return type of useLocalGraphState hook
@@ -24,23 +27,26 @@ interface UseLocalGraphStateReturn {
 }
 
 /**
- * useLocalGraphState — Manages local node/edge state for ReactFlow
+ * useLocalGraphState — Manages local node/edge state for ReactFlow.
  *
  * Encapsulates:
  * - Local nodes state (synced from Dagre on initial render + dialogues count change)
  * - Local edges state (always synced from Dagre) + ref to avoid stale closures
+ * - Serpentine edge recalculation on node drag (reads serpentineEnabled from UIStore)
  * - onNodesChange handler (drag/select)
  * - onNodeDragStop handler (serpentine edge recalculation)
  * - reconnectLocalEdge helper (edge drag-to-reconnect)
+ *
+ * Previously split into useLocalGraphState + useSerpentineSync — merged for cohesion.
  */
 export function useLocalGraphState(
   dagreNodes: GraphNode[],
   edges: Edge[],
   dialoguesLength: number,
-  serpentineEnabled: boolean,
   editMode: boolean,
-  recalculateEdges: (nodes: Node[], edges: Edge[]) => Edge[],
 ): UseLocalGraphStateReturn {
+  const serpentineEnabled = useUIStore(s => s.serpentineEnabled);
+
   // Local state for node positions (enables manual dragging)
   const [localNodes, setLocalNodes] = useState<GraphNode[]>(dagreNodes);
 
@@ -83,6 +89,15 @@ export function useLocalGraphState(
       return updated;
     });
   }, []);
+
+  // Recalculate serpentine edge handles based on current node positions
+  const recalculateEdges = useCallback(
+    (nodes: Node[], currentEdges: Edge[]): Edge[] => {
+      if (!serpentineEnabled || nodes.length === 0) return currentEdges;
+      return recalculateSerpentineEdges(nodes.filter(n => !isTerminalNode(n)), currentEdges);
+    },
+    [serpentineEnabled]
+  );
 
   // Handle node drag stop — recalculate serpentine edge handles
   const onNodeDragStop = useCallback(

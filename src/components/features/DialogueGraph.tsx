@@ -16,7 +16,6 @@ import './DialogueGraph.css';
 
 import { useDialogueGraph } from '../../hooks/useDialogueGraph';
 import { useDialogueGraphActions } from '../../hooks/useDialogueGraphActions';
-import { useSerpentineSync } from '../../hooks/useSerpentineSync';
 import { useLocalGraphState } from '../../hooks/useLocalGraphState';
 import { nodeTypes } from './graph-nodes';
 import { useValidation } from '../../hooks/useValidation';
@@ -99,8 +98,6 @@ function DialogueGraphInner({
   const validation = useValidation();
   const theme = useGraphTheme();
   const actions = useDialogueGraphActions(selectedScene?.id || '');
-  const { recalculateEdges, serpentineEnabled } = useSerpentineSync();
-
   // Edge types from registry (theme-driven)
   const edgeTypes = useMemo(() => getEdgeTypes(theme.id), [theme.id]);
 
@@ -115,7 +112,7 @@ function DialogueGraphInner({
 
   // Local graph state (nodes + edges + drag/reconnect handlers)
   const { localNodes, localEdges, onNodesChange, onEdgesChange, onNodeDragStop, reconnectLocalEdge } =
-    useLocalGraphState(dagreNodes, edges, dialogues.length, serpentineEnabled, editMode, recalculateEdges);
+    useLocalGraphState(dagreNodes, edges, dialogues.length, editMode);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 

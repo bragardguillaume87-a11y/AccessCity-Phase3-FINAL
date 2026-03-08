@@ -23,13 +23,4 @@ export const GRAPH_THEMES: Record<string, GraphTheme> = {
  */
 export const DEFAULT_THEME_ID = 'default';
 
-/**
- * Get a theme by ID, falls back to default if not found
- */
-export function getGraphTheme(themeId: string): GraphTheme {
-  return GRAPH_THEMES[themeId] || GRAPH_THEMES[DEFAULT_THEME_ID];
-}
-
-// Re-export everything for convenience
-export { defaultTheme, cosmosTheme, blenderTheme };
-export type { GraphTheme, NodeColorSet, EdgeStyle } from './types';
+export type { GraphTheme, EdgeStyle } from './types';

@@ -147,7 +147,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
             flex: 1,
             padding: '6px',
             fontSize: '0.75rem',
-            backgroundColor: '#8b5cf6',
+            backgroundColor: 'var(--color-primary)',
             color: 'white',
             border: 'none',
             borderRadius: '4px',

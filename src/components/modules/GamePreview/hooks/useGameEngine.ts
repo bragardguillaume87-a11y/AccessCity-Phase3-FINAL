@@ -13,6 +13,7 @@
 import { useEffect, useRef } from 'react';
 import * as ex from 'excalibur';
 import { useMapsStore } from '@/stores/mapsStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { TopdownScene } from '../GameScene';
 import { DialogueBridge } from '../DialogueBridge';
 
@@ -38,8 +39,11 @@ export function useGameEngine({
     const mapData     = storeState.mapDataById[selectedMapId];
     if (!mapData) return;
 
-    const mapMetadata  = storeState.getMapById(selectedMapId);
+    const mapMetadata      = storeState.getMapById(selectedMapId);
     const playerSpritePath = mapMetadata?.playerSpritePath;
+    // Config sprite (avec flipX) — lu depuis settingsStore (getState() correct dans un handler)
+    const spriteConfigs    = useSettingsStore.getState().spriteSheetConfigs;
+    const playerSpriteConfig = playerSpritePath ? spriteConfigs[playerSpritePath] : undefined;
 
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -57,6 +61,11 @@ export function useGameEngine({
     // Player sprite
     if (playerSpritePath) uniqueUrls.add(playerSpritePath);
 
+    // Entity sprites
+    for (const entity of mapData._ac_entities ?? []) {
+      if (entity.spriteAssetUrl) uniqueUrls.add(entity.spriteAssetUrl);
+    }
+
     // Create ImageSource map (url → source)
     const imageCache = new Map<string, ex.ImageSource>();
     for (const url of uniqueUrls) {
@@ -68,6 +77,7 @@ export function useGameEngine({
     canvas.style.width  = '100%';
     canvas.style.height = '100%';
     canvas.style.display = 'block';
+    canvas.style.imageRendering = 'pixelated'; // prevent browser-level smoothing when CSS-scaling the canvas
     container.appendChild(canvas);
 
     const engine = new ex.Engine({
@@ -88,7 +98,7 @@ export function useGameEngine({
       onTriggerMapExit: onMapExit,
     });
 
-    const scene = new TopdownScene(mapData, bridge, playerSpritePath, imageCache);
+    const scene = new TopdownScene(mapData, bridge, playerSpritePath, imageCache, playerSpriteConfig, spriteConfigs);
     engine.addScene('topdown', scene);
 
     // Start with loader if there are images, else start directly

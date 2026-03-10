@@ -1,11 +1,14 @@
 /**
- * Map Types — LDtk-compatible format
+ * Map Types — LDtk-compatible format + AccessCity extensions (entities)
  *
  * AccessCity topdown map editor outputs JSON compatible with Excalibur's @excaliburjs/plugin-ldtk.
  * Custom _ac_ fields extend the format with dialogue triggers and scene exits.
  *
  * @module types/map
  */
+
+import type { EntityInstance } from './sprite';
+export type { EntityInstance };
 
 // ============================================================================
 // PRIMITIVES
@@ -59,10 +62,18 @@ export interface TileInstance {
   cx: number;
   /** Grid row */
   cy: number;
-  /** Source asset path/url for the tile sprite */
+  /** Source asset path/url for the tile sprite (full image OR tileset sheet URL) */
   src: string;
   /** Flip flags: 0 = none, 1 = X, 2 = Y, 3 = XY */
   f: 0 | 1 | 2 | 3;
+  /**
+   * Sheet coordinates — présents uniquement si src est un tileset sheet (tileW > 0).
+   * Absent (undefined) = image entière utilisée comme tuile unique.
+   */
+  tileX?: number;
+  tileY?: number;
+  tileW?: number;
+  tileH?: number;
 }
 
 export interface LayerInstance {
@@ -124,4 +135,6 @@ export interface MapData {
   /** AccessCity custom extensions */
   _ac_dialogue_triggers: DialogueTrigger[];
   _ac_scene_exits: SceneExit[];
+  /** Entités placées sur la carte (PNJ, monstres, objets…) */
+  _ac_entities: EntityInstance[];
 }

@@ -161,6 +161,8 @@ export default function AssetsLibraryModal({
     sfx: assets.filter(a => a.category === 'sfx').length,
     voices: assets.filter(a => a.category === 'voices').length,
     atmosphere: assets.filter(a => a.category === 'atmosphere').length,
+    tilesets: assets.filter(a => a.category === 'tilesets').length,
+    'sprites-2d': assets.filter(a => a.category === 'sprites-2d').length,
   }), [assets]);
 
   useEffect(() => {
@@ -422,6 +424,8 @@ export default function AssetsLibraryModal({
                       <SelectItem value="music">Musique</SelectItem>
                       <SelectItem value="sfx">Effets sonores</SelectItem>
                       <SelectItem value="voices">Voix</SelectItem>
+                      <SelectItem value="tilesets">Tilesets</SelectItem>
+                      <SelectItem value="sprites-2d">Sprites 2D</SelectItem>
                     </SelectContent>
                   </Select>
                   {moving && (

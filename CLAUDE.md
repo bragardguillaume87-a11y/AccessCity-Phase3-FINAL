@@ -183,10 +183,11 @@ Quand l'utilisateur demande "qualité maximale" ou "protocole code" :
 
 ## 7. Règles détaillées → `.claude/rules/`
 
-`store-patterns.md` | `react-patterns.md` | `graph-patterns.md` | `tauri-patterns.md` | `ai-adaptation.md`
+`store-patterns.md` | `react-patterns.md` | `graph-patterns.md` | `tauri-patterns.md` | `ai-adaptation.md` | `nintendo-ux.md`
 
 ⚠️ Lire `tauri-patterns.md` avant tout audit Tauri (asset.url vs asset.path).
+⚠️ Lire `nintendo-ux.md` avant tout travail UI/UX (composants, animations, feedback).
 
 ---
 
-**Dernière mise à jour** : 2026-03-06 par Claude Sonnet 4.6 — réduction 636L → 230L
+**Dernière mise à jour** : 2026-03-08 par Claude Sonnet 4.6

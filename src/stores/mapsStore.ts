@@ -1,7 +1,9 @@
-import { create } from 'zustand';
+import { create, useStore } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import type { TemporalState } from 'zundo';
 import type { MapMetadata, MapData } from '@/types/map';
+import type { EntityInstance } from '@/types/sprite';
 
 /**
  * Maps Store
@@ -56,6 +58,7 @@ function createEmptyMapData(id: string, name: string, widthTiles: number, height
     ],
     _ac_dialogue_triggers: [],
     _ac_scene_exits: [],
+    _ac_entities: [],
   };
 }
 
@@ -77,6 +80,14 @@ interface MapsState {
   updateMapMetadata: (mapId: string, patch: Partial<MapMetadata>) => void;
   updateMapData: (mapId: string, data: MapData) => void;
   deleteMap: (mapId: string) => void;
+
+  // Resize / rename
+  resizeMap: (mapId: string, name: string, widthTiles: number, heightTiles: number, tileSize: number) => void;
+
+  // Entities
+  addEntity: (mapId: string, entity: EntityInstance) => void;
+  updateEntity: (mapId: string, entityId: string, patch: Partial<EntityInstance>) => void;
+  removeEntity: (mapId: string, entityId: string) => void;
 
   // Import
   importMaps: (maps: MapMetadata[], mapDataById: Record<string, MapData>) => void;
@@ -152,6 +163,104 @@ export const useMapsStore = create<MapsState>()(
             );
           },
 
+          resizeMap: (mapId, name, widthTiles, heightTiles, tileSize) => {
+            const existingData = get().mapDataById[mapId];
+            if (!existingData) return;
+
+            const newLayers = existingData.layerInstances.map(layer => {
+              // Trim tiles outside new bounds
+              const gridTiles = layer.gridTiles.filter(
+                t => t.cx < widthTiles && t.cy < heightTiles
+              );
+              // Recompute collision intGrid — convert old (cx,cy) to new flat indices
+              let intGrid = layer.intGrid;
+              if (layer.__type === 'collision' && layer.intGrid) {
+                const oldCWid = layer.__cWid;
+                intGrid = layer.intGrid
+                  .map(idx => ({ cx: idx % oldCWid, cy: Math.floor(idx / oldCWid) }))
+                  .filter(c => c.cx < widthTiles && c.cy < heightTiles)
+                  .map(c => c.cy * widthTiles + c.cx);
+              }
+              return { ...layer, __gridSize: tileSize, __cWid: widthTiles, __cHei: heightTiles, gridTiles, intGrid };
+            });
+
+            const newData: MapData = {
+              ...existingData,
+              identifier: name,
+              pxWid: widthTiles * tileSize,
+              pxHei: heightTiles * tileSize,
+              __gridSize: tileSize,
+              layerInstances: newLayers,
+            };
+            const now = new Date().toISOString();
+            set(
+              state => ({
+                maps: state.maps.map(m =>
+                  m.id === mapId ? { ...m, name, widthTiles, heightTiles, tileSize, updatedAt: now } : m
+                ),
+                mapDataById: { ...state.mapDataById, [mapId]: newData },
+              }),
+              false,
+              'maps/resizeMap'
+            );
+          },
+
+          addEntity: (mapId, entity) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            set(
+              state => ({
+                mapDataById: {
+                  ...state.mapDataById,
+                  [mapId]: {
+                    ...data,
+                    _ac_entities: [...(data._ac_entities ?? []), entity],
+                  },
+                },
+              }),
+              false,
+              'maps/addEntity'
+            );
+          },
+
+          updateEntity: (mapId, entityId, patch) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            set(
+              state => ({
+                mapDataById: {
+                  ...state.mapDataById,
+                  [mapId]: {
+                    ...data,
+                    _ac_entities: (data._ac_entities ?? []).map(e =>
+                      e.id === entityId ? { ...e, ...patch } : e
+                    ),
+                  },
+                },
+              }),
+              false,
+              'maps/updateEntity'
+            );
+          },
+
+          removeEntity: (mapId, entityId) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            set(
+              state => ({
+                mapDataById: {
+                  ...state.mapDataById,
+                  [mapId]: {
+                    ...data,
+                    _ac_entities: (data._ac_entities ?? []).filter(e => e.id !== entityId),
+                  },
+                },
+              }),
+              false,
+              'maps/removeEntity'
+            );
+          },
+
           importMaps: (maps, mapDataById) => {
             set(() => ({ maps, mapDataById }), false, 'maps/importMaps');
           },
@@ -170,3 +279,14 @@ export const useMapsStore = create<MapsState>()(
     { name: 'MapsStore' }
   )
 );
+
+/**
+ * Hook React pour accéder à l'état temporel (undo/redo) du store.
+ * Utilise le pattern officiel zundo : useStore(store.temporal, selector).
+ *
+ * @example
+ * const { undo, redo, pastStates, futureStates } = useTemporalMapsStore(s => s);
+ */
+export const useTemporalMapsStore = <T,>(
+  selector: (state: TemporalState<MapsState>) => T
+): T => useStore(useMapsStore.temporal, selector);

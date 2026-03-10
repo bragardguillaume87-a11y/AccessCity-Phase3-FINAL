@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, X, ArrowUpDown, Package, ImageIcon, Users as UsersIcon, Palette, Music, Volume2, Mic, Wind } from 'lucide-react';
+import { Search, X, ArrowUpDown, Package, ImageIcon, Users as UsersIcon, Palette, Music, Volume2, Mic, Wind, Grid3X3, PersonStanding } from 'lucide-react';
 import { VirtualAssetGrid } from './VirtualAssetGrid';
 import { AssetsLibrarySidebar, type SidebarSection } from './AssetsLibrarySidebar';
 import type { Asset } from '@/types';
@@ -23,8 +23,10 @@ const CATEGORY_ITEMS = [
   { id: 'illustrations', label: 'Illus.',   icon: Palette    },
   { id: 'music',         label: 'Musique',  icon: Music      },
   { id: 'sfx',           label: 'SFX',      icon: Volume2    },
-  { id: 'voices',        label: 'Voix',     icon: Mic        },
-  { id: 'atmosphere',    label: 'Ambiance', icon: Wind       },
+  { id: 'voices',        label: 'Voix',     icon: Mic             },
+  { id: 'atmosphere',    label: 'Ambiance', icon: Wind            },
+  { id: 'tilesets',      label: 'Tilesets', icon: Grid3X3         },
+  { id: 'sprites-2d',    label: 'Sprites 2D', icon: PersonStanding },
 ];
 
 export interface LibraryTabProps {

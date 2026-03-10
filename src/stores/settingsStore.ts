@@ -5,6 +5,8 @@ import { STAT_BOUNDS } from '@/config/gameConstants';
 import { TIMING } from '@/config/timing';
 import type { DialogueBoxStyle } from '@/types/scenes';
 import type { AssetCollection } from '@/types/collections';
+import type { TilesetConfig } from '@/types/tileset';
+import type { SpriteSheetConfig } from '@/types/sprite';
 
 // ── Character FX ──────────────────────────────────────────────────────────────
 
@@ -112,6 +114,24 @@ interface SettingsState {
   /** Noms d'affichage personnalisés par assetPath. Ne renomme pas le fichier. */
   assetDisplayNames: Record<string, string>;
   setAssetDisplayName: (assetPath: string, displayName: string) => void;
+  /**
+   * Configuration de découpe par asset (clé = asset URL display-ready).
+   * Persistée — l'utilisateur n'a pas à reconfigurer à chaque session.
+   */
+  tilesetConfigs: Record<string, TilesetConfig>;
+  setTilesetConfig: (assetUrl: string, config: TilesetConfig) => void;
+  /** Configuration des spritesheets de personnages/monstres (clé = asset URL display-ready) */
+  spriteSheetConfigs: Record<string, SpriteSheetConfig>;
+  setSpriteSheetConfig: (assetUrl: string, config: SpriteSheetConfig) => void;
+  removeSpriteSheetConfig: (assetUrl: string) => void;
+  removeTilesetConfig: (assetUrl: string) => void;
+  /**
+   * URLs d'assets masqués dans la palette de l'éditeur (ne supprime pas le fichier).
+   * Clé = asset URL display-ready ou path.
+   */
+  hiddenAssetPaths: string[];
+  hideAsset: (path: string) => void;
+  unhideAsset: (path: string) => void;
 }
 
 // ============================================================================
@@ -173,6 +193,9 @@ export const useSettingsStore = create<SettingsState>()(
         uiSoundsTickInterval: 65,
         assetCollections: [],
         assetDisplayNames: {},
+        tilesetConfigs: {},
+        spriteSheetConfigs: {},
+        hiddenAssetPaths: [],
 
         updateProjectData: (updates) => {
           set((state) => ({
@@ -282,6 +305,48 @@ export const useSettingsStore = create<SettingsState>()(
           }), false, 'settings/setAssetDisplayName');
         },
 
+        setTilesetConfig: (assetUrl, config) => {
+          set((state) => ({
+            tilesetConfigs: { ...state.tilesetConfigs, [assetUrl]: config },
+          }), false, 'settings/setTilesetConfig');
+        },
+
+        setSpriteSheetConfig: (assetUrl, config) => {
+          set((state) => ({
+            spriteSheetConfigs: { ...state.spriteSheetConfigs, [assetUrl]: config },
+          }), false, 'settings/setSpriteSheetConfig');
+        },
+
+        removeTilesetConfig: (assetUrl) => {
+          set((state) => {
+            const next = { ...state.tilesetConfigs };
+            delete next[assetUrl];
+            return { tilesetConfigs: next };
+          }, false, 'settings/removeTilesetConfig');
+        },
+
+        removeSpriteSheetConfig: (assetUrl) => {
+          set((state) => {
+            const next = { ...state.spriteSheetConfigs };
+            delete next[assetUrl];
+            return { spriteSheetConfigs: next };
+          }, false, 'settings/removeSpriteSheetConfig');
+        },
+
+        hideAsset: (path) => {
+          set((state) => ({
+            hiddenAssetPaths: state.hiddenAssetPaths.includes(path)
+              ? state.hiddenAssetPaths
+              : [...state.hiddenAssetPaths, path],
+          }), false, 'settings/hideAsset');
+        },
+
+        unhideAsset: (path) => {
+          set((state) => ({
+            hiddenAssetPaths: state.hiddenAssetPaths.filter(p => p !== path),
+          }), false, 'settings/unhideAsset');
+        },
+
         // Actions: Dialogue Box Defaults
         updateDialogueBoxDefaults: (style) => {
           set((state) => ({
@@ -310,6 +375,9 @@ export const useSettingsStore = create<SettingsState>()(
           uiSoundStyle: state.uiSoundStyle,
           uiSoundsTickInterval: state.uiSoundsTickInterval,
           assetCollections: state.assetCollections,
+          tilesetConfigs: state.tilesetConfigs,
+          spriteSheetConfigs: state.spriteSheetConfigs,
+          hiddenAssetPaths: state.hiddenAssetPaths,
         }),
       }
     ),

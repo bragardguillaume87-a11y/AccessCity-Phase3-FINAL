@@ -305,6 +305,31 @@ textarea {
 }
 .animate-celebration { animation: celebration-shake 0.5s ease-in-out; }
 
+/* Spinner — chargement de manifest d'assets */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Barre de progression indéterminée (upload sans progress exact) */
+@keyframes indeterminate {
+  0%   { left: -40%; width: 40%; }
+  50%  { left: 20%;  width: 60%; }
+  100% { left: 100%; width: 40%; }
+}
+
+/* Skeleton shimmer — chargement de liste d'assets */
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+
+/* Badge pulsant sur onglet inactif après un upload */
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.6; }
+}
+
 /* Large touch targets for kids (44px minimum) */
 .touch-target-xl {
   min-height: 56px;

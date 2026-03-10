@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UploadZone } from './UploadZone';
 import { Button } from '@/components/ui/button';
-import { ImageIcon, Users as UsersIcon, Palette, Music, Volume2, Mic } from 'lucide-react';
+import { ImageIcon, Users as UsersIcon, Palette, Music, Volume2, Mic, Grid3X3, PersonStanding } from 'lucide-react';
 
 export interface UploadTabProps {
   initialCategory?: string;
@@ -49,6 +49,20 @@ const CATEGORIES = [
     icon: Mic,
     description: 'Voix off et narration',
     isAudio: true
+  },
+  {
+    id: 'tilesets',
+    label: 'Tilesets',
+    icon: Grid3X3,
+    description: 'Tuiles et décors pour cartes 2D',
+    isAudio: false
+  },
+  {
+    id: 'sprites-2d',
+    label: 'Sprites 2D',
+    icon: PersonStanding,
+    description: 'Spritesheets personnage (format LPC : 4 rangées × 9 cols, 64×64px)',
+    isAudio: false
   },
 ];
 
@@ -118,6 +132,12 @@ export function UploadTab({ initialCategory }: UploadTabProps) {
           )}
           {selectedCategory === 'voices' && (
             <li>• MP3 ou WAV pour les voix off (qualité audio importante)</li>
+          )}
+          {selectedCategory === 'tilesets' && (
+            <li>• PNG avec transparence recommandé, taille de tuile : 16, 32 ou 64px</li>
+          )}
+          {selectedCategory === 'sprites-2d' && (
+            <li>• Format LPC : 4 rangées × 9 colonnes, 64×64px par frame (PNG transparent)</li>
           )}
           <li>• Taille max: {CATEGORIES.find(c => c.id === selectedCategory)?.isAudio ? '50 Mo' : '10 Mo'} par fichier</li>
         </ul>

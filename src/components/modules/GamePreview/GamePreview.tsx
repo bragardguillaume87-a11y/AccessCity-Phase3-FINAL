@@ -24,8 +24,9 @@ export default function GamePreview() {
   const [selectedMapId, setSelectedMapId] = useState<string | null>(
     maps[0]?.id ?? null
   );
-  const [isRunning, setIsRunning] = useState(false);
-  const [activeMapId, setActiveMapId] = useState<string | null>(null);
+  // Auto-démarre dès qu'une carte est disponible (pas d'écran "Lancer" intermédiaire)
+  const [isRunning, setIsRunning] = useState(() => maps.length > 0);
+  const [activeMapId, setActiveMapId] = useState<string | null>(() => maps[0]?.id ?? null);
 
   const setActiveModal = useUIStore(s => s.setActiveModal);
   const setModalContext = useUIStore(s => s.setModalContext);
@@ -142,10 +143,12 @@ export default function GamePreview() {
 
       {/* Game canvas container */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Excalibur mounts its canvas here */}
+        {/* Excalibur mounts its canvas here.
+            position absolute + inset 0 garantit le remplissage même dans un flex-item
+            (height:100% ne se propage pas fiablement sur un enfant block d'un flex-item) */}
         <div
           id={CONTAINER_ID}
-          style={{ width: '100%', height: '100%', display: isRunning ? 'block' : 'none' }}
+          style={{ position: 'absolute', inset: 0, display: isRunning ? 'block' : 'none' }}
         />
 
         {/* Idle state when not running */}

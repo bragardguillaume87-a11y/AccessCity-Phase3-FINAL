@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, Edge, getSmoothStepPath } from '@xyflow/react';
+import { BaseEdge, EdgeProps, Edge, getSmoothStepPath } from '@xyflow/react';
 import { COSMOS_COLORS, COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
 
 /**
@@ -51,7 +51,7 @@ export function CosmosConvergenceEdge({
   const spread = (parallelIndex - (parallelCount - 1) / 2) * ySpread;
 
   const dim = COSMOS_DIMENSIONS.convergenceEdge;
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY: sourceY + spread,
     sourcePosition,
@@ -77,27 +77,6 @@ export function CosmosConvergenceEdge({
         }}
       />
 
-      <EdgeLabelRenderer>
-        <div
-          style={{
-            position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            background: convergence.labelBg,
-            border: `1px solid ${convergence.labelBorder}`,
-            color: convergence.labelText,
-            fontSize: dim.labelFontSize,
-            fontWeight: dim.labelFontWeight,
-            letterSpacing: '0.02em',
-            padding: dim.labelPadding,
-            borderRadius: dim.labelBorderRadius,
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
-            boxShadow: convergence.labelShadow,
-          }}
-        >
-          ↩ rejoint
-        </div>
-      </EdgeLabelRenderer>
     </>
   );
 }

@@ -80,14 +80,6 @@ export function isCharacterSelection(element: SelectedElement): element is Chara
   return element !== null && element.type === 'character';
 }
 
-export function isSceneCharacterSelection(element: SelectedElement): element is SceneCharacterSelection {
-  return element !== null && element.type === 'sceneCharacter';
-}
-
-export function isNoSelection(element: SelectedElement): element is NoSelection | null {
-  return element === null || element.type === null;
-}
-
 /** Get a human-readable description of a selection (for logging) */
 export function describeSelection(element: SelectedElement): string {
   if (element === null || element.type === null) return 'No selection';

@@ -5,6 +5,8 @@ import { X, Users, Edit, Copy, Trash2, AlertCircle, AlertTriangle, MapPin, Eye, 
 import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
 import type { CharacterUsageData } from '../hooks/useCharacterUsage';
+import { getPreviewImage } from '../utils/characterUtils';
+import { getMoodLabel, getMoodEmoji } from '@/hooks/useMoodPresets';
 
 /**
  * Validation error interface
@@ -35,17 +37,6 @@ export interface CharacterPreviewPanelProps {
   onDelete: (character: Character) => void;
   /** Callback when close is clicked */
   onClose: () => void;
-}
-
-/**
- * Get preview image URL for character
- */
-function getPreviewImage(character: Character): string | undefined {
-  if (!character.sprites || !character.moods || character.moods.length === 0) {
-    return undefined;
-  }
-  const firstMood = character.moods[0];
-  return character.sprites[firstMood];
 }
 
 /**
@@ -143,19 +134,19 @@ export function CharacterPreviewPanel({
       <ScrollArea className="flex-1">
         {/* ✨ AMÉLIORÉ : Padding augmenté (p-5 au lieu de p-4) */}
         <div className="p-5 space-y-4">
-          {/* ✨ AMÉLIORÉ : Preview Image avec border-2 et glow effect */}
+          {/* Preview Image avec border-2 et glow effect */}
           <div className="relative rounded-xl overflow-hidden bg-black/40 border-2 border-slate-600/40 shadow-lg">
             {previewImage ? (
               <img
                 src={previewImage}
                 alt={character.name}
-                className="w-full aspect-square object-contain"
+                className="w-full aspect-[3/4] object-contain"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             ) : (
-              <div className="w-full aspect-square flex items-center justify-center bg-gradient-to-br from-slate-800/60 to-slate-900/60">
+              <div className="w-full aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-slate-800/60 to-slate-900/60">
                 <Users className="h-16 w-16 text-slate-500" />
               </div>
             )}
@@ -219,24 +210,25 @@ export function CharacterPreviewPanel({
             </div>
           </div>
 
-          {/* ✨ AMÉLIORÉ : Moods List avec badges plus vivants */}
+          {/* Humeurs disponibles — emoji + label traduit */}
           {character.moods && character.moods.length > 0 && (
             <div className="space-y-2">
               <h5 className="text-xs font-semibold text-slate-300">Humeurs disponibles</h5>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {character.moods.map((mood) => (
                   <Badge
                     key={mood}
                     variant="outline"
-                    className={`text-xs px-2.5 py-1 font-medium border ${
+                    className={`text-xs px-2 py-0.5 font-medium border gap-1 ${
                       character.sprites?.[mood]
                         ? 'bg-blue-500/20 border-blue-400/50 text-blue-200'
                         : 'bg-slate-500/20 border-slate-400/50 text-slate-300'
                     }`}
                   >
-                    {mood}
+                    <span aria-hidden="true">{getMoodEmoji(mood)}</span>
+                    {getMoodLabel(mood)}
                     {character.sprites?.[mood] && (
-                      <span className="ml-1 text-green-400 font-bold">✓</span>
+                      <span className="text-green-400 font-bold" aria-label="sprite assigné">✓</span>
                     )}
                   </Badge>
                 ))}

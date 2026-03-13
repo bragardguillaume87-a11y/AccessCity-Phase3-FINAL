@@ -36,7 +36,7 @@ module.exports = {
     'react/prop-types': 'off', // Not needed with TypeScript
     'react/react-in-jsx-scope': 'off', // Not needed with React 17+
     'react/jsx-no-target-blank': 'warn',
-    'react/no-unescaped-entities': 'warn', // Apostrophes in JSX text
+    'react/no-unescaped-entities': 'off', // Désactivé — texte français avec apostrophes légitimes
 
     // React Hooks
     'react-hooks/rules-of-hooks': 'error',
@@ -80,5 +80,16 @@ module.exports = {
     '*.config.cjs',
     'vite.config.js',
     'tools/',
+  ],
+  // Overrides pour fichiers spécifiques
+  overrides: [
+    {
+      // React Three Fiber — propriétés JSX inconnues du plugin react standard
+      // (ambientLight, directionalLight, pointLight, mesh, geometry, material…)
+      files: ['**/DiceCubeR3F.tsx', '**/CinematicPreviewCanvas.tsx'],
+      rules: {
+        'react/no-unknown-property': 'off',
+      },
+    },
   ],
 };

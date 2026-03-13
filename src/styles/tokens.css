@@ -10,9 +10,11 @@
   /* ========== MIDNIGHT BLOOM THEME - WCAG AA Compliant ========== */
   /* Theme source: tweakcn.com - Midnight Bloom */
 
-  --color-primary: #6c5ce7;           /* Purple - Brand color */
-  --color-primary-hover: #5b4cdb;     /* Darker purple */
-  --color-primary-glow: rgba(108, 92, 231, 0.5);
+  --color-primary: #8b5cf6;           /* Violet-500 — couleur de marque (nintendo-ux.md) */
+  --color-primary-hover: #7c3aed;     /* Violet-600 — hover */
+  --color-primary-glow: rgba(139,92,246,0.5);
+  --color-primary-subtle: rgba(139,92,246,0.12);  /* Fond actif léger */
+  --color-primary-muted: rgba(139,92,246,0.18);   /* Fond actif standard */
 
   --color-accent: #6495ed;            /* Cornflower blue */
   --color-accent-hover: #5284dc;      /* Darker accent */
@@ -32,32 +34,32 @@
   --color-danger: #ef4444;            /* Red */
   --color-danger-hover: #DC2626;
 
-  /* ========== BACKGROUNDS - MIDNIGHT BLOOM DARK ========== */
+  /* ========== BACKGROUNDS - PREMIUM DARK (design v4) ========== */
 
-  --color-bg-base: #1a1d23;           /* Deep blue-gray - Base canvas */
-  --color-bg-elevated: #2f3436;       /* Cards, panels, modals */
-  --color-bg-hover: #444444;          /* Hover states */
-  --color-bg-active: #555555;         /* Active/selected */
-  --color-bg-overlay: rgba(26, 29, 35, 0.95);
+  --color-bg-base: #08090f;                      /* Noir profond — canvas principal */
+  --color-bg-elevated: #10131e;                  /* Panneaux, cartes, modales */
+  --color-bg-hover: #1e2438;                     /* Hover states */
+  --color-bg-active: #252d45;                    /* Active/selected */
+  --color-bg-overlay: rgba(8, 9, 15, 0.95);
 
   /* ========== TEXT - WCAG AA CONTRAST RATIOS ========== */
 
-  --color-text-primary: #ffffff;                   /* White - Primary text */
-  --color-text-secondary: rgb(255 255 255 / 0.85); /* White 85% - Section headers */
-  --color-text-muted: rgb(255 255 255 / 0.60);     /* White 60% - Inactive icons, secondary labels */
-  --color-text-disabled: #6e6e6e;                  /* Disabled text */
+  --color-text-primary: #eef0f8;                   /* Blanc chaud — texte principal */
+  --color-text-secondary: rgba(238,240,248,0.85);  /* 85% — section headers */
+  --color-text-muted: rgba(238,240,248,0.45);      /* 45% — icônes inactives, labels */
+  --color-text-disabled: #4e566e;                  /* Disabled text */
 
   /* ========== BORDERS ========== */
 
-  --color-border-base: #444444;       /* Standard border */
-  --color-border-hover: #555555;      /* Hover border */
-  --color-border-focus: #6c5ce7;      /* Focus - matches primary */
+  --color-border-base: rgba(255,255,255,0.08);   /* Bordure subtile */
+  --color-border-hover: rgba(255,255,255,0.14);  /* Hover border */
+  --color-border-focus: var(--color-primary);    /* Focus - matches primary */
   --color-border-error: #ef4444;
 
   /* ========== TYPOGRAPHY ========== */
-  /* Réutilise Poppins déjà chargée dans index.css */
 
-  --font-family-base: 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-base: 'DM Sans', 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-display: 'Syne', 'Audiowide', system-ui, sans-serif; /* Titres / brand */
   --font-family-mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
   --font-size-xs: 0.75rem;      /* 12px */
@@ -103,6 +105,10 @@
   --radius-lg: 0.75rem;   /* 12px */
   --radius-xl: 1rem;      /* 16px */
   --radius-full: 9999px;
+
+  /* ── Aliases studio.css (utilisés via --r, --r-sm, --r-lg) ── */
+  /* --r-sm: 5px intentionnel — valeur intermédiaire pour petits éléments UI
+     (badges, topbar-icon) — distinct de --radius-sm (4px, composants shadcn) */
 
   /* ========== SHADOWS - GAMING DEPTH ========== */
   /* Réutilise shadows existantes */
@@ -170,6 +176,36 @@
   /* Cyan & Yellow */
   --accent-cyan: #06b6d4;
   --accent-yellow: #eab308;
+
+  /* ========== DIALOGUE GRAPH NODE COLORS ========== */
+  /* Miroir des constantes TypeScript dans config/colors.ts.
+     Ces variables permettent le theming CSS sans modifier les 17 fichiers consommateurs.
+     Usage futur : remplacer NODE_COLORS.dialogueNode.bg par var(--node-dialogue-bg) dans les nodes. */
+
+  --node-dialogue-bg: #1e293b;
+  --node-dialogue-border: #334155;
+  --node-dialogue-text: #e2e8f0;
+
+  --node-choice-bg: rgba(139, 92, 246, 0.2);
+  --node-choice-border: #8b5cf6;
+  --node-choice-text: #c4b5fd;
+
+  --node-terminal-bg: #1e293b;
+  --node-terminal-border: #475569;
+  --node-terminal-text: #94a3b8;
+
+  --node-error-bg: #7f1d1d;
+  --node-error-border: #dc2626;
+  --node-error-text: #fecaca;
+
+  --node-warning-bg: #78350f;
+  --node-warning-border: #f59e0b;
+  --node-warning-text: #fde68a;
+
+  --graph-grid-color: #475569;
+  --graph-minimap-dialogue: #3b82f6;
+  --graph-minimap-choice: #8b5cf6;
+  --graph-minimap-terminal: #f59e0b;
 
   /* ========== LEGACY ALIASES ========== */
   /* For backwards compatibility with theme.css consumers */

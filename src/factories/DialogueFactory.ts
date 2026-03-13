@@ -46,6 +46,10 @@ export interface CreateDialogueOptions {
   choices?: DialogueChoice[];
   /** Optional sound effect to play when dialogue appears */
   sfx?: DialogueAudio;
+  /** Optional procedural voice preset ID (ex: 'homme-neutre', 'femme-joyeuse') */
+  voicePreset?: string;
+  /** Optional mood ID for the speaker during this dialogue (ex: 'happy', 'angry') */
+  speakerMood?: string;
   /** Optional custom ID (auto-generated if not provided) */
   id?: string;
 }
@@ -81,6 +85,8 @@ export class DialogueFactory {
       text,
       choices = [],
       sfx,
+      voicePreset,
+      speakerMood,
       id = this.generateId(),
     } = options;
 
@@ -92,6 +98,8 @@ export class DialogueFactory {
       text: text.trim(),
       choices,
       ...(sfx && { sfx }),
+      ...(voicePreset && { voicePreset }),
+      ...(speakerMood && { speakerMood }),
     });
 
     logger.debug(`[DialogueFactory] Created dialogue: ${id} (speaker: ${speaker})`);

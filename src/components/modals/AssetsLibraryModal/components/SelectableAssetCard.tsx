@@ -38,7 +38,7 @@ export function SelectableAssetCard({
       >
         <div className="relative aspect-[4/3] bg-muted overflow-hidden">
           <img
-            src={asset.path}
+            src={asset.url ?? asset.path}
             alt={asset.name}
             className="w-full h-full object-cover"
             loading="lazy"

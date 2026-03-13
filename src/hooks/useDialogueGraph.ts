@@ -8,6 +8,9 @@ import { useUIStore } from '@/stores/uiStore';
 import { useShallow } from 'zustand/react/shallow';
 import { dialogueNodeId } from '@/config/handleConfig';
 import type { GraphNode } from './graph-utils/types';
+
+const EMPTY_CHOICES: Dialogue['choices'] = [];
+const EMPTY_ISSUES: ValidationProblem[] = [];
 import { buildGraphEdges } from './graph-utils/buildGraphEdges';
 import { applyDagreLayout } from './graph-utils/applyDagreLayout';
 import { applySerpentineLayout, applySerpentineEdgeRouting } from './graph-utils/applySerpentineLayout';
@@ -79,13 +82,44 @@ export function useDialogueGraph(
     // Pagination works on the dialogue array BEFORE node construction.
     // We keep the original indices for display (data.index) but use local indices for IDs
     // so buildGraphEdges (which iterates the same array) produces matching source/target IDs.
-    const shouldPaginate = proModeEnabled && proPaginationEnabled && dialogues.length > proPageSize;
+    // Pagination active pour tous les utilisateurs (proModeEnabled n'est pas requis)
+    const shouldPaginate = proPaginationEnabled && dialogues.length > proPageSize;
     const pageStart = shouldPaginate ? proCurrentPage * proPageSize : 0;
     const pageDialogues = shouldPaginate
       ? dialogues.slice(pageStart, pageStart + proPageSize)
       : dialogues;
 
     // Step 1: Transform dialogues to nodes
+    // Pre-compute response labels (e.g. "7A", "7B") for isResponse nodes
+    // Also handles dice check responses (not marked isResponse but referenced by diceCheck.success/failure)
+    const diceResponseIds = new Set<string>();
+    pageDialogues.forEach(d => {
+      d.choices?.forEach(choice => {
+        if (choice.diceCheck) {
+          if (choice.diceCheck.success?.nextDialogueId) diceResponseIds.add(choice.diceCheck.success.nextDialogueId);
+          if (choice.diceCheck.failure?.nextDialogueId) diceResponseIds.add(choice.diceCheck.failure.nextDialogueId);
+        }
+      });
+    });
+
+    const responseLabels = new Map<number, string>();
+    let lastChoiceDisplayIndex = -1;
+    let responseLetterCode = 65; // 'A'
+    pageDialogues.forEach((dialogue, index) => {
+      const hasChoices = !!(dialogue.choices && dialogue.choices.length > 0);
+      const isResponseNode = dialogue.isResponse || diceResponseIds.has(dialogue.id);
+      if (hasChoices) {
+        lastChoiceDisplayIndex = pageStart + index;
+        responseLetterCode = 65;
+      } else if (isResponseNode && lastChoiceDisplayIndex >= 0) {
+        responseLabels.set(index, `${lastChoiceDisplayIndex + 1}${String.fromCharCode(responseLetterCode)}`);
+        responseLetterCode++;
+      } else {
+        // Non-response, non-choice dialogue resets the response sequence
+        lastChoiceDisplayIndex = -1;
+      }
+    });
+
     const allNodes: GraphNode[] = pageDialogues.map((dialogue, index) => {
       const hasChoices = dialogue.choices && dialogue.choices.length > 0;
       const displayIndex = pageStart + index; // original index for display in node badge
@@ -100,8 +134,9 @@ export function useDialogueGraph(
           text: dialogue.text || '',
           speakerMood: dialogue.speakerMood || 'neutral',
           stageDirections: dialogue.stageDirections || '',
-          choices: dialogue.choices || [],
-          issues: validation?.errors?.dialogues?.[dialogue.id] || []
+          choices: dialogue.choices ?? EMPTY_CHOICES,
+          issues: validation?.errors?.dialogues?.[dialogue.id] ?? EMPTY_ISSUES,
+          responseLabel: responseLabels.get(index),
         }
       };
     });
@@ -109,7 +144,7 @@ export function useDialogueGraph(
     // Step 1b: Pro mode cluster collapse — replace choice+response groups with ClusterNodes
     const shouldCollapse = proModeEnabled && proCollapseEnabled;
     const collapseResult = shouldCollapse
-      ? collapseChoiceClusters(allNodes, pageDialogues, sceneId, proExpandedClusters)
+      ? collapseChoiceClusters(allNodes, pageDialogues, sceneId, proExpandedClusters, diceResponseIds)
       : { nodes: allNodes, collapsedNodeIds: new Set<string>(), nodeToCluster: new Map<string, string>() };
     const nodes = collapseResult.nodes;
 
@@ -184,6 +219,7 @@ function collapseChoiceClusters(
   dialogues: Dialogue[],
   sceneId: string,
   expandedClusters: string[],
+  diceResponseIds: Set<string> = new Set(),
 ): { nodes: GraphNode[]; collapsedNodeIds: Set<string>; nodeToCluster: Map<string, string> } {
   const expandedSet = new Set(expandedClusters);
   const result: GraphNode[] = [];
@@ -199,7 +235,7 @@ function collapseChoiceClusters(
       // Collect consecutive isResponse dialogues after this choice
       const clusterIndices = [i];
       let j = i + 1;
-      while (j < dialogues.length && dialogues[j].isResponse) {
+      while (j < dialogues.length && (dialogues[j].isResponse || diceResponseIds.has(dialogues[j].id))) {
         clusterIndices.push(j);
         j++;
       }

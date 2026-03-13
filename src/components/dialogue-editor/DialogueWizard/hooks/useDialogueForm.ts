@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { Dialogue, DialogueChoice, DialogueAudio } from '@/types';
-import type { ComplexityLevel } from './useDialogueWizardState';
+import type { ComplexityLevel } from '@/types';
 import type { SituationTemplate } from '@/config/dialogueTemplates';
+import { GAME_STATS } from '@/i18n';
 
-/** Default stat for dice checks — aligned with GAME_STATS.MENTALE */
-const DEFAULT_DICE_STAT = 'mentale';
+const DEFAULT_DICE_STAT = GAME_STATS.MENTALE;
 
 /**
  * Response data for branch responses (after player choice)
@@ -21,6 +21,8 @@ export interface DialogueFormData {
   speaker: string;
   text: string;
   sfx?: DialogueAudio;
+  voicePreset?: string;
+  speakerMood?: string;
   choices: DialogueChoice[];
   complexityLevel: ComplexityLevel | null;
   responses: ResponseData[];
@@ -152,6 +154,8 @@ export function useDialogueForm(
         speaker: initialDialogue.speaker,
         text: initialDialogue.text,
         sfx: initialDialogue.sfx,
+        voicePreset: initialDialogue.voicePreset,
+        speakerMood: initialDialogue.speakerMood,
         choices: initialDialogue.choices,
         complexityLevel: complexity,
         responses: []

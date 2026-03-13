@@ -1,144 +1,243 @@
 import * as React from 'react';
-import type { DialogueChoice, Effect, SceneMetadata, Dialogue } from '@/types';
+import type { DialogueChoice, SceneMetadata, Dialogue } from '@/types';
+import type { DiceCheck, DiceCheckBranch } from '@/types/game';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Info } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
-
-// Extended DialogueChoice with diceRoll support (game mechanic)
-interface DiceRollOutcome {
-  message: string;
-  moral: number;
-  illustration: string;
-}
-
-interface DiceRoll {
-  enabled: boolean;
-  difficulty: number;
-  successOutcome: DiceRollOutcome;
-  failureOutcome: DiceRollOutcome;
-}
-
-interface DialogueChoiceWithDiceRoll extends Omit<DialogueChoice, 'nextSceneId'> {
-  nextScene?: string; // Legacy support - maps to nextSceneId
-  diceRoll?: DiceRoll;
-}
+import { GAME_STATS } from '@/i18n';
+import { EffectsEditor } from '@/components/dialogue-editor/DialogueWizard/components/ComplexChoiceBuilder/EffectsEditor';
 
 export interface ChoiceEditorProps {
-  choice: DialogueChoiceWithDiceRoll;
+  choice: DialogueChoice;
   choiceIndex: number;
-  onUpdate: (choiceIndex: number, updatedChoice: DialogueChoiceWithDiceRoll) => void;
+  onUpdate: (choiceIndex: number, updatedChoice: DialogueChoice) => void;
   onDelete: (choiceIndex: number) => void;
-  // Metadata uniquement (title/id pour les dropdowns de navigation)
   scenes: SceneMetadata[];
   currentSceneId: string;
 }
 
-/**
- * ChoiceEditor - Edit a single dialogue choice
- *
- * Displays and allows editing of:
- * - Choice text
- * - Next scene ID
- * - Dice roll toggle and configuration
- * - Success/failure outcomes (message, moral impact, illustration)
- * - Legacy effects (readonly)
- */
+// ─── Sub-component: BranchEditor ──────────────────────────────────────────────
+
+interface BranchEditorProps {
+  branch: DiceCheckBranch;
+  onChange: (updates: Partial<DiceCheckBranch>) => void;
+  scenes: SceneMetadata[];
+  currentSceneDialogues: Dialogue[];
+  getDialoguePreview: (d: Dialogue, idx: number) => string;
+}
+
+function BranchEditor({ branch, onChange, scenes, currentSceneDialogues, getDialoguePreview }: BranchEditorProps) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+      {/* Scène cible */}
+      <Select
+        value={branch.nextSceneId || undefined}
+        onValueChange={(value) => onChange({ nextSceneId: value })}
+      >
+        <SelectTrigger className="w-full bg-card border-border h-7 text-xs">
+          <SelectValue placeholder="🎬 Scène (optionnel)" />
+        </SelectTrigger>
+        <SelectContent>
+          {scenes.map(scene => (
+            <SelectItem key={scene.id} value={scene.id}>
+              🎬 {scene.title || `Scène ${scene.id}`}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Dialogue cible */}
+      <Select
+        value={branch.nextDialogueId || undefined}
+        onValueChange={(value) => onChange({ nextDialogueId: value || undefined })}
+      >
+        <SelectTrigger className="w-full bg-card border-border h-7 text-xs">
+          <SelectValue placeholder="💬 Dialogue (optionnel)" />
+        </SelectTrigger>
+        <SelectContent>
+          {currentSceneDialogues.length === 0 ? (
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun dialogue</div>
+          ) : (
+            currentSceneDialogues.map((d, idx) => (
+              <SelectItem key={d.id} value={d.id}>
+                💬 {getDialoguePreview(d, idx)}
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+
+      {/* Effet sur une stat */}
+      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+        <Select
+          value={branch.statEffect?.stat || GAME_STATS.PHYSIQUE}
+          onValueChange={(stat) =>
+            onChange({ statEffect: { stat, amount: branch.statEffect?.amount ?? 5 } })
+          }
+        >
+          <SelectTrigger className="bg-card border-border h-7 text-xs" style={{ flex: 1 }}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GAME_STATS.PHYSIQUE}>🏃 Corps</SelectItem>
+            <SelectItem value={GAME_STATS.MENTALE}>🧠 Esprit</SelectItem>
+          </SelectContent>
+        </Select>
+        <input
+          type="number"
+          value={branch.statEffect?.amount ?? 0}
+          onChange={(e) =>
+            onChange({
+              statEffect: {
+                stat: branch.statEffect?.stat ?? GAME_STATS.PHYSIQUE,
+                amount: parseInt(e.target.value) || 0,
+              },
+            })
+          }
+          style={{
+            width: '3.5rem',
+            padding: 'var(--space-1) var(--space-2)',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border-base)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: 'var(--font-size-xs)',
+            color: 'var(--color-text-primary)',
+            textAlign: 'center',
+          }}
+          placeholder="±5"
+          aria-label="Valeur de l'effet"
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
 export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, currentSceneId }: ChoiceEditorProps) {
-  const updateChoice = (updates: Partial<DialogueChoiceWithDiceRoll>) => {
+  const updateChoice = (updates: Partial<DialogueChoice>) => {
     onUpdate(choiceIndex, { ...choice, ...updates });
   };
 
-  // Dialogues from current scene (via dialoguesStore, not scenes prop)
   const currentSceneDialogues = useDialoguesStore((s) => s.getDialoguesByScene(currentSceneId));
 
-  // NEW: Helper function to format dialogue preview
   const getDialoguePreview = React.useCallback((dialogue: Dialogue, index: number) => {
-    if (!dialogue.text || dialogue.text.trim() === '') {
-      return `Dialogue ${index + 1} (vide)`;
-    }
+    if (!dialogue.text || dialogue.text.trim() === '') return `Dialogue ${index + 1} (vide)`;
     return dialogue.text.length > 50
-      ? `${dialogue.text.substring(0, 50)}...`
+      ? `${dialogue.text.substring(0, 50)}…`
       : dialogue.text;
   }, []);
 
-  const updateDiceRoll = (diceRollUpdates: Partial<DiceRoll>) => {
-    const currentDiceRoll: DiceRoll = choice.diceRoll || {
-      enabled: false,
-      difficulty: 12,
-      successOutcome: { message: '', moral: 0, illustration: '' },
-      failureOutcome: { message: '', moral: 0, illustration: '' }
-    };
-    updateChoice({
-      diceRoll: { ...currentDiceRoll, ...diceRollUpdates }
-    });
+  const diceEnabled = !!choice.diceCheck;
+
+  const toggleDice = () => {
+    if (diceEnabled) {
+      updateChoice({ diceCheck: undefined });
+    } else {
+      updateChoice({
+        diceCheck: {
+          stat: GAME_STATS.PHYSIQUE,
+          difficulty: 12,
+          success: {},
+          failure: {},
+        },
+      });
+    }
   };
 
-  const updateOutcome = (outcomeType: 'successOutcome' | 'failureOutcome', updates: Partial<DiceRollOutcome>) => {
-    const currentDiceRoll: DiceRoll = choice.diceRoll || {
-      enabled: true,
-      difficulty: 12,
-      successOutcome: { message: '', moral: 0, illustration: '' },
-      failureOutcome: { message: '', moral: 0, illustration: '' }
-    };
+  const updateDiceCheck = (updates: Partial<DiceCheck>) => {
+    const current = choice.diceCheck ?? { stat: GAME_STATS.PHYSIQUE, difficulty: 12 };
+    updateChoice({ diceCheck: { ...current, ...updates } });
+  };
+
+  const updateBranch = (branch: 'success' | 'failure', updates: Partial<DiceCheckBranch>) => {
+    const current = choice.diceCheck ?? { stat: GAME_STATS.PHYSIQUE, difficulty: 12 };
     updateChoice({
-      diceRoll: {
-        ...currentDiceRoll,
-        [outcomeType]: { ...currentDiceRoll[outcomeType], ...updates }
-      }
+      diceCheck: {
+        ...current,
+        [branch]: { ...(current[branch] ?? {}), ...updates },
+      },
     });
   };
 
   return (
-    <div className="p-4 bg-background border-2 border-border rounded-lg space-y-3">
-      {/* Choice header */}
-      <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold text-blue-400">Choice {choiceIndex + 1}</div>
-        <Button
-          variant="danger-ghost"
-          size="sm"
-          onClick={() => {
-            if (confirm(`Delete choice ${choiceIndex + 1}?`)) {
-              onDelete(choiceIndex);
-            }
-          }}
-        >
-          <Trash2 className="h-3 w-3" />
-          Delete
-        </Button>
+    <div style={{
+      padding: 'var(--space-3)',
+      background: 'var(--color-bg-elevated)',
+      border: '1px solid var(--color-border-base)',
+      borderRadius: 'var(--radius-lg)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 'var(--space-3)',
+    }}>
+      {/* En-tête : Choix N + corbeille */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontSize: 'var(--font-size-xs)',
+          fontWeight: 'var(--font-weight-semibold)',
+          color: 'var(--accent-blue)',
+        }}>
+          Choix {choiceIndex + 1}
+        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="danger-ghost"
+              size="sm"
+              onClick={() => onDelete(choiceIndex)}
+              aria-label={`Supprimer le choix ${choiceIndex + 1}`}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" portal={false}>Supprimer ce choix</TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* Choice text */}
-      <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-          Choice Text
-        </label>
-        <input
-          type="text"
-          value={choice.text || ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ text: e.target.value })}
-          className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="e.g., Accept the mission"
-        />
-      </div>
+      {/* Texte du choix */}
+      <input
+        type="text"
+        value={choice.text || ''}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ text: e.target.value })}
+        style={{
+          width: '100%',
+          padding: 'var(--space-2) var(--space-3)',
+          background: 'var(--color-bg-base)',
+          border: '1px solid var(--color-border-base)',
+          borderRadius: 'var(--radius-md)',
+          fontSize: 'var(--font-size-sm)',
+          color: 'var(--color-text-primary)',
+          outline: 'none',
+          boxSizing: 'border-box',
+        }}
+        placeholder="Texte du choix…"
+        aria-label={`Texte du choix ${choiceIndex + 1}`}
+      />
 
-      {/* Next scene - Radix UI Select for child-friendly UX */}
+      {/* Scène suivante */}
       <div>
-        <label
-          htmlFor={`choice-${choiceIndex}-scene`}
-          className="block text-xs font-semibold text-muted-foreground mb-1.5"
-        >
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+          fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)',
+        }}>
           🎬 Scène suivante
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-3 w-3" style={{ cursor: 'help', flexShrink: 0 }} />
+            </TooltipTrigger>
+            <TooltipContent side="right" portal={false}>
+              Changer de lieu. Laisser vide pour rester dans cette scène.
+            </TooltipContent>
+          </Tooltip>
         </label>
         <Select
-          value={choice.nextScene || undefined}
-          onValueChange={(value) => updateChoice({ nextScene: value })}
+          value={choice.nextSceneId || undefined}
+          onValueChange={(value) => updateChoice({ nextSceneId: value })}
         >
-          <SelectTrigger
-            id={`choice-${choiceIndex}-scene`}
-            className="w-full bg-card border-border"
-          >
-            <SelectValue placeholder="-- Continuer dans cette scène --" />
+          <SelectTrigger className="w-full bg-card border-border h-8 text-xs">
+            <SelectValue placeholder="— Rester dans cette scène —" />
           </SelectTrigger>
           <SelectContent>
             {scenes.map(scene => (
@@ -148,169 +247,199 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground mt-1">
-          💡 Change de lieu/scène. Laissez vide pour rester dans la scène actuelle.
-        </p>
       </div>
 
-      {/* Next dialogue ID (intra-scene navigation) - Radix UI Select */}
+      {/* Dialogue suivant */}
       <div>
-        <label
-          htmlFor={`choice-${choiceIndex}-dialogue`}
-          className="block text-xs font-semibold text-muted-foreground mb-1.5"
-        >
-          💬 Dialogue suivant <span className="text-xs text-purple-400">(même scène)</span>
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
+          fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)',
+        }}>
+          💬 Dialogue suivant
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-3 w-3" style={{ cursor: 'help', flexShrink: 0 }} />
+            </TooltipTrigger>
+            <TooltipContent side="right" portal={false}>
+              Sauter à un dialogue spécifique dans cette scène. Laisser vide pour avancer normalement.
+            </TooltipContent>
+          </Tooltip>
         </label>
         <Select
           value={choice.nextDialogueId || undefined}
           onValueChange={(value) => updateChoice({ nextDialogueId: value || undefined })}
         >
-          <SelectTrigger
-            id={`choice-${choiceIndex}-dialogue`}
-            className="w-full bg-card border-border"
-          >
-            <SelectValue placeholder="-- Passer au dialogue suivant --" />
+          <SelectTrigger className="w-full bg-card border-border h-8 text-xs">
+            <SelectValue placeholder="— Avancer naturellement —" />
           </SelectTrigger>
           <SelectContent>
             {currentSceneDialogues.length === 0 ? (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                ⚠ Aucun dialogue dans cette scène
-              </div>
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">⚠ Aucun dialogue dans cette scène</div>
             ) : (
               currentSceneDialogues.map((dialogue, idx) => (
                 <SelectItem key={dialogue.id} value={dialogue.id}>
-                  💬 Dialogue {idx + 1}: {getDialoguePreview(dialogue, idx)}
+                  💬 {getDialoguePreview(dialogue, idx)}
                 </SelectItem>
               ))
             )}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground mt-1">
-          💡 Sauter à un dialogue spécifique dans cette scène. Laissez vide pour avancer naturellement.
-        </p>
       </div>
 
-      {/* Dice roll toggle */}
-      <div className="pt-3 border-t border-border">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={choice.diceRoll?.enabled || false}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDiceRoll({ enabled: e.target.checked })}
-            className="w-4 h-4 text-purple-600 border-border rounded focus:ring-2 focus:ring-purple-500 bg-card"
-          />
-          <span className="text-xs font-semibold text-purple-400">
-            🎲 Enable dice roll
-          </span>
-        </label>
+      {/* Toggle jet de dé */}
+      <div style={{ paddingTop: 'var(--space-1)', borderTop: '1px solid var(--color-border-base)' }}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={toggleDice}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-1) var(--space-3)',
+                borderRadius: 'var(--radius-full)',
+                border: `1px solid ${diceEnabled ? 'var(--accent-purple)' : 'var(--color-border-base)'}`,
+                background: diceEnabled ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+                color: diceEnabled ? 'var(--accent-purple)' : 'var(--color-text-muted)',
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 'var(--font-weight-semibold)',
+                cursor: 'pointer',
+                transition: 'var(--transition-fast)',
+              }}
+              aria-pressed={diceEnabled}
+            >
+              🎲 Jet de dé{diceEnabled ? ' (actif)' : ''}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" portal={false}>
+            {diceEnabled ? 'Désactiver le jet de dé' : 'Ajouter un jet de dé (Corps ou Esprit, difficulté 1-20)'}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* Dice configuration */}
-      {choice.diceRoll?.enabled && (
-        <div className="p-3 border border-purple-500/30 rounded-lg bg-purple-900/20 space-y-3">
-          {/* Difficulty */}
-          <div>
-            <label className="block text-xs font-semibold text-purple-300 mb-1.5">
-              Difficulty (1-20)
-            </label>
+      {/* Configuration du jet de dé */}
+      {diceEnabled && choice.diceCheck && (
+        <div style={{
+          padding: 'var(--space-3)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          borderRadius: 'var(--radius-md)',
+          background: 'rgba(139, 92, 246, 0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-3)',
+        }}>
+          {/* Stat */}
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+              Stat :
+            </span>
+            {[
+              { value: GAME_STATS.PHYSIQUE, label: '🏃 Corps' },
+              { value: GAME_STATS.MENTALE, label: '🧠 Esprit' },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => updateDiceCheck({ stat: value })}
+                style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${choice.diceCheck!.stat === value ? 'var(--accent-purple)' : 'var(--color-border-base)'}`,
+                  background: choice.diceCheck!.stat === value ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                  color: choice.diceCheck!.stat === value ? 'var(--accent-purple)' : 'var(--color-text-muted)',
+                  fontSize: 'var(--font-size-xs)',
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Difficulté */}
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+              Difficulté :
+            </span>
             <input
-              type="number"
+              type="range"
               min="1"
               max="20"
-              value={choice.diceRoll?.difficulty || 12}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDiceRoll({ difficulty: parseInt(e.target.value) || 12 })}
-              className="w-full px-3 py-2 bg-card border border-purple-500/50 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              value={choice.diceCheck.difficulty || 12}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                updateDiceCheck({ difficulty: parseInt(e.target.value) || 12 })
+              }
+              style={{ flex: 1 }}
+              aria-label="Difficulté du jet de dé"
             />
-            <p className="text-xs text-purple-400 mt-1">Player must roll this score or higher (d20)</p>
+            <span style={{
+              fontSize: 'var(--font-size-xs)',
+              fontWeight: 'var(--font-weight-semibold)',
+              color: 'var(--accent-purple)',
+              minWidth: '2ch',
+              textAlign: 'right',
+            }}>
+              {choice.diceCheck.difficulty || 12}
+            </span>
           </div>
 
-          {/* Success outcome */}
-          <div className="p-3 border border-green-500/30 rounded-lg bg-green-900/20">
-            <h4 className="text-xs font-bold text-green-300 mb-2">✅ On Success</h4>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-xs font-medium text-green-400 mb-1">Message</label>
-                <input
-                  type="text"
-                  value={choice.diceRoll?.successOutcome?.message || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('successOutcome', { message: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-card border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
-                  placeholder="e.g., Found a spot!"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-green-400 mb-1">Moral Impact</label>
-                <input
-                  type="number"
-                  value={choice.diceRoll?.successOutcome?.moral || 0}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('successOutcome', { moral: parseInt(e.target.value) || 0 })}
-                  className="w-full px-2 py-1.5 bg-card border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
-                  placeholder="5"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-green-400 mb-1">Illustration</label>
-                <input
-                  type="text"
-                  value={choice.diceRoll?.successOutcome?.illustration || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('successOutcome', { illustration: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-card border border-green-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-green-500"
-                  placeholder="parking-success.png"
-                />
-              </div>
+          {/* Branche Succès */}
+          <div style={{
+            padding: 'var(--space-2)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(16, 185, 129, 0.05)',
+          }}>
+            <div style={{
+              fontSize: 'var(--font-size-xs)',
+              fontWeight: 'var(--font-weight-semibold)',
+              color: 'var(--color-success)',
+              marginBottom: 'var(--space-2)',
+            }}>
+              ✅ Si ça réussit
             </div>
+            <BranchEditor
+              branch={choice.diceCheck.success ?? {}}
+              onChange={(updates) => updateBranch('success', updates)}
+              scenes={scenes}
+              currentSceneDialogues={currentSceneDialogues}
+              getDialoguePreview={getDialoguePreview}
+            />
           </div>
 
-          {/* Failure outcome */}
-          <div className="p-3 border border-red-500/30 rounded-lg bg-red-900/20">
-            <h4 className="text-xs font-bold text-red-300 mb-2">❌ On Failure</h4>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-xs font-medium text-red-400 mb-1">Message</label>
-                <input
-                  type="text"
-                  value={choice.diceRoll?.failureOutcome?.message || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('failureOutcome', { message: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-card border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-                  placeholder="e.g., No spots..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-red-400 mb-1">Moral Impact</label>
-                <input
-                  type="number"
-                  value={choice.diceRoll?.failureOutcome?.moral || 0}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('failureOutcome', { moral: parseInt(e.target.value) || 0 })}
-                  className="w-full px-2 py-1.5 bg-card border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-                  placeholder="-3"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-red-400 mb-1">Illustration</label>
-                <input
-                  type="text"
-                  value={choice.diceRoll?.failureOutcome?.illustration || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOutcome('failureOutcome', { illustration: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-card border border-red-500/50 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-                  placeholder="parking-fail.png"
-                />
-              </div>
+          {/* Branche Échec */}
+          <div style={{
+            padding: 'var(--space-2)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(239, 68, 68, 0.05)',
+          }}>
+            <div style={{
+              fontSize: 'var(--font-size-xs)',
+              fontWeight: 'var(--font-weight-semibold)',
+              color: 'var(--color-danger)',
+              marginBottom: 'var(--space-2)',
+            }}>
+              ❌ Si ça rate
             </div>
+            <BranchEditor
+              branch={choice.diceCheck.failure ?? {}}
+              onChange={(updates) => updateBranch('failure', updates)}
+              scenes={scenes}
+              currentSceneDialogues={currentSceneDialogues}
+              getDialoguePreview={getDialoguePreview}
+            />
           </div>
         </div>
       )}
 
-      {/* Effects (legacy support - read-only for now) */}
-      {choice.effects && choice.effects.length > 0 && (
-        <div className="pt-3 border-t border-border">
-          <div className="text-xs font-semibold text-amber-400 mb-2">Effects (legacy):</div>
-          {choice.effects.map((effect: Effect, eIdx: number) => (
-            <div key={eIdx} className="text-xs text-amber-500 ml-2">
-              {effect.variable}: {effect.operation} {effect.value}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Effets — éditables */}
+      <EffectsEditor
+        effects={choice.effects ?? []}
+        onChange={(effects) => updateChoice({ effects })}
+      />
     </div>
   );
 }

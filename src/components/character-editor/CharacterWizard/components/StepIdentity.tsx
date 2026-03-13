@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { User, FileText } from 'lucide-react';
 import EncouragingMessage from './EncouragingMessage';
+import CharacterStatsSection from '../../CharacterEditorModal/components/CharacterStatsSection';
 
 interface StepIdentityProps {
   name: string;
@@ -12,6 +13,10 @@ interface StepIdentityProps {
   onUpdateDescription: (desc: string) => void;
   onValidChange: (isValid: boolean) => void;
   nameError?: string;
+  isProtagonist?: boolean;
+  initialStats?: { physique?: number; mentale?: number };
+  onToggleProtagonist: (value: boolean) => void;
+  onUpdateStat: (stat: 'physique' | 'mentale', value: number) => void;
 }
 
 const NAME_EXAMPLES = ['Luna', 'Max', 'Sophie', 'Léo', 'Emma', 'Hugo'];
@@ -28,7 +33,11 @@ export function StepIdentity({
   onUpdateName,
   onUpdateDescription,
   onValidChange,
-  nameError
+  nameError,
+  isProtagonist = false,
+  initialStats = {},
+  onToggleProtagonist,
+  onUpdateStat,
 }: StepIdentityProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const randomExample = NAME_EXAMPLES[Math.floor(Math.random() * NAME_EXAMPLES.length)];
@@ -102,6 +111,16 @@ export function StepIdentity({
           <span>Optionnel - tu peux laisser vide</span>
           <span>{description.length} / 500</span>
         </div>
+      </div>
+
+      {/* Stats de jeu */}
+      <div className="pt-2 border-t border-border/50">
+        <CharacterStatsSection
+          isProtagonist={isProtagonist}
+          initialStats={initialStats}
+          onToggleProtagonist={onToggleProtagonist}
+          onUpdateStat={onUpdateStat}
+        />
       </div>
 
       {/* Helper tip */}

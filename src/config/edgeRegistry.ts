@@ -1,6 +1,8 @@
 import type { EdgeTypes } from '@xyflow/react';
 import { CosmosChoiceEdge } from '@/components/features/CosmosChoiceEdge';
 import { CosmosConvergenceEdge } from '@/components/features/CosmosConvergenceEdge';
+import { BlenderConvergenceEdge } from '@/components/features/BlenderConvergenceEdge';
+import { BlenderChoiceEdge } from '@/components/features/BlenderChoiceEdge';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -26,6 +28,16 @@ const EDGE_REGISTRY: Record<string, Record<string, EdgeTypeEntry>> = {
     cosmosConvergence: {
       component: CosmosConvergenceEdge as EdgeTypes[string],
       categories: ['convergence'],
+    },
+  },
+  blender: {
+    blenderConvergence: {
+      component: BlenderConvergenceEdge as EdgeTypes[string],
+      categories: ['convergence'],
+    },
+    blenderChoice: {
+      component: BlenderChoiceEdge as EdgeTypes[string],
+      categories: ['choice'],
     },
   },
 };

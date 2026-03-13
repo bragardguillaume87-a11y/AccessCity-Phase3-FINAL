@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
-import type { SceneMetadata } from '../types';
+import type { SceneMetadata, SceneType, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
 
@@ -44,14 +45,19 @@ interface ScenesState {
   getAllScenes: () => SceneMetadata[];
 
   // Actions: CRUD
-  addScene: () => string;
+  addScene: (sceneType?: SceneType) => string;
   updateScene: (sceneId: string, patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)) => void;
   deleteScene: (sceneId: string) => void;
   reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
+  /** Met à jour les pistes multi-canaux (nouveau format NLE). */
+  updateCinematicTracks: (sceneId: string, tracks: CinematicTracks) => void;
 
   // Batch operations (performance)
   batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<SceneMetadata> }>) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importScenes: (scenes: SceneMetadata[]) => void;
 }
 
 // ============================================================================
@@ -98,13 +104,18 @@ function generateSceneId(): string {
  * Utiliser dialoguesStore.addDialogue() et sceneElementsStore.addCharacterToScene()
  * pour ajouter du contenu après création.
  */
-function createEmptyScene(): SceneMetadata {
-  return {
+function createEmptyScene(sceneType?: SceneType): SceneMetadata {
+  const base: SceneMetadata = {
     id: generateSceneId(),
-    title: 'Nouvelle Scène',
+    title: sceneType === 'cinematic' ? 'Nouvelle Cinématique' : 'Nouvelle Scène',
     description: '',
     backgroundUrl: '',
   };
+  if (sceneType === 'cinematic') {
+    base.sceneType = 'cinematic';
+    base.cinematicEvents = [];
+  }
+  return base;
 }
 
 // ============================================================================
@@ -152,8 +163,8 @@ export const useScenesStore = create<ScenesState>()(
            * const sceneId = addScene();
            * console.log(sceneId); // 'scene-abc123...'
            */
-          addScene: () => {
-            const newScene = createEmptyScene();
+          addScene: (sceneType) => {
+            const newScene = createEmptyScene(sceneType);
 
             set(
               (state) => ({
@@ -251,6 +262,24 @@ export const useScenesStore = create<ScenesState>()(
             );
           },
 
+          /**
+           * Met à jour les pistes multi-canaux d'une scène cinématique (nouveau format NLE).
+           *
+           * Remplace l'objet CinematicTracks complet — utilisé par l'éditeur multi-pistes
+           * après chaque drag/resize/ajout/suppression de bloc.
+           */
+          updateCinematicTracks: (sceneId, tracks) => {
+            set(
+              (state) => ({
+                scenes: state.scenes.map((s) =>
+                  s.id === sceneId ? { ...s, cinematicTracks: tracks } : s
+                ),
+              }),
+              false,
+              'scenes/updateCinematicTracks'
+            );
+          },
+
           // ============================================================
           // ACTIONS: DELETE
           // ============================================================
@@ -294,6 +323,10 @@ export const useScenesStore = create<ScenesState>()(
               'scenes/reorderScenes'
             );
           },
+
+          importScenes: (scenes) => {
+            set(() => ({ scenes }), false, 'scenes/importScenes');
+          },
         })),
         { name: 'ScenesStore' }
       ),
@@ -327,7 +360,7 @@ export const useScenesStore = create<ScenesState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

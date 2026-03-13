@@ -1,15 +1,21 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCharactersStore, useSettingsStore } from '../stores/index';
 import { useAllScenesWithElements } from '@/stores/selectors';
+import type { Scene } from '@/types';
+import type { Character } from '@/types/characters';
 
 /**
- * Optimized Real-time Validation Hook
+ * Validation on defined cycles — inspired by Monaco editor / VSCode strategy.
  *
- * PERFORMANCE: Incremental validation with domain-specific memoization
- * - Only re-validates changed domains (scenes, characters, variables)
- * - Reduces unnecessary computation by 60-80% in typical editing workflows
- * - Uses separate useMemo for each validation domain
+ * Pattern : debounce 500ms → requestIdleCallback
+ * - No computation while the user is actively typing
+ * - Runs once the user pauses (500ms idle)
+ * - Executed during browser idle time (requestIdleCallback) to never block the UI
+ * - Fallback to immediate execution on environments without requestIdleCallback
  */
+
+const DEBOUNCE_MS = 500;
+const IDLE_TIMEOUT_MS = 2000; // max wait before forcing execution
 
 // ============================================================================
 // TYPES
@@ -38,254 +44,279 @@ interface ValidationResult {
   hasIssues: boolean;
 }
 
+const INITIAL_RESULT: ValidationResult = {
+  errors: { scenes: {}, dialogues: {}, choices: {}, characters: {}, variables: {}, global: [] },
+  totalErrors: 0,
+  totalWarnings: 0,
+  isValid: true,
+  hasIssues: false,
+};
+
 // ============================================================================
-// INCREMENTAL VALIDATION HOOK
+// PURE COMPUTATION FUNCTIONS (no hooks — unit-testable independently)
+// ============================================================================
+
+function computeScenesValidation(scenes: Scene[]) {
+  const errors: {
+    scenes: Record<string, ValidationError[]>;
+    dialogues: Record<string, ValidationError[]>;
+    choices: Record<string, ValidationError[]>;
+  } = { scenes: {}, dialogues: {}, choices: {} };
+  let totalErrors = 0;
+  let totalWarnings = 0;
+  const sceneIds = new Set<string>();
+
+  scenes.forEach((scene) => {
+    const sceneErrors: ValidationError[] = [];
+
+    if (!scene.id || scene.id.trim() === '') {
+      sceneErrors.push({ field: 'id', message: 'ID manquant', severity: 'error' });
+      totalErrors++;
+    } else {
+      if (sceneIds.has(scene.id)) {
+        sceneErrors.push({ field: 'id', message: 'ID dupliqué', severity: 'error' });
+        totalErrors++;
+      }
+      sceneIds.add(scene.id);
+    }
+
+    if (!scene.title || scene.title.trim() === '') {
+      sceneErrors.push({ field: 'title', message: 'Titre manquant', severity: 'warning' });
+      totalWarnings++;
+    }
+
+    if (!scene.dialogues || scene.dialogues.length === 0) {
+      sceneErrors.push({ field: 'dialogues', message: 'Aucun dialogue', severity: 'warning' });
+      totalWarnings++;
+    }
+
+    if (sceneErrors.length > 0) errors.scenes[scene.id] = sceneErrors;
+
+    const dialogueIds = new Set((scene.dialogues || []).map(d => d.id));
+
+    (scene.dialogues || []).forEach((dialogue, dIdx) => {
+      const dialogueErrors: ValidationError[] = [];
+      const dialogueKey = `${scene.id}-${dIdx}`;
+
+      if (!dialogue.speaker || dialogue.speaker.trim() === '') {
+        dialogueErrors.push({ field: 'speaker', message: 'Locuteur manquant', severity: 'error' });
+        totalErrors++;
+      }
+      if (!dialogue.text || dialogue.text.trim() === '') {
+        dialogueErrors.push({ field: 'text', message: 'Texte manquant', severity: 'error' });
+        totalErrors++;
+      }
+      if (dialogueErrors.length > 0) errors.dialogues[dialogueKey] = dialogueErrors;
+
+      (dialogue.choices || []).forEach((choice, cIdx) => {
+        const choiceErrors: ValidationError[] = [];
+        const choiceKey = `${scene.id}-${dIdx}-${cIdx}`;
+
+        if (!choice.text || choice.text.trim() === '') {
+          choiceErrors.push({ field: 'text', message: 'Texte du choix manquant', severity: 'error' });
+          totalErrors++;
+        }
+
+        if (!choice.nextSceneId) {
+          if (choice.nextDialogueId === '') {
+            choiceErrors.push({ field: 'nextDialogueId', message: 'Lien navigation vide (utilisera dialogue suivant)', severity: 'warning' });
+            totalWarnings++;
+          } else if (choice.nextDialogueId && !dialogueIds.has(choice.nextDialogueId)) {
+            choiceErrors.push({ field: 'nextDialogueId', message: `Dialogue cible "${choice.nextDialogueId}" introuvable dans la scène`, severity: 'error' });
+            totalErrors++;
+          }
+        }
+
+        if (choice.diceCheck) {
+          const { success, failure } = choice.diceCheck;
+          if (!success?.nextSceneId) {
+            if (success?.nextDialogueId === '') {
+              choiceErrors.push({ field: 'diceCheck.success', message: 'Lien succès dé vide (utilisera dialogue suivant)', severity: 'warning' });
+              totalWarnings++;
+            } else if (success?.nextDialogueId && !dialogueIds.has(success.nextDialogueId)) {
+              choiceErrors.push({ field: 'diceCheck.success', message: `Dialogue cible succès "${success.nextDialogueId}" introuvable`, severity: 'error' });
+              totalErrors++;
+            }
+          }
+          if (!failure?.nextSceneId) {
+            if (failure?.nextDialogueId === '') {
+              choiceErrors.push({ field: 'diceCheck.failure', message: 'Lien échec dé vide (utilisera dialogue suivant)', severity: 'warning' });
+              totalWarnings++;
+            } else if (failure?.nextDialogueId && !dialogueIds.has(failure.nextDialogueId)) {
+              choiceErrors.push({ field: 'diceCheck.failure', message: `Dialogue cible échec "${failure.nextDialogueId}" introuvable`, severity: 'error' });
+              totalErrors++;
+            }
+          }
+        }
+
+        if (choiceErrors.length > 0) errors.choices[choiceKey] = choiceErrors;
+      });
+    });
+  });
+
+  return { errors, totalErrors, totalWarnings };
+}
+
+function computeCharactersValidation(characters: Character[]) {
+  const errors: Record<string, ValidationError[]> = {};
+  let totalErrors = 0;
+  let totalWarnings = 0;
+
+  characters.forEach((character) => {
+    const charErrors: ValidationError[] = [];
+
+    if (!character.name || character.name.trim() === '') {
+      charErrors.push({ field: 'name', message: 'Nom manquant', severity: 'error' });
+      totalErrors++;
+    }
+    if (!character.sprites || Object.keys(character.sprites).length === 0) {
+      charErrors.push({ field: 'sprites', message: 'Aucun sprite défini', severity: 'warning' });
+      totalWarnings++;
+    }
+    if (charErrors.length > 0) errors[character.id] = charErrors;
+  });
+
+  return { errors, totalErrors, totalWarnings };
+}
+
+function computeVariablesValidation(variables: Record<string, unknown>) {
+  const errors: Record<string, ValidationError[]> = {};
+  const totalErrors = 0;
+  let totalWarnings = 0;
+
+  Object.entries(variables).forEach(([name, value]) => {
+    const varErrors: ValidationError[] = [];
+    if (typeof value === 'number' && (value < 0 || value > 100)) {
+      varErrors.push({ field: 'value', message: 'Valeur hors limites (0-100)', severity: 'warning' });
+      totalWarnings++;
+    }
+    if (varErrors.length > 0) errors[name] = varErrors;
+  });
+
+  return { errors, totalErrors, totalWarnings };
+}
+
+function computeCrossDomainValidation(
+  scenes: Scene[],
+  characters: Character[],
+  variables: Record<string, unknown>,
+) {
+  const errors: Record<string, ValidationError[]> = {};
+  const totalErrors = 0;
+  let totalWarnings = 0;
+  const characterIdSet = new Set(characters.map(c => c.id));
+
+  scenes.forEach((scene) => {
+    (scene.dialogues || []).forEach((dialogue, dIdx) => {
+      if (dialogue.speaker && dialogue.speaker.trim() !== '') {
+        if (!characterIdSet.has(dialogue.speaker)) {
+          const key = `${scene.id}-${dIdx}`;
+          if (!errors[key]) errors[key] = [];
+          errors[key].push({ field: 'speaker', message: 'Personnage inexistant', severity: 'warning' });
+          totalWarnings++;
+        }
+      }
+
+      (dialogue.choices || []).forEach((choice, cIdx) => {
+        (choice.effects || []).forEach((effect) => {
+          if (!(effect.variable in (variables ?? {}))) {
+            const key = `${scene.id}-${dIdx}-${cIdx}`;
+            if (!errors[key]) errors[key] = [];
+            errors[key].push({ field: 'effects', message: `Variable "${effect.variable}" inexistante`, severity: 'warning' });
+            totalWarnings++;
+          }
+        });
+      });
+    });
+  });
+
+  return { errors, totalErrors, totalWarnings };
+}
+
+function mergeValidation(
+  scenesV: ReturnType<typeof computeScenesValidation>,
+  charactersV: ReturnType<typeof computeCharactersValidation>,
+  variablesV: ReturnType<typeof computeVariablesValidation>,
+  crossV: ReturnType<typeof computeCrossDomainValidation>,
+): ValidationResult {
+  const mergedDialogues = { ...scenesV.errors.dialogues };
+  Object.entries(crossV.errors).forEach(([key, errs]: [string, ValidationError[]]) => {
+    if (key.includes('-') && !key.split('-')[2]) {
+      mergedDialogues[key] = [...(mergedDialogues[key] || []), ...errs];
+    }
+  });
+
+  const mergedChoices = { ...scenesV.errors.choices };
+  Object.entries(crossV.errors).forEach(([key, errs]: [string, ValidationError[]]) => {
+    if (key.split('-').length === 3) {
+      mergedChoices[key] = [...(mergedChoices[key] || []), ...errs];
+    }
+  });
+
+  const totalErrors = scenesV.totalErrors + charactersV.totalErrors + variablesV.totalErrors + crossV.totalErrors;
+  const totalWarnings = scenesV.totalWarnings + charactersV.totalWarnings + variablesV.totalWarnings + crossV.totalWarnings;
+
+  return {
+    errors: {
+      scenes: scenesV.errors.scenes,
+      dialogues: mergedDialogues,
+      choices: mergedChoices,
+      characters: charactersV.errors,
+      variables: variablesV.errors,
+      global: [],
+    },
+    totalErrors,
+    totalWarnings,
+    isValid: totalErrors === 0,
+    hasIssues: totalErrors > 0 || totalWarnings > 0,
+  };
+}
+
+// ============================================================================
+// HOOK
 // ============================================================================
 
 export function useValidation(): ValidationResult {
-  const scenes = useAllScenesWithElements();
+  const scenes     = useAllScenesWithElements();
   const characters = useCharactersStore(state => state.characters);
-  const variables = useSettingsStore(state => state.variables);
+  const variables  = useSettingsStore(state => state.variables);
 
-  // ========== DOMAIN 1: Scenes & Dialogues (Memoized separately) ==========
-  const scenesValidation = useMemo(() => {
-    const errors: {
-      scenes: Record<string, ValidationError[]>;
-      dialogues: Record<string, ValidationError[]>;
-      choices: Record<string, ValidationError[]>;
-    } = {
-      scenes: {},
-      dialogues: {},
-      choices: {}
-    };
+  const [result, setResult] = useState<ValidationResult>(INITIAL_RESULT);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idleRef     = useRef<number | null>(null);
 
-    let totalErrors = 0;
-    let totalWarnings = 0;
+  useEffect(() => {
+    // Cancel any pending work
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (idleRef.current && typeof cancelIdleCallback === 'function') {
+      cancelIdleCallback(idleRef.current);
+    }
 
-    const sceneIds = new Set<string>();
+    // Wait 500ms after the last change (user pauses typing)
+    debounceRef.current = setTimeout(() => {
+      const runValidation = () => {
+        const scenesV     = computeScenesValidation(scenes);
+        const charactersV = computeCharactersValidation(characters);
+        const variablesV  = computeVariablesValidation(variables);
+        const crossV      = computeCrossDomainValidation(scenes, characters, variables);
+        setResult(mergeValidation(scenesV, charactersV, variablesV, crossV));
+      };
 
-    scenes.forEach((scene) => {
-      const sceneErrors: ValidationError[] = [];
-
-      // ID validation
-      if (!scene.id || scene.id.trim() === '') {
-        sceneErrors.push({ field: 'id', message: 'ID manquant', severity: 'error' });
-        totalErrors++;
+      // Run during browser idle time to never block UI interactions
+      if (typeof requestIdleCallback === 'function') {
+        idleRef.current = requestIdleCallback(runValidation, { timeout: IDLE_TIMEOUT_MS });
       } else {
-        if (sceneIds.has(scene.id)) {
-          sceneErrors.push({ field: 'id', message: 'ID dupliqué', severity: 'error' });
-          totalErrors++;
-        }
-        sceneIds.add(scene.id);
+        runValidation(); // Safari / SSR fallback
       }
+    }, DEBOUNCE_MS);
 
-      // Title validation
-      if (!scene.title || scene.title.trim() === '') {
-        sceneErrors.push({ field: 'title', message: 'Titre manquant', severity: 'warning' });
-        totalWarnings++;
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (idleRef.current && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(idleRef.current);
       }
-
-      // Dialogues presence
-      if (!scene.dialogues || scene.dialogues.length === 0) {
-        sceneErrors.push({ field: 'dialogues', message: 'Aucun dialogue', severity: 'warning' });
-        totalWarnings++;
-      }
-
-      if (sceneErrors.length > 0) {
-        errors.scenes[scene.id] = sceneErrors;
-      }
-
-      // Dialogues validation
-      (scene.dialogues || []).forEach((dialogue, dIdx) => {
-        const dialogueErrors: ValidationError[] = [];
-        const dialogueKey = `${scene.id}-${dIdx}`;
-
-        // Speaker validation (existence check done in cross-domain validation)
-        if (!dialogue.speaker || dialogue.speaker.trim() === '') {
-          dialogueErrors.push({ field: 'speaker', message: 'Locuteur manquant', severity: 'error' });
-          totalErrors++;
-        }
-
-        // Text validation
-        if (!dialogue.text || dialogue.text.trim() === '') {
-          dialogueErrors.push({ field: 'text', message: 'Texte manquant', severity: 'error' });
-          totalErrors++;
-        }
-
-        if (dialogueErrors.length > 0) {
-          errors.dialogues[dialogueKey] = dialogueErrors;
-        }
-
-        // Choices validation
-        (dialogue.choices || []).forEach((choice, cIdx) => {
-          const choiceErrors: ValidationError[] = [];
-          const choiceKey = `${scene.id}-${dIdx}-${cIdx}`;
-
-          // Choice text validation
-          if (!choice.text || choice.text.trim() === '') {
-            choiceErrors.push({ field: 'text', message: 'Texte du choix manquant', severity: 'error' });
-            totalErrors++;
-          }
-
-          if (choiceErrors.length > 0) {
-            errors.choices[choiceKey] = choiceErrors;
-          }
-        });
-      });
-    });
-
-    return { errors, totalErrors, totalWarnings };
-  }, [scenes]); // Only re-runs when scenes change
-
-  // ========== DOMAIN 2: Characters (Memoized separately) ==========
-  const charactersValidation = useMemo(() => {
-    const errors: Record<string, ValidationError[]> = {};
-    let totalErrors = 0;
-    let totalWarnings = 0;
-
-    characters.forEach((character) => {
-      const charErrors: ValidationError[] = [];
-
-      // Name validation
-      if (!character.name || character.name.trim() === '') {
-        charErrors.push({ field: 'name', message: 'Nom manquant', severity: 'error' });
-        totalErrors++;
-      }
-
-      // Sprites validation
-      if (!character.sprites || Object.keys(character.sprites).length === 0) {
-        charErrors.push({ field: 'sprites', message: 'Aucun sprite défini', severity: 'warning' });
-        totalWarnings++;
-      }
-
-      if (charErrors.length > 0) {
-        errors[character.id] = charErrors;
-      }
-    });
-
-    return { errors, totalErrors, totalWarnings };
-  }, [characters]); // Only re-runs when characters change
-
-  // ========== DOMAIN 3: Variables (Memoized separately) ==========
-  const variablesValidation = useMemo(() => {
-    const errors: Record<string, ValidationError[]> = {};
-    const totalErrors = 0;
-    let totalWarnings = 0;
-
-    Object.entries(variables).forEach(([name, value]) => {
-      const varErrors: ValidationError[] = [];
-
-      // Value range validation
-      if (typeof value === 'number' && (value < 0 || value > 100)) {
-        varErrors.push({ field: 'value', message: 'Valeur hors limites (0-100)', severity: 'warning' });
-        totalWarnings++;
-      }
-
-      if (varErrors.length > 0) {
-        errors[name] = varErrors;
-      }
-    });
-
-    return { errors, totalErrors, totalWarnings };
-  }, [variables]); // Only re-runs when variables change
-
-  // ========== CROSS-DOMAIN VALIDATION (Memoized on all dependencies) ==========
-  const crossDomainValidation = useMemo(() => {
-    const errors: Record<string, ValidationError[]> = {};
-    const totalErrors = 0;
-    let totalWarnings = 0;
-
-    // B1-FIX: Build O(1) lookup Set once instead of O(n×m) characters.some() per dialogue
-    const characterIdSet = new Set(characters.map(c => c.id));
-
-    // Check if dialogue speakers exist in characters
-    scenes.forEach((scene) => {
-      (scene.dialogues || []).forEach((dialogue, dIdx) => {
-        if (dialogue.speaker && dialogue.speaker.trim() !== '') {
-          const speakerExists = characterIdSet.has(dialogue.speaker);
-          if (!speakerExists) {
-            const dialogueKey = `${scene.id}-${dIdx}`;
-            if (!errors[dialogueKey]) {
-              errors[dialogueKey] = [];
-            }
-            errors[dialogueKey].push({
-              field: 'speaker',
-              message: 'Personnage inexistant',
-              severity: 'warning'
-            });
-            totalWarnings++;
-          }
-        }
-
-        // Check if choice effects reference existing variables
-        (dialogue.choices || []).forEach((choice, cIdx) => {
-          (choice.effects || []).forEach((effect) => {
-            const variableExists = effect.variable in (variables ?? {});
-            if (!variableExists) {
-              const choiceKey = `${scene.id}-${dIdx}-${cIdx}`;
-              if (!errors[choiceKey]) {
-                errors[choiceKey] = [];
-              }
-              errors[choiceKey].push({
-                field: 'effects',
-                message: `Variable "${effect.variable}" inexistante`,
-                severity: 'warning'
-              });
-              totalWarnings++;
-            }
-          });
-        });
-      });
-    });
-
-    return { errors, totalErrors, totalWarnings };
-  }, [scenes, characters, variables]); // Only re-runs when relationships need checking
-
-  // ========== COMBINE RESULTS (Cheap operation, runs on every render) ==========
-  const validation = useMemo(() => {
-    // Merge dialogue errors from scenes and cross-domain
-    const mergedDialogues = { ...scenesValidation.errors.dialogues };
-    Object.entries(crossDomainValidation.errors).forEach(([key, errs]) => {
-      if (key.includes('-') && !key.split('-')[2]) { // It's a dialogue key
-        mergedDialogues[key] = [...(mergedDialogues[key] || []), ...errs];
-      }
-    });
-
-    // Merge choice errors from scenes and cross-domain
-    const mergedChoices = { ...scenesValidation.errors.choices };
-    Object.entries(crossDomainValidation.errors).forEach(([key, errs]) => {
-      if (key.split('-').length === 3) { // It's a choice key
-        mergedChoices[key] = [...(mergedChoices[key] || []), ...errs];
-      }
-    });
-
-    const totalErrors =
-      scenesValidation.totalErrors +
-      charactersValidation.totalErrors +
-      variablesValidation.totalErrors +
-      crossDomainValidation.totalErrors;
-
-    const totalWarnings =
-      scenesValidation.totalWarnings +
-      charactersValidation.totalWarnings +
-      variablesValidation.totalWarnings +
-      crossDomainValidation.totalWarnings;
-
-    return {
-      errors: {
-        scenes: scenesValidation.errors.scenes,
-        dialogues: mergedDialogues,
-        choices: mergedChoices,
-        characters: charactersValidation.errors,
-        variables: variablesValidation.errors,
-        global: []
-      },
-      totalErrors,
-      totalWarnings,
-      isValid: totalErrors === 0,
-      hasIssues: totalErrors > 0 || totalWarnings > 0
     };
-  }, [scenesValidation, charactersValidation, variablesValidation, crossDomainValidation]);
+  }, [scenes, characters, variables]);
 
-  return validation;
+  return result;
 }

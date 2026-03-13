@@ -1,8 +1,15 @@
 import React from 'react';
+import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
+import { useScenesStore } from '@/stores/scenesStore';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import { useCharactersStore } from '@/stores/charactersStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { useMapsStore } from '@/stores/mapsStore';
 
 /**
- * Settings form data structure
+ * Settings form data structure (affiché dans le formulaire Settings)
  */
 export interface SettingsFormData {
   project: {
@@ -27,83 +34,106 @@ export interface SettingsFormData {
         max: number;
       };
     };
+    enableStatsHUD?: boolean;
   };
+}
+
+/**
+ * Format d'export complet du projet (v2).
+ * Contient les données de tous les stores persistés.
+ */
+interface ProjectExport {
+  /** Indicateur de version du format — v2 = export projet complet */
+  _accesscity_export_version: '2.0';
+  exportedAt: string;
+  projectTitle: string;
+  scenes: unknown[];
+  dialoguesByScene: Record<string, unknown[]>;
+  elementsByScene: Record<string, unknown>;
+  characters: unknown[];
+  projectData: unknown;
+  projectSettings: unknown;
+  /** Cartes topdown — ajouté v2.1 */
+  maps?: unknown[];
+  mapDataById?: Record<string, unknown>;
 }
 
 /**
  * Return type for useSettingsImportExport hook
  */
 export interface UseSettingsImportExportReturn {
-  /** Handler to export settings as JSON file */
   handleExport: () => void;
-  /** Handler to import settings from JSON file */
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 /**
- * Custom hook for managing settings import/export functionality
+ * useSettingsImportExport — Sauvegarde et restauration complète du projet.
  *
- * Handles JSON file export and import with validation.
- * Exports create a downloadable JSON file with current settings.
- * Imports validate JSON structure before applying changes.
+ * Export (v2) : récupère les données des 5 stores Zustand et produit un JSON
+ * contenant scènes, dialogues, éléments de scène, personnages et paramètres.
  *
- * @param formData - Current form data to export
- * @param setFormData - Function to update form data on import
- * @returns Object containing handleExport and handleImport functions
- *
- * @example
- * ```tsx
- * const { handleExport, handleImport } = useSettingsImportExport(formData, setFormData);
- * ```
+ * Import : accepte les exports v2 (projet complet) et les anciens exports v1
+ * (paramètres uniquement). En v2 : restaure tous les stores. En v1 : met à
+ * jour uniquement le formulaire Settings (rétrocompat).
  */
 export function useSettingsImportExport(
   formData: SettingsFormData,
   setFormData: React.Dispatch<React.SetStateAction<SettingsFormData>>
 ): UseSettingsImportExportReturn {
-  /**
-   * Export settings as JSON file
-   * Creates a downloadable JSON file with current settings
-   */
+
+  // ── Export ────────────────────────────────────────────────────────────────
+
   const handleExport = (): void => {
     try {
-      // Convert form data to formatted JSON string
-      const dataStr = JSON.stringify(formData, null, 2);
+      // Lecture ponctuelle des stores (handler, pas render → getState() correct)
+      const scenesState     = useScenesStore.getState();
+      const dialoguesState  = useDialoguesStore.getState();
+      const elementsState   = useSceneElementsStore.getState();
+      const charactersState = useCharactersStore.getState();
+      const settingsState   = useSettingsStore.getState();
+      const mapsState       = useMapsStore.getState();
 
-      // Create blob from JSON string
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const exportData: ProjectExport = {
+        _accesscity_export_version: '2.0',
+        exportedAt: new Date().toISOString(),
+        projectTitle: formData.project?.title || settingsState.projectData?.title || 'Projet AccessCity',
+        scenes:           scenesState.scenes,
+        dialoguesByScene: dialoguesState.dialoguesByScene,
+        elementsByScene:  elementsState.elementsByScene,
+        characters:       charactersState.characters,
+        projectData:      settingsState.projectData,
+        projectSettings:  settingsState.projectSettings,
+        maps:             mapsState.maps,
+        mapDataById:      mapsState.mapDataById,
+      };
 
-      // Create download URL
-      const url = URL.createObjectURL(dataBlob);
+      const json = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
 
-      // Create temporary link element
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'accesscity-parametres.json';
-
-      // Trigger download
+      link.download = `accesscity-${exportData.projectTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-backup.json`;
       link.click();
-
-      // Clean up URL object
       URL.revokeObjectURL(url);
+
+      toast.success('Projet exporté !', {
+        description: `${scenesState.scenes.length} scène(s) · ${charactersState.characters.length} personnage(s)`,
+      });
     } catch (error) {
-      logger.error('[Settings] Failed to export:', error);
-      alert('Échec de l\'exportation des paramètres');
+      logger.error('[Settings] Export échoué :', error);
+      toast.error("Échec de l'export", { description: String(error) });
     }
   };
 
-  /**
-   * Import settings from JSON file
-   * Validates JSON structure before importing
-   *
-   * @param e - File input change event
-   */
+  // ── Import ────────────────────────────────────────────────────────────────
+
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.name.endsWith('.json')) {
-      alert('Veuillez sélectionner un fichier JSON valide');
+      toast.error('Fichier invalide', { description: 'Sélectionne un fichier .json exporté depuis AccessCity.' });
       return;
     }
 
@@ -111,42 +141,67 @@ export function useSettingsImportExport(
 
     reader.onload = (event: ProgressEvent<FileReader>): void => {
       try {
-        const result = event.target?.result;
-        if (typeof result !== 'string') {
-          throw new Error('Contenu de fichier invalide');
+        const raw = event.target?.result;
+        if (typeof raw !== 'string') throw new Error('Contenu illisible');
+
+        const parsed = JSON.parse(raw);
+
+        // ── v2 : export projet complet ────────────────────────────────────
+        if (parsed._accesscity_export_version === '2.0') {
+          if (!Array.isArray(parsed.scenes))               throw new Error('Champ "scenes" manquant ou invalide');
+          if (typeof parsed.dialoguesByScene !== 'object') throw new Error('Champ "dialoguesByScene" invalide');
+          if (typeof parsed.elementsByScene  !== 'object') throw new Error('Champ "elementsByScene" invalide');
+          if (!Array.isArray(parsed.characters))           throw new Error('Champ "characters" invalide');
+
+          // Restaurer tous les stores via les actions import*
+          useScenesStore.getState().importScenes(parsed.scenes);
+          useDialoguesStore.getState().importDialoguesByScene(parsed.dialoguesByScene);
+          useSceneElementsStore.getState().importElementsByScene(parsed.elementsByScene);
+          useCharactersStore.getState().importCharacters(parsed.characters);
+
+          if (parsed.projectData)     useSettingsStore.getState().updateProjectData(parsed.projectData);
+          if (parsed.projectSettings) useSettingsStore.getState().updateProjectSettings(parsed.projectSettings);
+          if (parsed.maps && parsed.mapDataById) useMapsStore.getState().importMaps(parsed.maps, parsed.mapDataById);
+
+          // Synchroniser le formulaire Settings
+          if (parsed.projectSettings) {
+            setFormData(prev => ({ ...prev, ...parsed.projectSettings }));
+          }
+
+          toast.success('Projet restauré !', {
+            description: `${parsed.scenes.length} scène(s) · ${parsed.characters.length} personnage(s). Rechargement recommandé.`,
+            duration: 6000,
+          });
+          logger.info(`[Settings] Import v2 OK — ${parsed.scenes.length} scènes, ${parsed.characters.length} personnages`);
+          return;
         }
 
-        // Parse JSON content
-        const imported = JSON.parse(result) as SettingsFormData;
-
-        // Validate imported structure
+        // ── v1 : ancien format paramètres seuls (rétrocompatibilité) ─────
+        const imported = parsed as SettingsFormData;
         if (!imported.project || !imported.editor || !imported.game) {
-          throw new Error('Structure de fichier invalide');
+          throw new Error('Format non reconnu. Exporte depuis Settings → Exporter pour obtenir un fichier compatible.');
         }
 
-        // Update form data with imported settings
         setFormData(imported);
+        toast.success('Paramètres restaurés.', {
+          description: 'Ancien format v1 — seuls les réglages ont été importés (scènes et dialogues inchangés).',
+        });
 
-        alert('Paramètres importés avec succès !');
       } catch (error) {
-        logger.error('[Settings] Import error:', error);
-        alert('Échec de l\'importation : fichier JSON invalide');
+        logger.error('[Settings] Import échoué :', error);
+        toast.error("Échec de l'import", {
+          description: error instanceof Error ? error.message : 'Fichier JSON invalide',
+        });
       }
     };
 
     reader.onerror = (): void => {
-      alert('Erreur lors de la lecture du fichier');
+      toast.error('Erreur de lecture', { description: 'Impossible de lire le fichier.' });
     };
 
-    // Read file as text
     reader.readAsText(file);
-
-    // Reset input value to allow re-importing same file
     e.target.value = '';
   };
 
-  return {
-    handleExport,
-    handleImport
-  };
+  return { handleExport, handleImport };
 }

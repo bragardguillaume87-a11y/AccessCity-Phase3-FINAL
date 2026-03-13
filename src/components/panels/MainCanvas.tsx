@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Film } from 'lucide-react';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
 import { getSceneDuration, getDialogueIndexAtTime } from '@/utils/dialogueDuration';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
@@ -15,7 +16,9 @@ import type {
   SelectedElementType,
   ModalContext,
   Prop,
-  TextBox
+  TextBox,
+  DialogueChoice,
+  Dialogue,
 } from '@/types';
 import type { CanvasProp } from './MainCanvas/components/PropElement';
 import type { CanvasTextBox } from './MainCanvas/components/TextBoxElement';
@@ -40,15 +43,45 @@ import { CharacterSprite } from './MainCanvas/components/CharacterSprite';
 import { PropElement } from './MainCanvas/components/PropElement';
 import { TextBoxElement } from './MainCanvas/components/TextBoxElement';
 import { DialoguePreviewOverlay } from './MainCanvas/components/DialoguePreviewOverlay';
-import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
 // import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization'; // masquée — doublon avec graphe Panel 3
-import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
 import { logger } from '../../utils/logger';
 import { CANVAS_PRESENTATION } from '@/config/canvas';
 
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
+// ⚠️ EMPTY_DIALOGUES must be module-level (not inline []) to avoid useSyncExternalStore getSnapshot instability.
+// `|| []` inside a Zustand selector creates a new array on every getSnapshot call → React 18 infinite loop.
+const EMPTY_DIALOGUES: Dialogue[] = [];
+
+/**
+ * Placeholder affiché dans le canvas quand la scène sélectionnée est de type 'cinematic'.
+ * Les scènes cinématiques utilisent l'Éditeur Cinématique modal — pas le canvas standard.
+ */
+function CinematicScenePlaceholder({ sceneId, sceneTitle }: { sceneId: string; sceneTitle: string }) {
+  const setCinematicEditorOpen = useUIStore(s => s.setCinematicEditorOpen);
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-5 text-center p-8 select-none">
+      <Film className="w-14 h-14 text-violet-400 opacity-50" aria-hidden="true" />
+      <div>
+        <p className="font-semibold text-base text-[var(--color-text-primary)]">{sceneTitle}</p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Scène cinématique</p>
+      </div>
+      <p className="text-sm text-[var(--color-text-muted)] max-w-sm leading-relaxed">
+        Les scènes cinématiques s'éditent dans l'Éditeur Cinématique dédié.<br />
+        Le canvas standard n'est pas disponible pour ce type de scène.
+      </p>
+      <button
+        type="button"
+        onClick={() => setCinematicEditorOpen(true, sceneId)}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors shadow-md"
+      >
+        <Film className="w-4 h-4" aria-hidden="true" />
+        Ouvrir l'Éditeur Cinématique
+      </button>
+    </div>
+  );
+}
 
 /**
  * Calcule les dimensions explicites du canvas (équivalent "object-fit: contain").
@@ -109,7 +142,7 @@ export default function MainCanvas({
   // ⚠️ selectedScene.dialogues est TOUJOURS [] (Phase 3 store split).
   // Utiliser ce sélecteur réactif pour toutes les lectures de dialogues.
   const sceneDialogues = useDialoguesStore((s) =>
-    sceneId ? (s.dialoguesByScene[sceneId] || []) : []
+    sceneId ? (s.dialoguesByScene[sceneId] || EMPTY_DIALOGUES) : EMPTY_DIALOGUES
   );
 
   const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
@@ -124,7 +157,6 @@ export default function MainCanvas({
   });
   const selection = useCanvasSelection({
     selectedScene,
-    selectedElement,
     onSelectDialogue
   });
 
@@ -182,6 +214,7 @@ export default function MainCanvas({
     setSelectedCharacterId: selection.setSelectedCharacterId
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleUpdateCharacterPosition = useCallback(
     (sceneCharId: string, updates: Partial<SceneCharacter>) => {
       if (selectedScene?.id) {
@@ -191,6 +224,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.updateSceneCharacter]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleUpdateProp = useCallback(
     (propId: string, updates: Partial<Prop>) => {
       if (selectedScene?.id) {
@@ -200,6 +234,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.updateProp]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleRemoveProp = useCallback(
     (propId: string) => {
       if (selectedScene?.id) {
@@ -209,6 +244,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.removePropFromScene]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleUpdateTextBox = useCallback(
     (textBoxId: string, updates: Partial<TextBox>) => {
       if (selectedScene?.id) {
@@ -218,6 +254,7 @@ export default function MainCanvas({
     [selectedScene?.id, actions.updateTextBox]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions.X sont des méthodes stables du store Zustand
   const handleRemoveTextBox = useCallback(
     (textBoxId: string) => {
       if (selectedScene?.id) {
@@ -237,14 +274,12 @@ export default function MainCanvas({
   //       pas le mood "base" de la scène qui peut différer du mood initial du jeu
   const activeMoodOverrides = useMemo<Record<string, string>>(() => {
     if (selectedElement?.type === 'dialogue' && selectedElement.sceneId === selectedScene?.id) {
-      // Mode Dialogues : afficher les moods du dialogue sélectionné
+      // Mode Dialogues : appliquer les moods du dialogue sélectionné
       const dialogue = sceneDialogues[selectedElement.index];
       return dialogue?.characterMoods || {};
     }
-    // Mode Scènes (ou aucun dialogue sélectionné) : afficher les moods du premier dialogue
-    // pour que le canvas soit cohérent avec ce que le joueur verra au lancement
-    const firstDialogue = sceneDialogues[0];
-    return firstDialogue?.characterMoods || {};
+    // Mode Scènes : pas d'override — sceneChar.mood (géré par CharacterMoodPicker) fait foi
+    return {};
   }, [selectedElement, selectedScene?.id, sceneDialogues]);
 
   // ID du sceneCharacter qui parle dans le dialogue sélectionné
@@ -279,6 +314,25 @@ export default function MainCanvas({
     [setCurrentTime, sceneId, selectedScene?.id, onSelectDialogue]
   );
 
+  /**
+   * Gère le clic sur un bouton de choix dans l'overlay éditeur.
+   * Navigue vers le dialogue lié (nextDialogueId) si défini, sinon vers le suivant.
+   * ✅ getState() dans un handler → lecture ponctuelle correcte (CLAUDE.md §6.7)
+   */
+  const handleChoiceNavigation = useCallback((choice: DialogueChoice) => {
+    if (!selectedScene?.id || !onSelectDialogue) return;
+    if (choice.nextDialogueId) {
+      const idx = sceneDialogues.findIndex(d => d.id === choice.nextDialogueId);
+      if (idx !== -1) {
+        onSelectDialogue(selectedScene.id, idx);
+        return;
+      }
+    }
+    // Fallback : dialogue suivant (pas de nextDialogueId ou ID introuvable)
+    selection.handleDialogueNavigate('next');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- selection.X est une méthode stable du store Zustand
+  }, [selectedScene?.id, sceneDialogues, onSelectDialogue, selection.handleDialogueNavigate]);
+
   const handlePlayPause = useCallback(() => {
     const newIsPlaying = !viewState.isPlaying;
     viewState.setIsPlaying(newIsPlaying);
@@ -292,7 +346,7 @@ export default function MainCanvas({
         onSelectDialogue?.(selectedScene.id, 0);
       }
     }
-  }, [viewState.isPlaying, viewState.setIsPlaying, selectedScene, selectedElement, onSelectDialogue]);
+  }, [viewState, selectedScene, selectedElement, onSelectDialogue, dialoguesCount]);
 
   const handleCloseAddCharacterModal = useCallback(
     () => setShowAddCharacterModal(false),
@@ -303,11 +357,15 @@ export default function MainCanvas({
     return <EmptySceneState />;
   }
 
+  // Cinematic scenes have their own editor — the standard canvas is not applicable
+  if (selectedScene.sceneType === 'cinematic') {
+    return <CinematicScenePlaceholder sceneId={selectedScene.id} sceneTitle={selectedScene.title} />;
+  }
+
   return (
     <div className="h-full flex flex-col">
       <SceneHeader
         scene={selectedScene}
-        dialoguesCount={dialoguesCount}
         fullscreenMode={fullscreenMode}
         onFullscreenChange={setFullscreenMode}
       />
@@ -440,7 +498,7 @@ export default function MainCanvas({
               )}
 
               {selectedElement?.type === 'dialogue' && selectedElement?.sceneId === selectedScene.id && (() => {
-                const dialogue = selectedScene.dialogues[selectedElement.index];
+                const dialogue = sceneDialogues[selectedElement.index];
                 if (!dialogue) return null;
 
                 const speaker = actions.characters.find(c => c.id === dialogue.speaker);
@@ -450,10 +508,11 @@ export default function MainCanvas({
                   <DialoguePreviewOverlay
                     dialogue={dialogue}
                     dialogueIndex={selectedElement.index}
-                    totalDialogues={selectedScene.dialogues.length}
+                    totalDialogues={sceneDialogues.length}
                     speakerName={speakerName}
                     currentDialogueText={currentDialogueText}
                     onNavigate={selection.handleDialogueNavigate}
+                    onChoose={handleChoiceNavigation}
                     isAutoPlaying={viewState.isPlaying}
                     onAutoPlayComplete={() => viewState.setIsPlaying(false)}
                     canvasWidth={canvasSize.width}
@@ -466,11 +525,10 @@ export default function MainCanvas({
 
         {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
         <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
-          <SceneInfoBar charactersCount={sceneCharacters.length} dialoguesCount={dialoguesCount} />
           <TimelinePlayhead
             currentTime={currentTime}
             duration={sceneDuration}
-            dialogues={selectedScene?.dialogues || []}
+            dialogues={sceneDialogues}
             onSeek={handleSeek}
             onPlayPause={handlePlayPause}
             isPlaying={viewState.isPlaying}
@@ -495,13 +553,10 @@ export default function MainCanvas({
           */}
         </div>
 
-      </div>
+        {/* Zone réservée — espace pour futur widget sous la timeline */}
+        <div className="flex-shrink-0 h-[72px] bg-background border-t border-border/50" />
 
-      <QuickActionsBar
-        sceneId={selectedScene.id}
-        onAddDialogue={actions.handleAddDialogue}
-        onSetBackground={actions.handleSetBackground}
-      />
+      </div>
 
       {contextMenu.contextMenuData && (
         <CharacterContextMenu

@@ -2,8 +2,10 @@
  * ChoiceCardHeader — Shared header for DiceChoiceCard and ComplexChoiceCard
  *
  * Eliminates the duplicated header pattern (icon badge + title + delete button).
+ * The title animates smoothly when it changes (e.g. "Dés" → "Dés A").
  */
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,7 +15,7 @@ interface ChoiceCardHeaderProps {
   icon: React.ReactNode;
   /** Gradient classes for the icon badge (e.g. "from-purple-500 to-pink-500") */
   iconGradient: string;
-  /** Card title (e.g. "Test #1", "Choix #2") */
+  /** Card title (e.g. "Dés", "Dés A", "Choix #2") */
   title: string;
   /** Whether the card can be removed */
   canRemove: boolean;
@@ -35,12 +37,23 @@ export function ChoiceCardHeader({
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br",
+          "w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br",
           iconGradient
         )}>
           {icon}
         </div>
-        <h4 className="text-lg font-bold">{title}</h4>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.h4
+            key={title}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="text-sm font-semibold"
+          >
+            {title}
+          </motion.h4>
+        </AnimatePresence>
       </div>
       {canRemove && (
         <Button

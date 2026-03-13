@@ -22,8 +22,10 @@ import type { Variants } from 'framer-motion';
 import { AnimatedCharacterSprite } from '@/components/ui/AnimatedCharacterSprite';
 import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
 import type { CharacterAnimationVariantName } from '@/constants/animations';
-import type { GameStats } from '@/types';
+import type { GameStats, DialogueChoice, Scene } from '@/types';
+import type { Character } from '@/types/characters';
 import { useSettingsStore, useCharactersStore } from '../../../stores/index';
+import { uiSounds } from '@/utils/uiSounds';
 import { useAllScenesWithElements } from '@/stores/selectors';
 import { REFERENCE_CANVAS_WIDTH } from '@/config/canvas';
 import { useGameState } from '../../../hooks/useGameState';
@@ -34,10 +36,12 @@ import { useCanvasDimensions } from '../MainCanvas/hooks/useCanvasDimensions';
 import { Volume2, VolumeX, BarChart3 } from 'lucide-react';
 import { audioManager } from '../../../utils/audioManager';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import { CinematicPlayer } from './CinematicPlayer';
 import { logger } from '@/utils/logger';
 import { GAME_STATS } from '@/i18n';
 import { DialogueBox } from '@/components/ui/DialogueBox';
 import { CompactStatHUD } from '@/components/ui/compact-stat-hud';
+import { DiceOverlay } from './DiceOverlay';
 
 /** Aspect ratio 16:9 */
 const ASPECT_RATIO = 16 / 9;
@@ -52,17 +56,51 @@ function computePlayerSize(containerW: number, containerH: number): { width: num
 
 export interface PreviewPlayerProps {
   initialSceneId?: string | null;
+  /** ID du dialogue de départ.
+   *  null ou absent → premier dialogue de la scène (comportement par défaut). */
+  initialDialogueId?: string | null;
   onClose: () => void;
+  /** Standalone mode — si fourni, bypasse les stores Zustand (lecture depuis ExportData). */
+  standaloneScenes?: Scene[];
+  standaloneCharacters?: Character[];
+  /** Valeurs initiales des variables de jeu (issues des defs ExportData.settings.variables). */
+  standaloneInitialVariables?: GameStats;
 }
 
-export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayerProps) {
-  // ── Stores ──────────────────────────────────────────────────────────────
-  const scenes = useAllScenesWithElements();
+export default function PreviewPlayer({
+  initialSceneId,
+  initialDialogueId,
+  onClose,
+  standaloneScenes,
+  standaloneCharacters,
+  standaloneInitialVariables,
+}: PreviewPlayerProps) {
+  // ── Stores (bypassed in standalone mode si les props correspondantes sont fournies) ──
+  const storeScenes = useAllScenesWithElements();
+  const scenes = standaloneScenes ?? storeScenes;
   const variables = useSettingsStore(state => state.variables);
   const enableStatsHUD = useSettingsStore(state => state.enableStatsHUD);
   const setEnableStatsHUD = useSettingsStore(state => state.setEnableStatsHUD);
-  const characterFx = useSettingsStore(state => state.characterFx);
-  const characterLibrary = useCharactersStore(state => state.characters);
+  const characterFx             = useSettingsStore(state => state.characterFx);
+  const uiSoundsVolume          = useSettingsStore(state => state.uiSoundsVolume);
+  const uiSoundStyle            = useSettingsStore(state => state.uiSoundStyle);
+  const uiSoundsTickInterval    = useSettingsStore(state => state.uiSoundsTickInterval);
+  const storeCharacterLibrary = useCharactersStore(state => state.characters);
+  const characterLibrary: Character[] = standaloneCharacters ?? storeCharacterLibrary;
+
+  // Protagoniste → stats initiales (fallback sur variables globales si non trouvé).
+  // useMemo évite de re-traverser la liste à chaque render ; se met à jour uniquement
+  // si la bibliothèque de personnages ou le override standalone changent.
+  const protagonistStats = useMemo<GameStats | null>(() => {
+    if (standaloneInitialVariables) return null; // standalone override prend la priorité
+    const protagonist = storeCharacterLibrary.find(c => c.isProtagonist);
+    if (!protagonist?.initialStats) return null;
+    const { physique, mentale } = protagonist.initialStats;
+    return {
+      [GAME_STATS.PHYSIQUE]: physique ?? 100,
+      [GAME_STATS.MENTALE]:  mentale  ?? 100,
+    };
+  }, [storeCharacterLibrary, standaloneInitialVariables]);
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -74,6 +112,8 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
   const liveRegionRef = useRef<HTMLDivElement>(null);
   const previousSceneIdRef = useRef<string | null>(null);
   const prevSfxDialogueRef = useRef<string | null>(null);
+  /** Détection de la transition false→true de typewriterDone pour les sons de fin. */
+  const prevTypewriterDoneRef = useRef(false);
 
   // ── Canvas sizing ─────────────────────────────────────────────────────────
   const [centerDivRef, centerSize] = useCanvasDimensions();
@@ -104,10 +144,15 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
     goToScene,
     isAtLastDialogue,
     setIsPaused: _setIsPaused,
+    diceState,
+    pendingDiceDifficulty,
+    confirmDiceNavigation,
   } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
-    initialStats: (variables as GameStats) || {},
+    initialDialogueId: initialDialogueId ?? null,
+    // Priorité : standalone > protagoniste > variables globales > vide
+    initialStats: standaloneInitialVariables ?? protagonistStats ?? (variables as GameStats) ?? {},
   });
 
   // ── Config boîte de dialogue (hook partagé avec DialoguePreviewOverlay) ──
@@ -116,16 +161,31 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
   // ── Typewriter ────────────────────────────────────────────────────────────
   const { displayText, isComplete: typewriterDone, skip: skipTypewriter } = useTypewriter(
     currentDialogue?.text ?? '',
-    { speed: dialogueBoxConfig.typewriterSpeed, cursor: true, contextAware: true }
+    {
+      speed: dialogueBoxConfig.typewriterSpeed,
+      cursor: true,
+      contextAware: true,
+      // onTick via ref interne → pas de redémarrage de l'animation sur re-render
+      onTick: useCallback((char: string) => { uiSounds.tick(char); }, []),
+    }
   );
 
   const handleAdvance = useCallback(() => {
     if (!typewriterDone) {
+      // Son distinct "skip" — différent d'advance() pour que le joueur sente la distinction
+      uiSounds.skipTypewriter();
       skipTypewriter();
     } else if (!isAtLastDialogue) {
+      uiSounds.advance();
       goToNextDialogue();
     }
   }, [typewriterDone, skipTypewriter, goToNextDialogue, isAtLastDialogue]);
+
+  /** Wrapper chooseOption avec son de sélection. */
+  const handleChoose = useCallback((choice: DialogueChoice) => {
+    uiSounds.choiceSelect();
+    chooseOption(choice);
+  }, [chooseOption]);
 
   // ── Speaker layout (hook partagé avec DialoguePreviewOverlay) ────────────
   const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor } = useSpeakerLayout({
@@ -153,11 +213,18 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
     return sc?.id ?? null;
   }, [currentDialogue, currentScene?.characters, characterLibrary]);
 
+  // ── hasChoices (useMemo avant la garde — utilisé dans les useEffects UI sounds) ──
+  const hasChoices = useMemo(
+    () => !!(currentDialogue?.choices && currentDialogue.choices.length > 0),
+    [currentDialogue]
+  );
+
   // ── Audio ─────────────────────────────────────────────────────────────────
   const initializeAudio = useCallback(async () => {
     if (!audioInitialized) {
       try {
         await audioManager.initialize();
+        uiSounds.initialize(); // initialise l'AudioContext uiSounds après le geste utilisateur
         setAudioInitialized(true);
       } catch (error) {
         logger.warn('[PreviewPlayer] Audio initialization failed:', error);
@@ -191,7 +258,12 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
 
   useEffect(() => { return () => { audioManager.stopBGM(0); audioManager.stopAllAmbient(); }; }, []);
 
-  // ── Pistes ambiantes — démarrent/s'arrêtent au changement de scène ─────────
+  // ── Pistes ambiantes — démarrent/s'arrêtent au changement de scène ou de pistes ──
+  // Les deux slots sont traités séparément pour éviter d'arrêter slot-0 quand slot-1 change.
+  // Deps incluent les URLs des 2 slots pour détecter les changements de pistes sans
+  // changer d'ID de scène (ex: édition des pistes ambiantes en live).
+  const ambientSlot0Url = currentScene?.ambientTracks?.[0]?.url ?? '';
+  const ambientSlot1Url = currentScene?.ambientTracks?.[1]?.url ?? '';
   useEffect(() => {
     if (!audioInitialized || !currentScene) {
       audioManager.stopAllAmbient();
@@ -204,8 +276,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
       else            audioManager.stopAmbient(slot);
     });
     return () => { audioManager.stopAllAmbient(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioInitialized, currentScene?.id]);
+  }, [audioInitialized, currentScene?.id, ambientSlot0Url, ambientSlot1Url]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     audioManager.initialize()
@@ -220,6 +291,65 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
     }
   }, [currentDialogue]);
 
+  // ── UI Sounds — synchronisation volume, mute, style & rythme ─────────────
+  useEffect(() => { uiSounds.setVolume(uiSoundsVolume); }, [uiSoundsVolume]);
+  useEffect(() => { uiSounds.setMuted(isMuted); }, [isMuted]);
+  useEffect(() => { uiSounds.setTickStyle(uiSoundStyle as import('@/utils/uiSounds').TickStyle); }, [uiSoundStyle]);
+  useEffect(() => { uiSounds.setTickInterval(uiSoundsTickInterval); }, [uiSoundsTickInterval]);
+
+  // ── UI Sounds — démarrage du jeu ──────────────────────────────────────────
+  // Arpège C5-E5-G5 joué 300ms après l'initialisation audio (AudioContext stable).
+  // ⭐ Son inattendu : signal d'ouverture de scène, style Ace Attorney.
+  useEffect(() => {
+    if (!audioInitialized) return;
+    const timer = setTimeout(() => uiSounds.gameStart(), 300);
+    return () => clearTimeout(timer);
+  }, [audioInitialized]);
+
+  // ── UI Sounds — transition de scène ──────────────────────────────────────
+  // Swoosh grave lors du changement de scène (branché sur le même trigger que le BGM).
+  // ⭐ Son inattendu : repère spatial/temporel sous-conscient.
+  useEffect(() => {
+    if (!audioInitialized || !currentScene) return;
+    // previousSceneIdRef.current est mis à jour dans l'effet BGM — on lit sa valeur courante
+    // sans interférer avec lui. On détecte le changement via currentScene.id directement.
+    return () => {
+      // Nettoyage : rien à faire ici, la transition est déclenchée au changement
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Transition de scène : déclenchée quand currentScene.id change (hors mount initial)
+  const sceneTransitionInitRef = useRef(false);
+  useEffect(() => {
+    if (!audioInitialized) return;
+    if (!sceneTransitionInitRef.current) {
+      sceneTransitionInitRef.current = true;
+      return; // ignorer le mount initial
+    }
+    uiSounds.sceneTransition();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScene?.id]);
+
+  // ── UI Sounds — typewriter terminé ───────────────────────────────────────
+  // Détecte la transition false→true de typewriterDone.
+  // - Avec choix  → whoosh "choiceAppear" ⭐ (attention sans agression)
+  // - Sans choix  → ping doux "typewriterComplete" ⭐ (signal subliminal "tu peux cliquer")
+  useEffect(() => {
+    if (!audioInitialized) {
+      prevTypewriterDoneRef.current = typewriterDone;
+      return;
+    }
+    if (typewriterDone && !prevTypewriterDoneRef.current) {
+      if (hasChoices) {
+        uiSounds.choiceAppear();
+      } else {
+        uiSounds.typewriterComplete();
+      }
+    }
+    prevTypewriterDoneRef.current = typewriterDone;
+  }, [typewriterDone, hasChoices, audioInitialized]);
+
   // ── Garde ─────────────────────────────────────────────────────────────────
   if (!currentScene) {
     return (
@@ -230,7 +360,7 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
     );
   }
 
-  const hasChoices = !!(currentDialogue?.choices && currentDialogue.choices.length > 0);
+  // hasChoices est défini plus haut en useMemo (avant la garde)
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
@@ -254,6 +384,9 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
             {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             {isMuted ? 'Son OFF' : 'Son ON'}
           </button>
+          {/* Stats HUD — accessible dans tous les modes (Pro + Élève).
+              Les créateurs peuvent tester les stats même en prévisualisation mode élève.
+              Masqué par défaut (enableStatsHUD = false). */}
           <button
             onClick={(e) => { e.stopPropagation(); setEnableStatsHUD(!enableStatsHUD); }}
             className={`px-3 py-1 rounded text-sm flex items-center gap-1.5 ${enableStatsHUD ? 'bg-purple-600 text-white' : 'bg-muted'}`}
@@ -281,7 +414,18 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
         ref={centerDivRef}
         className="flex-1 min-h-0 bg-black flex items-center justify-center relative overflow-hidden"
       >
-        {canvasSize.width > 0 && (
+        {canvasSize.width > 0 && currentScene.sceneType === 'cinematic' && (
+          <CinematicPlayer
+            tracks={currentScene.cinematicTracks}
+            events={currentScene.cinematicEvents}
+            backgroundUrl={currentScene.backgroundUrl}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            characterLibrary={characterLibrary}
+            onSequenceEnd={goToNextDialogue}
+          />
+        )}
+        {canvasSize.width > 0 && currentScene.sceneType !== 'cinematic' && (
           <div
             className="relative overflow-hidden flex-shrink-0"
             style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
@@ -405,16 +549,18 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
                   speakerPortraitUrl={speakerPortraitUrl}
                   speakerIsOnRight={speakerIsOnRight}
                   speakerColor={speakerColor}
-                  onChoose={chooseOption}
+                  isRolling={diceState.lastRoll !== null}
+                  onChoose={handleChoose}
                   onRestart={() => goToScene(currentScene.id, null)}
                   onClose={onClose}
                 />
               </div>
             </div>
 
-            {/* ── Stats HUD ── */}
+            {/* ── Stats HUD — tous modes (Pro + Élève) ── */}
+            {/* z-[60] > DiceOverlay (z-50) → HUD visible même pendant le lancer de dé */}
             {enableStatsHUD && (
-              <div className="absolute top-3 left-3 z-20">
+              <div className="absolute top-3 left-3 z-[60]">
                 <CompactStatHUD
                   physique={stats[GAME_STATS.PHYSIQUE] ?? 100}
                   mentale={stats[GAME_STATS.MENTALE] ?? 100}
@@ -422,6 +568,17 @@ export default function PreviewPlayer({ initialSceneId, onClose }: PreviewPlayer
                 />
               </div>
             )}
+
+            {/* ── Overlay spectaculaire lancer de dé ──
+                 Le résultat (roll/success/difficulty) est connu SYNCHRONEMENT avant l'ouverture.
+                 L'animation DiceOverlay fournit elle-même la suspense visuelle (1750ms). */}
+            <DiceOverlay
+              isOpen={diceState.lastRoll !== null}
+              roll={diceState.lastRoll ?? 0}
+              difficulty={pendingDiceDifficulty ?? 0}
+              success={diceState.lastResult === 'success'}
+              onClose={confirmDiceNavigation}
+            />
 
           </div>
         )}

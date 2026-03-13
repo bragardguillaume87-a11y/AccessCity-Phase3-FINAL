@@ -175,6 +175,8 @@ export const DialogueSchema = z.object({
   ),
   choices: z.array(DialogueChoiceSchema).default([]),
   sfx: DialogueAudioSchema.optional(),
+  voicePreset: z.string().optional(),
+  speakerMood: z.string().optional(),
   nextDialogueId: OptionalString,
   isResponse: z.boolean().optional(),
 });

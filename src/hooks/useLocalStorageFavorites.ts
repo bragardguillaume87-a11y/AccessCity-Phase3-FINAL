@@ -18,7 +18,7 @@ import { logger } from '@/utils/logger';
 /**
  * Return type for useLocalStorageFavorites hook
  */
-export interface UseLocalStorageFavoritesReturn<T extends string> {
+interface UseLocalStorageFavoritesReturn<T extends string> {
   /** Set of favorited item IDs */
   favorites: Set<T>;
   /** Toggle favorite status for an item */

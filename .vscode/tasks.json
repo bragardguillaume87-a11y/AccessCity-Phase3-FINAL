@@ -1,0 +1,94 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Lancer le serveur Vite pour voir le rendu de l’éditeur no-code",
+			"type": "shell",
+			"command": "npm run dev",
+			"isBackground": true,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Démarrer API Claude (port 8787)",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoLogo",
+				"-NoProfile",
+				"-Command",
+				"$env:CLAUDE_SERVER_PORT='8787'; npm run api"
+			],
+			"isBackground": true,
+			"group": "build"
+		},
+		{
+			"label": "Health Check API Claude",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoLogo",
+				"-NoProfile",
+				"-Command",
+				"npm run health"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Player — Build frontend (Tauri)",
+			"type": "shell",
+			"command": "npm run build:player-tauri-frontend",
+			"group": { "kind": "build", "isDefault": false },
+			"problemMatcher": ["$tsc"]
+		},
+		{
+			"label": "Player — Dev hot-reload + DevTools (Ctrl+Shift+I dans la fenêtre)",
+			"type": "shell",
+			"command": "npx tauri dev --config src-tauri/tauri.conf.json",
+			"isBackground": true,
+			"dependsOn": "Player — Build frontend (Tauri)",
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Nettoyage & Relance Vite",
+			"type": "shell",
+			"windows": {
+				"command": "pwsh",
+				"args": [
+					"-NoProfile",
+					"-Command",
+					"& {",
+					"  Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue;",
+					"  Remove-Item -Path .vite -Recurse -Force -ErrorAction SilentlyContinue;",
+					"  Remove-Item -Path node_modules\\.vite -Recurse -Force -ErrorAction SilentlyContinue;",
+					"  Write-Host 'Nettoyage termine, relance Vite...' -ForegroundColor Green;",
+					"  npm run dev",
+					"}"
+				]
+			},
+			"isBackground": true,
+			"problemMatcher": [
+				{
+					"pattern": [
+						{
+							"regexp": ".",
+							"file": 1,
+							"location": 2,
+							"message": 3
+						}
+					],
+					"background": {
+						"activeOnStart": true,
+						"beginsPattern": ".",
+						"endsPattern": "ready in"
+					}
+				}
+			],
+			"group": "build"
+		}
+	]
+}

@@ -330,6 +330,31 @@
   opacity: 1 !important;
 }
 
+/* Blender-style: always-visible handles (default theme + themed variants) */
+/* Sit on node border at full opacity — no hover-reveal needed */
+.react-flow__handle-visible {
+  opacity: 0.85 !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.react-flow__handle-visible:hover {
+  opacity: 1 !important;
+  transform: scale(1.25) !important;
+}
+
+/* Boost visibility on parent node hover */
+.dialogue-node:hover .react-flow__handle-visible,
+.choice-node:hover .react-flow__handle-visible,
+.terminal-node:hover .react-flow__handle-visible {
+  opacity: 1 !important;
+}
+
+/* Connecting & valid states override for visible handles */
+.react-flow__handle-visible.react-flow__handle-connecting,
+.react-flow__handle-visible.react-flow__handle-valid {
+  opacity: 1 !important;
+}
+
 /* VAGUE 4: Enhanced handle visibility in edit mode */
 .dialogue-graph-container[data-edit-mode="true"] .react-flow__handle {
   opacity: 0.4;
@@ -407,19 +432,17 @@
    DEFAULT THEME ANIMATIONS
    ============================================================================ */
 
-/* Default hover effect: subtle lift */
-.default-node-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
+/* Default hover effect: lift + zoom pour meilleure lisibilité au survol */
+/* transition géré par inline style (COSMOS_ANIMATIONS.transitionFast = 'all 0.2s') */
 .default-node-hover:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.06);
+  z-index: 100; /* premier plan pour éviter le clipping par les nœuds voisins */
 }
 
-/* Default selected state: cyan outline */
+/* Default selected state: glow driven by inline shadowSelected (theme-aware).
+   Outline removed — the theme's shadowSelected provides the accent ring + glow. */
 .default-node-selected {
-  outline: 3px solid var(--graph-accent);
-  outline-offset: 2px;
+  outline: none;
 }
 
 /* Default appear animation: fade in */

@@ -4,6 +4,9 @@ import { GAME_STATS, type SupportedLocale } from '../i18n';
 import { STAT_BOUNDS } from '@/config/gameConstants';
 import { TIMING } from '@/config/timing';
 import type { DialogueBoxStyle } from '@/types/scenes';
+import type { AssetCollection } from '@/types/collections';
+import type { TilesetConfig } from '@/types/tileset';
+import type { SpriteSheetConfig } from '@/types/sprite';
 
 // ── Character FX ──────────────────────────────────────────────────────────────
 
@@ -84,17 +87,51 @@ interface SettingsState {
   language: SupportedLocale;
   enableStatsHUD: boolean;
   characterFx: CharacterFxSettings;
+  /** Volume des sons UI procéduraux (typewriter, boutons, transitions). 0–1, 0 = muet. */
+  uiSoundsVolume: number;
+  /** Style de frappe typewriter : 'mecanique' | 'vintage' | 'gaming' | '8bit' | 'doux'. */
+  uiSoundStyle: string;
+  /** Intervalle minimum entre deux ticks (ms). 35 = rapide, 65 = normal, 130 = lent. */
+  uiSoundsTickInterval: number;
+  /** Collections d'assets personnalisées (dossiers utilisateur) — persistées avec le projet. */
+  assetCollections: AssetCollection[];
 
   // Actions
-  setContextField: (key: keyof ProjectData, value: string) => void;
   updateProjectData: (updates: Partial<ProjectData>) => void;
   updateProjectSettings: (updates: Partial<ProjectSettings>) => void;
-  setVariable: (name: string, value: number) => void;
   modifyVariable: (name: string, delta: number) => void;
-  setLanguage: (lang: SupportedLocale) => void;
   setEnableStatsHUD: (enabled: boolean) => void;
   updateDialogueBoxDefaults: (style: Partial<DialogueBoxStyle>) => void;
   setCharacterFx: (patch: Partial<CharacterFxSettings>) => void;
+  setUiSoundsVolume: (v: number) => void;
+  setUiSoundStyle: (style: string) => void;
+  setUiSoundsTickInterval: (ms: number) => void;
+  addAssetCollection: (name: string) => string;
+  removeAssetCollection: (id: string) => void;
+  renameAssetCollection: (id: string, name: string) => void;
+  addAssetToCollection: (collectionId: string, assetId: string) => void;
+  removeAssetFromCollection: (collectionId: string, assetId: string) => void;
+  /** Noms d'affichage personnalisés par assetPath. Ne renomme pas le fichier. */
+  assetDisplayNames: Record<string, string>;
+  setAssetDisplayName: (assetPath: string, displayName: string) => void;
+  /**
+   * Configuration de découpe par asset (clé = asset URL display-ready).
+   * Persistée — l'utilisateur n'a pas à reconfigurer à chaque session.
+   */
+  tilesetConfigs: Record<string, TilesetConfig>;
+  setTilesetConfig: (assetUrl: string, config: TilesetConfig) => void;
+  /** Configuration des spritesheets de personnages/monstres (clé = asset URL display-ready) */
+  spriteSheetConfigs: Record<string, SpriteSheetConfig>;
+  setSpriteSheetConfig: (assetUrl: string, config: SpriteSheetConfig) => void;
+  removeSpriteSheetConfig: (assetUrl: string) => void;
+  removeTilesetConfig: (assetUrl: string) => void;
+  /**
+   * URLs d'assets masqués dans la palette de l'éditeur (ne supprime pas le fichier).
+   * Clé = asset URL display-ready ou path.
+   */
+  hiddenAssetPaths: string[];
+  hideAsset: (path: string) => void;
+  unhideAsset: (path: string) => void;
 }
 
 // ============================================================================
@@ -151,13 +188,14 @@ export const useSettingsStore = create<SettingsState>()(
         language: 'fr' as SupportedLocale,
         enableStatsHUD: false,
         characterFx: DEFAULT_CHARACTER_FX,
-
-        // Actions: Project Data (context)
-        setContextField: (key, value) => {
-          set((state) => ({
-            projectData: { ...state.projectData, [key]: value },
-          }), false, 'settings/setContextField');
-        },
+        uiSoundsVolume: 0.3,
+        uiSoundStyle: 'mecanique',
+        uiSoundsTickInterval: 65,
+        assetCollections: [],
+        assetDisplayNames: {},
+        tilesetConfigs: {},
+        spriteSheetConfigs: {},
+        hiddenAssetPaths: [],
 
         updateProjectData: (updates) => {
           set((state) => ({
@@ -188,12 +226,6 @@ export const useSettingsStore = create<SettingsState>()(
         },
 
         // Actions: Variables
-        setVariable: (name, value) => {
-          set((state) => ({
-            variables: { ...state.variables, [name]: value },
-          }), false, 'settings/setVariable');
-        },
-
         modifyVariable: (name, delta) => {
           set((state) => {
             const current = typeof state.variables[name] === 'number'
@@ -206,11 +238,6 @@ export const useSettingsStore = create<SettingsState>()(
           }, false, 'settings/modifyVariable');
         },
 
-        // Actions: Language
-        setLanguage: (lang) => {
-          set({ language: lang }, false, 'settings/setLanguage');
-        },
-
         // Actions: Stats HUD
         setEnableStatsHUD: (enabled) => {
           set({ enableStatsHUD: enabled }, false, 'settings/setEnableStatsHUD');
@@ -221,6 +248,103 @@ export const useSettingsStore = create<SettingsState>()(
           set((state) => ({
             characterFx: { ...state.characterFx, ...patch },
           }), false, 'settings/setCharacterFx');
+        },
+
+        // Actions: UI Sounds
+        setUiSoundsVolume: (v) => {
+          set({ uiSoundsVolume: Math.max(0, Math.min(1, v)) }, false, 'settings/setUiSoundsVolume');
+        },
+        setUiSoundStyle: (style) => {
+          set({ uiSoundStyle: style }, false, 'settings/setUiSoundStyle');
+        },
+        setUiSoundsTickInterval: (ms) => {
+          set({ uiSoundsTickInterval: Math.max(35, Math.min(130, ms)) }, false, 'settings/setUiSoundsTickInterval');
+        },
+
+        // Actions: Asset Collections
+        addAssetCollection: (name) => {
+          const id = `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          set((state) => ({
+            assetCollections: [...state.assetCollections, { id, name, assetIds: [] }],
+          }), false, 'settings/addAssetCollection');
+          return id;
+        },
+        removeAssetCollection: (id) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.filter(c => c.id !== id),
+          }), false, 'settings/removeAssetCollection');
+        },
+        renameAssetCollection: (id, name) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.map(c =>
+              c.id === id ? { ...c, name } : c
+            ),
+          }), false, 'settings/renameAssetCollection');
+        },
+        addAssetToCollection: (collectionId, assetId) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.map(c =>
+              c.id === collectionId && !c.assetIds.includes(assetId)
+                ? { ...c, assetIds: [...c.assetIds, assetId] }
+                : c
+            ),
+          }), false, 'settings/addAssetToCollection');
+        },
+        removeAssetFromCollection: (collectionId, assetId) => {
+          set((state) => ({
+            assetCollections: state.assetCollections.map(c =>
+              c.id === collectionId
+                ? { ...c, assetIds: c.assetIds.filter(id => id !== assetId) }
+                : c
+            ),
+          }), false, 'settings/removeAssetFromCollection');
+        },
+        setAssetDisplayName: (assetPath, displayName) => {
+          set((state) => ({
+            assetDisplayNames: { ...state.assetDisplayNames, [assetPath]: displayName },
+          }), false, 'settings/setAssetDisplayName');
+        },
+
+        setTilesetConfig: (assetUrl, config) => {
+          set((state) => ({
+            tilesetConfigs: { ...state.tilesetConfigs, [assetUrl]: config },
+          }), false, 'settings/setTilesetConfig');
+        },
+
+        setSpriteSheetConfig: (assetUrl, config) => {
+          set((state) => ({
+            spriteSheetConfigs: { ...state.spriteSheetConfigs, [assetUrl]: config },
+          }), false, 'settings/setSpriteSheetConfig');
+        },
+
+        removeTilesetConfig: (assetUrl) => {
+          set((state) => {
+            const next = { ...state.tilesetConfigs };
+            delete next[assetUrl];
+            return { tilesetConfigs: next };
+          }, false, 'settings/removeTilesetConfig');
+        },
+
+        removeSpriteSheetConfig: (assetUrl) => {
+          set((state) => {
+            const next = { ...state.spriteSheetConfigs };
+            delete next[assetUrl];
+            return { spriteSheetConfigs: next };
+          }, false, 'settings/removeSpriteSheetConfig');
+        },
+
+        hideAsset: (path) => {
+          set((state) => ({
+            hiddenAssetPaths: state.hiddenAssetPaths.includes(path)
+              ? state.hiddenAssetPaths
+              : [...state.hiddenAssetPaths, path],
+          }), false, 'settings/hideAsset');
+        },
+
+        unhideAsset: (path) => {
+          set((state) => ({
+            hiddenAssetPaths: state.hiddenAssetPaths.filter(p => p !== path),
+          }), false, 'settings/unhideAsset');
         },
 
         // Actions: Dialogue Box Defaults
@@ -247,6 +371,13 @@ export const useSettingsStore = create<SettingsState>()(
           language: state.language,
           enableStatsHUD: state.enableStatsHUD,
           characterFx: state.characterFx,
+          uiSoundsVolume: state.uiSoundsVolume,
+          uiSoundStyle: state.uiSoundStyle,
+          uiSoundsTickInterval: state.uiSoundsTickInterval,
+          assetCollections: state.assetCollections,
+          tilesetConfigs: state.tilesetConfigs,
+          spriteSheetConfigs: state.spriteSheetConfigs,
+          hiddenAssetPaths: state.hiddenAssetPaths,
         }),
       }
     ),

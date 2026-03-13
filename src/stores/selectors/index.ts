@@ -30,7 +30,6 @@ const EMPTY_DIALOGUES: Dialogue[] = [];
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
-const EMPTY_ELEMENTS = { characters: EMPTY_CHARACTERS, textBoxes: EMPTY_TEXTBOXES, props: EMPTY_PROPS };
 
 // Re-export all selectors from sceneSelectors and characterSelectors
 export * from './sceneSelectors';
@@ -80,10 +79,10 @@ export function useAllScenesWithElements(): Scene[] {
 
   return useMemo(() => scenes.map((scene) => ({
     ...scene,
-    dialogues: dialoguesByScene[scene.id] || [],
-    characters: elementsByScene[scene.id]?.characters || [],
-    textBoxes: elementsByScene[scene.id]?.textBoxes || [],
-    props: elementsByScene[scene.id]?.props || [],
+    dialogues: dialoguesByScene[scene.id] ?? EMPTY_DIALOGUES,
+    characters: elementsByScene[scene.id]?.characters ?? EMPTY_CHARACTERS,
+    textBoxes: elementsByScene[scene.id]?.textBoxes ?? EMPTY_TEXTBOXES,
+    props: elementsByScene[scene.id]?.props ?? EMPTY_PROPS,
   })), [scenes, dialoguesByScene, elementsByScene]);
 }
 
@@ -92,20 +91,6 @@ export function useAllScenesWithElements(): Scene[] {
  */
 export function useSceneDialogues(sceneId: string) {
   return useDialoguesStore((s) => s.dialoguesByScene[sceneId] || EMPTY_DIALOGUES);
-}
-
-/**
- * Récupère les personnages d'une scène (shortcut)
- */
-export function useSceneCharacters(sceneId: string) {
-  return useSceneElementsStore((s) => s.elementsByScene[sceneId]?.characters || EMPTY_CHARACTERS);
-}
-
-/**
- * Récupère les éléments visuels d'une scène (shortcut)
- */
-export function useSceneElements(sceneId: string) {
-  return useSceneElementsStore((s) => s.elementsByScene[sceneId] || EMPTY_ELEMENTS);
 }
 
 // ============================================================================
@@ -193,7 +178,5 @@ export default {
   useSceneWithElements,
   useAllScenesWithElements,
   useSceneDialogues,
-  useSceneCharacters,
-  useSceneElements,
   useSceneActions,
 };

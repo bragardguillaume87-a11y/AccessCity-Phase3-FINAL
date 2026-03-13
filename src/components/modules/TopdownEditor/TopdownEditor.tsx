@@ -29,6 +29,7 @@ import TilePalette from './TilePalette';
 import SpritesPanel from './SpritesPanel';
 import EntityPropertyPanel from './EntityPropertyPanel';
 import TriggerZonePanel from './TriggerZonePanel';
+import SoundPalette from './SoundPalette';
 import type { MapData } from '@/types/map';
 import type { EntityBehavior } from '@/types/sprite';
 
@@ -78,7 +79,7 @@ export default function TopdownEditor() {
   const canRedo = futureStates.length > 0;
 
   // ── Right panel tab (Tuiles | Sprites | Triggers) ────────────────────────
-  const [rightTab, setRightTab] = useState<'tiles' | 'sprites' | 'triggers'>('tiles');
+  const [rightTab, setRightTab] = useState<'tiles' | 'sprites' | 'triggers' | 'sounds'>('tiles');
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   // ── Badge de rechargement sur les onglets ─────────────────────────────────
@@ -699,6 +700,7 @@ export default function TopdownEditor() {
             { id: 'tiles',    label: '🗺 Tuiles' },
             { id: 'sprites',  label: '🧑 Sprites' },
             { id: 'triggers', label: '🚪 Triggers' },
+            { id: 'sounds',   label: '🔊 Sons' },
           ] as const).map(tab => {
             const isActive = rightTab === tab.id;
             const showBadge = assetsReloading && !isActive;
@@ -748,6 +750,8 @@ export default function TopdownEditor() {
               }
               onCancelPlacing={() => setPlacingEntity(null)}
             />
+          ) : rightTab === 'sounds' ? (
+            <SoundPalette />
           ) : (
             editor.selectedMapId ? (
               <TriggerZonePanel

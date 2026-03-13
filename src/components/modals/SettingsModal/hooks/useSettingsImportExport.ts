@@ -6,6 +6,7 @@ import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { useCharactersStore } from '@/stores/charactersStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useMapsStore } from '@/stores/mapsStore';
 
 /**
  * Settings form data structure (affiché dans le formulaire Settings)
@@ -52,6 +53,9 @@ interface ProjectExport {
   characters: unknown[];
   projectData: unknown;
   projectSettings: unknown;
+  /** Cartes topdown — ajouté v2.1 */
+  maps?: unknown[];
+  mapDataById?: Record<string, unknown>;
 }
 
 /**
@@ -87,6 +91,7 @@ export function useSettingsImportExport(
       const elementsState   = useSceneElementsStore.getState();
       const charactersState = useCharactersStore.getState();
       const settingsState   = useSettingsStore.getState();
+      const mapsState       = useMapsStore.getState();
 
       const exportData: ProjectExport = {
         _accesscity_export_version: '2.0',
@@ -98,6 +103,8 @@ export function useSettingsImportExport(
         characters:       charactersState.characters,
         projectData:      settingsState.projectData,
         projectSettings:  settingsState.projectSettings,
+        maps:             mapsState.maps,
+        mapDataById:      mapsState.mapDataById,
       };
 
       const json = JSON.stringify(exportData, null, 2);
@@ -154,6 +161,7 @@ export function useSettingsImportExport(
 
           if (parsed.projectData)     useSettingsStore.getState().updateProjectData(parsed.projectData);
           if (parsed.projectSettings) useSettingsStore.getState().updateProjectSettings(parsed.projectSettings);
+          if (parsed.maps && parsed.mapDataById) useMapsStore.getState().importMaps(parsed.maps, parsed.mapDataById);
 
           // Synchroniser le formulaire Settings
           if (parsed.projectSettings) {

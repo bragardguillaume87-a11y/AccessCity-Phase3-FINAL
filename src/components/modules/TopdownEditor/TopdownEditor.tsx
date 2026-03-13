@@ -14,7 +14,8 @@
  * @module components/modules/TopdownEditor/TopdownEditor
  */
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useLayoutEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useMapsStore, useTemporalMapsStore } from '@/stores/mapsStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { MAP_ZOOM } from '@/config/mapEditorConfig';
@@ -26,6 +27,8 @@ import MapSidebar from './MapSidebar';
 import LayerPanel from './LayerPanel';
 import TilePalette from './TilePalette';
 import SpritesPanel from './SpritesPanel';
+import EntityPropertyPanel from './EntityPropertyPanel';
+import TriggerZonePanel from './TriggerZonePanel';
 import type { MapData } from '@/types/map';
 import type { EntityBehavior } from '@/types/sprite';
 
@@ -60,7 +63,11 @@ function getPaletteConfig(screenWidth: number) {
   return                          { min: 180, max: 380, default: 260 };  // < 720p
 }
 
-const PALETTE_STORAGE_KEY = 'ac_palette_width';
+const PALETTE_STORAGE_KEY  = 'ac_palette_width';
+const SIDEBAR_STORAGE_KEY  = 'ac_sidebar_width';
+const SIDEBAR_MIN          = 150;
+const SIDEBAR_MAX          = 320;
+const SIDEBAR_DEFAULT      = 200;
 
 export default function TopdownEditor() {
   const editor = useMapEditor();
@@ -70,8 +77,9 @@ export default function TopdownEditor() {
   const canUndo = pastStates.length > 0;
   const canRedo = futureStates.length > 0;
 
-  // ── Right panel tab (Tuiles | Sprites) ────────────────────────────────────
-  const [rightTab, setRightTab] = useState<'tiles' | 'sprites'>('tiles');
+  // ── Right panel tab (Tuiles | Sprites | Triggers) ────────────────────────
+  const [rightTab, setRightTab] = useState<'tiles' | 'sprites' | 'triggers'>('tiles');
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   // ── Badge de rechargement sur les onglets ─────────────────────────────────
   // Quand un upload se termine, l'onglet inactif montre un point pulsant
@@ -96,19 +104,64 @@ export default function TopdownEditor() {
     displayName?: string;
   } | null>(null);
 
-  const addEntity = useMapsStore(s => s.addEntity);
-  const removeEntity = useMapsStore(s => s.removeEntity);
+  // ── Entity selection state ────────────────────────────────────────────────
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+
+  const addEntity          = useMapsStore(s => s.addEntity);
+  const removeEntity       = useMapsStore(s => s.removeEntity);
+  const updateMapMetadata  = useMapsStore(s => s.updateMapMetadata);
+  const resizeMap          = useMapsStore(s => s.resizeMap);
+
+  // Player spawn position — read from current map metadata
+  const mapMetadata = useMapsStore(s =>
+    editor.selectedMapId ? s.maps.find(m => m.id === editor.selectedMapId) : undefined
+  );
+  const playerStartCx = mapMetadata?.playerStartCx ?? 2;
+  const playerStartCy = mapMetadata?.playerStartCy ?? 2;
+
+  // ── Resize map via canvas handles ─────────────────────────────────────────
+  const handleResizeMap = useCallback((newW: number, newH: number) => {
+    if (!editor.selectedMapId || !mapMetadata) return;
+    resizeMap(editor.selectedMapId, mapMetadata.name, newW, newH, mapMetadata.tileSize);
+  }, [editor.selectedMapId, mapMetadata, resizeMap]);
+
+  // ── Move spawn via canvas clic (triggered in status bar toggle) ───────────
+  const [isMovingSpawn, setIsMovingSpawn] = useState(false);
 
   // Current map data from store
   const mapData = useMapsStore(s =>
     editor.selectedMapId ? (s.mapDataById[editor.selectedMapId] ?? EMPTY_MAP_DATA) : EMPTY_MAP_DATA
   );
 
+  // ── Export carte courante en JSON ─────────────────────────────────────────
+  const handleExportMap = useCallback(() => {
+    if (!editor.selectedMapId || !mapMetadata) return;
+    const exportData = {
+      _accesscity_map_version: '1.0',
+      exportedAt: new Date().toISOString(),
+      metadata: mapMetadata,
+      data: mapData,
+    };
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${mapMetadata.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ac-map.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Carte exportée !', { description: mapMetadata.name });
+  }, [editor.selectedMapId, mapMetadata, mapData]);
+
   // Preload tile images
   const { assets } = useAssets();
-  const imageAssets = assets.filter(a =>
-    a.category !== 'audio' &&
-    (a.type?.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(a.path))
+  // useMemo : stable reference → useTileset effect ne tourne que si les assets changent vraiment
+  const imageAssets = useMemo(
+    () => assets.filter(a =>
+      a.category !== 'audio' &&
+      (a.type?.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(a.path))
+    ),
+    [assets]
   );
   const imageCache = useTileset(imageAssets);
 
@@ -122,17 +175,16 @@ export default function TopdownEditor() {
     const observer = new ResizeObserver(entries => {
       const entry = entries[0];
       if (entry) {
-        setContainerSize({
-          width: Math.floor(entry.contentRect.width),
-          height: Math.floor(entry.contentRect.height),
-        });
+        const w = Math.floor(entry.contentRect.width);
+        const h = Math.floor(entry.contentRect.height);
+        // Ne pas écraser avec des dimensions nulles (flex CSS non propagé)
+        if (w > 0 && h > 0) setContainerSize({ width: w, height: h });
       }
     });
     observer.observe(container);
-    setContainerSize({
-      width: Math.floor(container.clientWidth),
-      height: Math.floor(container.clientHeight),
-    });
+    const w = Math.floor(container.clientWidth);
+    const h = Math.floor(container.clientHeight);
+    if (w > 0 && h > 0) setContainerSize({ width: w, height: h });
     return () => observer.disconnect();
   }, []);
 
@@ -165,6 +217,72 @@ export default function TopdownEditor() {
     document.addEventListener('mouseup', onUp);
   }, [paletteWidth]);
 
+  // ── Resizable left sidebar ─────────────────────────────────────────────────
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    const parsed = stored ? parseInt(stored, 10) : NaN;
+    return isNaN(parsed) ? SIDEBAR_DEFAULT : Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parsed));
+  });
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  const handleSidebarResizerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      setSidebarWidth(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [sidebarWidth]);
+
+  // ── Auto-fit map in view on selection ─────────────────────────────────────
+  // Fires once per selectedMapId. If containerSize not measured yet (< 100px),
+  // waits for next containerSize update.
+  const autoFittedMapRef = useRef<string | null>(null);
+
+  const fitMapInView = useCallback(() => {
+    const { width: cw, height: ch } = containerSize;
+    const mapW = mapData.pxWid;
+    const mapH = mapData.pxHei;
+    if (mapW > 0 && mapH > 0 && cw > 0 && ch > 0) {
+      const fitZoom = Math.min(
+        MAP_ZOOM.MAX,
+        Math.max(MAP_ZOOM.MIN, Math.min(cw / mapW, ch / mapH) * 0.9)
+      );
+      editor.setZoom(fitZoom);
+      editor.setStagePos({
+        x: (cw - mapW * fitZoom) / 2,
+        y: (ch - mapH * fitZoom) / 2,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerSize, mapData.pxWid, mapData.pxHei]);
+
+  // Reset auto-fit tracking when map changes so next containerSize triggers fit
+  useLayoutEffect(() => {
+    if (editor.selectedMapId !== autoFittedMapRef.current) {
+      autoFittedMapRef.current = null;
+    }
+  }, [editor.selectedMapId]);
+
+  useEffect(() => {
+    if (!editor.selectedMapId) return;
+    if (autoFittedMapRef.current === editor.selectedMapId) return;
+    if (containerSize.width < 100 || containerSize.height < 100) return;
+    autoFittedMapRef.current = editor.selectedMapId;
+    fitMapInView();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor.selectedMapId, containerSize.width, containerSize.height]);
+
   // ── Eyedropper pick — résolution tile → asset ─────────────────────────────
   const handleEyedropperPick = useCallback((cx: number, cy: number) => {
     const tilesLayer = mapData.layerInstances.find(l => l.__type === 'tiles');
@@ -187,15 +305,17 @@ export default function TopdownEditor() {
     }
   }, [mapData, assets, editor]);
 
-  // ── Cancel entity placement on Escape ────────────────────────────────────
+  // ── Cancel entity placement / deselect / cancel spawn move on Escape ────
   useEffect(() => {
-    if (!placingEntity) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPlacingEntity(null);
+      if (e.key !== 'Escape') return;
+      if (isMovingSpawn) { setIsMovingSpawn(false); return; }
+      if (placingEntity) { setPlacingEntity(null); return; }
+      if (selectedEntityId) { setSelectedEntityId(null); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [placingEntity]);
+  }, [isMovingSpawn, placingEntity, selectedEntityId]);
 
   // ── Keyboard shortcuts (B/E/F/I/G/D/X/Y/T + Ctrl+Z/Y + Suppr + Home + Shift+G + Arrow keys)
   useEffect(() => {
@@ -229,19 +349,7 @@ export default function TopdownEditor() {
 
       // ── Shift+G = fit map in view (C3) ────────────────────────────────────
       if ((e.key === 'G' || e.key === 'g') && e.shiftKey) {
-        const { width: cw, height: ch } = canvasContainerRef.current?.getBoundingClientRect() ?? { width: 800, height: 600 };
-        const mapW = mapData.pxWid;
-        const mapH = mapData.pxHei;
-        if (mapW > 0 && mapH > 0) {
-          const fitZoom = Math.min(
-            MAP_ZOOM.MAX,
-            Math.max(MAP_ZOOM.MIN, Math.min(cw / mapW, ch / mapH) * 0.9)
-          );
-          const x = (cw - mapW * fitZoom) / 2;
-          const y = (ch - mapH * fitZoom) / 2;
-          editor.setZoom(fitZoom);
-          editor.setStagePos({ x, y });
-        }
+        fitMapInView();
         return;
       }
 
@@ -286,7 +394,7 @@ export default function TopdownEditor() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editor, imageCache, undo, redo, mapData, removeEntity]);
+  }, [editor, imageCache, undo, redo, mapData, removeEntity, fitMapInView]);
 
   // When tile layer is not active, no tile selected
   const effectiveTile = editor.activeLayer === 'tiles' ? editor.selectedTile : null;
@@ -299,8 +407,8 @@ export default function TopdownEditor() {
     >
       {/* ── Left sidebar ── */}
       <aside
-        className="flex-shrink-0 flex flex-col border-r border-border overflow-hidden"
-        style={{ width: 200, background: 'var(--color-bg-surface)' }}
+        className="flex-shrink-0 flex flex-col overflow-hidden"
+        style={{ width: sidebarWidth, background: 'var(--color-bg-surface)', position: 'relative', borderRight: '1px solid var(--color-border-base)' }}
         aria-label="Cartes et couches"
       >
         {/* Map list (top, flex-1) */}
@@ -326,7 +434,12 @@ export default function TopdownEditor() {
             flipX={editor.flipX}
             flipY={editor.flipY}
             stackMode={editor.stackMode}
-            onLayerChange={editor.setActiveLayer}
+            onLayerChange={(layer) => {
+              editor.setActiveLayer(layer);
+              // Auto-switch palette tab on layer change
+              if (layer === 'triggers') setRightTab('triggers');
+              else if (rightTab === 'triggers') setRightTab('tiles');
+            }}
             onToolChange={editor.setActiveTool}
             onToggleLayerVisibility={editor.toggleLayerVisibility}
             onSetLayerOpacity={editor.setLayerOpacity}
@@ -336,6 +449,20 @@ export default function TopdownEditor() {
           />
         </div>
 
+        {/* Sidebar resize handle (right edge) */}
+        <div
+          onMouseDown={handleSidebarResizerMouseDown}
+          style={{
+            position: 'absolute', top: 0, right: 0, width: 4, bottom: 0,
+            cursor: 'col-resize',
+            background: 'var(--color-border-base)',
+            transition: 'background 0.15s',
+            zIndex: 10,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(139,92,246,0.6)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--color-border-base)'; }}
+          title="Redimensionner la sidebar"
+        />
       </aside>
 
       {/* ── Canvas center ── */}
@@ -386,7 +513,37 @@ export default function TopdownEditor() {
             <span style={{ color: 'rgba(255,90,90,0.8)' }}>🧹 Clic droit aussi</span>
           )}
 
+          {/* Spawn move button */}
+          {editor.selectedMapId && (
+            <button
+              onClick={() => setIsMovingSpawn(v => !v)}
+              title={isMovingSpawn ? 'Cliquez sur la carte pour placer le spawn (Échap pour annuler)' : 'Déplacer la position de départ du joueur'}
+              style={{
+                padding: '1px 6px', fontSize: 10, borderRadius: 3, cursor: 'pointer',
+                border: '1px solid',
+                borderColor: isMovingSpawn ? 'rgba(0,220,120,0.8)' : 'var(--color-border-base)',
+                background: isMovingSpawn ? 'rgba(0,220,120,0.18)' : 'transparent',
+                color: isMovingSpawn ? 'rgba(0,220,120,1)' : 'var(--color-text-muted)',
+                animation: isMovingSpawn ? 'pulse-dot 1s ease-in-out infinite' : 'none',
+              }}
+            >
+              ▶ spawn
+            </button>
+          )}
+
           <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {/* Fit in view (Shift+G) */}
+            <button
+              onClick={fitMapInView}
+              title="Centrer la carte dans la vue (Shift+G)"
+              style={{
+                padding: '1px 6px', fontSize: 10, borderRadius: 3, cursor: 'pointer',
+                border: '1px solid var(--color-border-base)',
+                background: 'transparent', color: 'var(--color-text-muted)',
+              }}
+            >
+              ⊞ centrer
+            </button>
             {/* Grid toggle (G) */}
             <button
               onClick={editor.toggleGrid}
@@ -413,6 +570,21 @@ export default function TopdownEditor() {
             >
               ◑ dim
             </button>
+            {/* Export carte */}
+            {editor.selectedMapId && (
+              <button
+                onClick={handleExportMap}
+                title="Exporter la carte en JSON (.ac-map.json)"
+                style={{
+                  padding: '1px 6px', fontSize: 10, borderRadius: 3, cursor: 'pointer',
+                  border: '1px solid var(--color-border-base)',
+                  background: 'transparent',
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                ↓ export
+              </button>
+            )}
           </span>
           {editor.selectedMapId && (
             <span>
@@ -435,7 +607,13 @@ export default function TopdownEditor() {
           onStagePosChange={editor.setStagePos}
           onCellHover={editor.setHoveredCell}
           onCellPaint={(cx, cy) => {
-            // Entity placement mode takes priority
+            // Spawn move mode takes priority
+            if (isMovingSpawn && editor.selectedMapId) {
+              updateMapMetadata(editor.selectedMapId, { playerStartCx: cx, playerStartCy: cy });
+              setIsMovingSpawn(false);
+              return;
+            }
+            // Entity placement mode
             if (placingEntity && editor.selectedMapId) {
               addEntity(editor.selectedMapId, {
                 id: `entity-${Date.now()}`,
@@ -461,12 +639,34 @@ export default function TopdownEditor() {
             editor.fillCell(cx, cy);
           }}
           onEyedropperPick={handleEyedropperPick}
+          playerStartCx={playerStartCx}
+          playerStartCy={playerStartCy}
           entities={mapData._ac_entities}
+          selectedEntityId={selectedEntityId}
+          onEntityClick={setSelectedEntityId}
           onEntityDelete={editor.selectedMapId
-            ? (entityId) => removeEntity(editor.selectedMapId!, entityId)
+            ? (entityId) => {
+                removeEntity(editor.selectedMapId!, entityId);
+                if (selectedEntityId === entityId) setSelectedEntityId(null);
+              }
             : undefined
           }
+          onResizeMap={editor.selectedMapId ? handleResizeMap : undefined}
         />
+        {/* ── Entity property panel ── */}
+        {selectedEntityId && editor.selectedMapId && (() => {
+          const entity = mapData._ac_entities.find(e => e.id === selectedEntityId);
+          if (!entity) return null;
+          return (
+            <div className="absolute bottom-0 left-0 right-0 z-20">
+              <EntityPropertyPanel
+                mapId={editor.selectedMapId}
+                entity={entity}
+                onClose={() => setSelectedEntityId(null)}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Resizer ── */}
@@ -496,8 +696,9 @@ export default function TopdownEditor() {
           background: 'rgba(0,0,0,0.2)', flexShrink: 0,
         }}>
           {([
-            { id: 'tiles',   label: '🗺 Tuiles' },
-            { id: 'sprites', label: '🧑 Sprites' },
+            { id: 'tiles',    label: '🗺 Tuiles' },
+            { id: 'sprites',  label: '🧑 Sprites' },
+            { id: 'triggers', label: '🚪 Triggers' },
           ] as const).map(tab => {
             const isActive = rightTab === tab.id;
             const showBadge = assetsReloading && !isActive;
@@ -538,7 +739,7 @@ export default function TopdownEditor() {
               onSelectTile={editor.setSelectedTile}
               mapGridSize={mapData.__gridSize}
             />
-          ) : (
+          ) : rightTab === 'sprites' ? (
             <SpritesPanel
               mapId={editor.selectedMapId}
               isPlacingEntity={placingEntity !== null}
@@ -547,6 +748,19 @@ export default function TopdownEditor() {
               }
               onCancelPlacing={() => setPlacingEntity(null)}
             />
+          ) : (
+            editor.selectedMapId ? (
+              <TriggerZonePanel
+                mapId={editor.selectedMapId}
+                tileSize={mapData.__gridSize}
+                selectedZoneId={selectedZoneId}
+                onSelectZone={setSelectedZoneId}
+              />
+            ) : (
+              <p style={{ fontSize: 11, color: 'var(--color-text-muted)', padding: 16 }}>
+                Sélectionnez une carte d'abord.
+              </p>
+            )
           )}
         </div>
       </aside>

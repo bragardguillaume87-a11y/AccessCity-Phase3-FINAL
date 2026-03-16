@@ -451,15 +451,18 @@ export const useSettingsStore = create<SettingsState>()(
         version: 1,
         migrate: (persisted: Record<string, unknown>) => {
           // v1 — AnimationRange: {startFrame, endFrame} → {frames: number[]}
-          const configs = (persisted?.spriteSheetConfigs as Record<string, unknown>) ?? {};
+          const configs =
+            (persisted?.spriteSheetConfigs as Record<string, Record<string, unknown>>) ?? {};
           for (const key of Object.keys(configs)) {
-            const cfg = configs[key];
+            const cfg = configs[key] as Record<string, Record<string, unknown>> | undefined;
             if (!cfg?.animations) continue;
             for (const tag of Object.keys(cfg.animations)) {
-              const anim = cfg.animations[tag];
+              const anim = cfg.animations[tag] as Record<string, unknown> | undefined;
               if (anim && !Array.isArray(anim.frames) && anim.startFrame !== undefined) {
-                const lo = Math.min(anim.startFrame, anim.endFrame ?? anim.startFrame);
-                const hi = Math.max(anim.startFrame, anim.endFrame ?? anim.startFrame);
+                const sf = anim.startFrame as number;
+                const ef = (anim.endFrame as number | undefined) ?? sf;
+                const lo = Math.min(sf, ef);
+                const hi = Math.max(sf, ef);
                 anim.frames = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
                 delete anim.startFrame;
                 delete anim.endFrame;

@@ -62,6 +62,5 @@ export function usePortableAutoload(): void {
         localStorage.setItem(AUTOLOAD_KEY, '1');
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 }

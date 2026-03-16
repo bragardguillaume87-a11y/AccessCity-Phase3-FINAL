@@ -45,7 +45,7 @@ describe('MapsStore', () => {
         tileSize: 32,
       });
       expect(mapDataById[id]).toBeDefined();
-      expect(mapDataById[id].layerInstances).toHaveLength(3);
+      expect(mapDataById[id].layerInstances).toHaveLength(4);
     });
 
     it('crée une carte avec un nom personnalisé', () => {
@@ -66,11 +66,12 @@ describe('MapsStore', () => {
       expect(id).toMatch(/^map-\d+$/);
     });
 
-    it('initialise les couches Décor, Collision, Triggers', () => {
+    it('initialise les couches Sol, Objets, Collision, Triggers', () => {
       const id = addTestMap();
       const data = useMapsStore.getState().mapDataById[id];
       const identifiers = data.layerInstances.map((l) => l.__identifier);
-      expect(identifiers).toContain('Décor');
+      expect(identifiers).toContain('Sol');
+      expect(identifiers).toContain('Objets');
       expect(identifiers).toContain('Collision');
       expect(identifiers).toContain('Triggers');
     });
@@ -199,14 +200,14 @@ describe('MapsStore', () => {
       const withTile = {
         ...original,
         layerInstances: original.layerInstances.map((l) =>
-          l.__identifier === 'Décor' ? { ...l, gridTiles: [{ cx: 9, cy: 7, src: '/tile.png' }] } : l
+          l.__identifier === 'Sol' ? { ...l, gridTiles: [{ cx: 9, cy: 7, src: '/tile.png' }] } : l
         ),
       };
       useMapsStore.getState().updateMapData(id, withTile);
       useMapsStore.getState().resizeMap(id, 'Resized', 5, 5, 32);
 
       const data = useMapsStore.getState().mapDataById[id];
-      const decor = data.layerInstances.find((l) => l.__identifier === 'Décor');
+      const decor = data.layerInstances.find((l) => l.__identifier === 'Sol');
       expect(decor.gridTiles).toHaveLength(0); // tile (9,7) trimmed
       expect(data.pxWid).toBe(5 * 32);
       expect(data.pxHei).toBe(5 * 32);
@@ -218,14 +219,14 @@ describe('MapsStore', () => {
       const withTile = {
         ...original,
         layerInstances: original.layerInstances.map((l) =>
-          l.__identifier === 'Décor' ? { ...l, gridTiles: [{ cx: 2, cy: 2, src: '/tile.png' }] } : l
+          l.__identifier === 'Sol' ? { ...l, gridTiles: [{ cx: 2, cy: 2, src: '/tile.png' }] } : l
         ),
       };
       useMapsStore.getState().updateMapData(id, withTile);
       useMapsStore.getState().resizeMap(id, 'Resized', 5, 5, 32);
 
       const data = useMapsStore.getState().mapDataById[id];
-      const decor = data.layerInstances.find((l) => l.__identifier === 'Décor');
+      const decor = data.layerInstances.find((l) => l.__identifier === 'Sol');
       expect(decor.gridTiles).toHaveLength(1);
     });
 

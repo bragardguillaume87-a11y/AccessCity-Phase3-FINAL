@@ -362,8 +362,8 @@ export default function MainCanvas({
       }
       // Fallback : dialogue suivant (pas de nextDialogueId ou ID introuvable)
       selection.handleDialogueNavigate('next');
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- selection.X est une méthode stable du store Zustand
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selection est un objet Zustand stable; selection.handleDialogueNavigate suffit
     [selectedScene?.id, sceneDialogues, onSelectDialogue, selection.handleDialogueNavigate]
   );
 

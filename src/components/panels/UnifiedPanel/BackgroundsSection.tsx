@@ -23,7 +23,15 @@ const EMPTY_FILTER: BackgroundFilter = {};
 // IOS TOGGLE (inline)
 // ============================================================================
 
-function IosToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
+function IosToggle({
+  enabled,
+  onToggle,
+  label,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
   return (
     <button
       onClick={onToggle}
@@ -35,10 +43,12 @@ function IosToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: (
       aria-checked={enabled}
       aria-label={`${enabled ? 'Désactiver' : 'Activer'} ${label}`}
     >
-      <span className={[
-        'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-        enabled ? 'translate-x-4' : 'translate-x-0.5',
-      ].join(' ')} />
+      <span
+        className={[
+          'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
+          enabled ? 'translate-x-4' : 'translate-x-0.5',
+        ].join(' ')}
+      />
     </button>
   );
 }
@@ -55,27 +65,28 @@ function IosToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: (
  * - Filtres visuels : Activer + Luminosité, Contraste, Saturation, Flou
  */
 export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
-  const sceneId = useUIStore(s => s.selectedSceneForEdit);
-  const scene   = useSceneById(sceneId);
+  const sceneId = useUIStore((s) => s.selectedSceneForEdit);
+  const scene = useSceneById(sceneId);
   const { updateScene } = useSceneActions();
   const { assets: backgrounds } = useAssets({ category: 'backgrounds' });
 
-  const filter = useMemo(
-    () => scene?.backgroundFilter ?? EMPTY_FILTER,
-    [scene?.backgroundFilter]
-  );
+  const filter = useMemo(() => scene?.backgroundFilter ?? EMPTY_FILTER, [scene?.backgroundFilter]);
 
   const handleDragStart = (e: DragEvent, backgroundUrl: string) => {
     const dragData = { type: 'background', url: backgroundUrl };
     e.dataTransfer.setData('text/x-drag-type', 'background');
+    e.dataTransfer.setData('text/x-drag-type-background', '');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  const handleFilterChange = useCallback((key: keyof BackgroundFilter, value: number) => {
-    if (!sceneId) return;
-    updateScene(sceneId, { backgroundFilter: { ...filter, [key]: value } });
-  }, [sceneId, filter, updateScene]);
+  const handleFilterChange = useCallback(
+    (key: keyof BackgroundFilter, value: number) => {
+      if (!sceneId) return;
+      updateScene(sceneId, { backgroundFilter: { ...filter, [key]: value } });
+    },
+    [sceneId, filter, updateScene]
+  );
 
   const handleResetFilters = useCallback(() => {
     if (!sceneId) return;
@@ -83,12 +94,12 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
   }, [sceneId, updateScene]);
 
   const hasActiveFilter = buildFilterCSS(filter) !== 'none';
-  const filtersEnabled = hasActiveFilter || (
+  const filtersEnabled =
+    hasActiveFilter ||
     filter.brightness !== undefined ||
-    filter.contrast   !== undefined ||
+    filter.contrast !== undefined ||
     filter.saturation !== undefined ||
-    filter.blur       !== undefined
-  );
+    filter.blur !== undefined;
 
   // "Activer les filtres" toggle : quand activé, applique des valeurs par défaut ;
   // quand désactivé, remet tout à undefined.
@@ -98,26 +109,29 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
       updateScene(sceneId, { backgroundFilter: undefined });
     } else {
       // Active avec valeurs neutres (aucun effet visible mais "activé")
-      updateScene(sceneId, { backgroundFilter: {
-        brightness: BACKGROUND_FILTER_DEFAULTS.brightness,
-        contrast:   BACKGROUND_FILTER_DEFAULTS.contrast,
-        saturation: BACKGROUND_FILTER_DEFAULTS.saturation,
-        blur:       BACKGROUND_FILTER_DEFAULTS.blur,
-      }});
+      updateScene(sceneId, {
+        backgroundFilter: {
+          brightness: BACKGROUND_FILTER_DEFAULTS.brightness,
+          contrast: BACKGROUND_FILTER_DEFAULTS.contrast,
+          saturation: BACKGROUND_FILTER_DEFAULTS.saturation,
+          blur: BACKGROUND_FILTER_DEFAULTS.blur,
+        },
+      });
     }
   }, [sceneId, filtersEnabled, updateScene]);
 
   const brightnessValue = filter.brightness ?? BACKGROUND_FILTER_DEFAULTS.brightness;
   const saturationValue = filter.saturation ?? BACKGROUND_FILTER_DEFAULTS.saturation;
-  const contrastValue   = filter.contrast   ?? BACKGROUND_FILTER_DEFAULTS.contrast;
-  const blurValue       = filter.blur       ?? BACKGROUND_FILTER_DEFAULTS.blur;
+  const contrastValue = filter.contrast ?? BACKGROUND_FILTER_DEFAULTS.contrast;
+  const blurValue = filter.blur ?? BACKGROUND_FILTER_DEFAULTS.blur;
 
   return (
     <div>
-
       {/* === Fonds récents === */}
       <section className="sp-sec" aria-labelledby="bg-recent-heading">
-        <h3 id="bg-recent-heading" className="sp-lbl">FONDS RÉCENTS</h3>
+        <h3 id="bg-recent-heading" className="sp-lbl">
+          FONDS RÉCENTS
+        </h3>
 
         {backgrounds && backgrounds.length > 0 ? (
           <div className="sp-thumb-grid mb-3">
@@ -130,9 +144,16 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
                 tabIndex={0}
                 role="button"
                 aria-label={`Faire glisser le fond ${bg.name} sur le canvas`}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                }}
               >
-                <img src={bg.url} alt={bg.name} className="w-full h-full object-cover" draggable="false" />
+                <img
+                  src={bg.url}
+                  alt={bg.name}
+                  className="w-full h-full object-cover"
+                  draggable="false"
+                />
               </div>
             ))}
           </div>
@@ -156,7 +177,6 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
 
       {/* === Filtres visuels === */}
       <PanelSection title="FILTRES VISUELS" id="bg-filters" defaultOpen={false}>
-
         {/* Toggle Activer */}
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs text-[var(--color-text-secondary)]">Activer les filtres</span>
@@ -175,8 +195,12 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
             <span>{brightnessValue}%</span>
           </div>
           <input
-            type="range" min={50} max={150} step={5} value={brightnessValue}
-            onChange={e => handleFilterChange('brightness', parseFloat(e.target.value))}
+            type="range"
+            min={50}
+            max={150}
+            step={5}
+            value={brightnessValue}
+            onChange={(e) => handleFilterChange('brightness', parseFloat(e.target.value))}
             className="sp-slider mb-2"
             aria-label={`Luminosité : ${brightnessValue} %`}
           />
@@ -187,8 +211,12 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
             <span>{contrastValue}%</span>
           </div>
           <input
-            type="range" min={50} max={150} step={5} value={contrastValue}
-            onChange={e => handleFilterChange('contrast', parseFloat(e.target.value))}
+            type="range"
+            min={50}
+            max={150}
+            step={5}
+            value={contrastValue}
+            onChange={(e) => handleFilterChange('contrast', parseFloat(e.target.value))}
             className="sp-slider mb-2"
             aria-label={`Contraste : ${contrastValue} %`}
           />
@@ -199,8 +227,12 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
             <span>{saturationValue}%</span>
           </div>
           <input
-            type="range" min={0} max={200} step={5} value={saturationValue}
-            onChange={e => handleFilterChange('saturation', parseFloat(e.target.value))}
+            type="range"
+            min={0}
+            max={200}
+            step={5}
+            value={saturationValue}
+            onChange={(e) => handleFilterChange('saturation', parseFloat(e.target.value))}
             className="sp-slider mb-2"
             aria-label={`Saturation : ${saturationValue} %`}
           />
@@ -211,8 +243,12 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
             <span>{blurValue}px</span>
           </div>
           <input
-            type="range" min={0} max={20} step={1} value={blurValue}
-            onChange={e => handleFilterChange('blur', parseFloat(e.target.value))}
+            type="range"
+            min={0}
+            max={20}
+            step={1}
+            value={blurValue}
+            onChange={(e) => handleFilterChange('blur', parseFloat(e.target.value))}
             className="sp-slider"
             aria-label={`Flou : ${blurValue} px`}
           />
@@ -227,7 +263,6 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
           </button>
         )}
       </PanelSection>
-
     </div>
   );
 }

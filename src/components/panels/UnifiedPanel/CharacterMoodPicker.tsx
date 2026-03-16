@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Users } from 'lucide-react';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
@@ -116,6 +116,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
     (e: React.DragEvent<HTMLDivElement>, characterId: string, mood: string) => {
       const dragData = { type: 'character', characterId, mood };
       e.dataTransfer.setData('text/x-drag-type', 'character');
+      e.dataTransfer.setData('text/x-drag-type-character', '');
       e.dataTransfer.setData('application/json', JSON.stringify(dragData));
       e.dataTransfer.effectAllowed = 'copy';
       onDragStart?.(characterId, mood);
@@ -138,11 +139,16 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
     return (
       <section className="sp-sec">
         <h3 className="sp-lbl">SUR SCÈNE</h3>
-        <p className="text-xs text-[var(--color-text-muted)] text-center py-4">
+        <p className="text-xs text-[var(--color-text-muted)] text-center py-3">
           Aucun personnage sur cette scène.
-          <br />
-          Fais glisser un personnage depuis la bibliothèque.
         </p>
+        <button
+          onClick={() => useUIStore.getState().setActiveModal('characters')}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-dashed border-[var(--color-border-base)] text-xs text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+        >
+          <Users size={13} aria-hidden="true" />
+          Parcourir les personnages
+        </button>
       </section>
     );
   }

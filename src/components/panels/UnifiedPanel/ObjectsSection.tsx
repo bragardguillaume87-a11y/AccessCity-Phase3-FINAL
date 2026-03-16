@@ -6,13 +6,16 @@ export function ObjectsSection() {
   const handleDragStart = (e: React.DragEvent, emoji: string) => {
     const dragData = { type: 'prop', emoji };
     e.dataTransfer.setData('text/x-drag-type', 'prop');
+    e.dataTransfer.setData('text/x-drag-type-prop', '');
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   return (
     <section className="sp-sec" aria-labelledby="objects-section-heading">
-      <h3 id="objects-section-heading" className="sp-lbl">OBJETS</h3>
+      <h3 id="objects-section-heading" className="sp-lbl">
+        OBJETS
+      </h3>
       <div className="grid grid-cols-3 gap-2 mb-3">
         {PROP_EMOJIS.map((emoji, idx) => (
           <button

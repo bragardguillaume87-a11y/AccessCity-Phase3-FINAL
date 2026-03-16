@@ -379,7 +379,6 @@ export default function MapCanvas({
     return () => {
       anim.stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggersLayer?._ac_visible]);
 
   // Decode collision intGrid → array de {cx, cy}

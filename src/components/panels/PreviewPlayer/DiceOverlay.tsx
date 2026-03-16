@@ -25,27 +25,32 @@ export interface DiceOverlayProps {
 
 // ── Timings ───────────────────────────────────────────────────────────────────
 
-const PHASE_ENTRY_MS  = 350;
+const PHASE_ENTRY_MS = 350;
 const PHASE_IMPACT_MS = 280;
 const PHASE_REVEAL_MS = 420;
 const PHASE_RESULT_MS = 400;
 
-const FLASH_STEPS    = 12;
+const FLASH_STEPS = 12;
 const FLASH_START_MS = 55;
 const FLASH_STEP_INC = 12;
 
 // ── DiceOverlay ───────────────────────────────────────────────────────────────
 
 export function DiceOverlay({
-  isOpen, roll, difficulty, success, criticalThreshold = 19, onClose,
+  isOpen,
+  roll,
+  difficulty,
+  success,
+  criticalThreshold = 19,
+  onClose,
 }: DiceOverlayProps) {
-  const [phase, setPhase]                 = useState<Phase>('hidden');
+  const [phase, setPhase] = useState<Phase>('hidden');
   const [displayNumber, setDisplayNumber] = useState(1);
-  const [flashId, setFlashId]             = useState(0);
-  const [showConfetti, setShowConfetti]   = useState(false);
+  const [flashId, setFlashId] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const isCritical = success && roll >= criticalThreshold;
-  const advanceTo  = useCallback((p: Phase) => setPhase(p), []);
+  const advanceTo = useCallback((p: Phase) => setPhase(p), []);
 
   // ── Phase machine ──────────────────────────────────────────────────────────
 
@@ -60,7 +65,7 @@ export function DiceOverlay({
     advanceTo('entry');
     const t = setTimeout(() => advanceTo('rolling'), PHASE_ENTRY_MS);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- advanceTo est stable (useCallback) ; omis intentionnellement pour éviter la re-exécution sur chaque render
   }, [isOpen]);
 
   useEffect(() => {
@@ -68,7 +73,7 @@ export function DiceOverlay({
     uiSounds.diceRollStart();
 
     let step = 0;
-    let id   = flashId;
+    let id = flashId;
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     function scheduleNext() {
@@ -90,7 +95,7 @@ export function DiceOverlay({
 
     scheduleNext();
     return () => timers.forEach(clearTimeout);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- uiSounds est un import module-level stable ; advanceTo/roll/setDisplayNumber/setFlashId sont stables
   }, [phase]);
 
   useEffect(() => {
@@ -102,10 +107,11 @@ export function DiceOverlay({
 
   useEffect(() => {
     if (phase !== 'reveal') return;
-    if (success) uiSounds.diceSuccess(); else uiSounds.diceFailure();
+    if (success) uiSounds.diceSuccess();
+    else uiSounds.diceFailure();
     const t = setTimeout(() => advanceTo('result'), PHASE_REVEAL_MS);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- uiSounds est un import module-level stable ; advanceTo est stable (useCallback) ; success n'est pas un trigger
   }, [phase]);
 
   useEffect(() => {
@@ -120,7 +126,10 @@ export function DiceOverlay({
   useEffect(() => {
     if (phase !== 'ready') return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClose();
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -131,10 +140,10 @@ export function DiceOverlay({
   if (!isOpen && phase === 'hidden') return null;
 
   const isPostImpact = phase === 'reveal' || phase === 'result' || phase === 'ready';
-  const showResult   = phase === 'result' || phase === 'ready';
-  const showButton   = phase === 'ready';
-  const resultLabel  = isCritical ? '✨ Succès Critique !' : success ? '✓ Succès' : '✗ Échec';
-  const resultColor  = success ? '#4ade80' : '#f87171';
+  const showResult = phase === 'result' || phase === 'ready';
+  const showButton = phase === 'ready';
+  const resultLabel = isCritical ? '✨ Succès Critique !' : success ? '✓ Succès' : '✗ Échec';
+  const resultColor = success ? '#4ade80' : '#f87171';
 
   return (
     <motion.div
@@ -142,13 +151,18 @@ export function DiceOverlay({
       animate={{ backgroundColor: isOpen ? 'rgba(0,0,0,0.82)' : 'rgba(0,0,0,0)' }}
       transition={{ duration: 0.28 }}
       style={{
-        position: 'absolute', inset: 0, zIndex: 50,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 18, paddingBottom: '14vh',
+        position: 'absolute',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 18,
+        paddingBottom: '14vh',
       }}
       onClick={showButton ? onClose : undefined}
     >
-
       {/* ── Cube (CSS ou R3F selon WebGL) ── */}
       <DiceCubeWrapper
         phase={phase}
@@ -167,13 +181,17 @@ export function DiceOverlay({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
             style={{
-              textAlign: 'center', color: 'rgba(255,255,255,0.72)', fontSize: 14,
+              textAlign: 'center',
+              color: 'rgba(255,255,255,0.72)',
+              fontSize: 14,
               textShadow: '0 1px 6px rgba(0,0,0,0.9)',
-              background: 'rgba(0,0,0,0.48)', borderRadius: 8, padding: '6px 18px',
+              background: 'rgba(0,0,0,0.48)',
+              borderRadius: 8,
+              padding: '6px 18px',
             }}
           >
-            Résultat : <strong style={{ color: 'white' }}>{roll}</strong>
-            {' '}/ Difficulté : <strong style={{ color: 'white' }}>{difficulty}</strong>
+            Résultat : <strong style={{ color: 'white' }}>{roll}</strong> / Difficulté :{' '}
+            <strong style={{ color: 'white' }}>{difficulty}</strong>
           </motion.div>
         )}
       </AnimatePresence>
@@ -183,13 +201,15 @@ export function DiceOverlay({
         {showResult && (
           <motion.div
             key="result"
-            initial={{ y: 30, opacity: 0, scale: 0.80 }}
+            initial={{ y: 30, opacity: 0, scale: 0.8 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.88 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             aria-live="assertive"
             style={{
-              fontSize: 30, fontWeight: 900, color: resultColor,
+              fontSize: 30,
+              fontWeight: 900,
+              color: resultColor,
               textShadow: `0 0 28px ${resultColor}95, 0 2px 12px rgba(0,0,0,0.95)`,
               letterSpacing: '0.03em',
             }}
@@ -209,13 +229,22 @@ export function DiceOverlay({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
             autoFocus
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             style={{
-              marginTop: 6, padding: '10px 30px', borderRadius: 10, border: 'none',
+              marginTop: 6,
+              padding: '10px 30px',
+              borderRadius: 10,
+              border: 'none',
               background: success
                 ? 'linear-gradient(135deg, #16a34a, #15803d)'
                 : 'linear-gradient(135deg, #dc2626, #991b1b)',
-              color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
               boxShadow: `0 4px 20px ${success ? 'rgba(22,163,74,0.60)' : 'rgba(220,38,38,0.60)'}`,
               letterSpacing: '0.02em',
             }}

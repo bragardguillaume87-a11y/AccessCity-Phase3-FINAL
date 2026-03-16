@@ -7,7 +7,7 @@
  */
 declare module 'jsfxr' {
   /** Raw synthesis parameters. Most values are 0.0–1.0 unless noted. */
-  export class Params {
+  class Params {
     /** Waveform: 0=SQUARE, 1=SAWTOOTH, 2=SINE, 3=NOISE */
     wave_type: 0 | 1 | 2 | 3;
     /** Base pitch (0.1 = très grave, 0.9 = très aigu) */
@@ -61,9 +61,18 @@ declare module 'jsfxr' {
     toWebAudio(sound: unknown, ctx?: AudioContext): AudioBufferSourceNode;
     /** Génère un son à partir du nom d'un algorithme, retourne un objet Params */
     generate(
-      algorithm: 'pickupCoin' | 'laserShoot' | 'explosion' | 'powerUp' |
-                 'hitHurt' | 'jump' | 'blipSelect' | 'synth' | 'tone' |
-                 'click' | 'random',
+      algorithm:
+        | 'pickupCoin'
+        | 'laserShoot'
+        | 'explosion'
+        | 'powerUp'
+        | 'hitHurt'
+        | 'jump'
+        | 'blipSelect'
+        | 'synth'
+        | 'tone'
+        | 'click'
+        | 'random',
       options?: Record<string, number>
     ): Params;
     toWave(sound: unknown): { dataURI: string };

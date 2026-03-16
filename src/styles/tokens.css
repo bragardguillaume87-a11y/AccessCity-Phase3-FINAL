@@ -10,65 +10,94 @@
   /* ========== MIDNIGHT BLOOM THEME - WCAG AA Compliant ========== */
   /* Theme source: tweakcn.com - Midnight Bloom */
 
-  --color-primary: #8b5cf6;           /* Violet-500 — couleur de marque (nintendo-ux.md) */
-  --color-primary-hover: #7c3aed;     /* Violet-600 — hover */
-  --color-primary-glow: rgba(139,92,246,0.5);
-  --color-primary-subtle: rgba(139,92,246,0.12);  /* Fond actif léger */
-  --color-primary-muted: rgba(139,92,246,0.18);   /* Fond actif standard */
+  --color-primary: #8b5cf6; /* Violet-500 — couleur de marque (nintendo-ux.md) */
+  --color-primary-hover: #7c3aed; /* Violet-600 — hover */
 
-  --color-accent: #6495ed;            /* Cornflower blue */
-  --color-accent-hover: #5284dc;      /* Darker accent */
+  /* ── Échelle d'opacité primary (utilisée dans les 6 fichiers TopdownEditor) ── */
+  --color-primary-04: rgba(139, 92, 246, 0.04); /* Très subtil — survol doux */
+  --color-primary-05: rgba(139, 92, 246, 0.05); /* Très subtil — gradient terminus */
+  --color-primary-06: rgba(139, 92, 246, 0.06); /* Très subtil — fond inactif */
+  --color-primary-07: rgba(139, 92, 246, 0.07);
+  --color-primary-08: rgba(139, 92, 246, 0.08);
+  --color-primary-10: rgba(139, 92, 246, 0.1); /* Fond léger */
+  --color-primary-subtle: rgba(139, 92, 246, 0.12); /* Fond actif léger */
+  --color-primary-15: rgba(139, 92, 246, 0.15); /* Fond hover léger */
+  --color-primary-muted: rgba(139, 92, 246, 0.18); /* Fond actif standard */
+  --color-primary-20: rgba(139, 92, 246, 0.2);
+  --color-primary-22: rgba(139, 92, 246, 0.22);
+  --color-primary-25: rgba(139, 92, 246, 0.25); /* Badge bg */
+  --color-primary-28: rgba(139, 92, 246, 0.28);
+  --color-primary-30: rgba(139, 92, 246, 0.3); /* Bordure dashed */
+  --color-primary-35: rgba(139, 92, 246, 0.35);
+  --color-primary-40: rgba(139, 92, 246, 0.4); /* Bordure bouton */
+  --color-primary-45: rgba(139, 92, 246, 0.45); /* Bordure sélection sprite */
+  --color-primary-glow: rgba(139, 92, 246, 0.5); /* Glow standard */
+  --color-primary-55: rgba(139, 92, 246, 0.55); /* Bordure forte */
+  --color-primary-60: rgba(139, 92, 246, 0.6);
+  --color-primary-70: rgba(139, 92, 246, 0.7);
+  --color-primary-80: rgba(139, 92, 246, 0.8);
+  --color-primary-90: rgba(139, 92, 246, 0.9);
+
+  --color-accent: #6495ed; /* Cornflower blue */
+  --color-accent-hover: #5284dc; /* Darker accent */
   --color-accent-glow: rgba(100, 149, 237, 0.5);
 
-  --color-secondary: #4b0082;         /* Indigo */
-  --color-secondary-hover: #3d006b;   /* Darker indigo */
+  --color-secondary: #4b0082; /* Indigo */
+  --color-secondary-hover: #3d006b; /* Darker indigo */
 
-  --color-pink: #EC4899;              /* game-pink (conservé) */
-  --color-pink-hover: #DB2777;
+  --color-pink: #ec4899; /* game-pink (conservé) */
+  --color-pink-hover: #db2777;
 
   /* Semantic colors - WCAG AA compliant */
-  --color-success: #10B981;           /* Green */
+  --color-success: #10b981; /* Green */
   --color-success-hover: #059669;
-  --color-warning: #F59E0B;           /* Amber */
-  --color-warning-hover: #D97706;
-  --color-danger: #ef4444;            /* Red */
-  --color-danger-hover: #DC2626;
+  --color-warning: #f59e0b; /* Amber */
+  --color-warning-hover: #d97706;
+  --color-danger: #ef4444; /* Red */
+  --color-danger-hover: #dc2626;
 
   /* ========== BACKGROUNDS - PREMIUM DARK (design v4) ========== */
 
-  --color-bg-base: #08090f;                      /* Noir profond — canvas principal */
-  --color-bg-elevated: #10131e;                  /* Panneaux, cartes, modales */
-  --color-bg-hover: #1e2438;                     /* Hover states */
-  --color-bg-active: #252d45;                    /* Active/selected */
+  --color-bg-base: #111318; /* Noir doux — évite l'halation WCAG (enfants) */
+  --color-bg-elevated: #10131e; /* Panneaux, cartes, modales */
+  --color-bg-hover: #1e2438; /* Hover states */
+  --color-bg-active: #252d45; /* Active/selected */
   --color-bg-overlay: rgba(8, 9, 15, 0.95);
 
   /* ========== TEXT - WCAG AA CONTRAST RATIOS ========== */
 
-  --color-text-primary: #eef0f8;                   /* Blanc chaud — texte principal */
-  --color-text-secondary: rgba(238,240,248,0.85);  /* 85% — section headers */
-  --color-text-muted: rgba(238,240,248,0.45);      /* 45% — icônes inactives, labels */
-  --color-text-disabled: #4e566e;                  /* Disabled text */
+  --color-text-primary: #eef0f8; /* Blanc chaud — texte principal */
+  --color-text-secondary: rgba(238, 240, 248, 0.85); /* 85% — section headers */
+  --color-text-muted: rgba(
+    238,
+    240,
+    248,
+    0.62
+  ); /* 62% — icônes inactives, labels (WCAG AA ~4.8:1) */
+  --color-text-disabled: #4e566e; /* Disabled text */
 
   /* ========== BORDERS ========== */
 
-  --color-border-base: rgba(255,255,255,0.08);   /* Bordure subtile */
-  --color-border-hover: rgba(255,255,255,0.14);  /* Hover border */
-  --color-border-focus: var(--color-primary);    /* Focus - matches primary */
+  --color-border-base: rgba(255, 255, 255, 0.08); /* Bordure subtile */
+  --color-border-hover: rgba(255, 255, 255, 0.14); /* Hover border */
+  --color-border-focus: var(--color-primary); /* Focus - matches primary */
   --color-border-error: #ef4444;
 
   /* ========== TYPOGRAPHY ========== */
 
-  --font-family-base: 'DM Sans', 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-base:
+    'DM Sans', 'Poppins', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
   --font-family-display: 'Syne', 'Audiowide', system-ui, sans-serif; /* Titres / brand */
   --font-family-mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
-  --font-size-xs: 0.75rem;      /* 12px */
-  --font-size-sm: 0.875rem;     /* 14px */
-  --font-size-base: 1rem;       /* 16px */
-  --font-size-lg: 1.125rem;     /* 18px */
-  --font-size-xl: 1.25rem;      /* 20px */
-  --font-size-2xl: 1.5rem;      /* 24px */
-  --font-size-3xl: 2rem;        /* 32px */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 2rem; /* 32px */
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -82,28 +111,28 @@
   /* ========== SPACING (base 4px) ========== */
 
   --space-0: 0;
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
 
   /* ========== BORDERS & RADIUS ========== */
 
   --border-width-thin: 1px;
   --border-width-base: 2px;
-  --border-width-thick: 4px;      /* WCAG 2.2 focus ring minimum */
+  --border-width-thick: 4px; /* WCAG 2.2 focus ring minimum */
 
   --radius-none: 0;
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;      /* 16px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
   --radius-full: 9999px;
 
   /* ── Aliases studio.css (utilisés via --r, --r-sm, --r-lg) ── */
@@ -114,12 +143,9 @@
   /* Réutilise shadows existantes */
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-               0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-               0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-               0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 
   /* Gaming shadows avec glow */
   --shadow-game-glow: 0 0 20px var(--color-primary-glow);
@@ -207,6 +233,44 @@
   --graph-minimap-choice: #8b5cf6;
   --graph-minimap-terminal: #f59e0b;
 
+  /* ========== OVERLAYS (blanc / noir — sans variables dédiées) ========== */
+
+  --color-overlay-03: rgba(255, 255, 255, 0.03);
+  --color-overlay-04: rgba(255, 255, 255, 0.04);
+  --color-overlay-05: rgba(255, 255, 255, 0.05);
+  --color-overlay-06: rgba(255, 255, 255, 0.06);
+  --color-overlay-08: rgba(255, 255, 255, 0.08); /* = --color-border-base */
+  --color-overlay-10: rgba(255, 255, 255, 0.1);
+
+  --color-dark-20: rgba(0, 0, 0, 0.2);
+  --color-dark-25: rgba(0, 0, 0, 0.25);
+  --color-dark-30: rgba(0, 0, 0, 0.3);
+  --color-dark-40: rgba(0, 0, 0, 0.4);
+  --color-dark-65: rgba(0, 0, 0, 0.65);
+
+  /* ========== DANGER opacity ========== */
+
+  --color-danger-15: rgba(239, 68, 68, 0.15);
+  --color-danger-55: rgba(239, 68, 68, 0.55);
+  --color-danger-60: rgba(239, 68, 68, 0.6);
+
+  /* ========== ZONES TRIGGER (TopdownEditor — carte) ========== */
+
+  --zone-dialogue-bg: rgba(60, 220, 100, 0.1);
+  --zone-dialogue-border: rgba(60, 220, 100, 0.8);
+  --zone-exit-bg: rgba(100, 160, 255, 0.1);
+  --zone-exit-border: rgba(100, 160, 255, 0.8);
+  --zone-audio-subtle: rgba(251, 146, 60, 0.06);
+  --zone-audio-bg: rgba(251, 146, 60, 0.12);
+  --zone-audio-badge: rgba(251, 146, 60, 0.25);
+  --zone-audio-border: rgba(251, 146, 60, 0.85);
+  --zone-audio-solid: rgba(251, 146, 60, 1);
+
+  /* ========== ALIASES MANQUANTS (utilisés dans les composants) ========== */
+
+  --color-text-base: var(--color-text-primary); /* alias court */
+  --color-bg-surface: var(--color-bg-elevated); /* alias court */
+
   /* ========== LEGACY ALIASES ========== */
   /* For backwards compatibility with theme.css consumers */
 
@@ -238,14 +302,14 @@
   /* These aliases map home.css naming to token naming */
 
   --font-family: var(--font-family-base);
-  --font-size-4xl: 2.25rem;     /* 36px - Missing from base tokens */
+  --font-size-4xl: 2.25rem; /* 36px - Missing from base tokens */
 
   /* Spacing aliases (home.css uses --spacing-*, tokens use --space-*) */
-  --spacing-xs: var(--space-1);   /* 4px */
-  --spacing-sm: var(--space-2);   /* 8px */
-  --spacing-md: var(--space-4);   /* 16px */
-  --spacing-lg: var(--space-6);   /* 24px */
-  --spacing-xl: var(--space-8);   /* 32px */
+  --spacing-xs: var(--space-1); /* 4px */
+  --spacing-sm: var(--space-2); /* 8px */
+  --spacing-md: var(--space-4); /* 16px */
+  --spacing-lg: var(--space-6); /* 24px */
+  --spacing-xl: var(--space-8); /* 32px */
   --spacing-2xl: var(--space-12); /* 48px */
 }
 
@@ -273,7 +337,8 @@
  * Amplitude contrôlée par CSS custom properties injectées par le composant.
  */
 @keyframes char-breathe {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1) translateY(0);
   }
   50% {
@@ -291,10 +356,18 @@
  * Amplitude contrôlée par CSS custom properties injectées par le composant.
  */
 @keyframes char-speak-pop {
-  0%   { transform: scale(1) translateY(0); }
-  30%  { transform: scale(var(--char-speak-scale, 1.03)) translateY(calc(-1 * var(--char-speak-y, 3px))); }
-  65%  { transform: scale(0.99) translateY(calc(var(--char-speak-y, 3px) * 0.4)); }
-  100% { transform: scale(1) translateY(0); }
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  30% {
+    transform: scale(var(--char-speak-scale, 1.03)) translateY(calc(-1 * var(--char-speak-y, 3px)));
+  }
+  65% {
+    transform: scale(0.99) translateY(calc(var(--char-speak-y, 3px) * 0.4));
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
 }
 
 .char-speak-pop {

@@ -9,36 +9,22 @@ import { Settings, RotateCcw, Download, Upload as UploadIcon } from 'lucide-reac
 export interface SettingsHeaderProps {
   /** Callback to reset settings to defaults */
   onResetDefaults: () => void;
-  /** Callback to export settings */
-  onExport: () => void;
-  /** Callback to handle import file selection */
+  /** Callback to export project as ZIP (JSON + assets) */
+  onExport: () => Promise<void>;
+  /** Callback to handle import file selection (.json or .zip) */
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Whether export is in progress */
+  isExporting?: boolean;
 }
 
 /**
  * SettingsHeader - Header section of settings modal
- *
- * Displays title, description, and action buttons (Reset, Export, Import).
- * Includes a hidden file input for importing JSON settings files.
- *
- * @param props - Component props
- * @param props.onResetDefaults - Callback to reset settings to defaults
- * @param props.onExport - Callback to export settings
- * @param props.onImport - Callback to handle import file selection
- *
- * @example
- * ```tsx
- * <SettingsHeader
- *   onResetDefaults={() => handleReset()}
- *   onExport={() => handleExport()}
- *   onImport={(e) => handleImport(e)}
- * />
- * ```
  */
 export function SettingsHeader({
   onResetDefaults,
   onExport,
-  onImport
+  onImport,
+  isExporting = false,
 }: SettingsHeaderProps): React.ReactElement {
   return (
     <DialogHeader className="px-8 pt-8 pb-6 border-b bg-gradient-to-b from-background to-muted/20">
@@ -72,10 +58,21 @@ export function SettingsHeader({
             variant="outline"
             size="sm"
             onClick={onExport}
-            className="transition-all duration-200 hover:scale-105 active:scale-95 hover:border-primary/50"
+            disabled={isExporting}
+            title="Exporter le projet complet (JSON + assets) en ZIP"
+            className="transition-all duration-200 hover:scale-105 active:scale-95 hover:border-primary/50 disabled:opacity-60"
           >
-            <Download className="h-4 w-4 mr-2" />
-            Exporter
+            {isExporting ? (
+              <>
+                <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Export…
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Exporter
+              </>
+            )}
           </Button>
 
           <Button
@@ -88,11 +85,11 @@ export function SettingsHeader({
             Importer
           </Button>
 
-          {/* Hidden file input for import */}
+          {/* Hidden file input for import — accepte .json et .zip */}
           <input
             id="import-settings"
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             className="hidden"
             onChange={onImport}
           />

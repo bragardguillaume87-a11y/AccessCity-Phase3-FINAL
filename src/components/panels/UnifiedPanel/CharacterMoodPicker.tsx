@@ -26,40 +26,40 @@ export interface CharacterMoodPickerProps {
  * - Clic sur un mood → met à jour toutes les instances du perso dans la scène.
  */
 export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
-  const characters      = useCharactersStore(state => state.characters);
-  const selectedSceneId = useUIStore(s => s.selectedSceneForEdit);
-  const sceneCharacters = useSceneElementsStore(s =>
+  const characters = useCharactersStore((state) => state.characters);
+  const selectedSceneId = useUIStore((s) => s.selectedSceneForEdit);
+  const sceneCharacters = useSceneElementsStore((s) =>
     selectedSceneId
-      ? (s.elementsByScene[selectedSceneId]?.characters || EMPTY_SCENE_CHARACTERS)
+      ? s.elementsByScene[selectedSceneId]?.characters || EMPTY_SCENE_CHARACTERS
       : EMPTY_SCENE_CHARACTERS
   );
-  const updateSceneCharacter = useSceneElementsStore(s => s.updateSceneCharacter);
+  const updateSceneCharacter = useSceneElementsStore((s) => s.updateSceneCharacter);
 
   // Dialogue sélectionné (mode Dialogues)
-  const selectedElement  = useSelectionStore(s => s.selectedElement);
-  const updateDialogue   = useDialoguesStore(s => s.updateDialogue);
-  const dialoguesByScene = useDialoguesStore(s => s.dialoguesByScene);
+  const selectedElement = useSelectionStore((s) => s.selectedElement);
+  const updateDialogue = useDialoguesStore((s) => s.updateDialogue);
+  const dialoguesByScene = useDialoguesStore((s) => s.dialoguesByScene);
 
   const dialogueSelection = isDialogueSelection(selectedElement) ? selectedElement : null;
 
   const isDialogueMode =
-    dialogueSelection !== null &&
-    dialogueSelection.sceneId === selectedSceneId;
+    dialogueSelection !== null && dialogueSelection.sceneId === selectedSceneId;
 
-  const selectedDialogue = isDialogueMode && dialogueSelection
-    ? dialoguesByScene[dialogueSelection.sceneId]?.[dialogueSelection.index]
-    : null;
+  const selectedDialogue =
+    isDialogueMode && dialogueSelection
+      ? dialoguesByScene[dialogueSelection.sceneId]?.[dialogueSelection.index]
+      : null;
 
   // IDs uniques des personnages sur la scène
-  const sceneCharacterIds = [...new Set(sceneCharacters.map(sc => sc.characterId))];
+  const sceneCharacterIds = [...new Set(sceneCharacters.map((sc) => sc.characterId))];
   const sceneChars = sceneCharacterIds
-    .map(id => characters.find(c => c.id === id))
+    .map((id) => characters.find((c) => c.id === id))
     .filter(Boolean) as typeof characters;
 
   const [openId, setOpenId] = useState<string | null>(null);
 
   const toggleOpen = useCallback((id: string) => {
-    setOpenId(prev => prev === id ? null : id);
+    setOpenId((prev) => (prev === id ? null : id));
   }, []);
 
   /**
@@ -67,44 +67,61 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
    * - mode dialogue → characterMoods du dialogue sélectionné (fallback : sceneChar.mood)
    * - mode scène    → sceneChar.mood
    */
-  const getActiveMood = useCallback((characterId: string): string => {
-    const sc = sceneCharacters.find(s => s.characterId === characterId);
-    if (!sc) return 'neutral';
-    if (isDialogueMode && selectedDialogue) {
-      return selectedDialogue.characterMoods?.[sc.id] ?? sc.mood ?? 'neutral';
-    }
-    return sc.mood ?? 'neutral';
-  }, [sceneCharacters, isDialogueMode, selectedDialogue]);
+  const getActiveMood = useCallback(
+    (characterId: string): string => {
+      const sc = sceneCharacters.find((s) => s.characterId === characterId);
+      if (!sc) return 'neutral';
+      if (isDialogueMode && selectedDialogue) {
+        return selectedDialogue.characterMoods?.[sc.id] ?? sc.mood ?? 'neutral';
+      }
+      return sc.mood ?? 'neutral';
+    },
+    [sceneCharacters, isDialogueMode, selectedDialogue]
+  );
 
   /**
    * Clic sur une carte :
    * - mode dialogue → met à jour characterMoods du dialogue sélectionné
    * - mode scène    → met à jour sceneChar.mood (reflété immédiatement sur le canvas)
    */
-  const handleMoodClick = useCallback((characterId: string, mood: string) => {
-    if (!selectedSceneId) return;
-    const targets = sceneCharacters.filter(sc => sc.characterId === characterId);
-    if (isDialogueMode && dialogueSelection) {
-      const prev = selectedDialogue?.characterMoods || {};
-      const next = { ...prev };
-      targets.forEach(sc => { next[sc.id] = mood; });
-      updateDialogue(dialogueSelection.sceneId, dialogueSelection.index, { characterMoods: next });
-    } else {
-      targets.forEach(sc => updateSceneCharacter(selectedSceneId, sc.id, { mood }));
-    }
-  }, [selectedSceneId, sceneCharacters, isDialogueMode, dialogueSelection, selectedDialogue, updateDialogue, updateSceneCharacter]);
+  const handleMoodClick = useCallback(
+    (characterId: string, mood: string) => {
+      if (!selectedSceneId) return;
+      const targets = sceneCharacters.filter((sc) => sc.characterId === characterId);
+      if (isDialogueMode && dialogueSelection) {
+        const prev = selectedDialogue?.characterMoods || {};
+        const next = { ...prev };
+        targets.forEach((sc) => {
+          next[sc.id] = mood;
+        });
+        updateDialogue(dialogueSelection.sceneId, dialogueSelection.index, {
+          characterMoods: next,
+        });
+      } else {
+        targets.forEach((sc) => updateSceneCharacter(selectedSceneId, sc.id, { mood }));
+      }
+    },
+    [
+      selectedSceneId,
+      sceneCharacters,
+      isDialogueMode,
+      dialogueSelection,
+      selectedDialogue,
+      updateDialogue,
+      updateSceneCharacter,
+    ]
+  );
 
-  const handleDragStart = useCallback((
-    e: React.DragEvent<HTMLDivElement>,
-    characterId: string,
-    mood: string,
-  ) => {
-    const dragData = { type: 'character', characterId, mood };
-    e.dataTransfer.setData('text/x-drag-type', 'character');
-    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
-    e.dataTransfer.effectAllowed = 'copy';
-    onDragStart?.(characterId, mood);
-  }, [onDragStart]);
+  const handleDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>, characterId: string, mood: string) => {
+      const dragData = { type: 'character', characterId, mood };
+      e.dataTransfer.setData('text/x-drag-type', 'character');
+      e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+      e.dataTransfer.effectAllowed = 'copy';
+      onDragStart?.(characterId, mood);
+    },
+    [onDragStart]
+  );
 
   // État vide
   if (!selectedSceneId) {
@@ -122,7 +139,8 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
       <section className="sp-sec">
         <h3 className="sp-lbl">SUR SCÈNE</h3>
         <p className="text-xs text-[var(--color-text-muted)] text-center py-4">
-          Aucun personnage sur cette scène.<br />
+          Aucun personnage sur cette scène.
+          <br />
           Fais glisser un personnage depuis la bibliothèque.
         </p>
       </section>
@@ -133,10 +151,8 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
     <section className="sp-sec" aria-label="Personnages sur la scène">
       <h3 className="sp-lbl">SUR SCÈNE</h3>
 
-      {sceneChars.map(character => {
-        const moods = character.moods && character.moods.length > 0
-          ? character.moods
-          : ['neutral'];
+      {sceneChars.map((character) => {
+        const moods = character.moods && character.moods.length > 0 ? character.moods : ['neutral'];
         const activeMood = getActiveMood(character.id);
         const isOpen = openId === character.id;
         const activeSprite = character.sprites?.[activeMood];
@@ -153,7 +169,9 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
               aria-expanded={isOpen}
               aria-controls={`mood-grid-${character.id}`}
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleOpen(character.id); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') toggleOpen(character.id);
+              }}
             >
               {/* Avatar */}
               <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-[var(--color-bg-base)] border border-[var(--color-border-base)] flex items-center justify-center">
@@ -165,7 +183,9 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                     draggable="false"
                   />
                 ) : (
-                  <span className="text-xl" aria-hidden="true">👤</span>
+                  <span className="text-xl" aria-hidden="true">
+                    👤
+                  </span>
                 )}
               </div>
 
@@ -212,12 +232,17 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                         return (
                           <motion.button
                             key={mood}
-                            onClick={(e) => { e.stopPropagation(); handleMoodClick(character.id, mood); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoodClick(character.id, mood);
+                            }}
                             /* Entrée : les cartes sont distribuées une par une */
                             initial={{ opacity: 0, y: 12, rotateZ: -2 }}
                             animate={{ opacity: 1, y: isActive ? -5 : 0, rotateZ: 0 }}
                             transition={{
-                              type: 'spring', stiffness: 380, damping: 22,
+                              type: 'spring',
+                              stiffness: 380,
+                              damping: 22,
                               delay: idx * 0.05,
                             }}
                             whileHover={{ y: isActive ? -7 : -5, transition: { duration: 0.12 } }}
@@ -231,7 +256,7 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                               overflow: 'hidden',
                               border: `2px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
                               boxShadow: isActive
-                                ? '0 6px 20px rgba(139,92,246,0.45), 0 0 0 1px rgba(139,92,246,0.25)'
+                                ? '0 6px 20px var(--color-primary-45), 0 0 0 1px var(--color-primary-25)'
                                 : '0 3px 10px rgba(0,0,0,0.35)',
                               cursor: 'pointer',
                               background: 'var(--color-bg-elevated)',
@@ -245,22 +270,29 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                                 src={convertFileSrcIfNeeded(sprite)}
                                 alt={`${character.name} ${moodLabel}`}
                                 style={{
-                                  position: 'absolute', inset: 0,
-                                  width: '100%', height: '100%',
+                                  position: 'absolute',
+                                  inset: 0,
+                                  width: '100%',
+                                  height: '100%',
                                   objectFit: 'contain',
                                 }}
                                 draggable="false"
                               />
                             ) : (
                               /* Pas de sprite : grand emoji centré sur fond dégradé */
-                              <div style={{
-                                position: 'absolute', inset: 0,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '1.75rem',
-                                background: isActive
-                                  ? 'linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(139,92,246,0.05) 100%)'
-                                  : 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 100%)',
-                              }}>
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  inset: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '1.75rem',
+                                  background: isActive
+                                    ? 'linear-gradient(135deg, var(--color-primary-20) 0%, var(--color-primary-05) 100%)'
+                                    : 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 100%)',
+                                }}
+                              >
                                 {moodEmoji}
                               </div>
                             )}
@@ -269,8 +301,11 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                             <span
                               aria-hidden="true"
                               style={{
-                                position: 'absolute', top: 3, right: 4,
-                                fontSize: '11px', lineHeight: 1,
+                                position: 'absolute',
+                                top: 3,
+                                right: 4,
+                                fontSize: '11px',
+                                lineHeight: 1,
                                 filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
                               }}
                             >
@@ -278,23 +313,30 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                             </span>
 
                             {/* Label — overlay gradient au bas, style carte */}
-                            <div style={{
-                              position: 'absolute', bottom: 0, left: 0, right: 0,
-                              padding: '14px 5px 5px',
-                              background: isActive
-                                ? 'linear-gradient(to top, rgba(88,28,235,0.92) 0%, rgba(139,92,246,0.5) 55%, transparent 100%)'
-                                : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)',
-                              textAlign: 'center',
-                            }}>
-                              <span style={{
-                                display: 'block',
-                                fontSize: '9.5px',
-                                fontWeight: 700,
-                                color: 'white',
-                                lineHeight: 1.2,
-                                textShadow: '0 1px 3px rgba(0,0,0,0.7)',
-                                letterSpacing: '0.02em',
-                              }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                padding: '14px 5px 5px',
+                                background: isActive
+                                  ? 'linear-gradient(to top, rgba(88,28,235,0.92) 0%, var(--color-primary-glow) 55%, transparent 100%)'
+                                  : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)',
+                                textAlign: 'center',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: 'block',
+                                  fontSize: '9.5px',
+                                  fontWeight: 700,
+                                  color: 'white',
+                                  lineHeight: 1.2,
+                                  textShadow: '0 1px 3px rgba(0,0,0,0.7)',
+                                  letterSpacing: '0.02em',
+                                }}
+                              >
                                 {moodLabel}
                               </span>
                             </div>

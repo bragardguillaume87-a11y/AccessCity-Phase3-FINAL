@@ -25,16 +25,19 @@ interface VoicePresetPickerProps {
 // Groupes affichés dans l'ordre souhaité
 const CATEGORY_ORDER = ['humain', 'animal', 'special'] as const;
 const CATEGORY_LABELS: Record<string, string> = {
-  humain:  '👤 Humain',
-  animal:  '🐾 Animal',
+  humain: '👤 Humain',
+  animal: '🐾 Animal',
   special: '✨ Spécial',
 };
 
 export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: VoicePresetPickerProps) {
-  const handleSelect = useCallback((id: string) => {
-    onChange(value === id ? undefined : id);
-    onClose();
-  }, [value, onChange, onClose]);
+  const handleSelect = useCallback(
+    (id: string) => {
+      onChange(value === id ? undefined : id);
+      onClose();
+    },
+    [value, onChange, onClose]
+  );
 
   const handleHover = useCallback((id: string) => {
     playVoicePreview(id);
@@ -63,8 +66,10 @@ export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: Voice
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
-        pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
-        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+        pickerRef.current &&
+        !pickerRef.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
       ) {
         onClose();
       }
@@ -95,14 +100,35 @@ export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: Voice
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 10,
+        }}
+      >
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--color-text-muted)',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
           Voix du personnage
         </span>
         <button
           type="button"
           onClick={onClose}
-          style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
+          style={{
+            color: 'var(--color-text-muted)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 2,
+          }}
           aria-label="Fermer"
         >
           <X size={13} />
@@ -110,21 +136,35 @@ export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: Voice
       </div>
 
       {/* Hint */}
-      <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 10, lineHeight: 1.4 }}>
+      <p
+        style={{
+          fontSize: '10px',
+          color: 'var(--color-text-muted)',
+          marginBottom: 10,
+          lineHeight: 1.4,
+        }}
+      >
         Survole pour prévisualiser · Clic pour sélectionner
       </p>
 
       {/* Groups */}
-      {CATEGORY_ORDER.map(cat => {
-        const profiles = VOICE_PROFILES.filter(p => p.category === cat);
+      {CATEGORY_ORDER.map((cat) => {
+        const profiles = VOICE_PROFILES.filter((p) => p.category === cat);
         if (profiles.length === 0) return null;
         return (
           <div key={cat} style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600, marginBottom: 5 }}>
+            <div
+              style={{
+                fontSize: '10px',
+                color: 'var(--color-text-muted)',
+                fontWeight: 600,
+                marginBottom: 5,
+              }}
+            >
               {CATEGORY_LABELS[cat]}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {profiles.map(profile => {
+              {profiles.map((profile) => {
                 const isActive = value === profile.id;
                 return (
                   <motion.button
@@ -143,7 +183,7 @@ export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: Voice
                       padding: '4px 8px',
                       borderRadius: 'var(--radius-sm)',
                       border: `1.5px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
-                      background: isActive ? 'rgba(139,92,246,0.18)' : 'var(--color-bg-base)',
+                      background: isActive ? 'var(--color-primary-muted)' : 'var(--color-bg-base)',
                       color: isActive ? 'var(--color-primary)' : 'var(--color-text-primary)',
                       fontSize: '11px',
                       fontWeight: isActive ? 700 : 500,
@@ -155,7 +195,11 @@ export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: Voice
                     <span aria-hidden="true">{profile.emoji}</span>
                     <span>{profile.label}</span>
                     {isActive && (
-                      <span style={{ fontSize: '9px', color: 'var(--color-primary)', marginLeft: 1 }}>✓</span>
+                      <span
+                        style={{ fontSize: '9px', color: 'var(--color-primary)', marginLeft: 1 }}
+                      >
+                        ✓
+                      </span>
                     )}
                   </motion.button>
                 );
@@ -213,8 +257,8 @@ export function VoicePresetBadge({ presetId }: { presetId: string }) {
         gap: 3,
         padding: '2px 6px',
         borderRadius: 999,
-        background: 'rgba(139,92,246,0.15)',
-        border: '1px solid rgba(139,92,246,0.35)',
+        background: 'var(--color-primary-15)',
+        border: '1px solid var(--color-primary-35)',
         fontSize: '10px',
         fontWeight: 600,
         color: 'var(--color-primary)',
@@ -224,7 +268,8 @@ export function VoicePresetBadge({ presetId }: { presetId: string }) {
         textOverflow: 'ellipsis',
       }}
     >
-      {profile.emoji} <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.label}</span>
+      {profile.emoji}{' '}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.label}</span>
     </span>
   );
 }

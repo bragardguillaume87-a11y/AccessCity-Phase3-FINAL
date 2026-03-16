@@ -1,35 +1,35 @@
-import { useState } from "react";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useState } from 'react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import SkipToContent from './components/SkipToContent';
 import HomePage from './components/HomePage';
 import EditorShell from './components/EditorShell';
-import TokensDemo from "./pages/TokensDemo";
-import { Toaster } from "sonner";
+import TokensDemo from './pages/TokensDemo';
+import { Toaster } from 'sonner';
+import { usePortableAutoload } from '@/hooks/usePortableAutoload';
 
 // État initial des quêtes (données de démo)
 const DEMO_QUESTS = [
   {
-    id: "demo-1",
-    name: "La visite à la mairie",
+    id: 'demo-1',
+    name: 'La visite à la mairie',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
 function App() {
+  usePortableAutoload();
+
   const [quests, setQuests] = useState(() => {
     // On peut charger depuis localStorage ici si besoin
     return DEMO_QUESTS;
   });
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
-  const [newQuestName, setNewQuestName] = useState("");
+  const [newQuestName, setNewQuestName] = useState('');
   // Check URL for demo mode (?demo=true) and tokens mode (?tokens=true)
   const urlParams = new URLSearchParams(window.location.search);
   const isTokensMode = urlParams.get('tokens') === 'true';
-  const [currentView, setCurrentView] = useState(
-    isTokensMode ? "tokens-demo" :
-    "home"
-  ); // 'home' | 'studio' | 'tokens-demo'
+  const [currentView, setCurrentView] = useState(isTokensMode ? 'tokens-demo' : 'home'); // 'home' | 'studio' | 'tokens-demo'
 
   // Créer une nouvelle quête
   function handleCreateQuest() {
@@ -42,7 +42,7 @@ function App() {
       updatedAt: new Date().toISOString(),
     };
     setQuests([...quests, newQuest]);
-    setNewQuestName("");
+    setNewQuestName('');
     setSelectedQuestId(newQuest.id);
   }
 
@@ -54,7 +54,7 @@ function App() {
   // Lancer le studio pour la quête sélectionnée
   function handleLaunchEditor() {
     if (!selectedQuestId) return;
-    setCurrentView("studio");
+    setCurrentView('studio');
   }
 
   // Supprimer la quête sélectionnée
@@ -66,15 +66,15 @@ function App() {
 
   // Retour à l'accueil
   function handleBackHome() {
-    setCurrentView("home");
+    setCurrentView('home');
   }
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={100}>
       <SkipToContent />
-      {currentView === "tokens-demo" ? (
+      {currentView === 'tokens-demo' ? (
         <TokensDemo />
-      ) : currentView === "studio" ? (
+      ) : currentView === 'studio' ? (
         <EditorShell onBack={handleBackHome} />
       ) : (
         <HomePage

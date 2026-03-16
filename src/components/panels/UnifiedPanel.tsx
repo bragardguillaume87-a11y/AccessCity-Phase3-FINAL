@@ -1,6 +1,15 @@
 import { useCallback } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { Image, Type, Users, Package, Volume2, LayoutTemplate, MessageSquare, Sparkles } from 'lucide-react';
+import {
+  Image,
+  Type,
+  Users,
+  Package,
+  Volume2,
+  LayoutTemplate,
+  MessageSquare,
+  Sparkles,
+} from 'lucide-react';
 import { useUIStore } from '@/stores';
 import { useIsKidMode } from '@/hooks/useIsKidMode';
 import type { SectionId } from '@/types';
@@ -18,17 +27,17 @@ import type { SectionId } from '@/types';
  * Chaque bouton a un Radix Tooltip (side="left") pour l'accessibilité.
  */
 
-type SectionEntry = { id: SectionId; icon: React.FC<{ size?: number }>; label: string } | null
+type SectionEntry = { id: SectionId; icon: React.FC<{ size?: number }>; label: string } | null;
 
 const SECTIONS: SectionEntry[] = [
-  { id: 'backgrounds', icon: Image,         label: 'Fond'     },
-  { id: 'audio',       icon: Volume2,       label: 'Audio'    },
-  { id: 'characters',  icon: Users,         label: 'Persos'   },
-  { id: 'objects',     icon: Package,       label: 'Objets'   },
+  { id: 'backgrounds', icon: Image, label: 'Fond' },
+  { id: 'audio', icon: Volume2, label: 'Audio' },
+  { id: 'characters', icon: Users, label: 'Persos' },
+  { id: 'objects', icon: Package, label: 'Objets' },
   null, // séparateur
-  { id: 'dialogue',    icon: MessageSquare, label: 'Dialogue' },
-  { id: 'text',        icon: Type,          label: 'Texte'    },
-  { id: 'effects',     icon: Sparkles,      label: 'Effets'   },
+  { id: 'dialogue', icon: MessageSquare, label: 'Dialogue' },
+  { id: 'text', icon: Type, label: 'Texte' },
+  { id: 'effects', icon: Sparkles, label: 'Effets' },
 ];
 
 export interface UnifiedPanelProps {
@@ -37,13 +46,13 @@ export interface UnifiedPanelProps {
 }
 
 export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
-  const activeSection = useUIStore(s => s.activeSection);
+  const activeSection = useUIStore((s) => s.activeSection);
   const isKid = useIsKidMode();
 
   // En mode kid, masquer uniquement les effets d'animation (trop complexes pour élèves).
   // Audio reste visible — les élèves ont besoin d'ajouter de la musique à leurs scènes.
   const sections = isKid
-    ? SECTIONS.filter(entry => entry === null || entry.id !== 'effects')
+    ? SECTIONS.filter((entry) => entry === null || entry.id !== 'effects')
     : SECTIONS;
 
   const handleIconClick = useCallback((id: SectionId) => {
@@ -60,7 +69,29 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
       >
         {/* En-tête identité */}
         <div className="flex-shrink-0 w-full flex items-center justify-center h-9 border-b border-[var(--color-border-base)]">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] select-none">
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'var(--color-text-primary)',
+              userSelect: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <span
+              style={{
+                width: 3,
+                height: 10,
+                borderRadius: 2,
+                background: 'var(--color-primary)',
+                display: 'inline-block',
+                flexShrink: 0,
+              }}
+            />
             Outils
           </span>
         </div>
@@ -90,11 +121,7 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
-                  <Tooltip.Content
-                    side="left"
-                    className="toolbar-tooltip"
-                    sideOffset={8}
-                  >
+                  <Tooltip.Content side="left" className="toolbar-tooltip" sideOffset={8}>
                     {label}
                     <Tooltip.Arrow className="toolbar-tooltip-arrow" />
                   </Tooltip.Content>

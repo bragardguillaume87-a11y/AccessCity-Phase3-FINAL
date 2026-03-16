@@ -2,7 +2,7 @@ import { create, useStore } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import type { TemporalState } from 'zundo';
-import type { MapMetadata, MapData } from '@/types/map';
+import type { MapMetadata, MapData, DialogueTrigger, SceneExit, AudioZone } from '@/types/map';
 import type { EntityInstance } from '@/types/sprite';
 
 /**
@@ -20,7 +20,13 @@ import type { EntityInstance } from '@/types/sprite';
 // HELPERS
 // ============================================================================
 
-function createEmptyMapData(id: string, name: string, widthTiles: number, heightTiles: number, tileSize: number): MapData {
+function createEmptyMapData(
+  id: string,
+  name: string,
+  widthTiles: number,
+  heightTiles: number,
+  tileSize: number
+): MapData {
   return {
     identifier: name,
     uid: id,
@@ -31,12 +37,22 @@ function createEmptyMapData(id: string, name: string, widthTiles: number, height
     __gridSize: tileSize,
     layerInstances: [
       {
-        __identifier: 'Décor',
+        __identifier: 'Sol',
         __type: 'tiles',
         __gridSize: tileSize,
         __cWid: widthTiles,
         __cHei: heightTiles,
         gridTiles: [],
+        _ac_colorIndex: 0,
+      },
+      {
+        __identifier: 'Objets',
+        __type: 'tiles',
+        __gridSize: tileSize,
+        __cWid: widthTiles,
+        __cHei: heightTiles,
+        gridTiles: [],
+        _ac_colorIndex: 1,
       },
       {
         __identifier: 'Collision',
@@ -58,6 +74,7 @@ function createEmptyMapData(id: string, name: string, widthTiles: number, height
     ],
     _ac_dialogue_triggers: [],
     _ac_scene_exits: [],
+    _ac_audio_zones: [],
     _ac_entities: [],
   };
 }
@@ -82,12 +99,57 @@ interface MapsState {
   deleteMap: (mapId: string) => void;
 
   // Resize / rename
-  resizeMap: (mapId: string, name: string, widthTiles: number, heightTiles: number, tileSize: number) => void;
+  resizeMap: (
+    mapId: string,
+    name: string,
+    widthTiles: number,
+    heightTiles: number,
+    tileSize: number
+  ) => void;
 
   // Entities
   addEntity: (mapId: string, entity: EntityInstance) => void;
   updateEntity: (mapId: string, entityId: string, patch: Partial<EntityInstance>) => void;
   removeEntity: (mapId: string, entityId: string) => void;
+
+  // Dialogue triggers
+  addDialogueTrigger: (mapId: string, trigger: DialogueTrigger) => void;
+  updateDialogueTrigger: (
+    mapId: string,
+    triggerId: string,
+    patch: Partial<DialogueTrigger>
+  ) => void;
+  removeDialogueTrigger: (mapId: string, triggerId: string) => void;
+
+  // Scene exits
+  addSceneExit: (mapId: string, exit: SceneExit) => void;
+  updateSceneExit: (mapId: string, exitId: string, patch: Partial<SceneExit>) => void;
+  removeSceneExit: (mapId: string, exitId: string) => void;
+
+  // Audio zones
+  addAudioZone: (mapId: string, zone: AudioZone) => void;
+  updateAudioZone: (mapId: string, zoneId: string, patch: Partial<AudioZone>) => void;
+  removeAudioZone: (mapId: string, zoneId: string) => void;
+
+  // Tile layers (dynamic)
+  addTileLayer: (mapId: string, name: string) => void;
+  removeTileLayer: (mapId: string, identifier: string) => void;
+  renameTileLayer: (mapId: string, identifier: string, newName: string) => void;
+  reorderTileLayer: (mapId: string, fromIndex: number, toIndex: number) => void;
+  updateLayerProps: (
+    mapId: string,
+    identifier: string,
+    patch: { _ac_visible?: boolean; _ac_opacity?: number; _ac_locked?: boolean }
+  ) => void;
+  /** Moves all tiles at the given cells from one tile layer to another. */
+  moveTilesToLayer: (
+    mapId: string,
+    cells: Array<{ cx: number; cy: number }>,
+    fromLayerIdx: number,
+    toLayerIdx: number
+  ) => void;
+  /** Removes a single tile from a specific tile layer by index. */
+  eraseTileFromLayer: (mapId: string, cx: number, cy: number, layerIdx: number) => void;
 
   // Import
   importMaps: (maps: MapMetadata[], mapDataById: Record<string, MapData>) => void;
@@ -105,13 +167,21 @@ export const useMapsStore = create<MapsState>()(
           maps: [],
           mapDataById: {},
 
-          getMapById: (mapId) => get().maps.find(m => m.id === mapId),
+          getMapById: (mapId) => get().maps.find((m) => m.id === mapId),
           getMapData: (mapId) => get().mapDataById[mapId],
 
           addMap: (name = 'Nouvelle carte', widthTiles = 20, heightTiles = 15, tileSize = 32) => {
             const id = `map-${Date.now()}`;
             const now = new Date().toISOString();
-            const metadata: MapMetadata = { id, name, widthTiles, heightTiles, tileSize, createdAt: now, updatedAt: now };
+            const metadata: MapMetadata = {
+              id,
+              name,
+              widthTiles,
+              heightTiles,
+              tileSize,
+              createdAt: now,
+              updatedAt: now,
+            };
             const data = createEmptyMapData(id, name, widthTiles, heightTiles, tileSize);
             set(
               (state) => ({
@@ -127,7 +197,7 @@ export const useMapsStore = create<MapsState>()(
           updateMapMetadata: (mapId, patch) => {
             set(
               (state) => ({
-                maps: state.maps.map(m =>
+                maps: state.maps.map((m) =>
                   m.id === mapId ? { ...m, ...patch, updatedAt: new Date().toISOString() } : m
                 ),
               }),
@@ -140,7 +210,7 @@ export const useMapsStore = create<MapsState>()(
             set(
               (state) => ({
                 mapDataById: { ...state.mapDataById, [mapId]: data },
-                maps: state.maps.map(m =>
+                maps: state.maps.map((m) =>
                   m.id === mapId ? { ...m, updatedAt: new Date().toISOString() } : m
                 ),
               }),
@@ -154,7 +224,7 @@ export const useMapsStore = create<MapsState>()(
               (state) => {
                 const { [mapId]: _deleted, ...rest } = state.mapDataById;
                 return {
-                  maps: state.maps.filter(m => m.id !== mapId),
+                  maps: state.maps.filter((m) => m.id !== mapId),
                   mapDataById: rest,
                 };
               },
@@ -167,21 +237,28 @@ export const useMapsStore = create<MapsState>()(
             const existingData = get().mapDataById[mapId];
             if (!existingData) return;
 
-            const newLayers = existingData.layerInstances.map(layer => {
+            const newLayers = existingData.layerInstances.map((layer) => {
               // Trim tiles outside new bounds
               const gridTiles = layer.gridTiles.filter(
-                t => t.cx < widthTiles && t.cy < heightTiles
+                (t) => t.cx < widthTiles && t.cy < heightTiles
               );
               // Recompute collision intGrid — convert old (cx,cy) to new flat indices
               let intGrid = layer.intGrid;
               if (layer.__type === 'collision' && layer.intGrid) {
                 const oldCWid = layer.__cWid;
                 intGrid = layer.intGrid
-                  .map(idx => ({ cx: idx % oldCWid, cy: Math.floor(idx / oldCWid) }))
-                  .filter(c => c.cx < widthTiles && c.cy < heightTiles)
-                  .map(c => c.cy * widthTiles + c.cx);
+                  .map((idx) => ({ cx: idx % oldCWid, cy: Math.floor(idx / oldCWid) }))
+                  .filter((c) => c.cx < widthTiles && c.cy < heightTiles)
+                  .map((c) => c.cy * widthTiles + c.cx);
               }
-              return { ...layer, __gridSize: tileSize, __cWid: widthTiles, __cHei: heightTiles, gridTiles, intGrid };
+              return {
+                ...layer,
+                __gridSize: tileSize,
+                __cWid: widthTiles,
+                __cHei: heightTiles,
+                gridTiles,
+                intGrid,
+              };
             });
 
             const newData: MapData = {
@@ -194,9 +271,11 @@ export const useMapsStore = create<MapsState>()(
             };
             const now = new Date().toISOString();
             set(
-              state => ({
-                maps: state.maps.map(m =>
-                  m.id === mapId ? { ...m, name, widthTiles, heightTiles, tileSize, updatedAt: now } : m
+              (state) => ({
+                maps: state.maps.map((m) =>
+                  m.id === mapId
+                    ? { ...m, name, widthTiles, heightTiles, tileSize, updatedAt: now }
+                    : m
                 ),
                 mapDataById: { ...state.mapDataById, [mapId]: newData },
               }),
@@ -206,58 +285,406 @@ export const useMapsStore = create<MapsState>()(
           },
 
           addEntity: (mapId, entity) => {
-            const data = get().mapDataById[mapId];
-            if (!data) return;
             set(
-              state => ({
-                mapDataById: {
-                  ...state.mapDataById,
-                  [mapId]: {
-                    ...data,
-                    _ac_entities: [...(data._ac_entities ?? []), entity],
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: { ...data, _ac_entities: [...(data._ac_entities ?? []), entity] },
                   },
-                },
-              }),
+                };
+              },
               false,
               'maps/addEntity'
             );
           },
 
           updateEntity: (mapId, entityId, patch) => {
-            const data = get().mapDataById[mapId];
-            if (!data) return;
             set(
-              state => ({
-                mapDataById: {
-                  ...state.mapDataById,
-                  [mapId]: {
-                    ...data,
-                    _ac_entities: (data._ac_entities ?? []).map(e =>
-                      e.id === entityId ? { ...e, ...patch } : e
-                    ),
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_entities: (data._ac_entities ?? []).map((e) =>
+                        e.id === entityId ? { ...e, ...patch } : e
+                      ),
+                    },
                   },
-                },
-              }),
+                };
+              },
               false,
               'maps/updateEntity'
             );
           },
 
           removeEntity: (mapId, entityId) => {
-            const data = get().mapDataById[mapId];
-            if (!data) return;
             set(
-              state => ({
-                mapDataById: {
-                  ...state.mapDataById,
-                  [mapId]: {
-                    ...data,
-                    _ac_entities: (data._ac_entities ?? []).filter(e => e.id !== entityId),
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_entities: (data._ac_entities ?? []).filter((e) => e.id !== entityId),
+                    },
                   },
-                },
-              }),
+                };
+              },
               false,
               'maps/removeEntity'
+            );
+          },
+
+          addDialogueTrigger: (mapId, trigger) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_dialogue_triggers: [...data._ac_dialogue_triggers, trigger],
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/addDialogueTrigger'
+            );
+          },
+
+          updateDialogueTrigger: (mapId, triggerId, patch) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_dialogue_triggers: data._ac_dialogue_triggers.map((t) =>
+                        t.id === triggerId ? { ...t, ...patch } : t
+                      ),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/updateDialogueTrigger'
+            );
+          },
+
+          removeDialogueTrigger: (mapId, triggerId) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_dialogue_triggers: data._ac_dialogue_triggers.filter(
+                        (t) => t.id !== triggerId
+                      ),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/removeDialogueTrigger'
+            );
+          },
+
+          addSceneExit: (mapId, exit) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_scene_exits: [...data._ac_scene_exits, exit],
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/addSceneExit'
+            );
+          },
+
+          updateSceneExit: (mapId, exitId, patch) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_scene_exits: data._ac_scene_exits.map((e) =>
+                        e.id === exitId ? { ...e, ...patch } : e
+                      ),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/updateSceneExit'
+            );
+          },
+
+          removeSceneExit: (mapId, exitId) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_scene_exits: data._ac_scene_exits.filter((e) => e.id !== exitId),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/removeSceneExit'
+            );
+          },
+
+          addAudioZone: (mapId, zone) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_audio_zones: [...(data._ac_audio_zones ?? []), zone],
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/addAudioZone'
+            );
+          },
+
+          updateAudioZone: (mapId, zoneId, patch) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_audio_zones: (data._ac_audio_zones ?? []).map((z) =>
+                        z.id === zoneId ? { ...z, ...patch } : z
+                      ),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/updateAudioZone'
+            );
+          },
+
+          removeAudioZone: (mapId, zoneId) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_audio_zones: (data._ac_audio_zones ?? []).filter((z) => z.id !== zoneId),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/removeAudioZone'
+            );
+          },
+
+          addTileLayer: (mapId, name) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            // Insert before the first non-tiles layer so tile layers stay grouped at the top
+            const insertIdx = data.layerInstances.findIndex((l) => l.__type !== 'tiles');
+            const pos = insertIdx >= 0 ? insertIdx : data.layerInstances.length;
+            const tileLayers = data.layerInstances.filter((l) => l.__type === 'tiles');
+            const newLayer = {
+              __identifier: name,
+              __type: 'tiles' as const,
+              __gridSize: data.__gridSize,
+              __cWid: Math.floor(data.pxWid / data.__gridSize),
+              __cHei: Math.floor(data.pxHei / data.__gridSize),
+              gridTiles: [],
+              _ac_colorIndex: tileLayers.length, // auto-assign next color index
+            };
+            const layerInstances = [
+              ...data.layerInstances.slice(0, pos),
+              newLayer,
+              ...data.layerInstances.slice(pos),
+            ];
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/addTileLayer'
+            );
+          },
+
+          removeTileLayer: (mapId, identifier) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            // Never remove if it's the last tile layer
+            const tileLayers = data.layerInstances.filter((l) => l.__type === 'tiles');
+            if (tileLayers.length <= 1) return;
+            const layerInstances = data.layerInstances.filter(
+              (l) => !(l.__type === 'tiles' && l.__identifier === identifier)
+            );
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/removeTileLayer'
+            );
+          },
+
+          renameTileLayer: (mapId, identifier, newName) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            const layerInstances = data.layerInstances.map((l) =>
+              l.__type === 'tiles' && l.__identifier === identifier
+                ? { ...l, __identifier: newName }
+                : l
+            );
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/renameTileLayer'
+            );
+          },
+
+          reorderTileLayer: (mapId, fromIndex, toIndex) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            const tileLayers = data.layerInstances.filter((l) => l.__type === 'tiles');
+            const otherLayers = data.layerInstances.filter((l) => l.__type !== 'tiles');
+            if (fromIndex < 0 || fromIndex >= tileLayers.length) return;
+            if (toIndex < 0 || toIndex >= tileLayers.length) return;
+            const reordered = [...tileLayers];
+            const [moved] = reordered.splice(fromIndex, 1);
+            reordered.splice(toIndex, 0, moved);
+            // Tile layers stay at top, system layers at bottom (same as before)
+            const layerInstances = [...reordered, ...otherLayers];
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/reorderTileLayer'
+            );
+          },
+
+          moveTilesToLayer: (mapId, cells, fromLayerIdx, toLayerIdx) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            const tileLayers = data.layerInstances.filter((l) => l.__type === 'tiles');
+            if (fromLayerIdx === toLayerIdx) return;
+            if (fromLayerIdx < 0 || fromLayerIdx >= tileLayers.length) return;
+            if (toLayerIdx < 0 || toLayerIdx >= tileLayers.length) return;
+            const fromLayer = tileLayers[fromLayerIdx];
+            const toLayer = tileLayers[toLayerIdx];
+            const cellSet = new Set(cells.map((c) => `${c.cx},${c.cy}`));
+            const tilesToMove = fromLayer.gridTiles.filter((t) => cellSet.has(`${t.cx},${t.cy}`));
+            const layerInstances = data.layerInstances.map((l) => {
+              if (l === fromLayer)
+                return {
+                  ...l,
+                  gridTiles: l.gridTiles.filter((t) => !cellSet.has(`${t.cx},${t.cy}`)),
+                };
+              if (l === toLayer)
+                return {
+                  ...l,
+                  gridTiles: [
+                    ...l.gridTiles.filter((t) => !cellSet.has(`${t.cx},${t.cy}`)),
+                    ...tilesToMove,
+                  ],
+                };
+              return l;
+            });
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/moveTilesToLayer'
+            );
+          },
+
+          eraseTileFromLayer: (mapId, cx, cy, layerIdx) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            const tileLayers = data.layerInstances.filter((l) => l.__type === 'tiles');
+            const targetLayer = tileLayers[layerIdx];
+            if (!targetLayer) return;
+            const layerInstances = data.layerInstances.map((l) =>
+              l === targetLayer
+                ? { ...l, gridTiles: l.gridTiles.filter((t) => !(t.cx === cx && t.cy === cy)) }
+                : l
+            );
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/eraseTileFromLayer'
+            );
+          },
+
+          updateLayerProps: (mapId, identifier, patch) => {
+            const data = get().mapDataById[mapId];
+            if (!data) return;
+            const layerInstances = data.layerInstances.map((l) =>
+              l.__identifier === identifier ? { ...l, ...patch } : l
+            );
+            set(
+              (state) => ({
+                mapDataById: { ...state.mapDataById, [mapId]: { ...data, layerInstances } },
+              }),
+              false,
+              'maps/updateLayerProps'
             );
           },
 
@@ -287,6 +714,5 @@ export const useMapsStore = create<MapsState>()(
  * @example
  * const { undo, redo, pastStates, futureStates } = useTemporalMapsStore(s => s);
  */
-export const useTemporalMapsStore = <T,>(
-  selector: (state: TemporalState<MapsState>) => T
-): T => useStore(useMapsStore.temporal, selector);
+export const useTemporalMapsStore = <T>(selector: (state: TemporalState<MapsState>) => T): T =>
+  useStore(useMapsStore.temporal, selector);

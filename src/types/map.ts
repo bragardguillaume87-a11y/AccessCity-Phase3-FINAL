@@ -42,11 +42,28 @@ export interface MapMetadata {
   /** Base64 thumbnail (generated on save) */
   thumbnail?: string;
   /**
+   * Brique sonore procédurale jouée en boucle comme BGM (SOUND_BRICKS[].id).
+   * Priorité inférieure à bgmAudioUrl — ignorée si bgmAudioUrl est défini.
+   */
+  bgmBrickId?: string;
+  /**
+   * URL display-ready d'un fichier audio uploadé par l'utilisateur (MP3, OGG, WAV…).
+   * Prioritaire sur bgmBrickId. Absent → fallback sur bgmBrickId ou silence.
+   */
+  bgmAudioUrl?: string;
+  /**
    * Spritesheet du joueur (format LPC : 4 rangées × 9 colonnes, 64×64px/frame).
    * URL display-ready (asset.url ?? asset.path). Absent → carré violet (fallback).
    * Rangées : 0=bas, 1=gauche, 2=droite, 3=haut.
    */
   playerSpritePath?: string;
+  /**
+   * Position de départ du joueur sur la carte (en tuiles).
+   * Absent → fallback (2, 2). Stocké comme col/rang entiers.
+   * Référence : LDtk / Tiled — spawn point séparé des entités NPC.
+   */
+  playerStartCx?: number;
+  playerStartCy?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,22 +102,83 @@ export interface LayerInstance {
   gridTiles: TileInstance[];
   /** Collision cells: flat array of [cx, cy] pairs for solid tiles */
   intGrid?: number[];
+  /**
+   * Per-layer editor state — AccessCity extensions (_ac_ prefix, LDtk-compatible).
+   * All optional, defaults applied at read time: visible=true, opacity=1.0, locked=false.
+   */
+  _ac_visible?: boolean;
+  _ac_opacity?: number;
+  _ac_locked?: boolean;
+  /**
+   * Auto-assigned color index (0–N) for the layer accent badge.
+   * Used by LayerPanel to show a distinct color per tile layer.
+   */
+  _ac_colorIndex?: number;
 }
 
 // ============================================================================
 // DIALOGUE TRIGGERS & EXITS (AccessCity extensions)
 // ============================================================================
 
-/** Triggers a VN dialogue when the player enters the zone */
+/** Triggers a VN dialogue or shows a text panel when the player enters/interacts with the zone */
 export interface DialogueTrigger {
   id: string;
   /** Zone in grid pixels (world space) */
   zone: Rect;
-  /** Scene ID in the VN editor to trigger */
+  /** Scene ID in the VN editor to trigger (required when triggerType === 'dialogue') */
   dialogueSceneId: string;
   /** Only trigger once per session? */
   once: boolean;
   /** Label shown in the editor (e.g. "Talk to Mayor") */
+  label: string;
+  /**
+   * What to do with the map BGM when this dialogue triggers.
+   * - 'keep'    : map BGM keeps playing (default)
+   * - 'replace' : stop map BGM; VN scene audio takes over
+   * - 'silence' : stop map BGM; dialogue plays silently
+   */
+  bgmBehavior?: 'keep' | 'replace' | 'silence';
+  /**
+   * Visual transition when switching from the 2D map to the dialogue.
+   * - 'fade-black' : fade to black (default, works on all PCs)
+   * - 'fade-white' : flash white (impact effect)
+   * - 'iris'       : circular iris close (Pokémon style, CSS clip-path)
+   * - 'none'       : instant cut
+   */
+  transitionType?: 'fade-black' | 'fade-white' | 'iris' | 'none';
+  /**
+   * Sub-type of trigger:
+   * - 'dialogue' : opens a VN scene (default)
+   * - 'sign'     : shows a free-text panel (notice, road sign, book…)
+   */
+  triggerType?: 'dialogue' | 'sign';
+  /**
+   * How the trigger fires:
+   * - 'auto'     : fires immediately when the player enters the zone (default)
+   * - 'interact' : fires when the player presses Enter while inside the zone
+   *                (shows a floating "↵ Entrée" tooltip)
+   */
+  interactionMode?: 'auto' | 'interact';
+  /**
+   * Text displayed when triggerType === 'sign'.
+   * Shown in a popup card when the player interacts with the zone.
+   */
+  signText?: string;
+}
+
+/**
+ * Joue une brique sonore procédurale quand le joueur entre dans la zone.
+ * soundBrickId référence un SOUND_BRICKS[].id de src/config/soundBricks.ts.
+ */
+export interface AudioZone {
+  id: string;
+  /** Zone in grid pixels (world space) */
+  zone: Rect;
+  /** ID de la brique sonore (SOUND_BRICKS[].id) */
+  soundBrickId: string;
+  /** Jouer une seule fois par session ? */
+  once: boolean;
+  /** Label affiché dans l'éditeur */
   label: string;
 }
 
@@ -135,6 +213,8 @@ export interface MapData {
   /** AccessCity custom extensions */
   _ac_dialogue_triggers: DialogueTrigger[];
   _ac_scene_exits: SceneExit[];
+  /** Zones sonores — jouent une brique jsfxr quand le joueur entre dedans */
+  _ac_audio_zones: AudioZone[];
   /** Entités placées sur la carte (PNJ, monstres, objets…) */
   _ac_entities: EntityInstance[];
 }

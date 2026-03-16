@@ -38,16 +38,16 @@ describe('SettingsStore', () => {
 
   // ─── projectData ──────────────────────────────────────────────────────────
 
-  describe('setContextField()', () => {
+  describe('updateProjectData() — champ unique', () => {
     it('met à jour un champ unique de projectData', () => {
-      const { setContextField } = useSettingsStore.getState();
-      setContextField('title', 'Mon Projet');
+      const { updateProjectData } = useSettingsStore.getState();
+      updateProjectData({ title: 'Mon Projet' });
       expect(useSettingsStore.getState().projectData.title).toBe('Mon Projet');
     });
 
     it('ne modifie pas les autres champs de projectData', () => {
-      const { setContextField } = useSettingsStore.getState();
-      setContextField('location', 'Paris');
+      const { updateProjectData } = useSettingsStore.getState();
+      updateProjectData({ location: 'Paris' });
       expect(useSettingsStore.getState().projectData.title).toBe('Sans titre');
       expect(useSettingsStore.getState().projectData.location).toBe('Paris');
     });
@@ -66,16 +66,14 @@ describe('SettingsStore', () => {
 
   // ─── variables (jeu) ──────────────────────────────────────────────────────
 
-  describe('setVariable()', () => {
-    it('définit une variable à la valeur exacte', () => {
-      const { setVariable } = useSettingsStore.getState();
-      setVariable('physique', 42);
+  describe('setState variables — set absolu', () => {
+    it('définit une variable à la valeur exacte via setState', () => {
+      useSettingsStore.setState((s) => ({ variables: { ...s.variables, physique: 42 } }));
       expect(useSettingsStore.getState().variables.physique).toBe(42);
     });
 
-    it('crée une nouvelle variable si elle n\'existait pas', () => {
-      const { setVariable } = useSettingsStore.getState();
-      setVariable('courage', 75);
+    it("crée une nouvelle variable si elle n'existait pas", () => {
+      useSettingsStore.setState((s) => ({ variables: { ...s.variables, courage: 75 } }));
       expect(useSettingsStore.getState().variables.courage).toBe(75);
     });
   });
@@ -94,8 +92,8 @@ describe('SettingsStore', () => {
     });
 
     it('plancher à 0 (MIN)', () => {
-      const { setVariable, modifyVariable } = useSettingsStore.getState();
-      setVariable('physique', 5);
+      const { modifyVariable } = useSettingsStore.getState();
+      useSettingsStore.setState((s) => ({ variables: { ...s.variables, physique: 5 } }));
       modifyVariable('physique', -50); // 5 - 50 = -45 → clampé à 0
       expect(useSettingsStore.getState().variables.physique).toBe(0);
     });
@@ -109,10 +107,9 @@ describe('SettingsStore', () => {
 
   // ─── language / enableStatsHUD ────────────────────────────────────────────
 
-  describe('setLanguage()', () => {
+  describe('language — setState direct', () => {
     it('bascule vers la langue cible', () => {
-      const { setLanguage } = useSettingsStore.getState();
-      setLanguage('en');
+      useSettingsStore.setState({ language: 'en' });
       expect(useSettingsStore.getState().language).toBe('en');
     });
   });
@@ -244,19 +241,20 @@ describe('SettingsStore', () => {
       expect(col.assetIds).toContain('asset-123');
     });
 
-    it('n\'ajoute pas en double un asset déjà présent', () => {
+    it("n'ajoute pas en double un asset déjà présent", () => {
       const { addAssetCollection, addAssetToCollection } = useSettingsStore.getState();
       const colId = addAssetCollection('Col');
       addAssetToCollection(colId, 'asset-abc');
       addAssetToCollection(colId, 'asset-abc');
       const col = useSettingsStore.getState().assetCollections[0];
-      expect(col.assetIds.filter(id => id === 'asset-abc')).toHaveLength(1);
+      expect(col.assetIds.filter((id) => id === 'asset-abc')).toHaveLength(1);
     });
   });
 
   describe('removeAssetFromCollection()', () => {
-    it('retire l\'assetId de la collection', () => {
-      const { addAssetCollection, addAssetToCollection, removeAssetFromCollection } = useSettingsStore.getState();
+    it("retire l'assetId de la collection", () => {
+      const { addAssetCollection, addAssetToCollection, removeAssetFromCollection } =
+        useSettingsStore.getState();
       const colId = addAssetCollection('Col');
       addAssetToCollection(colId, 'asset-xyz');
       removeAssetFromCollection(colId, 'asset-xyz');
@@ -268,7 +266,7 @@ describe('SettingsStore', () => {
   // ─── assetDisplayNames ────────────────────────────────────────────────────
 
   describe('setAssetDisplayName()', () => {
-    it('associe un nom d\'affichage à un chemin d\'asset', () => {
+    it("associe un nom d'affichage à un chemin d'asset", () => {
       const { setAssetDisplayName } = useSettingsStore.getState();
       setAssetDisplayName('/assets/bg/city.png', 'Vue sur la ville');
       const names = useSettingsStore.getState().assetDisplayNames;

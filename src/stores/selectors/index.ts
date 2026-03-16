@@ -23,13 +23,19 @@ import { useMemo } from 'react';
 import { useScenesStore } from '../scenesStore';
 import { useDialoguesStore } from '../dialoguesStore';
 import { useSceneElementsStore } from '../sceneElementsStore';
-import type { Scene, Dialogue, SceneCharacter, TextBox, Prop } from '../../types';
+import type { Scene, Dialogue, SceneCharacter, TextBox, Prop, SceneMetadata } from '../../types';
 
 /** Stable empty references to avoid infinite re-render loops in useSyncExternalStore */
+const EMPTY_SCENES: SceneMetadata[] = [];
 const EMPTY_DIALOGUES: Dialogue[] = [];
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
+const EMPTY_DIALOGUES_BY_SCENE: Record<string, Dialogue[]> = {};
+const EMPTY_ELEMENTS_BY_SCENE: Record<
+  string,
+  { characters: SceneCharacter[]; textBoxes: TextBox[]; props: Prop[] }
+> = {};
 
 // Re-export all selectors from sceneSelectors and characterSelectors
 export * from './sceneSelectors';
@@ -55,11 +61,15 @@ export function useSceneWithElements(sceneId: string | undefined): Scene | undef
   // Use raw store data with stable empty fallbacks to avoid infinite re-render loops.
   // Calling store methods like getElementsForScene() inside selectors creates new objects
   // on each call, which useSyncExternalStore interprets as tearing → infinite loop.
-  const sceneMetadata = useScenesStore((s) => id ? s.getSceneById(id) : undefined);
-  const dialogues = useDialoguesStore((s) => (id && s.dialoguesByScene[id]) || EMPTY_DIALOGUES);
-  const characters = useSceneElementsStore((s) => (id && s.elementsByScene[id]?.characters) || EMPTY_CHARACTERS);
-  const textBoxes = useSceneElementsStore((s) => (id && s.elementsByScene[id]?.textBoxes) || EMPTY_TEXTBOXES);
-  const props = useSceneElementsStore((s) => (id && s.elementsByScene[id]?.props) || EMPTY_PROPS);
+  const sceneMetadata = useScenesStore((s) => (id ? s?.getSceneById(id) : undefined));
+  const dialogues = useDialoguesStore((s) => (id && s?.dialoguesByScene[id]) || EMPTY_DIALOGUES);
+  const characters = useSceneElementsStore(
+    (s) => (id && s?.elementsByScene[id]?.characters) || EMPTY_CHARACTERS
+  );
+  const textBoxes = useSceneElementsStore(
+    (s) => (id && s?.elementsByScene[id]?.textBoxes) || EMPTY_TEXTBOXES
+  );
+  const props = useSceneElementsStore((s) => (id && s?.elementsByScene[id]?.props) || EMPTY_PROPS);
 
   return useMemo(() => {
     if (!sceneMetadata) return undefined;
@@ -73,17 +83,25 @@ export function useSceneWithElements(sceneId: string | undefined): Scene | undef
  * @returns Scene[] complètes
  */
 export function useAllScenesWithElements(): Scene[] {
-  const scenes = useScenesStore((s) => s.scenes);
-  const dialoguesByScene = useDialoguesStore((s) => s.dialoguesByScene);
-  const elementsByScene = useSceneElementsStore((s) => s.elementsByScene);
+  const scenes = useScenesStore((s) => s?.scenes ?? EMPTY_SCENES);
+  const dialoguesByScene = useDialoguesStore(
+    (s) => s?.dialoguesByScene ?? EMPTY_DIALOGUES_BY_SCENE
+  );
+  const elementsByScene = useSceneElementsStore(
+    (s) => s?.elementsByScene ?? EMPTY_ELEMENTS_BY_SCENE
+  );
 
-  return useMemo(() => scenes.map((scene) => ({
-    ...scene,
-    dialogues: dialoguesByScene[scene.id] ?? EMPTY_DIALOGUES,
-    characters: elementsByScene[scene.id]?.characters ?? EMPTY_CHARACTERS,
-    textBoxes: elementsByScene[scene.id]?.textBoxes ?? EMPTY_TEXTBOXES,
-    props: elementsByScene[scene.id]?.props ?? EMPTY_PROPS,
-  })), [scenes, dialoguesByScene, elementsByScene]);
+  return useMemo(
+    () =>
+      scenes.map((scene) => ({
+        ...scene,
+        dialogues: dialoguesByScene[scene.id] ?? EMPTY_DIALOGUES,
+        characters: elementsByScene[scene.id]?.characters ?? EMPTY_CHARACTERS,
+        textBoxes: elementsByScene[scene.id]?.textBoxes ?? EMPTY_TEXTBOXES,
+        props: elementsByScene[scene.id]?.props ?? EMPTY_PROPS,
+      })),
+    [scenes, dialoguesByScene, elementsByScene]
+  );
 }
 
 /**
@@ -104,36 +122,36 @@ export function useSceneDialogues(sceneId: string) {
  */
 export function useSceneActions() {
   // Scenes
-  const addScene = useScenesStore((s) => s.addScene);
-  const updateScene = useScenesStore((s) => s.updateScene);
-  const deleteScene = useScenesStore((s) => s.deleteScene);
-  const setSceneBackground = useScenesStore((s) => s.setSceneBackground);
+  const addScene = useScenesStore((s) => s?.addScene);
+  const updateScene = useScenesStore((s) => s?.updateScene);
+  const deleteScene = useScenesStore((s) => s?.deleteScene);
+  const setSceneBackground = useScenesStore((s) => s?.setSceneBackground);
 
   // Dialogues
-  const addDialogue = useDialoguesStore((s) => s.addDialogue);
-  const addDialogues = useDialoguesStore((s) => s.addDialogues);
-  const updateDialogue = useDialoguesStore((s) => s.updateDialogue);
-  const deleteDialogue = useDialoguesStore((s) => s.deleteDialogue);
-  const duplicateDialogue = useDialoguesStore((s) => s.duplicateDialogue);
-  const reorderDialogues = useDialoguesStore((s) => s.reorderDialogues);
-  const insertDialoguesAfter = useDialoguesStore((s) => s.insertDialoguesAfter);
+  const addDialogue = useDialoguesStore((s) => s?.addDialogue);
+  const addDialogues = useDialoguesStore((s) => s?.addDialogues);
+  const updateDialogue = useDialoguesStore((s) => s?.updateDialogue);
+  const deleteDialogue = useDialoguesStore((s) => s?.deleteDialogue);
+  const duplicateDialogue = useDialoguesStore((s) => s?.duplicateDialogue);
+  const reorderDialogues = useDialoguesStore((s) => s?.reorderDialogues);
+  const insertDialoguesAfter = useDialoguesStore((s) => s?.insertDialoguesAfter);
 
   // Scene Elements - Characters
-  const addCharacterToScene = useSceneElementsStore((s) => s.addCharacterToScene);
-  const removeCharacterFromScene = useSceneElementsStore((s) => s.removeCharacterFromScene);
-  const updateSceneCharacter = useSceneElementsStore((s) => s.updateSceneCharacter);
-  const updateCharacterPosition = useSceneElementsStore((s) => s.updateCharacterPosition);
-  const updateCharacterAnimation = useSceneElementsStore((s) => s.updateCharacterAnimation);
+  const addCharacterToScene = useSceneElementsStore((s) => s?.addCharacterToScene);
+  const removeCharacterFromScene = useSceneElementsStore((s) => s?.removeCharacterFromScene);
+  const updateSceneCharacter = useSceneElementsStore((s) => s?.updateSceneCharacter);
+  const updateCharacterPosition = useSceneElementsStore((s) => s?.updateCharacterPosition);
+  const updateCharacterAnimation = useSceneElementsStore((s) => s?.updateCharacterAnimation);
 
   // Scene Elements - TextBoxes
-  const addTextBoxToScene = useSceneElementsStore((s) => s.addTextBoxToScene);
-  const removeTextBoxFromScene = useSceneElementsStore((s) => s.removeTextBoxFromScene);
-  const updateTextBox = useSceneElementsStore((s) => s.updateTextBox);
+  const addTextBoxToScene = useSceneElementsStore((s) => s?.addTextBoxToScene);
+  const removeTextBoxFromScene = useSceneElementsStore((s) => s?.removeTextBoxFromScene);
+  const updateTextBox = useSceneElementsStore((s) => s?.updateTextBox);
 
   // Scene Elements - Props
-  const addPropToScene = useSceneElementsStore((s) => s.addPropToScene);
-  const removePropFromScene = useSceneElementsStore((s) => s.removePropFromScene);
-  const updateProp = useSceneElementsStore((s) => s.updateProp);
+  const addPropToScene = useSceneElementsStore((s) => s?.addPropToScene);
+  const removePropFromScene = useSceneElementsStore((s) => s?.removePropFromScene);
+  const updateProp = useSceneElementsStore((s) => s?.updateProp);
 
   return {
     // Scenes

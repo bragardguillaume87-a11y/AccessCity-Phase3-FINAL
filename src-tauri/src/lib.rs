@@ -156,6 +156,68 @@ fn upload_asset_editor(
     Ok(dest.to_string_lossy().into_owned())
 }
 
+/// Restaure un asset depuis un backup en préservant exactement le nom de fichier.
+/// `relative_path` ex: "tilesets/foo-12345.png" — chemin relatif depuis la racine assets.
+/// Contrairement à upload_asset_editor, aucun timestamp n'est ajouté.
+/// Retourne le chemin absolu du fichier restauré.
+#[tauri::command]
+fn restore_asset_exact(
+    app_handle: tauri::AppHandle,
+    relative_path: String,
+    data: Vec<u8>,
+) -> Result<String, String> {
+    let assets_root = user_assets_root(&app_handle)?;
+    // Sécurité : empêcher la traversal (ex: "../../etc/passwd")
+    let norm = relative_path
+        .replace('\\', "/")
+        .trim_start_matches('/')
+        .to_string();
+    if norm.contains("..") {
+        return Err(format!("Chemin invalide : {}", relative_path));
+    }
+
+    let dest = assets_root.join(&norm);
+
+    // Créer les sous-dossiers si nécessaire
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("create_dir_all : {}", e))?;
+    }
+
+    std::fs::write(&dest, &data)
+        .map_err(|e| format!("write {} : {}", norm, e))?;
+
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+/// Lit le fichier `data/autoload.zip` situé dans le répertoire de l'exe (mode portable).
+/// Retourne les bytes du ZIP, ou None si le fichier n'existe pas.
+/// Appelé au premier lancement pour auto-importer le projet.
+#[tauri::command]
+fn read_autoload_zip(app_handle: tauri::AppHandle) -> Result<Option<Vec<u8>>, String> {
+    // Disponible uniquement en mode portable
+    if app_handle.config().identifier != "fr.accesscity.studio.portable" {
+        return Ok(None);
+    }
+
+    let exe_dir = std::env::current_exe()
+        .map_err(|e| format!("current_exe : {}", e))?
+        .parent()
+        .ok_or_else(|| "L'exe n'a pas de dossier parent".to_string())?
+        .to_path_buf();
+
+    let autoload = exe_dir.join("data").join("autoload.zip");
+
+    if !autoload.exists() {
+        return Ok(None);
+    }
+
+    let bytes = std::fs::read(&autoload)
+        .map_err(|e| format!("read autoload.zip : {}", e))?;
+
+    Ok(Some(bytes))
+}
+
 /// Supprime une liste de fichiers (chemins absolus).
 /// Retourne JSON { success, deleted, errors, count, message }.
 #[tauri::command]
@@ -318,6 +380,8 @@ pub fn run() {
             get_user_assets_dir,
             list_user_assets,
             upload_asset_editor,
+            restore_asset_exact,
+            read_autoload_zip,
             delete_assets_editor,
             move_asset_editor,
         ])

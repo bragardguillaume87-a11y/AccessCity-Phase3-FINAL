@@ -1,0 +1,71 @@
+# Dépendances — jamais pertinentes pour le code source
+node_modules/
+.pnp/
+.pnp.js
+
+# Builds et artefacts compilés
+dist/
+dist-editor-tauri/
+dist-player-tauri/
+dist-ssr/
+build/
+.cache/
+tmp/
+
+# Tauri — artefacts générés automatiquement
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/android/
+
+# Assets binaires — non-textuels, consomment beaucoup de tokens pour rien
+*.zip
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.svg
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.wav
+*.mp3
+*.ogg
+*.mp4
+*.webm
+
+# Fichiers de lock — bruit pur pour Claude
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Fichiers TypeScript compilés
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Couverture de tests
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+*.code-workspace
+
+# Secrets
+.env
+.env.*.local
+.env.local
+.apikey
+*.secret
+
+# Contextes externes IA (non pertinents pour le code)
+.perplexity-context/
+
+# Manifeste d'assets généré — régénéré à chaque build
+public/assets-manifest.json

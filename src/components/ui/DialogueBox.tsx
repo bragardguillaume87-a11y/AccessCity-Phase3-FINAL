@@ -29,8 +29,8 @@ export const DIALOGUE_BOX_DEFAULTS: Required<DialogueBoxStyle> = {
   showPortrait: true,
   speakerAlign: 'auto',
   borderStyle: 'subtle',
-  portraitOffsetX: 50,  // centre horizontal
-  portraitOffsetY: 0,   // haut vertical (affiche le visage en priorité)
+  portraitOffsetX: 50, // centre horizontal
+  portraitOffsetY: 0, // haut vertical (affiche le visage en priorité)
   portraitScale: 1,
 };
 
@@ -50,9 +50,12 @@ export function hashStringToColor(str: string): string {
 /** Classe Tailwind de bordure selon le style de boîte */
 export function borderClass(style: DialogueBoxStyle['borderStyle']): string {
   switch (style) {
-    case 'none':      return 'border-transparent';
-    case 'prominent': return 'border-white/30';
-    default:          return 'border-white/10'; // subtle
+    case 'none':
+      return 'border-transparent';
+    case 'prominent':
+      return 'border-white/30';
+    default:
+      return 'border-white/10'; // subtle
   }
 }
 
@@ -142,20 +145,20 @@ export function DialogueBox({
 
   // Portrait masquage : pan + zoom non-destructif
   const portraitObjPos = `${config.portraitOffsetX}% ${config.portraitOffsetY}%`;
-  const portraitScale  = config.portraitScale !== 1 ? `scale(${config.portraitScale})` : undefined;
+  const portraitScale = config.portraitScale !== 1 ? `scale(${config.portraitScale})` : undefined;
 
   // Typographie proportionnelle au canvas — clamp [0.5 – 3] pour éviter les extrêmes
   const sf = Math.max(0.5, Math.min(3, scaleFactor));
-  const effectiveFontSize  = Math.round(config.fontSize * sf);   // texte dialogue
-  const speakerFontSize    = Math.round(14 * sf);                // text-sm = 14px
-  const portraitSizePx     = Math.round(48 * sf);               // w-12 h-12 = 48px
+  const effectiveFontSize = Math.round(config.fontSize * sf); // texte dialogue
+  const speakerFontSize = Math.round(14 * sf); // text-sm = 14px
+  const portraitSizePx = Math.round(48 * sf); // w-12 h-12 = 48px
   // minHeight uniquement quand il n'y a pas de choix — évite l'espace superflu
-  const textMinHeightPx    = hasChoices ? 0 : Math.round(72 * sf);
+  const textMinHeightPx = hasChoices ? 0 : Math.round(72 * sf);
 
   // Taille de l'icône indicateur et des badges de numérotation
-  const indicatorIconSize  = Math.round(18 * sf);
-  const badgeFontSize      = Math.round(11 * sf);
-  const badgeSize          = Math.round(22 * sf);
+  const indicatorIconSize = Math.round(18 * sf);
+  const badgeFontSize = Math.round(11 * sf);
+  const badgeSize = Math.round(22 * sf);
 
   return (
     <div
@@ -191,29 +194,32 @@ export function DialogueBox({
 
           {/* Nom + ligne décorative */}
           {speaker && (
-            <div className={`flex items-center gap-2 flex-1 min-w-0 ${speakerIsOnRight ? 'flex-row-reverse' : ''}`}>
+            <div
+              className={`flex items-center gap-2 flex-1 min-w-0 ${speakerIsOnRight ? 'flex-row-reverse' : ''}`}
+            >
               <span
                 className="font-bold uppercase tracking-widest drop-shadow flex-shrink-0"
                 style={{ color: speakerColor, fontSize: speakerFontSize }}
               >
                 {speaker}
               </span>
-              <div className="flex-1 h-px opacity-30 min-w-0" style={{ background: speakerColor }} />
+              <div
+                className="flex-1 h-px opacity-30 min-w-0"
+                style={{ background: speakerColor }}
+              />
             </div>
           )}
 
           {/* Slot de navigation (éditeur uniquement) — toujours à droite */}
           {navigationSlot && (
-            <div className={`flex-shrink-0${!speaker ? ' ml-auto' : ''}`}>
-              {navigationSlot}
-            </div>
+            <div className={`flex-shrink-0${!speaker ? ' ml-auto' : ''}`}>{navigationSlot}</div>
           )}
         </div>
       )}
 
       {/* ── Texte du dialogue ── */}
       <div
-        className={`relative px-4 ${(speaker || navigationSlot) ? 'pt-0' : 'pt-3'} ${hasChoices ? 'pb-1' : 'pb-3'}`}
+        className={`relative px-4 ${speaker || navigationSlot ? 'pt-0' : 'pt-3'} ${hasChoices ? 'pb-1' : 'pb-3'}`}
         onClick={onAdvance}
         role={onAdvance ? 'button' : undefined}
         style={{ cursor: onAdvance ? 'pointer' : undefined }}
@@ -243,10 +249,10 @@ export function DialogueBox({
               <motion.div
                 className="flex items-center justify-center rounded-full"
                 style={{
-                  background: 'rgba(139,92,246,0.28)',
-                  border: '1px solid rgba(139,92,246,0.60)',
+                  background: 'var(--color-primary-28)',
+                  border: '1px solid var(--color-primary-60)',
                   padding: Math.round(5 * sf),
-                  filter: `drop-shadow(0 0 ${Math.round(6 * sf)}px rgba(139,92,246,0.80))`,
+                  filter: `drop-shadow(0 0 ${Math.round(6 * sf)}px var(--color-primary-80))`,
                 }}
                 animate={{
                   opacity: [0.78, 1, 0.78],
@@ -273,7 +279,10 @@ export function DialogueBox({
             <div className="flex gap-2">
               {onRestart && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onRestart(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestart();
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" aria-hidden="true" />
@@ -282,7 +291,10 @@ export function DialogueBox({
               )}
               {onClose && (
                 <Button
-                  onClick={(e) => { e.stopPropagation(); onClose(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
                   variant="gaming-primary"
                   size="sm"
                   className="min-w-[120px] text-xs"
@@ -305,7 +317,15 @@ export function DialogueBox({
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: isRolling ? 0.45 : 1, x: 0 }}
               transition={{ delay: idx * 0.06, duration: 0.18, ease: 'easeOut' }}
-              whileHover={isRolling ? undefined : { x: 6, backgroundColor: 'rgba(30,12,80,0.80)', borderColor: 'rgba(139,92,246,0.50)' }}
+              whileHover={
+                isRolling
+                  ? undefined
+                  : {
+                      x: 6,
+                      backgroundColor: 'rgba(30,12,80,0.80)',
+                      borderColor: 'var(--color-primary-glow)',
+                    }
+              }
               whileTap={isRolling ? undefined : { scale: 0.98 }}
               className="w-full text-left rounded-xl text-white relative overflow-hidden group"
               style={{
@@ -332,7 +352,9 @@ export function DialogueBox({
               {/* Dégradé de fond au survol — CSS group-hover */}
               <div
                 className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ background: `linear-gradient(90deg, ${CHOICE_ACCENT}30 0%, transparent 65%)` }}
+                style={{
+                  background: `linear-gradient(90deg, ${CHOICE_ACCENT}30 0%, transparent 65%)`,
+                }}
               />
 
               {/* Numéro du choix */}
@@ -343,7 +365,7 @@ export function DialogueBox({
                   fontSize: badgeFontSize,
                   width: badgeSize,
                   height: badgeSize,
-                  border: `1px solid rgba(139,92,246,0.35)`,
+                  border: `1px solid var(--color-primary-35)`,
                   minWidth: badgeSize,
                 }}
                 aria-hidden="true"
@@ -368,17 +390,22 @@ export function DialogueBox({
                 {/* Badges effets (opération add uniquement — clair pour le joueur) */}
                 {choice.effects && choice.effects.length > 0 && (
                   <span className="flex flex-wrap gap-1 mt-0.5">
-                    {choice.effects.filter(e => e.operation === 'add').map((eff, i) => (
-                      <span
-                        key={i}
-                        className={`inline-block px-1.5 py-0.5 rounded-full font-semibold ${
-                          eff.value >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                        }`}
-                        style={{ fontSize: Math.round(9 * sf) }}
-                      >
-                        {eff.value >= 0 ? '+' : ''}{eff.value} {eff.variable}
-                      </span>
-                    ))}
+                    {choice.effects
+                      .filter((e) => e.operation === 'add')
+                      .map((eff, i) => (
+                        <span
+                          key={i}
+                          className={`inline-block px-1.5 py-0.5 rounded-full font-semibold ${
+                            eff.value >= 0
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}
+                          style={{ fontSize: Math.round(9 * sf) }}
+                        >
+                          {eff.value >= 0 ? '+' : ''}
+                          {eff.value} {eff.variable}
+                        </span>
+                      ))}
                   </span>
                 )}
               </span>

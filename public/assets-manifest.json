@@ -1,14 +1,20 @@
 {
-  "generated": "2026-03-07T13:22:11.865Z",
+  "generated": "2026-03-16T02:53:11.882Z",
   "version": "1.0.0",
-  "totalAssets": 13,
-  "categories": [
-    "backgrounds",
-    "characters",
-    "music",
-    "sfx"
-  ],
+  "totalAssets": 24,
+  "categories": ["audio", "backgrounds", "characters", "music", "sfx", "sprites-2d", "tilesets"],
   "assets": {
+    "audio": [
+      {
+        "id": "audio/lookupmastered-1773613993991",
+        "name": "lookupmastered-1773613993991",
+        "path": "/assets/audio/lookupmastered-1773613993991.mp3",
+        "type": "mp3",
+        "category": "audio",
+        "size": 3001838,
+        "modified": "2026-03-15T22:33:14.020Z"
+      }
+    ],
     "backgrounds": [
       {
         "id": "backgrounds/61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
@@ -132,6 +138,100 @@
         "category": "sfx",
         "size": 21403284,
         "modified": "2026-02-22T14:23:47.562Z"
+      }
+    ],
+    "sprites-2d": [
+      {
+        "id": "sprites-2d/0b84f4f9-68b1-42d0-94ac-a888f4e4a5e6-1773184589861",
+        "name": "0b84f4f9-68b1-42d0-94ac-a888f4e4a5e6-1773184589861",
+        "path": "/assets/sprites-2d/0b84f4f9-68b1-42d0-94ac-a888f4e4a5e6-1773184589861.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 1451984,
+        "modified": "2026-03-10T23:16:29.870Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773088471211",
+        "name": "characters-1773088471211",
+        "path": "/assets/sprites-2d/characters-1773088471211.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-09T20:34:31.214Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773096409772",
+        "name": "characters-1773096409772",
+        "path": "/assets/sprites-2d/characters-1773096409772.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-09T22:46:49.779Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773184807110",
+        "name": "characters-1773184807110",
+        "path": "/assets/sprites-2d/characters-1773184807110.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-10T23:20:07.111Z"
+      },
+      {
+        "id": "sprites-2d/snes---secret-of-evermore---boy---boy-1773185652844",
+        "name": "snes---secret-of-evermore---boy---boy-1773185652844",
+        "path": "/assets/sprites-2d/snes---secret-of-evermore---boy---boy-1773185652844.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 67851,
+        "modified": "2026-03-10T23:34:12.845Z"
+      }
+    ],
+    "tilesets": [
+      {
+        "id": "tilesets/hyptosistile-art-batch-1-1773573693258",
+        "name": "hyptosistile-art-batch-1-1773573693258",
+        "path": "/assets/tilesets/hyptosistile-art-batch-1-1773573693258.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 525029,
+        "modified": "2026-03-15T11:21:33.267Z"
+      },
+      {
+        "id": "tilesets/maple-tree-1773619139729",
+        "name": "maple-tree-1773619139729",
+        "path": "/assets/tilesets/maple-tree-1773619139729.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 2418,
+        "modified": "2026-03-15T23:58:59.733Z"
+      },
+      {
+        "id": "tilesets/sheet-1773081504531",
+        "name": "sheet-1773081504531",
+        "path": "/assets/tilesets/sheet-1773081504531.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 10314,
+        "modified": "2026-03-09T18:38:24.534Z"
+      },
+      {
+        "id": "tilesets/sheet-1773103925043",
+        "name": "sheet-1773103925043",
+        "path": "/assets/tilesets/sheet-1773103925043.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 10314,
+        "modified": "2026-03-10T00:52:05.046Z"
+      },
+      {
+        "id": "tilesets/treestextureshadowsource-1773615448670",
+        "name": "treestextureshadowsource-1773615448670",
+        "path": "/assets/tilesets/treestextureshadowsource-1773615448670.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 97702,
+        "modified": "2026-03-15T22:57:28.674Z"
       }
     ]
   }

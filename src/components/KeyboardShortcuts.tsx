@@ -39,12 +39,9 @@ export interface KeyboardShortcutsProps {
  * />
  * ```
  */
-export default function KeyboardShortcuts({
-  activeTab,
-  setActiveTab
-}: KeyboardShortcutsProps) {
-  const addScene = useScenesStore(state => state.addScene);
-  const addCharacter = useCharactersStore(state => state.addCharacter);
+export default function KeyboardShortcuts({ activeTab, setActiveTab }: KeyboardShortcutsProps) {
+  const addScene = useScenesStore((state) => state?.addScene);
+  const addCharacter = useCharactersStore((state) => state?.addCharacter);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,11 +51,7 @@ export default function KeyboardShortcuts({
 
       // Ignore shortcuts when typing in input/textarea
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         // Only allow Ctrl+S and Ctrl+K in input fields
         if (modifier && e.key.toLowerCase() === 's') {
           e.preventDefault();

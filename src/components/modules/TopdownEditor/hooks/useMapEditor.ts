@@ -2,13 +2,14 @@
  * useMapEditor — État local de l'éditeur de carte topdown
  *
  * Gère : tuile sélectionnée, couche active, outil actif, zoom/pan,
- *        visibilité/opacité des couches, grille, dim des couches inactives.
+ *        grille, dim des couches inactives.
  * Les mutations de données passent par mapsStore (via getState() dans les handlers).
+ * La visibilité/opacité/lock des couches sont stockées DANS LayerInstance (_ac_*).
  *
  * @module components/modules/TopdownEditor/hooks/useMapEditor
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMapsStore } from '@/stores/mapsStore';
 import type { LayerType, TileInstance, MapData } from '@/types/map';
 import type { SelectedTile } from '@/types/tileset';
@@ -19,13 +20,12 @@ import type { SelectedTile } from '@/types/tileset';
 
 export type EditorTool = 'paint' | 'erase' | 'eyedropper' | 'fill';
 
-export interface LayerVisibility   extends Record<LayerType, boolean> {}
-export interface LayerOpacity      extends Record<LayerType, number>  {}
-
 export interface MapEditorState {
   selectedMapId: string | null;
   activeTool: EditorTool;
   activeLayer: LayerType;
+  /** Index dans les couches de type 'tiles' uniquement (0 = première couche tuile) */
+  activeTileLayerIndex: number;
   selectedTile: SelectedTile | null;
   zoom: number;
   stagePos: { x: number; y: number };
@@ -36,8 +36,6 @@ export interface MapEditorState {
   flipY: boolean;
   stackMode: boolean;
   // Render options
-  layerVisibility: LayerVisibility;
-  layerOpacity: LayerOpacity;
   showGrid: boolean;
   dimInactiveLayers: boolean;
 }
@@ -46,6 +44,7 @@ export interface MapEditorActions {
   selectMap: (mapId: string) => void;
   setActiveTool: (tool: EditorTool) => void;
   setActiveLayer: (layer: LayerType) => void;
+  setActiveTileLayerIndex: (index: number) => void;
   setSelectedTile: (tile: SelectedTile | null) => void;
   setZoom: (zoom: number) => void;
   setStagePos: (pos: { x: number; y: number }) => void;
@@ -54,8 +53,6 @@ export interface MapEditorActions {
   paintCell: (cx: number, cy: number) => void;
   eraseCell: (cx: number, cy: number) => void;
   fillCell: (cx: number, cy: number) => void;
-  toggleLayerVisibility: (layer: LayerType) => void;
-  setLayerOpacity: (layer: LayerType, opacity: number) => void;
   toggleGrid: () => void;
   toggleDimInactive: () => void;
   toggleFlipX: () => void;
@@ -68,9 +65,6 @@ export interface MapEditorActions {
 // ============================================================================
 
 const LAST_MAP_KEY = 'ac_last_map_id';
-
-const DEFAULT_VISIBILITY: LayerVisibility = { tiles: true, collision: true, triggers: true };
-const DEFAULT_OPACITY: LayerOpacity       = { tiles: 1.0, collision: 0.7, triggers: 0.7 };
 
 // ============================================================================
 // HELPERS
@@ -114,10 +108,22 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     const stored = localStorage.getItem(LAST_MAP_KEY);
     if (!stored) return null;
     const maps = useMapsStore.getState().maps;
-    return maps.some(m => m.id === stored) ? stored : (maps[maps.length - 1]?.id ?? null);
+    return maps.some((m) => m.id === stored) ? stored : (maps[maps.length - 1]?.id ?? null);
   });
   const [activeTool, setActiveTool] = useState<EditorTool>('paint');
   const [activeLayer, setActiveLayer] = useState<LayerType>('tiles');
+  const [activeTileLayerIndex, setActiveTileLayerIndex] = useState<number>(() => {
+    // Restore the last active layer for this map, keyed by selectedMapId
+    const maps = useMapsStore.getState().maps;
+    const storedId = localStorage.getItem('ac_selected_map');
+    const mapId = maps.some((m) => m.id === storedId)
+      ? storedId
+      : (maps[maps.length - 1]?.id ?? null);
+    if (!mapId) return 0;
+    const stored = localStorage.getItem(`ac_active_layer_${mapId}`);
+    const parsed = stored ? parseInt(stored, 10) : 0;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  });
   const [selectedTile, setSelectedTile] = useState<SelectedTile | null>(null);
   const [zoom, setZoom] = useState(1);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
@@ -128,8 +134,6 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
   const [stackMode, setStackMode] = useState(false);
 
   // ── Render options ─────────────────────────────────────────────────────────
-  const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_VISIBILITY);
-  const [layerOpacity, setLayerOpacityState] = useState<LayerOpacity>(DEFAULT_OPACITY);
   const [showGrid, setShowGrid] = useState(true);
   const [dimInactiveLayers, setDimInactiveLayers] = useState(true);
 
@@ -139,22 +143,30 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     localStorage.setItem(LAST_MAP_KEY, mapId);
     setStagePos({ x: 0, y: 0 });
     setZoom(1);
+    // Restore activeTileLayerIndex for this map (clamped to actual layer count)
+    const mapData = useMapsStore.getState().mapDataById[mapId];
+    const tileLayerCount = mapData
+      ? mapData.layerInstances.filter((l) => l.__type === 'tiles').length
+      : 1;
+    const stored = localStorage.getItem(`ac_active_layer_${mapId}`);
+    const parsed = stored ? parseInt(stored, 10) : 0;
+    const raw = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    setActiveTileLayerIndex(Math.min(raw, Math.max(0, tileLayerCount - 1)));
   }, []);
+
+  // Persist active layer index per map so it survives page reloads
+  useEffect(() => {
+    if (selectedMapId !== null) {
+      localStorage.setItem(`ac_active_layer_${selectedMapId}`, String(activeTileLayerIndex));
+    }
+  }, [activeTileLayerIndex, selectedMapId]);
 
   // ── Render toggles ─────────────────────────────────────────────────────────
-  const toggleLayerVisibility = useCallback((layer: LayerType) => {
-    setLayerVisibility(prev => ({ ...prev, [layer]: !prev[layer] }));
-  }, []);
-
-  const setLayerOpacity = useCallback((layer: LayerType, opacity: number) => {
-    setLayerOpacityState(prev => ({ ...prev, [layer]: opacity }));
-  }, []);
-
-  const toggleGrid = useCallback(() => setShowGrid(v => !v), []);
-  const toggleDimInactive = useCallback(() => setDimInactiveLayers(v => !v), []);
-  const toggleFlipX = useCallback(() => setFlipX(v => !v), []);
-  const toggleFlipY = useCallback(() => setFlipY(v => !v), []);
-  const toggleStackMode = useCallback(() => setStackMode(v => !v), []);;
+  const toggleGrid = useCallback(() => setShowGrid((v) => !v), []);
+  const toggleDimInactive = useCallback(() => setDimInactiveLayers((v) => !v), []);
+  const toggleFlipX = useCallback(() => setFlipX((v) => !v), []);
+  const toggleFlipY = useCallback(() => setFlipY((v) => !v), []);
+  const toggleStackMode = useCallback(() => setStackMode((v) => !v), []);
 
   // ── Paint ──────────────────────────────────────────────────────────────────
 
@@ -165,88 +177,103 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
    * Si selectedTile.regionCols > 1 ou regionRows > 1, peint un motif complet
    * à partir de la cellule (cx, cy) vers le bas-droite.
    */
-  const paintCell = useCallback((cx: number, cy: number) => {
-    if (!selectedMapId) return;
-    const store = useMapsStore.getState();
-    const mapData = store.getMapData(selectedMapId);
-    if (!mapData) return;
+  const paintCell = useCallback(
+    (cx: number, cy: number) => {
+      if (!selectedMapId) return;
+      const store = useMapsStore.getState();
+      const mapData = store.getMapData(selectedMapId);
+      if (!mapData) return;
 
-    const newData: MapData = structuredClone(mapData);
+      const newData: MapData = structuredClone(mapData);
 
-    if (activeLayer === 'tiles') {
-      if (!selectedTile) return;
-      const layer = newData.layerInstances.find(l => l.__type === 'tiles');
-      if (!layer) return;
+      if (activeLayer === 'tiles') {
+        if (!selectedTile) return;
+        const tileLayers = newData.layerInstances.filter((l) => l.__type === 'tiles');
+        const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+        if (!layer) return;
+        // Guard: layer locked → skip
+        if (layer._ac_locked) return;
 
-      const rCols = selectedTile.regionCols ?? 1;
-      const rRows = selectedTile.regionRows ?? 1;
-      const stepX = selectedTile.tileStepX ?? selectedTile.tileW;
-      const stepY = selectedTile.tileStepY ?? selectedTile.tileH;
+        const rCols = selectedTile.regionCols ?? 1;
+        const rRows = selectedTile.regionRows ?? 1;
+        const stepX = selectedTile.tileStepX ?? selectedTile.tileW;
+        const stepY = selectedTile.tileStepY ?? selectedTile.tileH;
 
-      const tileF: 0 | 1 | 2 | 3 = ((flipX ? 1 : 0) | (flipY ? 2 : 0)) as 0 | 1 | 2 | 3;
+        const tileF: 0 | 1 | 2 | 3 = ((flipX ? 1 : 0) | (flipY ? 2 : 0)) as 0 | 1 | 2 | 3;
 
-      for (let dr = 0; dr < rRows; dr++) {
-        for (let dc = 0; dc < rCols; dc++) {
-          const targetCx = cx + dc;
-          const targetCy = cy + dr;
-          // Stack mode: keep existing tiles, just add on top
-          if (!stackMode) {
-            layer.gridTiles = layer.gridTiles.filter(t => !(t.cx === targetCx && t.cy === targetCy));
+        for (let dr = 0; dr < rRows; dr++) {
+          for (let dc = 0; dc < rCols; dc++) {
+            const targetCx = cx + dc;
+            const targetCy = cy + dr;
+            // Stack mode: keep existing tiles, just add on top
+            if (!stackMode) {
+              layer.gridTiles = layer.gridTiles.filter(
+                (t) => !(t.cx === targetCx && t.cy === targetCy)
+              );
+            }
+
+            const tile: TileInstance = {
+              cx: targetCx,
+              cy: targetCy,
+              src: selectedTile.asset.url ?? selectedTile.asset.path,
+              ...(selectedTile.tileW > 0
+                ? {
+                    tileX: selectedTile.tileX + dc * stepX,
+                    tileY: selectedTile.tileY + dr * stepY,
+                    tileW: selectedTile.tileW,
+                    tileH: selectedTile.tileH,
+                  }
+                : {}),
+              f: tileF,
+            };
+            layer.gridTiles.push(tile);
           }
-
-          const tile: TileInstance = {
-            cx: targetCx,
-            cy: targetCy,
-            src: selectedTile.asset.url ?? selectedTile.asset.path,
-            ...(selectedTile.tileW > 0 ? {
-              tileX: selectedTile.tileX + dc * stepX,
-              tileY: selectedTile.tileY + dr * stepY,
-              tileW: selectedTile.tileW,
-              tileH: selectedTile.tileH,
-            } : {}),
-            f: tileF,
-          };
-          layer.gridTiles.push(tile);
+        }
+      } else if (activeLayer === 'collision') {
+        const layer = newData.layerInstances.find((l) => l.__type === 'collision');
+        if (!layer) return;
+        if (layer._ac_locked) return;
+        if (!layer.intGrid) layer.intGrid = [];
+        const idx = cy * layer.__cWid + cx;
+        if (!layer.intGrid.includes(idx)) {
+          layer.intGrid.push(idx);
         }
       }
 
-    } else if (activeLayer === 'collision') {
-      const layer = newData.layerInstances.find(l => l.__type === 'collision');
-      if (!layer) return;
-      if (!layer.intGrid) layer.intGrid = [];
-      const idx = cy * layer.__cWid + cx;
-      if (!layer.intGrid.includes(idx)) {
-        layer.intGrid.push(idx);
-      }
-    }
-
-    store.updateMapData(selectedMapId, newData);
-  }, [selectedMapId, activeLayer, selectedTile, flipX, flipY, stackMode]);
+      store.updateMapData(selectedMapId, newData);
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex, selectedTile, flipX, flipY, stackMode]
+  );
 
   // ── Erase ──────────────────────────────────────────────────────────────────
 
-  const eraseCell = useCallback((cx: number, cy: number) => {
-    if (!selectedMapId) return;
-    const store = useMapsStore.getState();
-    const mapData = store.getMapData(selectedMapId);
-    if (!mapData) return;
+  const eraseCell = useCallback(
+    (cx: number, cy: number) => {
+      if (!selectedMapId) return;
+      const store = useMapsStore.getState();
+      const mapData = store.getMapData(selectedMapId);
+      if (!mapData) return;
 
-    const newData: MapData = structuredClone(mapData);
+      const newData: MapData = structuredClone(mapData);
 
-    if (activeLayer === 'tiles') {
-      const layer = newData.layerInstances.find(l => l.__type === 'tiles');
-      if (!layer) return;
-      layer.gridTiles = layer.gridTiles.filter(t => !(t.cx === cx && t.cy === cy));
+      if (activeLayer === 'tiles') {
+        const tileLayers = newData.layerInstances.filter((l) => l.__type === 'tiles');
+        const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+        if (!layer) return;
+        if (layer._ac_locked) return;
+        layer.gridTiles = layer.gridTiles.filter((t) => !(t.cx === cx && t.cy === cy));
+      } else if (activeLayer === 'collision') {
+        const layer = newData.layerInstances.find((l) => l.__type === 'collision');
+        if (!layer || !layer.intGrid) return;
+        if (layer._ac_locked) return;
+        const idx = cy * layer.__cWid + cx;
+        layer.intGrid = layer.intGrid.filter((i) => i !== idx);
+      }
 
-    } else if (activeLayer === 'collision') {
-      const layer = newData.layerInstances.find(l => l.__type === 'collision');
-      if (!layer || !layer.intGrid) return;
-      const idx = cy * layer.__cWid + cx;
-      layer.intGrid = layer.intGrid.filter(i => i !== idx);
-    }
-
-    store.updateMapData(selectedMapId, newData);
-  }, [selectedMapId, activeLayer]);
+      store.updateMapData(selectedMapId, newData);
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex]
+  );
 
   // ── Fill (BFS flood fill) ──────────────────────────────────────────────────
 
@@ -255,81 +282,100 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
    * - Couche tiles : remplit toutes les cellules adjacentes ayant la même source (ou vides).
    * - Couche collision : remplit/efface un bloc de cellules connexes de même état.
    */
-  const fillCell = useCallback((cx: number, cy: number) => {
-    if (!selectedMapId) return;
-    const store = useMapsStore.getState();
-    const mapData = store.getMapData(selectedMapId);
-    if (!mapData) return;
+  const fillCell = useCallback(
+    (cx: number, cy: number) => {
+      if (!selectedMapId) return;
+      const store = useMapsStore.getState();
+      const mapData = store.getMapData(selectedMapId);
+      if (!mapData) return;
 
-    const newData: MapData = structuredClone(mapData);
-    const gridW = Math.floor(newData.pxWid / newData.__gridSize);
-    const gridH = Math.floor(newData.pxHei / newData.__gridSize);
+      const newData: MapData = structuredClone(mapData);
+      const gridW = Math.floor(newData.pxWid / newData.__gridSize);
+      const gridH = Math.floor(newData.pxHei / newData.__gridSize);
 
-    if (activeLayer === 'tiles') {
-      if (!selectedTile) return;
-      const layer = newData.layerInstances.find(l => l.__type === 'tiles');
-      if (!layer) return;
+      if (activeLayer === 'tiles') {
+        if (!selectedTile) return;
+        const tileLayers = newData.layerInstances.filter((l) => l.__type === 'tiles');
+        const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+        if (!layer) return;
+        if (layer._ac_locked) return;
 
-      // Tile à la cellule de départ (peut être null = cellule vide)
-      const startTile = layer.gridTiles.find(t => t.cx === cx && t.cy === cy);
-      const targetSrc = startTile?.src ?? null;
+        // Lookup Map O(1) par cellule — évite O(N²) fill sur map dense (konva-patterns audit)
+        const tileMap = new Map(layer.gridTiles.map((t) => [`${t.cx},${t.cy}`, t]));
 
-      // Si on essaie de peindre la même tuile, ne rien faire
-      const newSrc = selectedTile.asset.url ?? selectedTile.asset.path;
-      if (targetSrc === newSrc && (selectedTile.tileW === 0 || (startTile?.tileX === selectedTile.tileX && startTile?.tileY === selectedTile.tileY))) return;
+        // Tile à la cellule de départ (peut être null = cellule vide)
+        const startTile = tileMap.get(`${cx},${cy}`) ?? null;
+        const targetSrc = startTile?.src ?? null;
 
-      const cells = bfsFill(cx, cy, gridW, gridH, (fcx, fcy) => {
-        const t = layer.gridTiles.find(ti => ti.cx === fcx && ti.cy === fcy);
-        return (t?.src ?? null) === targetSrc;
-      });
+        // Si on essaie de peindre la même tuile, ne rien faire
+        const newSrc = selectedTile.asset.url ?? selectedTile.asset.path;
+        if (
+          targetSrc === newSrc &&
+          (selectedTile.tileW === 0 ||
+            (startTile?.tileX === selectedTile.tileX && startTile?.tileY === selectedTile.tileY))
+        )
+          return;
 
-      const fillSet = new Set(cells.map(c => `${c.cx},${c.cy}`));
-      layer.gridTiles = layer.gridTiles.filter(t => !fillSet.has(`${t.cx},${t.cy}`));
-
-      for (const cell of cells) {
-        layer.gridTiles.push({
-          cx: cell.cx,
-          cy: cell.cy,
-          src: newSrc,
-          ...(selectedTile.tileW > 0 ? {
-            tileX: selectedTile.tileX,
-            tileY: selectedTile.tileY,
-            tileW: selectedTile.tileW,
-            tileH: selectedTile.tileH,
-          } : {}),
-          f: 0,
+        const cells = bfsFill(cx, cy, gridW, gridH, (fcx, fcy) => {
+          const t = tileMap.get(`${fcx},${fcy}`);
+          return (t?.src ?? null) === targetSrc;
         });
-      }
 
-    } else if (activeLayer === 'collision') {
-      const layer = newData.layerInstances.find(l => l.__type === 'collision');
-      if (!layer) return;
-      if (!layer.intGrid) layer.intGrid = [];
+        const fillSet = new Set(cells.map((c) => `${c.cx},${c.cy}`));
+        layer.gridTiles = layer.gridTiles.filter((t) => !fillSet.has(`${t.cx},${t.cy}`));
 
-      const collisionSet = new Set(layer.intGrid);
-      const cw = layer.__cWid;
-      const ch = layer.__cHei;
-      const startSolid = collisionSet.has(cy * cw + cx);
-
-      const cells = bfsFill(cx, cy, cw, ch, (fcx, fcy) =>
-        collisionSet.has(fcy * cw + fcx) === startSolid
-      );
-
-      if (startSolid) {
-        // Erase all
-        const removeSet = new Set(cells.map(c => c.cy * cw + c.cx));
-        layer.intGrid = layer.intGrid.filter(i => !removeSet.has(i));
-      } else {
-        // Add all
         for (const cell of cells) {
-          const idx = cell.cy * cw + cell.cx;
-          if (!layer.intGrid.includes(idx)) layer.intGrid.push(idx);
+          layer.gridTiles.push({
+            cx: cell.cx,
+            cy: cell.cy,
+            src: newSrc,
+            ...(selectedTile.tileW > 0
+              ? {
+                  tileX: selectedTile.tileX,
+                  tileY: selectedTile.tileY,
+                  tileW: selectedTile.tileW,
+                  tileH: selectedTile.tileH,
+                }
+              : {}),
+            f: 0,
+          });
+        }
+      } else if (activeLayer === 'collision') {
+        const layer = newData.layerInstances.find((l) => l.__type === 'collision');
+        if (!layer) return;
+        if (layer._ac_locked) return;
+        if (!layer.intGrid) layer.intGrid = [];
+
+        const collisionSet = new Set(layer.intGrid);
+        const cw = layer.__cWid;
+        const ch = layer.__cHei;
+        const startSolid = collisionSet.has(cy * cw + cx);
+
+        const cells = bfsFill(
+          cx,
+          cy,
+          cw,
+          ch,
+          (fcx, fcy) => collisionSet.has(fcy * cw + fcx) === startSolid
+        );
+
+        if (startSolid) {
+          // Erase all
+          const removeSet = new Set(cells.map((c) => c.cy * cw + c.cx));
+          layer.intGrid = layer.intGrid.filter((i) => !removeSet.has(i));
+        } else {
+          // Add all
+          for (const cell of cells) {
+            const idx = cell.cy * cw + cell.cx;
+            if (!layer.intGrid.includes(idx)) layer.intGrid.push(idx);
+          }
         }
       }
-    }
 
-    store.updateMapData(selectedMapId, newData);
-  }, [selectedMapId, activeLayer, selectedTile]);
+      store.updateMapData(selectedMapId, newData);
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex, selectedTile]
+  );
 
   // ── Return ─────────────────────────────────────────────────────────────────
 
@@ -337,6 +383,7 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     selectedMapId,
     activeTool,
     activeLayer,
+    activeTileLayerIndex,
     selectedTile,
     zoom,
     stagePos,
@@ -345,13 +392,12 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     flipX,
     flipY,
     stackMode,
-    layerVisibility,
-    layerOpacity,
     showGrid,
     dimInactiveLayers,
     selectMap,
     setActiveTool,
     setActiveLayer,
+    setActiveTileLayerIndex,
     setSelectedTile,
     setZoom,
     setStagePos,
@@ -360,8 +406,6 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     paintCell,
     eraseCell,
     fillCell,
-    toggleLayerVisibility,
-    setLayerOpacity,
     toggleGrid,
     toggleDimInactive,
     toggleFlipX,

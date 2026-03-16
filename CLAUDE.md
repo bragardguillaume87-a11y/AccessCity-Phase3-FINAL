@@ -147,6 +147,17 @@ Via CharactersModal → Éditer personnage → Moods, ou via `useCharactersStore
 ### Avant chaque chantier
 
 1. **WebSearch** : vérifier best practices actuelles. **Obligatoire.**
+
+   > **Règle anti-hardcoding** : La raison principale du WebSearch est de détecter si une bibliothèque open source ou un preset standard résout déjà le problème avant d'implémenter. Ne jamais créer de tables de données codées en dur (lookup tables, listes de valeurs, configurations statiques) quand une lib maintenue existe.
+   >
+   > Exemples appliqués dans ce projet :
+   > - Animations sprite → `SpriteSheetConfig` configurable (pas de frames hardcodées)
+   > - Layout graphe → Dagre (lib) + `config/layoutConfig.ts` (pas de positions fixes)
+   > - Audio procédural → Web Audio API natif (pas de fichiers WAV bundlés)
+   > - Moteur de jeu → Excalibur.js (pas de renderer WebGL maison)
+   >
+   > ⚠️ Lire `.claude/rules/dependencies.md` pour la checklist complète et les anti-patterns.
+
 2. **Audit ciblé** : Grep + Read sur les fichiers concernés
 3. **Contre-vérification** : les agents sous-tâches ont ~50-75% faux positifs sur pattern-matching — toujours vérifier par grep avant de corriger
 4. **Plan d'action** : lister les modifications confirmées avant de commencer
@@ -183,10 +194,12 @@ Quand l'utilisateur demande "qualité maximale" ou "protocole code" :
 
 ## 7. Règles détaillées → `.claude/rules/`
 
-`store-patterns.md` | `react-patterns.md` | `graph-patterns.md` | `tauri-patterns.md` | `ai-adaptation.md` | `nintendo-ux.md`
+`store-patterns.md` | `react-patterns.md` | `graph-patterns.md` | `tauri-patterns.md` | `ai-adaptation.md` | `nintendo-ux.md` | `dependencies.md` | `konva-patterns.md`
 
 ⚠️ Lire `tauri-patterns.md` avant tout audit Tauri (asset.url vs asset.path).
 ⚠️ Lire `nintendo-ux.md` avant tout travail UI/UX (composants, animations, feedback).
+⚠️ Lire `dependencies.md` avant toute nouvelle feature (checklist anti-hardcoding + libs disponibles).
+⚠️ Lire `konva-patterns.md` avant tout travail sur MapCanvas ou react-konva (dragend bubbling, coordonnées, Transformer).
 
 ---
 

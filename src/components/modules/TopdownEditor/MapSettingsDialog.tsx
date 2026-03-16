@@ -12,6 +12,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useMapsStore } from '@/stores/mapsStore';
 import type { MapMetadata } from '@/types/map';
 import { MAP_CONSTRAINTS, MAP_WARNING_COLORS } from '@/config/mapEditorConfig';
+import { SOUND_BRICKS } from '@/config/soundBricks';
 
 // Presets courants (largeur × hauteur tuiles, taille px)
 const PRESETS = [
@@ -19,7 +20,7 @@ const PRESETS = [
   { label: 'Moyen (40×30, 32px)', w: 40, h: 30, ts: 32 },
   { label: 'Grand (80×60, 32px)', w: 80, h: 60, ts: 32 },
   { label: 'Micro (16×10, 16px)', w: 16, h: 10, ts: 16 },
-  { label: 'XL (100×75, 32px)',   w: 100, h: 75, ts: 32 },
+  { label: 'XL (100×75, 32px)', w: 100, h: 75, ts: 32 },
 ];
 
 interface MapSettingsDialogProps {
@@ -28,34 +29,58 @@ interface MapSettingsDialogProps {
 }
 
 export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogProps) {
-  const resizeMap = useMapsStore(s => s.resizeMap);
+  const resizeMap = useMapsStore((s) => s.resizeMap);
 
   const [name, setName] = useState(map.name);
   const [width, setWidth] = useState(String(map.widthTiles));
   const [height, setHeight] = useState(String(map.heightTiles));
   const [tileSize, setTileSize] = useState(String(map.tileSize));
+  const [spawnCx, setSpawnCx] = useState(String(map.playerStartCx ?? 2));
+  const [spawnCy, setSpawnCy] = useState(String(map.playerStartCy ?? 2));
+  const [bgmBrickId, setBgmBrickId] = useState(map.bgmBrickId ?? '');
 
   const wNum = parseInt(width, 10);
   const hNum = parseInt(height, 10);
   const tsNum = parseInt(tileSize, 10);
 
-  const isValid = name.trim().length > 0
-    && !isNaN(wNum) && wNum >= MAP_CONSTRAINTS.WIDTH.MIN     && wNum <= MAP_CONSTRAINTS.WIDTH.MAX
-    && !isNaN(hNum) && hNum >= MAP_CONSTRAINTS.HEIGHT.MIN    && hNum <= MAP_CONSTRAINTS.HEIGHT.MAX
-    && !isNaN(tsNum) && tsNum >= MAP_CONSTRAINTS.TILE_SIZE.MIN && tsNum <= MAP_CONSTRAINTS.TILE_SIZE.MAX;
+  const spawnCxNum = parseInt(spawnCx, 10);
+  const spawnCyNum = parseInt(spawnCy, 10);
+
+  const isValid =
+    name.trim().length > 0 &&
+    !isNaN(wNum) &&
+    wNum >= MAP_CONSTRAINTS.WIDTH.MIN &&
+    wNum <= MAP_CONSTRAINTS.WIDTH.MAX &&
+    !isNaN(hNum) &&
+    hNum >= MAP_CONSTRAINTS.HEIGHT.MIN &&
+    hNum <= MAP_CONSTRAINTS.HEIGHT.MAX &&
+    !isNaN(tsNum) &&
+    tsNum >= MAP_CONSTRAINTS.TILE_SIZE.MIN &&
+    tsNum <= MAP_CONSTRAINTS.TILE_SIZE.MAX &&
+    !isNaN(spawnCxNum) &&
+    spawnCxNum >= 0 &&
+    !isNaN(spawnCyNum) &&
+    spawnCyNum >= 0;
 
   const willShrink = isValid && (wNum < map.widthTiles || hNum < map.heightTiles);
   const willChangeTileSize = isValid && tsNum !== map.tileSize;
 
-  function applyPreset(p: typeof PRESETS[0]) {
+  function applyPreset(p: (typeof PRESETS)[0]) {
     setWidth(String(p.w));
     setHeight(String(p.h));
     setTileSize(String(p.ts));
   }
 
+  const updateMapMetadata = useMapsStore((s) => s.updateMapMetadata);
+
   function handleConfirm() {
     if (!isValid) return;
     resizeMap(map.id, name.trim(), wNum, hNum, tsNum);
+    updateMapMetadata(map.id, {
+      playerStartCx: spawnCxNum,
+      playerStartCy: spawnCyNum,
+      bgmBrickId: bgmBrickId || undefined,
+    });
     onClose();
   }
 
@@ -67,17 +92,25 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
   // Trap focus inside dialog
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
-    return () => { prev?.focus(); };
+    return () => {
+      prev?.focus();
+    };
   }, []);
 
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
         background: 'rgba(0,0,0,0.65)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         role="dialog"
@@ -91,7 +124,9 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
           width: 380,
           padding: '20px 24px',
           boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
-          display: 'flex', flexDirection: 'column', gap: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
         }}
       >
         {/* Header */}
@@ -101,18 +136,31 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
 
         {/* Presets */}
         <div>
-          <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <p
+            style={{
+              margin: '0 0 6px',
+              fontSize: 11,
+              color: 'var(--color-text-primary)',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
             Présets
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {PRESETS.map(p => (
+            {PRESETS.map((p) => (
               <button
                 key={p.label}
                 onClick={() => applyPreset(p)}
                 style={{
-                  padding: '3px 8px', fontSize: 10, borderRadius: 4, cursor: 'pointer',
+                  padding: '3px 8px',
+                  fontSize: 10,
+                  borderRadius: 4,
+                  cursor: 'pointer',
                   border: '1px solid var(--color-border-base)',
-                  background: 'transparent', color: 'var(--color-text-muted)',
+                  background: 'transparent',
+                  color: 'var(--color-text-secondary)',
                 }}
               >
                 {p.label}
@@ -126,7 +174,7 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
           <input
             autoFocus
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             style={inputStyle}
             placeholder="Nom de la carte"
           />
@@ -135,33 +183,141 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
         {/* Dimensions */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <Field label="Largeur (tuiles)">
-            <input type="number" min={MAP_CONSTRAINTS.WIDTH.MIN} max={MAP_CONSTRAINTS.WIDTH.MAX} value={width} onChange={e => setWidth(e.target.value)} style={inputStyle} />
+            <input
+              type="number"
+              min={MAP_CONSTRAINTS.WIDTH.MIN}
+              max={MAP_CONSTRAINTS.WIDTH.MAX}
+              value={width}
+              onChange={(e) => setWidth(e.target.value)}
+              style={inputStyle}
+            />
           </Field>
           <Field label="Hauteur (tuiles)">
-            <input type="number" min={MAP_CONSTRAINTS.HEIGHT.MIN} max={MAP_CONSTRAINTS.HEIGHT.MAX} value={height} onChange={e => setHeight(e.target.value)} style={inputStyle} />
+            <input
+              type="number"
+              min={MAP_CONSTRAINTS.HEIGHT.MIN}
+              max={MAP_CONSTRAINTS.HEIGHT.MAX}
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              style={inputStyle}
+            />
           </Field>
           <Field label="Tuile (px)">
-            <input type="number" min={MAP_CONSTRAINTS.TILE_SIZE.MIN} max={MAP_CONSTRAINTS.TILE_SIZE.MAX} value={tileSize} onChange={e => setTileSize(e.target.value)} style={inputStyle} />
+            <input
+              type="number"
+              min={MAP_CONSTRAINTS.TILE_SIZE.MIN}
+              max={MAP_CONSTRAINTS.TILE_SIZE.MAX}
+              value={tileSize}
+              onChange={(e) => setTileSize(e.target.value)}
+              style={inputStyle}
+            />
           </Field>
         </div>
 
         {/* Info taille pixel */}
         {isValid && (
-          <p style={{ margin: 0, fontSize: 10, color: 'var(--color-text-muted)' }}>
+          <p style={{ margin: 0, fontSize: 10, color: 'var(--color-text-secondary)' }}>
             Carte : {wNum * tsNum} × {hNum * tsNum} px
           </p>
         )}
 
+        {/* Spawn position */}
+        <div>
+          <p
+            style={{
+              margin: '0 0 6px',
+              fontSize: 11,
+              color: 'var(--color-text-primary)',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            ▶ Position de départ du joueur
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <Field label="Colonne (cx)">
+              <input
+                type="number"
+                min={0}
+                value={spawnCx}
+                onChange={(e) => setSpawnCx(e.target.value)}
+                style={inputStyle}
+              />
+            </Field>
+            <Field label="Rangée (cy)">
+              <input
+                type="number"
+                min={0}
+                value={spawnCy}
+                onChange={(e) => setSpawnCy(e.target.value)}
+                style={inputStyle}
+              />
+            </Field>
+          </div>
+          <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--color-text-secondary)' }}>
+            Visible dans l'éditeur (marqueur ▶ vert). Modifiable via clic sur la carte.
+          </p>
+        </div>
+
+        {/* BGM */}
+        <div>
+          <p
+            style={{
+              margin: '0 0 6px',
+              fontSize: 11,
+              color: 'var(--color-text-primary)',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            🎵 Musique de fond (BGM)
+          </p>
+          <select
+            value={bgmBrickId}
+            onChange={(e) => setBgmBrickId(e.target.value)}
+            style={{ ...inputStyle, fontSize: 12 }}
+          >
+            <option value="">🔇 Aucune musique</option>
+            {SOUND_BRICKS.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.emoji} {b.label}
+              </option>
+            ))}
+          </select>
+          <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--color-text-secondary)' }}>
+            Jouée en boucle dès l'entrée sur la carte.
+          </p>
+        </div>
+
         {/* Warning shrink */}
         {(willShrink || willChangeTileSize) && (
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px',
-            background: MAP_WARNING_COLORS.FILL, border: `1px solid ${MAP_WARNING_COLORS.BORDER}`, borderRadius: 6,
-          }}>
-            <AlertTriangle size={14} style={{ color: MAP_WARNING_COLORS.TEXT, flexShrink: 0, marginTop: 1 }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: '8px 10px',
+              background: MAP_WARNING_COLORS.FILL,
+              border: `1px solid ${MAP_WARNING_COLORS.BORDER}`,
+              borderRadius: 6,
+            }}
+          >
+            <AlertTriangle
+              size={14}
+              style={{ color: MAP_WARNING_COLORS.TEXT, flexShrink: 0, marginTop: 1 }}
+            />
             <p style={{ margin: 0, fontSize: 11, color: MAP_WARNING_COLORS.TEXT, lineHeight: 1.5 }}>
-              {willShrink && <>Les tuiles hors des nouvelles dimensions seront supprimées.<br /></>}
-              {willChangeTileSize && <>Changer la taille de tuile ne rescale pas les tuiles existantes.</>}
+              {willShrink && (
+                <>
+                  Les tuiles hors des nouvelles dimensions seront supprimées.
+                  <br />
+                </>
+              )}
+              {willChangeTileSize && (
+                <>Changer la taille de tuile ne rescale pas les tuiles existantes.</>
+              )}
             </p>
           </div>
         )}
@@ -171,9 +327,13 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
           <button
             onClick={onClose}
             style={{
-              padding: '6px 16px', fontSize: 12, borderRadius: 5, cursor: 'pointer',
+              padding: '6px 16px',
+              fontSize: 12,
+              borderRadius: 5,
+              cursor: 'pointer',
               border: '1px solid var(--color-border-base)',
-              background: 'transparent', color: 'var(--color-text-muted)',
+              background: 'transparent',
+              color: 'var(--color-text-secondary)',
             }}
           >
             Annuler
@@ -182,10 +342,14 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
             onClick={handleConfirm}
             disabled={!isValid}
             style={{
-              padding: '6px 16px', fontSize: 12, borderRadius: 5, cursor: isValid ? 'pointer' : 'not-allowed',
+              padding: '6px 16px',
+              fontSize: 12,
+              borderRadius: 5,
+              cursor: isValid ? 'pointer' : 'not-allowed',
               border: 'none',
-              background: isValid ? 'var(--color-primary)' : 'rgba(139,92,246,0.3)',
-              color: 'white', fontWeight: 600,
+              background: isValid ? 'var(--color-primary)' : 'var(--color-primary-30)',
+              color: 'white',
+              fontWeight: 600,
             }}
           >
             Appliquer
@@ -201,7 +365,9 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600 }}>{label}</label>
+      <label style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+        {label}
+      </label>
       {children}
     </div>
   );

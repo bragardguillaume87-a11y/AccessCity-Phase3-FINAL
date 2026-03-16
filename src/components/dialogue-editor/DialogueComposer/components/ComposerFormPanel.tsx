@@ -4,7 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useCharactersStore } from '@/stores';
@@ -18,7 +22,6 @@ import { ComplexChoiceCard } from '../../DialogueWizard/components/ComplexChoice
 import { VoicePresetPicker, VoicePresetBadge } from './VoicePresetPicker';
 import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
 import { MoodCard } from '@/components/ui/MoodCard';
-
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ComposerFormPanelProps {
@@ -70,55 +73,68 @@ export function ComposerFormPanel({
   onAddChoice,
   onRemoveChoice,
 }: ComposerFormPanelProps) {
-  const characters = useCharactersStore(state => state.characters);
+  const characters = useCharactersStore((state) => state.characters);
   const [activeTab, setActiveTab] = useState(0);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const voiceBtnRef = useRef<HTMLButtonElement>(null);
 
-  const currentScene = useMemo(() => scenes.find(s => s.id === currentSceneId), [scenes, currentSceneId]);
-  const textLen      = text.trim().length;
-  const safeTab      = Math.min(activeTab, Math.max(choices.length - 1, 0));
+  const currentScene = useMemo(
+    () => scenes.find((s) => s.id === currentSceneId),
+    [scenes, currentSceneId]
+  );
+  const textLen = text.trim().length;
+  const safeTab = Math.min(activeTab, Math.max(choices.length - 1, 0));
 
   const handleAddChoice = useCallback(() => {
     onAddChoice();
     setActiveTab(choices.length); // jump to new tab
   }, [onAddChoice, choices.length]);
 
-  const handleRemoveChoice = useCallback((idx: number) => {
-    onRemoveChoice(idx);
-    setActiveTab(prev => Math.max(0, prev >= idx ? prev - 1 : prev));
-  }, [onRemoveChoice]);
+  const handleRemoveChoice = useCallback(
+    (idx: number) => {
+      onRemoveChoice(idx);
+      setActiveTab((prev) => Math.max(0, prev >= idx ? prev - 1 : prev));
+    },
+    [onRemoveChoice]
+  );
 
   // Per-choice validity (used for tab dot indicator)
-  const isChoiceValid = useCallback((i: number): boolean => {
-    const c = choices[i];
-    if (!c) return false;
-    const hasText = c.text?.trim().length >= 5;
-    if (complexityLevel === 'dice') {
-      return hasText && !!(c.diceCheck?.stat) && (c.diceCheck?.difficulty ?? 0) >= 1;
-    }
-    return hasText;
-  }, [choices, complexityLevel]);
+  const isChoiceValid = useCallback(
+    (i: number): boolean => {
+      const c = choices[i];
+      if (!c) return false;
+      const hasText = c.text?.trim().length >= 5;
+      if (complexityLevel === 'dice') {
+        return hasText && !!c.diceCheck?.stat && (c.diceCheck?.difficulty ?? 0) >= 1;
+      }
+      return hasText;
+    },
+    [choices, complexityLevel]
+  );
 
   // Tab labels — expert shows dynamic text preview (updates as user types)
-  const tabLabels = useMemo(() => choices.map((c, i) => {
-    if (complexityLevel === 'binary') return i === 0 ? '👍 A' : '👎 B';
-    if (complexityLevel === 'dice')   return choices.length === 1 ? '🎲 Dé' : `🎲 Dé ${String.fromCharCode(65 + i)}`;
-    // Expert: show first 10 chars of choice text, else "Choix N"
-    const preview = c.text?.trim();
-    if (preview && preview.length > 0) {
-      return preview.length > 10 ? `${preview.substring(0, 10)}…` : preview;
-    }
-    return `⚡ Choix ${String.fromCharCode(65 + i)}`;
-  }), [choices, complexityLevel]);
+  const tabLabels = useMemo(
+    () =>
+      choices.map((c, i) => {
+        if (complexityLevel === 'binary') return i === 0 ? '👍 A' : '👎 B';
+        if (complexityLevel === 'dice')
+          return choices.length === 1 ? '🎲 Dé' : `🎲 Dé ${String.fromCharCode(65 + i)}`;
+        // Expert: show first 10 chars of choice text, else "Choix N"
+        const preview = c.text?.trim();
+        if (preview && preview.length > 0) {
+          return preview.length > 10 ? `${preview.substring(0, 10)}…` : preview;
+        }
+        return `⚡ Choix ${String.fromCharCode(65 + i)}`;
+      }),
+    [choices, complexityLevel]
+  );
 
   const canAddChoice =
-    (complexityLevel === 'dice'   && choices.length < 2) ||
+    (complexityLevel === 'dice' && choices.length < 2) ||
     (complexityLevel === 'expert' && choices.length < 4);
 
   return (
     <div className="space-y-6">
-
       {/* ── Speaker ──────────────────────────────────────────────────────── */}
       <div className="space-y-2">
         {/* Label row — "Qui parle ?" + icône voix */}
@@ -133,7 +149,7 @@ export function ComposerFormPanel({
               <button
                 ref={voiceBtnRef}
                 type="button"
-                onClick={() => setVoicePickerOpen(v => !v)}
+                onClick={() => setVoicePickerOpen((v) => !v)}
                 title={voicePreset ? 'Changer la voix' : 'Ajouter une voix'}
                 aria-expanded={voicePickerOpen}
                 aria-haspopup="true"
@@ -144,8 +160,8 @@ export function ComposerFormPanel({
                   width: 26,
                   height: 26,
                   borderRadius: 'var(--radius-sm)',
-                  border: `1.5px solid ${voicePreset ? 'rgba(139,92,246,0.5)' : 'var(--color-border-base)'}`,
-                  background: voicePreset ? 'rgba(139,92,246,0.12)' : 'transparent',
+                  border: `1.5px solid ${voicePreset ? 'var(--color-primary-glow)' : 'var(--color-border-base)'}`,
+                  background: voicePreset ? 'var(--color-primary-subtle)' : 'transparent',
                   color: voicePreset ? 'var(--color-primary)' : 'var(--color-text-muted)',
                   cursor: 'pointer',
                   transition: 'border-color 0.15s, background 0.15s',
@@ -169,10 +185,7 @@ export function ComposerFormPanel({
           </div>
         </div>
 
-        <Select
-          value={speaker || DEFAULTS.DIALOGUE_SPEAKER}
-          onValueChange={onSpeakerChange}
-        >
+        <Select value={speaker || DEFAULTS.DIALOGUE_SPEAKER} onValueChange={onSpeakerChange}>
           <SelectTrigger className="h-9 text-sm">
             <SelectValue placeholder="Choisir un personnage…" />
           </SelectTrigger>
@@ -180,10 +193,17 @@ export function ComposerFormPanel({
             {characters.map((char) => (
               <SelectItem key={char.id} value={char.id} className="text-sm py-2">
                 <div className="flex items-center gap-2">
-                  {char.sprites?.neutral
-                    ? <img src={char.sprites.neutral} alt={char.name} className="w-5 h-5 rounded object-contain bg-muted flex-shrink-0" />
-                    : <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center flex-shrink-0"><span className="text-[10px]">👤</span></div>
-                  }
+                  {char.sprites?.neutral ? (
+                    <img
+                      src={char.sprites.neutral}
+                      alt={char.name}
+                      className="w-5 h-5 rounded object-contain bg-muted flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[10px]">👤</span>
+                    </div>
+                  )}
                   <span className="font-medium truncate">{char.name}</span>
                 </div>
               </SelectItem>
@@ -198,30 +218,34 @@ export function ComposerFormPanel({
 
         {/* ── Mood picker — Nintendo card style, inline sous le select ─── */}
         {(() => {
-          const char = characters.find(c => c.id === speaker);
+          const char = characters.find((c) => c.id === speaker);
           if (!char) return null;
           const moods = char.moods && char.moods.length > 0 ? char.moods : ['neutral'];
           const activeMood = speakerMood || moods[0];
           return (
             <div style={{ marginTop: 8 }}>
-              <p style={{
-                fontSize: '10px',
-                fontWeight: 600,
-                color: 'var(--color-text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                marginBottom: 6,
-              }}>
+              <p
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  color: 'var(--color-text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginBottom: 6,
+                }}
+              >
                 Humeur
               </p>
               {/* Scroll horizontal si +5 humeurs */}
-              <div style={{
-                display: 'flex',
-                gap: 6,
-                overflowX: 'auto',
-                paddingBottom: 4,
-                scrollbarWidth: 'none',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 6,
+                  overflowX: 'auto',
+                  paddingBottom: 4,
+                  scrollbarWidth: 'none',
+                }}
+              >
                 {moods.map((mood, idx) => (
                   <MoodCard
                     key={mood}
@@ -254,15 +278,21 @@ export function ComposerFormPanel({
             className={cn(
               'min-h-[130px] text-sm resize-none focus:ring-2 focus:ring-primary/20 pr-16',
               textLen > 0 && textLen < 10 && 'border-yellow-500/50',
-              textLen >= 10 && 'border-green-500/50 focus:border-green-500',
+              textLen >= 10 && 'border-green-500/50 focus:border-green-500'
             )}
             maxLength={550}
           />
-          <div className={cn(
-            'absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-xs font-medium',
-            'bg-background/90 backdrop-blur-sm border',
-            textLen < 10 ? 'text-yellow-500' : textLen > 450 ? 'text-orange-500' : 'text-green-500',
-          )}>
+          <div
+            className={cn(
+              'absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-xs font-medium',
+              'bg-background/90 backdrop-blur-sm border',
+              textLen < 10
+                ? 'text-yellow-500'
+                : textLen > 450
+                  ? 'text-orange-500'
+                  : 'text-green-500'
+            )}
+          >
             {textLen}/500
           </div>
         </div>
@@ -276,8 +306,8 @@ export function ComposerFormPanel({
           {/* Tab strip */}
           <div className="flex items-center gap-1 flex-wrap">
             {tabLabels.map((label, i) => {
-              const valid   = isChoiceValid(i);
-              const active  = safeTab === i;
+              const valid = isChoiceValid(i);
+              const active = safeTab === i;
               return (
                 <button
                   key={i}
@@ -289,17 +319,23 @@ export function ComposerFormPanel({
                     'max-w-[120px] truncate',
                     active
                       ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                   title={label}
                 >
                   {/* Validity dot */}
-                  <span className={cn(
-                    'w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors',
-                    valid
-                      ? active ? 'bg-green-300' : 'bg-green-500'
-                      : active ? 'bg-white/40'  : 'bg-muted-foreground/30',
-                  )} />
+                  <span
+                    className={cn(
+                      'w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors',
+                      valid
+                        ? active
+                          ? 'bg-green-300'
+                          : 'bg-green-500'
+                        : active
+                          ? 'bg-white/40'
+                          : 'bg-muted-foreground/30'
+                    )}
+                  />
                   <span className="truncate">{label}</span>
                 </button>
               );

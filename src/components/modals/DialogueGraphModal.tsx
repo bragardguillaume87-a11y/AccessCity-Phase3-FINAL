@@ -19,11 +19,15 @@ import { useGraphIntegrityCheck } from '@/hooks/useGraphIntegrityCheck';
 // PHASE 4 (Option 4): Lazy load CosmosBackground for bundle optimization
 // Only loaded when Cosmos theme is active (~117KB with canvas-confetti)
 const CosmosBackground = React.lazy(() =>
-  import('../features/CosmosBackground').then(module => ({ default: module.CosmosBackground }))
+  import('../features/CosmosBackground').then((module) => ({ default: module.CosmosBackground }))
 );
 // PHASE 5: Accessibility imports
 import { useGraphKeyboardNav, GraphLiveRegion } from '@/hooks/useGraphKeyboardNav';
-import { AccessibilityToolbar, useAccessibilityShortcuts, type AccessibilityMode } from './components/AccessibilityToolbar';
+import {
+  AccessibilityToolbar,
+  useAccessibilityShortcuts,
+  type AccessibilityMode,
+} from './components/AccessibilityToolbar';
 import { GraphListView } from './components/GraphListView';
 import './styles/a11y.css';
 
@@ -44,7 +48,9 @@ export function DialogueGraphModal() {
   } | null>(null);
 
   // Persist properties panel position across node selections (drag behavior)
-  const [propertiesPanelPos, setPropertiesPanelPos] = useState<{ x: number; y: number } | undefined>(undefined);
+  const [propertiesPanelPos, setPropertiesPanelPos] = useState<
+    { x: number; y: number } | undefined
+  >(undefined);
 
   // State for auto-layout: increment to force graph recalculation
   const [layoutVersion, setLayoutVersion] = useState(0);
@@ -94,6 +100,7 @@ export function DialogueGraphModal() {
 
   // Define handleClose early (needed by keyboard nav hook)
   const handleClose = useCallback(() => {
+    isAnimating.current = false; // Reset en cas de fermeture pendant une animation de page
     setIsOpen(false);
     setSelectedSceneId(null);
     setSelectedElement(null);
@@ -105,31 +112,44 @@ export function DialogueGraphModal() {
   }, [selectedSceneId, setProCurrentPage]);
 
   // Animation slide+fade lors du changement de page (public jeune)
-  const handlePageChange = useCallback((newPage: number, direction: 'forward' | 'backward') => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
-    setSelectedElement(null); // Désélectionner le nœud courant
+  const handlePageChange = useCallback(
+    (newPage: number, direction: 'forward' | 'backward') => {
+      if (isAnimating.current) return;
+      isAnimating.current = true;
+      setSelectedElement(null); // Désélectionner le nœud courant
 
-    const exitX = direction === 'forward' ? '-50px' : '50px';
-    const enterX = direction === 'forward' ? '50px' : '-50px';
+      const exitX = direction === 'forward' ? '-50px' : '50px';
+      const enterX = direction === 'forward' ? '50px' : '-50px';
 
-    // Phase 1 : sortie (slide + fondu)
-    setGraphAnimStyle({ opacity: 0, transform: `translateX(${exitX})`, transition: 'opacity 0.18s ease, transform 0.18s ease' });
-
-    setTimeout(() => {
-      // Phase 2 : changer la page + position initiale d'entrée (sans transition)
-      setProCurrentPage(newPage);
-      setGraphAnimStyle({ opacity: 0, transform: `translateX(${enterX})`, transition: 'none' });
-
-      // Phase 3 : animer l'entrée au prochain frame
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setGraphAnimStyle({ opacity: 1, transform: 'translateX(0)', transition: 'opacity 0.25s ease, transform 0.28s ease' });
-          setTimeout(() => { isAnimating.current = false; }, 300);
-        });
+      // Phase 1 : sortie (slide + fondu)
+      setGraphAnimStyle({
+        opacity: 0,
+        transform: `translateX(${exitX})`,
+        transition: 'opacity 0.18s ease, transform 0.18s ease',
       });
-    }, 200);
-  }, [setProCurrentPage]);
+
+      setTimeout(() => {
+        // Phase 2 : changer la page + position initiale d'entrée (sans transition)
+        setProCurrentPage(newPage);
+        setGraphAnimStyle({ opacity: 0, transform: `translateX(${enterX})`, transition: 'none' });
+
+        // Phase 3 : animer l'entrée au prochain frame
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setGraphAnimStyle({
+              opacity: 1,
+              transform: 'translateX(0)',
+              transition: 'opacity 0.25s ease, transform 0.28s ease',
+            });
+            setTimeout(() => {
+              isAnimating.current = false;
+            }, 300);
+          });
+        });
+      }, 200);
+    },
+    [setProCurrentPage]
+  );
 
   // PHASE 5: Accessibility hooks
   // Get nodes from scene for keyboard navigation (simplified type for navigation only)
@@ -137,68 +157,89 @@ export function DialogueGraphModal() {
   //    (|| [] inline crée un tableau différent à chaque fois → instabilité deps useGraphKeyboardNav)
   const EMPTY_GRAPH_NODES = useMemo(() => [], []);
   const graphNodes = useMemo(
-    () => selectedScene?.dialogues.map((_d, i) => ({
-      id: dialogueNodeId(selectedScene.id, i),
-      position: { x: i * 400, y: 0 }, // Approximate positions for navigation
-      data: {} as Record<string, unknown> // Type-safe for Node interface
-    })) ?? EMPTY_GRAPH_NODES,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () =>
+      selectedScene?.dialogues.map((_d, i) => ({
+        id: dialogueNodeId(selectedScene.id, i),
+        position: { x: i * 400, y: 0 }, // Approximate positions for navigation
+        data: {} as Record<string, unknown>, // Type-safe for Node interface
+      })) ?? EMPTY_GRAPH_NODES,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- positions recalculées uniquement si id ou nombre de dialogues change ; recalcul sur contenu serait trop fréquent
     [selectedScene?.id, selectedScene?.dialogues.length, EMPTY_GRAPH_NODES]
   );
 
   // Keyboard navigation handlers
-  const handleKeyboardSelectNode = useCallback((nodeId: string | null) => {
-    if (!nodeId || !selectedScene) {
+  const handleKeyboardSelectNode = useCallback(
+    (nodeId: string | null) => {
+      if (!nodeId || !selectedScene) {
+        setSelectedElement(null);
+        return;
+      }
+      const index = extractDialogueIndex(nodeId);
+      if (!isNaN(index)) {
+        setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
+      }
+    },
+    [selectedScene]
+  );
+
+  const handleKeyboardEditNode = useCallback(
+    (nodeId: string) => {
+      actions.handleNodeDoubleClick(nodeId);
+    },
+    [actions]
+  );
+
+  const handleKeyboardDeleteNode = useCallback(
+    (nodeId: string) => {
+      actions.handleDeleteNode(nodeId);
       setSelectedElement(null);
-      return;
-    }
-    const index = extractDialogueIndex(nodeId);
-    if (!isNaN(index)) {
-      setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
-    }
-  }, [selectedScene]);
+    },
+    [actions]
+  );
 
-  const handleKeyboardEditNode = useCallback((nodeId: string) => {
-    actions.handleNodeDoubleClick(nodeId);
-  }, [actions]);
-
-  const handleKeyboardDeleteNode = useCallback((nodeId: string) => {
-    actions.handleDeleteNode(nodeId);
-    setSelectedElement(null);
-  }, [actions]);
-
-  const handleKeyboardDuplicateNode = useCallback((nodeId: string) => {
-    actions.handleDuplicateNode(nodeId);
-  }, [actions]);
+  const handleKeyboardDuplicateNode = useCallback(
+    (nodeId: string) => {
+      actions.handleDuplicateNode(nodeId);
+    },
+    [actions]
+  );
 
   // Keyboard navigation hook
   const { announcements } = useGraphKeyboardNav({
     nodes: graphNodes,
-    selectedNodeId: selectedElement ? dialogueNodeId(selectedElement.sceneId!, selectedElement.index!) : null,
+    selectedNodeId: selectedElement
+      ? dialogueNodeId(selectedElement.sceneId!, selectedElement.index!)
+      : null,
     onSelectNode: handleKeyboardSelectNode,
     onEditNode: handleKeyboardEditNode,
     onDeleteNode: handleKeyboardDeleteNode,
     onDuplicateNode: handleKeyboardDuplicateNode,
     onClose: handleClose,
-    isEnabled: isOpen && accessibilityMode !== 'list'
+    isEnabled: isOpen && accessibilityMode !== 'list',
   });
 
   // Accessibility mode shortcuts (Ctrl+K, Ctrl+L, Ctrl+H)
   useAccessibilityShortcuts(setAccessibilityMode, isOpen);
 
   // Handler for list view dialogue selection
-  const handleListSelectDialogue = useCallback((index: number) => {
-    if (selectedScene) {
-      setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
-    }
-  }, [selectedScene]);
+  const handleListSelectDialogue = useCallback(
+    (index: number) => {
+      if (selectedScene) {
+        setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index });
+      }
+    },
+    [selectedScene]
+  );
 
-  const handleListEditDialogue = useCallback((index: number) => {
-    if (selectedScene) {
-      const nodeId = dialogueNodeId(selectedScene.id, index);
-      actions.handleNodeDoubleClick(nodeId);
-    }
-  }, [selectedScene, actions]);
+  const handleListEditDialogue = useCallback(
+    (index: number) => {
+      if (selectedScene) {
+        const nodeId = dialogueNodeId(selectedScene.id, index);
+        actions.handleNodeDoubleClick(nodeId);
+      }
+    },
+    [selectedScene, actions]
+  );
 
   const handleSelectDialogue = useCallback((sceneId: string, dialogueIndex: number) => {
     // Set selected element for properties panel (PHASE 3)
@@ -242,12 +283,15 @@ export function DialogueGraphModal() {
 
   // Graph integrity check
   const integrityIssues = useGraphIntegrityCheck(selectedScene?.dialogues ?? []);
-  const handleToggleIntegrityPanel = useCallback(() => setIntegrityPanelOpen(v => !v), []);
-  const handleIntegritySelectDialogue = useCallback((dialogueIndex: number) => {
-    if (selectedScene) {
-      setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index: dialogueIndex });
-    }
-  }, [selectedScene]);
+  const handleToggleIntegrityPanel = useCallback(() => setIntegrityPanelOpen((v) => !v), []);
+  const handleIntegritySelectDialogue = useCallback(
+    (dialogueIndex: number) => {
+      if (selectedScene) {
+        setSelectedElement({ type: 'dialogue', sceneId: selectedScene.id, index: dialogueIndex });
+      }
+    },
+    [selectedScene]
+  );
 
   // Terminal node actions (last node panel)
   const updateDialogue = useDialoguesStore((state) => state.updateDialogue);
@@ -296,12 +340,16 @@ export function DialogueGraphModal() {
     'dialogue-graph-modal',
     accessibilityMode === 'keyboard' && 'keyboard-mode',
     accessibilityMode === 'highContrast' && 'high-contrast-mode',
-    accessibilityMode === 'list' && 'list-mode'
-  ].filter(Boolean).join(' ');
+    accessibilityMode === 'list' && 'list-mode',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={`!w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 gap-0 bg-[var(--color-bg-base)] flex flex-col ${a11yClasses}`}>
+      <DialogContent
+        className={`!w-[95vw] !max-w-[95vw] !h-[95vh] !max-h-[95vh] p-0 gap-0 bg-[var(--color-bg-base)] flex flex-col ${a11yClasses}`}
+      >
         <DialogTitle className="sr-only">Éditeur Nodal</DialogTitle>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[var(--color-border-base)] bg-[var(--color-bg-elevated)] flex-shrink-0">
@@ -310,7 +358,8 @@ export function DialogueGraphModal() {
               Éditeur Nodal - {selectedScene.title}
             </h2>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
-              {selectedScene.dialogues.length} dialogue{selectedScene.dialogues.length !== 1 ? 's' : ''}
+              {selectedScene.dialogues.length} dialogue
+              {selectedScene.dialogues.length !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -407,7 +456,9 @@ export function DialogueGraphModal() {
                     sceneId={selectedElement.sceneId || ''}
                     dialogueIndex={selectedElement.index}
                     onClose={() => setSelectedElement(null)}
-                    isLastNode={selectedElement.index === (selectedScene?.dialogues.length ?? 0) - 1}
+                    isLastNode={
+                      selectedElement.index === (selectedScene?.dialogues.length ?? 0) - 1
+                    }
                     onAddDialogue={handleTerminalAddDialogue}
                     onOpenWizard={handleTerminalOpenWizard}
                     onConcludeStory={handleTerminalConcludeStory}

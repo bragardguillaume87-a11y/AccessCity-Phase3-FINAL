@@ -15,11 +15,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 // createPortal supprimé — remplacé par DropdownMenu.Portal de Radix
-import { Upload, Settings, ChevronDown, ChevronRight, ZoomIn, ZoomOut, Search, X } from 'lucide-react';
+import { Upload, Settings, ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import { useAssets } from '@/hooks/useAssets';
 import { useAssetUpload } from '@/components/modals/AssetsLibraryModal/hooks/useAssetUpload';
 import { useSettingsStore } from '@/stores/settingsStore';
 import TilesetImportDialog from './TilesetImportDialog';
+import { SheetView } from './SheetView';
 import { TILESET_CATEGORIES } from '@/types/tileset';
 import type { Asset } from '@/types/assets';
 import type { SelectedTile, TilesetConfig } from '@/types/tileset';
@@ -27,9 +28,17 @@ import type { LayerType } from '@/types/map';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const SHEET_MIN_ZOOM = 0.5;
-const SHEET_MAX_ZOOM = 4;
-const SHEET_ZOOM_FACTOR = 1.2;
+// ── Category colors — bande colorée Mario Maker style ────────────────────────
+
+const CATEGORY_COLORS: Record<string, string> = {
+  terrain: '#4ade80', // vert nature
+  structures: '#fb923c', // orange brique
+  vegetation: '#86efac', // vert clair
+  mobilier: '#fbbf24', // jaune bois
+  water: '#60a5fa', // bleu eau
+  effects: '#c084fc', // violet magie
+  divers: '#94a3b8', // gris neutre
+};
 
 // ── Symbol tiles (collision / triggers) ──────────────────────────────────────
 
@@ -64,10 +73,10 @@ export default function TilePalette({
   mapGridSize = 32,
 }: TilePaletteProps) {
   const { assets, loading, reloadManifest } = useAssets();
-  const tilesetConfigs = useSettingsStore(s => s.tilesetConfigs);
-  const setTilesetConfig = useSettingsStore(s => s.setTilesetConfig);
-  const hiddenAssetPaths = useSettingsStore(s => s.hiddenAssetPaths);
-  const hideAsset = useSettingsStore(s => s.hideAsset);
+  const tilesetConfigs = useSettingsStore((s) => s.tilesetConfigs);
+  const setTilesetConfig = useSettingsStore((s) => s.setTilesetConfig);
+  const hiddenAssetPaths = useSettingsStore((s) => s.hiddenAssetPaths);
+  const hideAsset = useSettingsStore((s) => s.hideAsset);
 
   // Reload manifest automatiquement après chaque upload (sans changer d'onglet)
   useEffect(() => {
@@ -76,7 +85,9 @@ export default function TilePalette({
     return () => window.removeEventListener('asset-manifest-updated', handler);
   }, [reloadManifest]);
 
-  const [activeTilesetId, setActiveTilesetId] = useState<string | null>(null);
+  const [activeTilesetIds, setActiveTilesetIds] = useState<Set<string>>(new Set());
+  const anchorRef = useRef<string | null>(null);
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
   const [importDialog, setImportDialog] = useState<{
     imageSrc: string;
     imagePath: string;
@@ -93,131 +104,228 @@ export default function TilePalette({
   const { uploadFiles, isUploading, progress } = useAssetUpload({ category: 'tilesets' });
 
   // Catégorie tilesets uniquement — exclut les assets masqués par l'utilisateur
-  const tileAssets = assets.filter(a =>
-    a.category === 'tilesets' &&
-    !hiddenAssetPaths.includes(a.url ?? a.path) &&
-    !hiddenAssetPaths.includes(a.path)
+  const tileAssets = assets.filter(
+    (a) =>
+      a.category === 'tilesets' &&
+      !hiddenAssetPaths.includes(a.url ?? a.path) &&
+      !hiddenAssetPaths.includes(a.path)
   );
 
-  // Auto-select first tileset on initial load
+  // Auto-ouvre le premier tileset au chargement initial
   useEffect(() => {
-    if (activeTilesetId === null && tileAssets.length > 0) {
-      setActiveTilesetId(tileAssets[0].id);
+    if (activeTilesetIds.size === 0 && tileAssets.length > 0) {
+      setActiveTilesetIds(new Set([tileAssets[0].id]));
+      anchorRef.current = tileAssets[0].id;
     }
-  }, [tileAssets, activeTilesetId]);
+  }, [tileAssets]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Efface la sélection fantôme si l'asset du brush sélectionné est masqué
+  useEffect(() => {
+    if (!selectedTile) return;
+    const assetUrl = selectedTile.asset.url ?? selectedTile.asset.path;
+    const isHidden =
+      hiddenAssetPaths.includes(assetUrl) || hiddenAssetPaths.includes(selectedTile.asset.path);
+    if (isHidden) onSelectTile(null);
+  }, [hiddenAssetPaths, selectedTile, onSelectTile]);
 
   // ── Config lookup ────────────────────────────────────────────────────────────
-  const getConfig = useCallback((asset: Asset): TilesetConfig | null => {
-    const url = asset.url ?? asset.path;
-    return tilesetConfigs[url] ?? tilesetConfigs[asset.path] ?? null;
-  }, [tilesetConfigs]);
+  const getConfig = useCallback(
+    (asset: Asset): TilesetConfig | null => {
+      const url = asset.url ?? asset.path;
+      return tilesetConfigs[url] ?? tilesetConfigs[asset.path] ?? null;
+    },
+    [tilesetConfigs]
+  );
 
-  const hasConfig = useCallback((asset: Asset): boolean => {
-    const url = asset.url ?? asset.path;
-    return !!(tilesetConfigs[url] ?? tilesetConfigs[asset.path]);
-  }, [tilesetConfigs]);
+  const hasConfig = useCallback(
+    (asset: Asset): boolean => {
+      const url = asset.url ?? asset.path;
+      return !!(tilesetConfigs[url] ?? tilesetConfigs[asset.path]);
+    },
+    [tilesetConfigs]
+  );
 
-  const getDisplayName = useCallback((asset: Asset): string => {
-    return getConfig(asset)?.displayName ?? asset.name;
-  }, [getConfig]);
+  const getDisplayName = useCallback(
+    (asset: Asset): string => {
+      const configured = getConfig(asset)?.displayName;
+      if (configured) return configured;
+      // Hash-like auto-generated names (e.g. "sheet-1773081504531") → friendly fallback
+      const nameNoExt = asset.name.replace(/\.[^.]+$/, '');
+      if (nameNoExt.length > 18 && !/\s/.test(nameNoExt)) return '📦 Tileset (sans nom)';
+      return nameNoExt.replace(/[-_]/g, ' ');
+    },
+    [getConfig]
+  );
 
-  const getAssetCategory = useCallback((asset: Asset): string => {
-    return getConfig(asset)?.category ?? 'divers';
-  }, [getConfig]);
+  const getAssetCategory = useCallback(
+    (asset: Asset): string => {
+      return getConfig(asset)?.category ?? 'divers';
+    },
+    [getConfig]
+  );
 
   // ── Filtering + grouping ──────────────────────────────────────────────────────
   const searchedAssets = searchQuery.trim()
-    ? tileAssets.filter(a => getDisplayName(a).toLowerCase().includes(searchQuery.toLowerCase()))
+    ? tileAssets.filter((a) => getDisplayName(a).toLowerCase().includes(searchQuery.toLowerCase()))
     : tileAssets;
 
   const displayedAssets = filterCategory
-    ? searchedAssets.filter(a => getAssetCategory(a) === filterCategory)
+    ? searchedAssets.filter((a) => getAssetCategory(a) === filterCategory)
     : searchedAssets;
 
   // Group by category only when no category filter is active
-  const grouped = filterCategory === null
-    ? TILESET_CATEGORIES
-        .map(cat => ({ ...cat, assets: displayedAssets.filter(a => getAssetCategory(a) === cat.id) }))
-        .filter(g => g.assets.length > 0)
-    : null;
-
-  // Active asset must be in displayed list — otherwise SheetView is hidden
-  const activeAsset = displayedAssets.find(a => a.id === activeTilesetId) ?? null;
+  const grouped =
+    filterCategory === null
+      ? TILESET_CATEGORIES.map((cat) => ({
+          ...cat,
+          assets: displayedAssets.filter((a) => getAssetCategory(a) === cat.id),
+        })).filter((g) => g.assets.length > 0)
+      : null;
 
   // Current category info
-  const currentCat = filterCategory ? TILESET_CATEGORIES.find(c => c.id === filterCategory) : null;
+  const currentCat = filterCategory
+    ? TILESET_CATEGORIES.find((c) => c.id === filterCategory)
+    : null;
+
+  // ── Multi-select handler ──────────────────────────────────────────────────────
+  const handleTilesetClick = useCallback(
+    (asset: Asset, e: React.MouseEvent) => {
+      e.preventDefault(); // évite la sélection de texte sur Shift+click
+      const id = asset.id;
+
+      if (e.shiftKey && anchorRef.current) {
+        // Plage — ouvre tous les tilesets entre l'ancre et la cible
+        const allIds = displayedAssets.map((a) => a.id);
+        const anchorIdx = allIds.indexOf(anchorRef.current);
+        const targetIdx = allIds.indexOf(id);
+        if (anchorIdx >= 0 && targetIdx >= 0) {
+          const [lo, hi] = [Math.min(anchorIdx, targetIdx), Math.max(anchorIdx, targetIdx)];
+          setActiveTilesetIds((prev) => {
+            const next = new Set(prev);
+            allIds.slice(lo, hi + 1).forEach((rid) => next.add(rid));
+            return next;
+          });
+        }
+      } else if (e.ctrlKey || e.metaKey) {
+        // Toggle individuel sans toucher aux autres
+        setActiveTilesetIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(id)) {
+            next.delete(id);
+          } else {
+            next.add(id);
+          }
+          return next;
+        });
+        anchorRef.current = id;
+      } else {
+        // Click simple : ouvre seul / ferme si déjà seul ouvert
+        setActiveTilesetIds((prev) =>
+          prev.size === 1 && prev.has(id) ? new Set() : new Set([id])
+        );
+        anchorRef.current = id;
+      }
+    },
+    [displayedAssets]
+  );
 
   // ── Upload handling ───────────────────────────────────────────────────────────
-  const handleFiles = useCallback(async (files: FileList | File[]) => {
-    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
-    if (fileArray.length === 0) return;
-    await uploadFiles(fileArray);
-    const f = fileArray[0];
-    const objUrl = URL.createObjectURL(f);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(objUrl);
-      if (img.naturalWidth > mapGridSize || img.naturalHeight > mapGridSize) {
-        setImportDialog({ imageSrc: objUrl, imagePath: f.name, imageName: f.name });
-      }
-    };
-    img.src = objUrl;
-  }, [uploadFiles, mapGridSize]);
+  const handleFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      if (fileArray.length === 0) return;
+      await uploadFiles(fileArray);
+      const f = fileArray[0];
+      const objUrl = URL.createObjectURL(f);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        if (img.naturalWidth > mapGridSize || img.naturalHeight > mapGridSize) {
+          setImportDialog({ imageSrc: objUrl, imagePath: f.name, imageName: f.name });
+        }
+      };
+      img.src = objUrl;
+    },
+    [uploadFiles, mapGridSize]
+  );
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
-  }, [handleFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+    },
+    [handleFiles]
+  );
 
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
-    e.target.value = '';
-  }, [handleFiles]);
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
+      e.target.value = '';
+    },
+    [handleFiles]
+  );
 
-  const openConfigDialog = useCallback((asset: Asset) => {
-    const url = asset.url ?? asset.path;
-    const existing = tilesetConfigs[url] ?? tilesetConfigs[asset.path];
-    setImportDialog({ imageSrc: url, imagePath: url, imageName: asset.name, initialConfig: existing });
-  }, [tilesetConfigs]);
+  const openConfigDialog = useCallback(
+    (asset: Asset) => {
+      const url = asset.url ?? asset.path;
+      const existing = tilesetConfigs[url] ?? tilesetConfigs[asset.path];
+      setImportDialog({
+        imageSrc: url,
+        imagePath: url,
+        imageName: asset.name,
+        initialConfig: existing,
+      });
+    },
+    [tilesetConfigs]
+  );
 
-  const handleConfigConfirm = useCallback((imagePath: string, config: TilesetConfig) => {
-    setTilesetConfig(imagePath, config);
-    setImportDialog(null);
-  }, [setTilesetConfig]);
+  const handleConfigConfirm = useCallback(
+    (imagePath: string, config: TilesetConfig) => {
+      setTilesetConfig(imagePath, config);
+      setImportDialog(null);
+    },
+    [setTilesetConfig]
+  );
 
   // ── Tile selection ────────────────────────────────────────────────────────────
-  const selectSheetRegion = useCallback((
-    asset: Asset,
-    config: TilesetConfig,
-    colStart: number,
-    rowStart: number,
-    colEnd: number,
-    rowEnd: number,
-  ) => {
-    const c0 = Math.min(colStart, colEnd);
-    const c1 = Math.max(colStart, colEnd);
-    const r0 = Math.min(rowStart, rowEnd);
-    const r1 = Math.max(rowStart, rowEnd);
-    const tileX = config.margin + c0 * (config.tileW + config.spacing);
-    const tileY = config.margin + r0 * (config.tileH + config.spacing);
-    const tile: SelectedTile = {
-      asset,
-      tileX,
-      tileY,
-      tileW: config.tileW,
-      tileH: config.tileH,
-      regionCols: c1 - c0 + 1,
-      regionRows: r1 - r0 + 1,
-      tileStepX: config.tileW + config.spacing,
-      tileStepY: config.tileH + config.spacing,
-    };
-    onSelectTile(tile);
-  }, [onSelectTile]);
+  const selectSheetRegion = useCallback(
+    (
+      asset: Asset,
+      config: TilesetConfig,
+      colStart: number,
+      rowStart: number,
+      colEnd: number,
+      rowEnd: number
+    ) => {
+      const c0 = Math.min(colStart, colEnd);
+      const c1 = Math.max(colStart, colEnd);
+      const r0 = Math.min(rowStart, rowEnd);
+      const r1 = Math.max(rowStart, rowEnd);
+      const tileX = config.margin + c0 * (config.tileW + config.spacing);
+      const tileY = config.margin + r0 * (config.tileH + config.spacing);
+      const tile: SelectedTile = {
+        asset,
+        tileX,
+        tileY,
+        tileW: config.tileW,
+        tileH: config.tileH,
+        regionCols: c1 - c0 + 1,
+        regionRows: r1 - r0 + 1,
+        tileStepX: config.tileW + config.spacing,
+        tileStepY: config.tileH + config.spacing,
+      };
+      onSelectTile(tile);
+    },
+    [onSelectTile]
+  );
 
-  const selectWholeTile = useCallback((asset: Asset) => {
-    onSelectTile({ asset, tileX: 0, tileY: 0, tileW: 0, tileH: 0 });
-  }, [onSelectTile]);
+  const selectWholeTile = useCallback(
+    (asset: Asset) => {
+      onSelectTile({ asset, tileX: 0, tileY: 0, tileW: 0, tileH: 0 });
+    },
+    [onSelectTile]
+  );
 
   // ── Brush preview label ───────────────────────────────────────────────────────
   const brushLabel = selectedTile
@@ -228,68 +336,141 @@ export default function TilePalette({
 
   // ── Tileset row renderer ──────────────────────────────────────────────────────
   const renderTilesetRow = (asset: Asset) => {
-    const isActive = asset.id === activeTilesetId;
+    const isActive = activeTilesetIds.has(asset.id);
     const configured = hasConfig(asset);
     const name = getDisplayName(asset);
     return (
-      <button
-        key={asset.id}
-        onClick={() => setActiveTilesetId(isActive ? null : asset.id)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          width: '100%', padding: '6px 10px',
-          background: isActive ? 'rgba(139,92,246,0.12)' : 'transparent',
-          border: 'none',
-          borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
-          cursor: 'pointer', textAlign: 'left',
-          transition: 'background 0.08s',
-        }}
-      >
-        {isActive
-          ? <ChevronDown size={12} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
-          : <ChevronRight size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-        }
-        <img
-          src={asset.url ?? asset.path}
-          alt=""
-          style={{ width: 22, height: 22, objectFit: 'cover', imageRendering: 'pixelated', borderRadius: 3, flexShrink: 0 }}
-        />
-        <span style={{
-          flex: 1, fontSize: 12, fontWeight: isActive ? 600 : 400,
-          color: isActive ? 'var(--color-text-base)' : 'var(--color-text-muted)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {name}
-        </span>
-        <button
-          onClick={e => { e.stopPropagation(); openConfigDialog(asset); }}
-          title={configured ? 'Reconfigurer / renommer' : 'Configurer la grille de tuiles'}
+      <div key={asset.id}>
+        {/* div instead of button — HTML spec forbids <button> inside <button> */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={(e) => handleTilesetClick(asset, e)}
+          onMouseEnter={() => setHoveredRowId(asset.id)}
+          onMouseLeave={() => setHoveredRowId(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setActiveTilesetIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(asset.id)) {
+                  next.delete(asset.id);
+                } else {
+                  next.add(asset.id);
+                }
+                return next;
+              });
+              anchorRef.current = asset.id;
+            }
+          }}
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 20, height: 20, borderRadius: 4,
-            border: configured ? '1px solid var(--color-border-base)' : '1px solid var(--color-primary)',
-            background: configured ? 'transparent' : 'rgba(139,92,246,0.18)',
-            color: configured ? 'var(--color-text-muted)' : 'var(--color-primary)',
-            cursor: 'pointer', flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            width: '100%',
+            padding: '6px 10px',
+            background: isActive ? 'var(--color-primary-subtle)' : 'transparent',
+            borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'background 0.08s',
+            outline: 'none',
           }}
         >
-          <Settings size={11} />
-        </button>
-        <button
-          onClick={e => { e.stopPropagation(); hideAsset(asset.url ?? asset.path); }}
-          title="Retirer de la palette (ne supprime pas le fichier)"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 20, height: 20, borderRadius: 4,
-            border: '1px solid transparent',
-            background: 'transparent',
-            color: 'rgba(239,68,68,0.55)',
-            cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          <X size={11} />
-        </button>
-      </button>
+          {isActive ? (
+            <ChevronDown size={12} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+          ) : (
+            <ChevronRight size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+          )}
+          <img
+            src={asset.url ?? asset.path}
+            alt=""
+            style={{
+              width: 22,
+              height: 22,
+              objectFit: 'cover',
+              imageRendering: 'pixelated',
+              borderRadius: 3,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              flex: 1,
+              fontSize: 12,
+              fontWeight: isActive ? 600 : 400,
+              color: isActive ? 'var(--color-text-base)' : 'var(--color-text-secondary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {name}
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openConfigDialog(asset);
+            }}
+            title={configured ? 'Reconfigurer / renommer' : 'Configurer la grille de tuiles'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              borderRadius: 4,
+              border: configured
+                ? '1px solid var(--color-border-base)'
+                : '1px solid var(--color-primary)',
+              background: configured ? 'transparent' : 'var(--color-primary-muted)',
+              color: configured ? 'var(--color-text-muted)' : 'var(--color-primary)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              opacity: hoveredRowId === asset.id ? 1 : 0,
+              transition: 'opacity 0.12s',
+            }}
+          >
+            <Settings size={11} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              hideAsset(asset.url ?? asset.path);
+            }}
+            title="Retirer de la palette (ne supprime pas le fichier)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              borderRadius: 4,
+              border: '1px solid transparent',
+              background: 'transparent',
+              color: 'var(--color-danger-55)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              opacity: hoveredRowId === asset.id ? 1 : 0,
+              transition: 'opacity 0.12s',
+            }}
+          >
+            <X size={11} />
+          </button>
+        </div>
+        {/* Inline SheetView — accordion multi-open */}
+        {isActive && (
+          <SheetView
+            asset={asset}
+            config={getConfig(asset)}
+            selectedTile={selectedTile}
+            onSelectTile={onSelectTile}
+            onSelectWhole={selectWholeTile}
+            onSelectSheetRegion={selectSheetRegion}
+            onOpenConfig={() => openConfigDialog(asset)}
+          />
+        )}
+      </div>
     );
   };
 
@@ -299,15 +480,43 @@ export default function TilePalette({
     return (
       <div className="flex flex-col h-full">
         <div className="px-3 py-2 border-b border-border flex-shrink-0">
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'var(--color-text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <span
+              style={{
+                width: 3,
+                height: 10,
+                borderRadius: 2,
+                background: 'var(--color-primary)',
+                display: 'inline-block',
+                flexShrink: 0,
+              }}
+            />
             Palette
           </p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-3 text-center">
           <span style={{ fontSize: 40 }}>{info.emoji}</span>
-          <p className="text-xs font-semibold" style={{ color: 'var(--color-text-base)' }}>{info.label}</p>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>{info.description}</p>
-          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Cliquez sur la carte pour peindre</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--color-text-base)' }}>
+            {info.label}
+          </p>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+            {info.description}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Cliquez sur la carte pour peindre
+          </p>
         </div>
       </div>
     );
@@ -319,7 +528,10 @@ export default function TilePalette({
       <div
         ref={dropRef}
         className="flex flex-col h-full"
-        onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
         style={{
@@ -330,71 +542,183 @@ export default function TilePalette({
         }}
       >
         {/* Header */}
-        <div className="flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border-base)' }}>
+        <div
+          className="flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--color-border-base)' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px' }}>
-            <p style={{ margin: 0, flex: 1, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)' }}>
-              Tuiles ({tileAssets.length})
+            <p
+              style={{
+                margin: 0,
+                flex: 1,
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.07em',
+                color: 'var(--color-text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span>🗺️</span>
+              <span>Tuiles</span>
+              {tileAssets.length > 0 && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: 'var(--color-text-secondary)',
+                    background: 'var(--color-overlay-06)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                  }}
+                >
+                  {tileAssets.length}
+                </span>
+              )}
+            </p>
+            <p
+              style={{
+                margin: '0 0 2px 10px',
+                fontSize: 10,
+                color: 'var(--color-text-muted)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Ctrl+clic : ouvrir plusieurs
             </p>
             {/* Loading spinner — manifest en cours de rechargement */}
             {loading && (
-              <span title="Chargement…" style={{ display: 'flex', alignItems: 'center', animation: 'spin 1s linear infinite', color: 'var(--color-primary)', flexShrink: 0 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              <span
+                title="Chargement…"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  animation: 'spin 1s linear infinite',
+                  color: 'var(--color-primary)',
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                </svg>
               </span>
             )}
             <label
               title="Importer un tileset (ou glissez un PNG)"
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 26, height: 26, borderRadius: 5, cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 26,
+                height: 26,
+                borderRadius: 5,
+                cursor: 'pointer',
                 border: '1px solid var(--color-border-base)',
-                background: isUploading ? 'rgba(139,92,246,0.2)' : 'transparent',
-                color: isUploading ? 'var(--color-primary)' : 'var(--color-text-muted)', flexShrink: 0,
+                background: isUploading ? 'var(--color-primary-20)' : 'transparent',
+                color: isUploading ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                flexShrink: 0,
                 transition: 'background 0.1s',
               }}
             >
               <Upload size={13} />
-              <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileInput} />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleFileInput}
+              />
             </label>
           </div>
           {/* Progress bar — visible uniquement pendant un upload actif */}
           {isUploading && (
-            <div style={{ height: 3, background: 'rgba(139,92,246,0.15)', position: 'relative', overflow: 'hidden' }}>
-              <div style={{
-                position: 'absolute', left: 0, top: 0, bottom: 0,
-                width: progress > 0 ? `${progress}%` : '40%',
-                background: 'var(--color-primary)',
-                borderRadius: 2,
-                transition: progress > 0 ? 'width 0.2s ease' : 'none',
-                animation: progress === 0 ? 'indeterminate 1.4s ease-in-out infinite' : 'none',
-              }} />
+            <div
+              style={{
+                height: 3,
+                background: 'var(--color-primary-15)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: progress > 0 ? `${progress}%` : '40%',
+                  background: 'var(--color-primary)',
+                  borderRadius: 2,
+                  transition: progress > 0 ? 'width 0.2s ease' : 'none',
+                  animation: progress === 0 ? 'indeterminate 1.4s ease-in-out infinite' : 'none',
+                }}
+              />
             </div>
           )}
         </div>
 
         {/* Search + category filter */}
         {tileAssets.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, padding: '6px 8px', borderBottom: '1px solid var(--color-border-base)', flexShrink: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 6,
+              padding: '6px 8px',
+              borderBottom: '1px solid var(--color-border-base)',
+              flexShrink: 0,
+            }}
+          >
             {/* Search input */}
-            <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', gap: 5,
-              background: 'rgba(0,0,0,0.25)', borderRadius: 6, padding: '4px 8px',
-              border: '1px solid var(--color-border-base)',
-            }}>
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'var(--color-dark-25)',
+                borderRadius: 6,
+                padding: '4px 8px',
+                border: '1px solid var(--color-border-base)',
+              }}
+            >
               <Search size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filtrer..."
                 style={{
-                  flex: 1, background: 'none', border: 'none', outline: 'none',
-                  fontSize: 12, color: 'var(--color-text-base)', minWidth: 0,
+                  flex: 1,
+                  background: 'none',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: 12,
+                  color: 'var(--color-text-base)',
+                  minWidth: 0,
                 }}
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    color: 'var(--color-text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
                 >
                   <X size={11} />
                 </button>
@@ -404,32 +728,75 @@ export default function TilePalette({
             {/* Category dropdown — @radix-ui/react-dropdown-menu */}
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                <button style={{
-                  flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
-                  border: currentCat ? '1.5px solid var(--color-primary)' : '1px solid var(--color-border-base)',
-                  background: currentCat ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.25)',
-                  color: currentCat ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                  fontSize: 12, fontWeight: currentCat ? 600 : 400, maxWidth: 110, overflow: 'hidden',
-                }}>
-                  <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>{currentCat ? currentCat.emoji : '⊞'}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                <button
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    border: currentCat
+                      ? '1.5px solid var(--color-primary)'
+                      : '1px solid var(--color-border-base)',
+                    background: currentCat ? 'var(--color-primary-15)' : 'var(--color-dark-25)',
+                    color: currentCat ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                    fontSize: 12,
+                    fontWeight: currentCat ? 600 : 400,
+                    maxWidth: 110,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>
+                    {currentCat ? currentCat.emoji : '⊞'}
+                  </span>
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
                     {currentCat ? currentCat.label : 'Toutes'}
                   </span>
-                  {currentCat
-                    ? <span onClick={e => { e.stopPropagation(); setFilterCategory(null); }} style={{ display: 'flex', flexShrink: 0 }}><X size={10} /></span>
-                    : <ChevronDown size={11} style={{ flexShrink: 0 }} />
-                  }
+                  {currentCat ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilterCategory(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          setFilterCategory(null);
+                        }
+                      }}
+                      style={{ display: 'flex', flexShrink: 0 }}
+                    >
+                      <X size={10} />
+                    </span>
+                  ) : (
+                    <ChevronDown size={11} style={{ flexShrink: 0 }} />
+                  )}
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  side="bottom" align="end" sideOffset={4}
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
                   style={{
-                    zIndex: 9999, minWidth: 190,
+                    zIndex: 9999,
+                    minWidth: 190,
                     background: 'var(--color-surface-elevated, #1e1e2e)',
                     border: '1px solid var(--color-border-base)',
-                    borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.65)',
+                    borderRadius: 10,
+                    boxShadow: '0 12px 32px var(--color-dark-65)',
                     overflow: 'hidden',
                     animation: 'tilepalette-dropdown-in 0.12s ease',
                   }}
@@ -438,33 +805,55 @@ export default function TilePalette({
                   <DropdownMenu.Item
                     onSelect={() => setFilterCategory(null)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer',
-                      background: filterCategory === null ? 'rgba(139,92,246,0.15)' : 'transparent',
-                      borderBottom: '1px solid var(--color-border-base)', outline: 'none',
-                      color: filterCategory === null ? 'var(--color-primary)' : 'var(--color-text-base)',
-                      fontSize: 13, fontWeight: filterCategory === null ? 600 : 400,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      background:
+                        filterCategory === null ? 'var(--color-primary-15)' : 'transparent',
+                      borderBottom: '1px solid var(--color-border-base)',
+                      outline: 'none',
+                      color:
+                        filterCategory === null ? 'var(--color-primary)' : 'var(--color-text-base)',
+                      fontSize: 13,
+                      fontWeight: filterCategory === null ? 600 : 400,
                     }}
                   >
                     <span style={{ fontSize: 16 }}>⊞</span> Toutes les catégories
                   </DropdownMenu.Item>
-                  {TILESET_CATEGORIES.map(cat => {
-                    const count = tileAssets.filter(a => getAssetCategory(a) === cat.id).length;
+                  {TILESET_CATEGORIES.map((cat) => {
+                    const count = tileAssets.filter((a) => getAssetCategory(a) === cat.id).length;
                     const isActive = filterCategory === cat.id;
                     return (
                       <DropdownMenu.Item
                         key={cat.id}
                         onSelect={() => setFilterCategory(cat.id)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', cursor: 'pointer',
-                          background: isActive ? 'rgba(139,92,246,0.15)' : 'transparent',
-                          outline: 'none', fontSize: 13, fontWeight: isActive ? 600 : 400,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '7px 12px',
+                          cursor: 'pointer',
+                          background: isActive ? 'var(--color-primary-15)' : 'transparent',
+                          outline: 'none',
+                          fontSize: 13,
+                          fontWeight: isActive ? 600 : 400,
                           color: isActive ? 'var(--color-primary)' : 'var(--color-text-base)',
                         }}
                       >
                         <span style={{ fontSize: 16 }}>{cat.emoji}</span>
                         <span style={{ flex: 1 }}>{cat.label}</span>
                         {count > 0 && (
-                          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '1px 5px' }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: 'var(--color-text-secondary)',
+                              background: 'var(--color-overlay-06)',
+                              borderRadius: 4,
+                              padding: '1px 5px',
+                            }}
+                          >
                             {count}
                           </span>
                         )}
@@ -479,88 +868,138 @@ export default function TilePalette({
 
         {loading && tileAssets.length === 0 ? (
           /* Skeleton — chargement initial du manifest */
-          <div className="flex-1" style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div
+            className="flex-1"
+            style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}
+          >
             {[72, 55, 65, 50, 60].map((w, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 6px' }}>
-                <div style={{ width: 22, height: 22, borderRadius: 3, background: 'rgba(255,255,255,0.08)', animation: `shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
-                <div style={{ height: 11, borderRadius: 4, background: 'rgba(255,255,255,0.08)', width: `${w}%`, animation: `shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
+              <div
+                key={i}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 6px' }}
+              >
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 3,
+                    background: 'var(--color-border-base)',
+                    animation: `shimmer 1.4s ease-in-out ${i * 0.1}s infinite`,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 11,
+                    borderRadius: 4,
+                    background: 'var(--color-border-base)',
+                    width: `${w}%`,
+                    animation: `shimmer 1.4s ease-in-out ${i * 0.1}s infinite`,
+                  }}
+                />
               </div>
             ))}
           </div>
         ) : tileAssets.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-2 p-3 text-center">
             <span style={{ fontSize: 28 }}>🖼️</span>
-            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: 0 }}>
-              Glissez un PNG ici<br />ou cliquez sur ⊕
+            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>
+              Glissez un PNG ici
+              <br />
+              ou cliquez sur ⊕
             </p>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Tileset list */}
-            <div style={{ flexShrink: 0, borderBottom: '1px solid var(--color-border-base)', overflowY: 'auto', maxHeight: 240 }}>
-              {displayedAssets.length === 0 ? (
-                <p style={{ margin: 0, padding: '10px', fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>
-                  Aucun tileset trouvé
-                </p>
-              ) : grouped ? (
-                // Vue groupée par catégorie
-                grouped.map(group => (
+          <div className="flex-1 overflow-y-auto">
+            {displayedAssets.length === 0 ? (
+              <p
+                style={{
+                  margin: 0,
+                  padding: '10px',
+                  fontSize: 12,
+                  color: 'var(--color-text-secondary)',
+                  textAlign: 'center',
+                }}
+              >
+                Aucun tileset trouvé
+              </p>
+            ) : grouped ? (
+              // Vue groupée par catégorie — SheetViews inline après chaque ligne active
+              grouped.map((group) => {
+                const bandColor = CATEGORY_COLORS[group.id] ?? '#94a3b8';
+                return (
                   <div key={group.id}>
-                    <div style={{
-                      padding: '5px 10px 3px',
-                      background: 'rgba(255,255,255,0.04)',
-                      borderTop: '1px solid var(--color-border-base)',
-                      display: 'flex', alignItems: 'center', gap: 5,
-                    }}>
-                      <span style={{ fontSize: 13, lineHeight: 1 }}>{group.emoji}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600,
-                        color: 'var(--color-text-base)',
-                        textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7,
-                      }}>
+                    <div
+                      style={{
+                        padding: '5px 10px 4px 8px',
+                        background: `${bandColor}10`,
+                        borderTop: '1px solid var(--color-border-base)',
+                        borderLeft: `3px solid ${bandColor}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <span style={{ fontSize: 14, lineHeight: 1 }}>{group.emoji}</span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: bandColor,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                        }}
+                      >
                         {group.label}
                       </span>
-                      <span style={{ fontSize: 10, color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: bandColor,
+                          marginLeft: 'auto',
+                          background: `${bandColor}20`,
+                          borderRadius: 4,
+                          padding: '1px 5px',
+                        }}
+                      >
                         {group.assets.length}
                       </span>
                     </div>
-                    {group.assets.map(asset => renderTilesetRow(asset))}
+                    {group.assets.map((asset) => renderTilesetRow(asset))}
                   </div>
-                ))
-              ) : (
-                // Vue plate (filtre catégorie actif)
-                displayedAssets.map(asset => renderTilesetRow(asset))
-              )}
-            </div>
-
-            {/* Sheet view */}
-            {activeAsset && (
-              <SheetView
-                asset={activeAsset}
-                config={getConfig(activeAsset)}
-                selectedTile={selectedTile}
-                onSelectTile={onSelectTile}
-                onSelectWhole={selectWholeTile}
-                onSelectSheetRegion={selectSheetRegion}
-                onOpenConfig={() => openConfigDialog(activeAsset)}
-              />
+                );
+              })
+            ) : (
+              // Vue plate (filtre catégorie actif)
+              displayedAssets.map((asset) => renderTilesetRow(asset))
             )}
           </div>
         )}
 
         {/* Brush preview strip */}
         {brushLabel && (
-          <div style={{
-            flexShrink: 0, padding: '5px 10px', borderTop: '1px solid var(--color-border-base)',
-            background: 'rgba(139,92,246,0.08)',
-          }}>
-            <p style={{ margin: 0, fontSize: 11, color: 'var(--color-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div
+            style={{
+              flexShrink: 0,
+              padding: '5px 10px',
+              borderTop: '1px solid var(--color-border-base)',
+              background: 'var(--color-primary-08)',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                color: 'var(--color-primary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               Brush : {brushLabel}
             </p>
           </div>
         )}
       </div>
-
 
       {importDialog && (
         <TilesetImportDialog
@@ -577,252 +1016,4 @@ export default function TilePalette({
   );
 }
 
-// ── SheetView ──────────────────────────────────────────────────────────────────
-
-interface SheetViewProps {
-  asset: Asset;
-  config: TilesetConfig | null;
-  selectedTile: SelectedTile | null;
-  onSelectTile: (tile: SelectedTile | null) => void;
-  onSelectWhole: (asset: Asset) => void;
-  onSelectSheetRegion: (asset: Asset, config: TilesetConfig, c0: number, r0: number, c1: number, r1: number) => void;
-  onOpenConfig: () => void;
-}
-
-function SheetView({
-  asset,
-  config,
-  selectedTile,
-  onSelectWhole,
-  onSelectSheetRegion,
-  onOpenConfig,
-}: SheetViewProps) {
-  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
-  const [sheetZoom, setSheetZoom] = useState(1.0);
-  const [dragStart, setDragStart] = useState<{ col: number; row: number } | null>(null);
-  const [dragCurrent, setDragCurrent] = useState<{ col: number; row: number } | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const url = asset.url ?? asset.path;
-
-  useEffect(() => {
-    setImgSize(null);
-    const img = new Image();
-    img.onload = () => setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = url;
-  }, [url]);
-
-  // Zoom initial adaptatif : remplit la largeur du conteneur, tiles visibles à min 2× leur taille native
-  useEffect(() => {
-    if (!imgSize) { setSheetZoom(2.0); return; }
-    const containerW = containerRef.current?.clientWidth ?? 0;
-    const fitZoom = containerW > 0 ? (containerW - 12) / imgSize.w : 2.0;
-    // Au moins 2x la taille native pour que les tiles 16px soient lisibles (≥ 32px)
-    const autoZoom = Math.min(SHEET_MAX_ZOOM, Math.max(2.0, fitZoom));
-    setSheetZoom(autoZoom);
-  }, [asset.id, imgSize]);
-
-  const zoomIn = () => setSheetZoom(z => Math.min(SHEET_MAX_ZOOM, z * SHEET_ZOOM_FACTOR));
-  const zoomOut = () => setSheetZoom(z => Math.max(SHEET_MIN_ZOOM, z / SHEET_ZOOM_FACTOR));
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const direction = e.deltaY < 0 ? 1 : -1;
-    setSheetZoom(z => {
-      const next = direction > 0 ? z * SHEET_ZOOM_FACTOR : z / SHEET_ZOOM_FACTOR;
-      return Math.min(SHEET_MAX_ZOOM, Math.max(SHEET_MIN_ZOOM, next));
-    });
-  };
-
-  const isWholeTileSelected = selectedTile?.asset.id === asset.id && selectedTile.tileW === 0;
-
-  if (!config) {
-    return (
-      <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-        <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--color-text-muted)' }}>
-          Image entière (pas de grille configurée)
-        </p>
-        <button
-          onClick={() => onSelectWhole(asset)}
-          style={{
-            display: 'block', width: '100%', padding: 0,
-            border: isWholeTileSelected ? '2px solid var(--color-primary)' : '2px solid transparent',
-            borderRadius: 4, cursor: 'pointer', background: 'transparent',
-          }}
-        >
-          <img src={url} alt={asset.name} style={{ width: '100%', imageRendering: 'pixelated', display: 'block' }} draggable={false} />
-        </button>
-        <button
-          onClick={onOpenConfig}
-          style={{
-            marginTop: 8, width: '100%', padding: '5px 0', fontSize: 12,
-            border: '1px dashed var(--color-primary)', borderRadius: 5,
-            background: 'rgba(139,92,246,0.08)', color: 'var(--color-primary)', cursor: 'pointer',
-          }}
-        >
-          ⚙ Configurer la grille
-        </button>
-      </div>
-    );
-  }
-
-  const innerW = imgSize ? imgSize.w - config.margin * 2 : 0;
-  const innerH = imgSize ? imgSize.h - config.margin * 2 : 0;
-  const cols = Math.max(0, Math.floor((innerW + config.spacing) / (config.tileW + config.spacing)));
-  const rows = Math.max(0, Math.floor((innerH + config.spacing) / (config.tileH + config.spacing)));
-
-  const selC0 = dragStart && dragCurrent ? Math.min(dragStart.col, dragCurrent.col) : -1;
-  const selC1 = dragStart && dragCurrent ? Math.max(dragStart.col, dragCurrent.col) : -1;
-  const selR0 = dragStart && dragCurrent ? Math.min(dragStart.row, dragCurrent.row) : -1;
-  const selR1 = dragStart && dragCurrent ? Math.max(dragStart.row, dragCurrent.row) : -1;
-
-  const isCellInDrag = (c: number, r: number) =>
-    dragStart !== null && c >= selC0 && c <= selC1 && r >= selR0 && r <= selR1;
-
-  const isCellSelected = (c: number, r: number) => {
-    if (!selectedTile || selectedTile.asset.id !== asset.id || selectedTile.tileW === 0) return false;
-    const c0 = (selectedTile.tileX - config.margin) / (config.tileW + config.spacing);
-    const r0 = (selectedTile.tileY - config.margin) / (config.tileH + config.spacing);
-    const rc = selectedTile.regionCols ?? 1;
-    const rr = selectedTile.regionRows ?? 1;
-    const inRegion = c >= c0 && c < c0 + rc && r >= r0 && r < r0 + rr;
-    const expectedX = config.margin + c * (config.tileW + config.spacing);
-    const expectedY = config.margin + r * (config.tileH + config.spacing);
-    const matchExact = selectedTile.tileX === expectedX && selectedTile.tileY === expectedY;
-    return inRegion || matchExact;
-  };
-
-  const handleCellMouseDown = (c: number, r: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    setDragStart({ col: c, row: r });
-    setDragCurrent({ col: c, row: r });
-  };
-
-  const handleCellMouseEnter = (c: number, r: number) => {
-    if (dragStart !== null) setDragCurrent({ col: c, row: r });
-  };
-
-  const handleCellMouseUp = (c: number, r: number) => {
-    if (dragStart) {
-      onSelectSheetRegion(asset, config, dragStart.col, dragStart.row, c, r);
-    }
-    setDragStart(null);
-    setDragCurrent(null);
-  };
-
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Zoom toolbar */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderBottom: '1px solid var(--color-border-base)' }}>
-        <span style={{ fontSize: 11, color: 'var(--color-text-muted)', flex: 1 }}>
-          {imgSize && cols > 0 ? `${cols}×${rows} (${config.tileW}×${config.tileH}px)` : ''}
-        </span>
-        <button onClick={zoomOut} title="Zoom -" style={zoomBtnStyle} disabled={sheetZoom <= SHEET_MIN_ZOOM}>
-          <ZoomOut size={12} />
-        </button>
-        <button
-          onClick={() => setSheetZoom(1)}
-          title="Zoom 100%"
-          style={{ ...zoomBtnStyle, minWidth: 38, fontSize: 11 }}
-        >
-          {Math.round(sheetZoom * 100)}%
-        </button>
-        <button onClick={zoomIn} title="Zoom +" style={zoomBtnStyle} disabled={sheetZoom >= SHEET_MAX_ZOOM}>
-          <ZoomIn size={12} />
-        </button>
-      </div>
-
-      {/* Scrollable sheet container */}
-      <div
-        ref={containerRef}
-        style={{ flex: 1, overflow: 'auto', padding: 6 }}
-        onWheel={handleWheel}
-      >
-        {imgSize && cols > 0 && rows > 0 ? (
-          /* Outer div: reserves the correct zoomed space for scrolling */
-          <div style={{ width: Math.round(imgSize.w * sheetZoom), height: Math.round(imgSize.h * sheetZoom), position: 'relative', flexShrink: 0 }}>
-            {/* Inner div: natural-pixel size, scaled uniformly by CSS transform.
-                This eliminates accumulated floating-point drift between grid cells
-                because the browser applies one uniform scale to the whole subtree. */}
-            <div
-              style={{
-                position: 'absolute', top: 0, left: 0,
-                width: imgSize.w, height: imgSize.h,
-                transformOrigin: '0 0',
-                transform: `scale(${sheetZoom})`,
-                userSelect: 'none',
-              }}
-              onMouseLeave={() => { if (dragStart) { setDragStart(null); setDragCurrent(null); } }}
-            >
-              <img
-                src={url}
-                alt={asset.name}
-                style={{ display: 'block', imageRendering: 'pixelated', width: imgSize.w, height: imgSize.h }}
-                draggable={false}
-              />
-              {/* Grid overlays at natural pixel coordinates — no zoom multiplication */}
-              <div style={{ position: 'absolute', top: config.margin, left: config.margin, pointerEvents: 'none' }}>
-                {Array.from({ length: rows }).map((_, r) =>
-                  Array.from({ length: cols }).map((_, c) => {
-                    const inDrag = isCellInDrag(c, r);
-                    const selected = !inDrag && isCellSelected(c, r);
-                    return (
-                      <div
-                        key={`${r}-${c}`}
-                        onMouseDown={e => handleCellMouseDown(c, r, e)}
-                        onMouseEnter={() => handleCellMouseEnter(c, r)}
-                        onMouseUp={() => handleCellMouseUp(c, r)}
-                        style={{
-                          position: 'absolute',
-                          left: c * (config.tileW + config.spacing),
-                          top: r * (config.tileH + config.spacing),
-                          width: config.tileW,
-                          height: config.tileH,
-                          boxSizing: 'border-box',
-                          border: selected
-                            ? `${2 / sheetZoom}px solid var(--color-primary)`
-                            : inDrag
-                              ? `${2 / sheetZoom}px solid rgba(139,92,246,0.9)`
-                              : `${1 / sheetZoom}px solid rgba(139,92,246,0.3)`,
-                          background: selected
-                            ? 'rgba(139,92,246,0.28)'
-                            : inDrag
-                              ? 'rgba(139,92,246,0.22)'
-                              : 'transparent',
-                          cursor: 'crosshair',
-                          pointerEvents: 'auto',
-                          transition: inDrag ? 'none' : 'background 0.08s',
-                        }}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: 0 }}>Chargement...</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Style helpers ──────────────────────────────────────────────────────────────
-
-const zoomBtnStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 24,
-  height: 24,
-  borderRadius: 4,
-  border: '1px solid var(--color-border-base)',
-  background: 'transparent',
-  color: 'var(--color-text-muted)',
-  cursor: 'pointer',
-  padding: 0,
-};
+// (SheetView → SheetView.tsx)

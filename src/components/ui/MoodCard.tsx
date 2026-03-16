@@ -28,7 +28,14 @@ export interface MoodCardProps {
  * Animations spring (stagger entrée, hover lift, tap scale) — principes Nintendo UX.
  */
 export function MoodCard({
-  mood, emoji, label, sprite, isActive, onClick, size = 40, entryDelay = 0,
+  mood,
+  emoji,
+  label,
+  sprite,
+  isActive,
+  onClick,
+  size = 40,
+  entryDelay = 0,
 }: MoodCardProps) {
   const badgeFontSize = Math.max(6, Math.round(size * 0.19));
   const labelFontSize = Math.max(6, Math.round(size * 0.175));
@@ -54,12 +61,12 @@ export function MoodCard({
         aspectRatio: '3 / 4',
         borderRadius: Math.round(size * 0.2),
         border: `2px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
-        background: isActive ? 'rgba(139,92,246,0.12)' : 'var(--color-bg-base)',
+        background: isActive ? 'var(--color-primary-subtle)' : 'var(--color-bg-base)',
         overflow: 'hidden',
         cursor: 'pointer',
         padding: 0,
         boxShadow: isActive
-          ? '0 6px 20px rgba(139,92,246,0.45), 0 0 0 1px rgba(139,92,246,0.2)'
+          ? '0 6px 20px var(--color-primary-45), 0 0 0 1px var(--color-primary-20)'
           : '0 2px 6px rgba(0,0,0,0.3)',
       }}
     >
@@ -69,47 +76,75 @@ export function MoodCard({
           src={convertFileSrcIfNeeded(sprite)}
           alt={mood}
           draggable="false"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+          }}
         />
       ) : (
-        <span style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: emojiFontSize,
-          background: isActive
-            ? 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))'
-            : 'linear-gradient(135deg, rgba(255,255,255,0.04), transparent)',
-        }}>
+        <span
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: emojiFontSize,
+            background: isActive
+              ? 'linear-gradient(135deg, var(--color-primary-20), var(--color-primary-05))'
+              : 'linear-gradient(135deg, rgba(255,255,255,0.04), transparent)',
+          }}
+        >
           {emoji}
         </span>
       )}
 
       {/* Badge emoji coin haut-droit */}
-      <span aria-hidden="true" style={{
-        position: 'absolute', top: 1, right: 2,
-        fontSize: badgeFontSize, lineHeight: 1,
-        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))',
-      }}>
+      <span
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 1,
+          right: 2,
+          fontSize: badgeFontSize,
+          lineHeight: 1,
+          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))',
+        }}
+      >
         {emoji}
       </span>
 
       {/* Label gradient bas */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: `${gradientPadTop}px 2px 2px`,
-        background: isActive
-          ? 'linear-gradient(to top, rgba(88,28,235,0.92), rgba(139,92,246,0.45) 60%, transparent)'
-          : 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.4) 60%, transparent)',
-        textAlign: 'center',
-      }}>
-        <span style={{
-          display: 'block',
-          fontSize: labelFontSize, fontWeight: 700,
-          color: '#fff', lineHeight: 1.2,
-          textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-          textTransform: 'capitalize',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: `${gradientPadTop}px 2px 2px`,
+          background: isActive
+            ? 'linear-gradient(to top, rgba(88,28,235,0.92), var(--color-primary-45) 60%, transparent)'
+            : 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.4) 60%, transparent)',
+          textAlign: 'center',
+        }}
+      >
+        <span
+          style={{
+            display: 'block',
+            fontSize: labelFontSize,
+            fontWeight: 700,
+            color: '#fff',
+            lineHeight: 1.2,
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+            textTransform: 'capitalize',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {label}
         </span>
       </div>

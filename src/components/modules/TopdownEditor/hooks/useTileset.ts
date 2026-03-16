@@ -23,11 +23,14 @@ export function useTileset(assets: Asset[]): TileImageCache {
   useEffect(() => {
     if (assets.length === 0) return;
 
+    // Guard against stale setState if component unmounts during image loading
+    let cancelled = false;
+
     const newCache = new Map<string, HTMLImageElement>(cache);
     let changed = false;
     let pending = 0;
 
-    assets.forEach(asset => {
+    assets.forEach((asset) => {
       const url = asset.url ?? asset.path;
       if (!url || newCache.has(url)) return;
 
@@ -35,15 +38,17 @@ export function useTileset(assets: Asset[]): TileImageCache {
       const img = new window.Image();
       img.src = url;
       img.onload = () => {
+        if (cancelled) return;
         newCache.set(url, img);
+        changed = true;
         pending--;
         if (pending === 0) {
           // All images loaded — trigger re-render with new cache
           setCache(new Map(newCache));
         }
-        changed = true;
       };
       img.onerror = () => {
+        if (cancelled) return;
         pending--;
         if (pending === 0 && changed) {
           setCache(new Map(newCache));
@@ -51,8 +56,11 @@ export function useTileset(assets: Asset[]): TileImageCache {
       };
     });
 
+    return () => {
+      cancelled = true;
+    };
     // If nothing pending (all already cached), don't update
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setCache est un setter React stable ; re-run uniquement quand la liste d'assets change par référence
   }, [assets]);
 
   return cache;

@@ -108,19 +108,3 @@ export const ELEMENT_DEFAULTS: ElementDefaults = {
   FONT_SIZE: 16,
   Z_INDEX: 1,
 } as const;
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Snap a value to the grid
- *
- * @param value - Value to snap
- * @param gridSize - Grid size (defaults to CANVAS_CONFIG.GRID_SIZE)
- * @returns Snapped value
- */
-export function snapToGrid(value: number, gridSize: number = CANVAS_CONFIG.GRID_SIZE): number {
-  return Math.round(value / gridSize) * gridSize;
-}
-

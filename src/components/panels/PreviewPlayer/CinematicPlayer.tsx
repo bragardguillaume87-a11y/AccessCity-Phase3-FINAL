@@ -20,7 +20,9 @@ import type { CinematicTracks } from '@/types/cinematic';
 import type { Character } from '@/types/characters';
 import {
   CINEMATIC_SPEED_MS,
-  flattenTracks, getTotalDurationMs, migrateToCinematicTracks,
+  flattenTracks,
+  getTotalDurationMs,
+  migrateToCinematicTracks,
 } from '@/types/cinematic';
 
 // ── Types internes ────────────────────────────────────────────────────────────
@@ -43,25 +45,33 @@ interface DialogueState {
 // ── Constantes de rendu ───────────────────────────────────────────────────────
 
 const TINT_FILTERS: Record<TintPreset, string> = {
-  none:   '',
+  none: '',
   memory: 'sepia(0.7) brightness(0.9)',
   danger: 'saturate(1.5) hue-rotate(-20deg) brightness(0.85)',
-  cold:   'saturate(0.6) hue-rotate(180deg) brightness(0.9)',
-  warm:   'sepia(0.4) saturate(1.4) brightness(1.05)',
-  dream:  'saturate(0.8) hue-rotate(260deg) brightness(0.9)',
+  cold: 'saturate(0.6) hue-rotate(180deg) brightness(0.9)',
+  warm: 'sepia(0.4) saturate(1.4) brightness(1.05)',
+  dream: 'saturate(0.8) hue-rotate(260deg) brightness(0.9)',
 };
 
 const SIDE_POSITIONS: Record<string, React.CSSProperties> = {
-  left:   { left: '5%',  bottom: '0' },
-  right:  { right: '5%', bottom: '0' },
-  top:    { left: '50%', bottom: '60%' },
+  left: { left: '5%', bottom: '0' },
+  right: { right: '5%', bottom: '0' },
+  top: { left: '50%', bottom: '60%' },
   bottom: { left: '50%', bottom: '0' },
 };
 
 const getSideVariants = (side: string) => ({
-  initial: { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, y: side === 'bottom' ? 60 : 0 },
+  initial: {
+    opacity: 0,
+    x: side === 'left' ? -60 : side === 'right' ? 60 : 0,
+    y: side === 'bottom' ? 60 : 0,
+  },
   animate: { opacity: 1, x: 0, y: 0, transition: { duration: 0.4 } },
-  exit:    { opacity: 0, x: side === 'left' ? -60 : side === 'right' ? 60 : 0, transition: { duration: 0.3 } },
+  exit: {
+    opacity: 0,
+    x: side === 'left' ? -60 : side === 'right' ? 60 : 0,
+    transition: { duration: 0.3 },
+  },
 });
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -81,69 +91,101 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CinematicPlayer({
-  tracks: tracksProp, events: eventsProp,
-  backgroundUrl: initialBg, canvasWidth, canvasHeight,
-  characterLibrary, onSequenceEnd,
+  tracks: tracksProp,
+  events: eventsProp,
+  backgroundUrl: initialBg,
+  canvasWidth,
+  canvasHeight,
+  characterLibrary,
+  onSequenceEnd,
 }: Props) {
-
   // Résolution tracks (backward-compat)
   const tracks = useMemo(
     () => tracksProp ?? migrateToCinematicTracks(eventsProp ?? []),
-    [tracksProp, eventsProp],
+    [tracksProp, eventsProp]
   );
 
   // ── Visual state ──────────────────────────────────────────────────────────
-  const [currentTimeMs, setCurrentTimeMs]   = useState(0);
+  const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [waitingForClick, setWaitingForClick] = useState(false);
-  const processedEventIds                   = useRef<Set<string>>(new Set());
+  const processedEventIds = useRef<Set<string>>(new Set());
 
   // Ref pour éviter la stale closure dans l'effet processeur d'événements
   // (deps: [currentTimeMs] uniquement → waitingForClick et onSequenceEnd seraient obsolètes sans ref)
   const waitingForClickRef = useRef(false);
-  const onSequenceEndRef   = useRef(onSequenceEnd);
-  useEffect(() => { waitingForClickRef.current = waitingForClick; });
-  useEffect(() => { onSequenceEndRef.current   = onSequenceEnd;   });
+  const onSequenceEndRef = useRef(onSequenceEnd);
+  useEffect(() => {
+    waitingForClickRef.current = waitingForClick;
+  });
+  useEffect(() => {
+    onSequenceEndRef.current = onSequenceEnd;
+  });
 
-  const [bgUrl, setBgUrl]       = useState(initialBg);
+  const [bgUrl, setBgUrl] = useState(initialBg);
   const [activeChars, setActiveChars] = useState<ActiveCharacter[]>([]);
-  const [fadeOverlay, setFadeOverlay] = useState<{ visible: boolean; color: 'black' | 'white'; opacity: number }>(
-    { visible: false, color: 'black', opacity: 0 }
-  );
-  const [flashKey, setFlashKey]     = useState(0);
+  const [fadeOverlay, setFadeOverlay] = useState<{
+    visible: boolean;
+    color: 'black' | 'white';
+    opacity: number;
+  }>({ visible: false, color: 'black', opacity: 0 });
+  const [flashKey, setFlashKey] = useState(0);
   const [flashColor, setFlashColor] = useState<'black' | 'white'>('white');
-  const [shakeKey, setShakeKey]     = useState(0);
-  const [vignette, setVignette]     = useState<{ visible: boolean; intensity: 'light' | 'medium' | 'strong' }>({ visible: false, intensity: 'medium' });
+  const [shakeKey, setShakeKey] = useState(0);
+  const [vignette, setVignette] = useState<{
+    visible: boolean;
+    intensity: 'light' | 'medium' | 'strong';
+  }>({ visible: false, intensity: 'medium' });
   const [tintPreset, setTintPreset] = useState<TintPreset>('none');
-  const [zoom, setZoom]             = useState(1);
-  const [letterbox, setLetterbox]   = useState(false);
-  const [titleCard, setTitleCard]   = useState<{ title: string; subtitle?: string } | null>(null);
-  const [dialogue, setDialogue]     = useState<DialogueState | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [letterbox, setLetterbox] = useState(false);
+  const [titleCard, setTitleCard] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [dialogue, setDialogue] = useState<DialogueState | null>(null);
 
   // Audio persistant — continue nativement pendant la pause Restaurant
-  const bgmAudioRef      = useRef<HTMLAudioElement | null>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambianceAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Ref pour le setInterval du fade BGM — nettoyé au démontage
+  const bgmFadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {
-      if (bgmAudioRef.current)      { bgmAudioRef.current.pause();      bgmAudioRef.current.src      = ''; bgmAudioRef.current      = null; }
-      if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
+      if (bgmFadeIntervalRef.current) {
+        clearInterval(bgmFadeIntervalRef.current);
+        bgmFadeIntervalRef.current = null;
+      }
+      if (bgmAudioRef.current) {
+        bgmAudioRef.current.pause();
+        bgmAudioRef.current.src = '';
+        bgmAudioRef.current = null;
+      }
+      if (ambianceAudioRef.current) {
+        ambianceAudioRef.current.pause();
+        ambianceAudioRef.current.src = '';
+        ambianceAudioRef.current = null;
+      }
     };
   }, []);
 
   // ── Dialogue typewriter ───────────────────────────────────────────────────
   const dialogueBoxConfig = useDialogueBoxConfig(undefined);
-  const { displayText, isComplete: typewriterDone, skip: skipTypewriter } = useTypewriter(
-    dialogue?.text ?? '',
-    { speed: dialogueBoxConfig.typewriterSpeed, cursor: true, contextAware: true }
-  );
-
-  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor } = useSpeakerLayout({
-    speakerNameOrId: dialogue?.speaker,
-    sceneCharacters: [],
-    characterLibrary,
-    config: dialogueBoxConfig,
-    moodOverrides: dialogue?.speakerMood ? { [dialogue.speaker]: dialogue.speakerMood } : {},
+  const {
+    displayText,
+    isComplete: typewriterDone,
+    skip: skipTypewriter,
+  } = useTypewriter(dialogue?.text ?? '', {
+    speed: dialogueBoxConfig.typewriterSpeed,
+    cursor: true,
+    contextAware: true,
   });
+
+  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor } =
+    useSpeakerLayout({
+      speakerNameOrId: dialogue?.speaker,
+      sceneCharacters: [],
+      characterLibrary,
+      config: dialogueBoxConfig,
+      moodOverrides: dialogue?.speakerMood ? { [dialogue.speaker]: dialogue.speakerMood } : {},
+    });
 
   // Auto-advance dialogue (autoAdvance=true) : 1.2s après fin typewriter
   useEffect(() => {
@@ -159,88 +201,173 @@ export function CinematicPlayer({
     if (waitingForClick) return;
     const totalMs = getTotalDurationMs(tracks);
     if (currentTimeMs >= totalMs) return;
-    const timer = setTimeout(() => setCurrentTimeMs(t => t + 16), 16);
+    const timer = setTimeout(() => setCurrentTimeMs((t) => t + 16), 16);
     return () => clearTimeout(timer);
   }, [waitingForClick, currentTimeMs, tracks]);
 
   // ── Déclenchement des événements au bon moment ────────────────────────────
   useEffect(() => {
     const allTracked = flattenTracks(tracks);
-    const toFire = allTracked.filter(te =>
-      !processedEventIds.current.has(te.id) &&
-      te.startTimeMs <= currentTimeMs
+    const toFire = allTracked.filter(
+      (te) => !processedEventIds.current.has(te.id) && te.startTimeMs <= currentTimeMs
     );
 
     for (const te of toFire) {
       processedEventIds.current.add(te.id);
       const event = te.event;
-      const durationMs = 'speed' in event ? CINEMATIC_SPEED_MS[(event as { speed: keyof typeof CINEMATIC_SPEED_MS }).speed] : 0;
+      const durationMs =
+        'speed' in event
+          ? CINEMATIC_SPEED_MS[(event as { speed: keyof typeof CINEMATIC_SPEED_MS }).speed]
+          : 0;
 
       switch (event.type) {
         case 'fade': {
           const start = event.direction === 'out' ? 0 : 1;
-          const end   = event.direction === 'out' ? 1 : 0;
+          const end = event.direction === 'out' ? 1 : 0;
           setFadeOverlay({ visible: true, color: event.color, opacity: start });
           setTimeout(() => setFadeOverlay({ visible: true, color: event.color, opacity: end }), 50);
-          if (event.direction === 'in') setTimeout(() => setFadeOverlay({ visible: false, color: event.color, opacity: 0 }), durationMs + 100);
+          if (event.direction === 'in')
+            setTimeout(
+              () => setFadeOverlay({ visible: false, color: event.color, opacity: 0 }),
+              durationMs + 100
+            );
           break;
         }
         case 'flash':
           setFlashColor(event.color);
-          setFlashKey(k => k + 1);
+          setFlashKey((k) => k + 1);
           break;
         case 'screenShake':
-          setShakeKey(k => k + 1);
+          setShakeKey((k) => k + 1);
           break;
         case 'background':
           setBgUrl(event.url);
           break;
         case 'characterEnter':
-          setActiveChars(prev => [
-            ...prev.filter(c => c.characterId !== event.characterId),
-            { characterId: event.characterId, mood: event.mood, side: event.side, visible: true, shaking: false },
+          setActiveChars((prev) => [
+            ...prev.filter((c) => c.characterId !== event.characterId),
+            {
+              characterId: event.characterId,
+              mood: event.mood,
+              side: event.side,
+              visible: true,
+              shaking: false,
+            },
           ]);
           break;
         case 'characterExit':
-          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, visible: false } : c));
-          setTimeout(() => setActiveChars(prev => prev.filter(c => c.characterId !== event.characterId)), durationMs + 100);
+          setActiveChars((prev) =>
+            prev.map((c) => (c.characterId === event.characterId ? { ...c, visible: false } : c))
+          );
+          setTimeout(
+            () => setActiveChars((prev) => prev.filter((c) => c.characterId !== event.characterId)),
+            durationMs + 100
+          );
           break;
         case 'dialogue':
-          setDialogue({ speaker: event.speaker, speakerMood: event.speakerMood, text: event.text, autoAdvance: event.autoAdvance });
-          if (!event.autoAdvance) setWaitingForClick(true);  // Restaurant : gèle le ticker ✓
+          setDialogue({
+            speaker: event.speaker,
+            speakerMood: event.speakerMood,
+            text: event.text,
+            autoAdvance: event.autoAdvance,
+          });
+          if (!event.autoAdvance) setWaitingForClick(true); // Restaurant : gèle le ticker ✓
           break;
         case 'sfx':
-          try { const a = new Audio(event.url); a.volume = event.volume ?? 0.7; a.play().catch(() => {}); } catch { /* ignore */ }
+          try {
+            const a = new Audio(event.url);
+            a.volume = event.volume ?? 0.7;
+            a.play().catch(() => {});
+          } catch {
+            /* ignore */
+          }
           break;
         case 'bgm':
-          if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; }
-          try { const a = new Audio(event.url); a.volume = event.volume ?? 0.7; a.loop = true; a.play().catch(() => {}); bgmAudioRef.current = a; } catch { /* ignore */ }
+          if (bgmAudioRef.current) {
+            bgmAudioRef.current.pause();
+            bgmAudioRef.current.src = '';
+            bgmAudioRef.current = null;
+          }
+          try {
+            const a = new Audio(event.url);
+            a.volume = event.volume ?? 0.7;
+            a.loop = true;
+            a.play().catch(() => {});
+            bgmAudioRef.current = a;
+          } catch {
+            /* ignore */
+          }
           break;
         case 'bgmStop': {
           const audio = bgmAudioRef.current;
           if (audio) {
             if (event.fade) {
-              const step = audio.volume / 10; let count = 0;
-              const iv = setInterval(() => { count++; if (!bgmAudioRef.current || count >= 10) { clearInterval(iv); if (bgmAudioRef.current) { bgmAudioRef.current.pause(); bgmAudioRef.current.src = ''; bgmAudioRef.current = null; } } else audio.volume = Math.max(0, audio.volume - step); }, 100);
-            } else { audio.pause(); audio.src = ''; bgmAudioRef.current = null; }
+              const step = audio.volume / 10;
+              let count = 0;
+              if (bgmFadeIntervalRef.current) clearInterval(bgmFadeIntervalRef.current);
+              bgmFadeIntervalRef.current = setInterval(() => {
+                count++;
+                if (!bgmAudioRef.current || count >= 10) {
+                  clearInterval(bgmFadeIntervalRef.current!);
+                  bgmFadeIntervalRef.current = null;
+                  if (bgmAudioRef.current) {
+                    bgmAudioRef.current.pause();
+                    bgmAudioRef.current.src = '';
+                    bgmAudioRef.current = null;
+                  }
+                } else {
+                  audio.volume = Math.max(0, audio.volume - step);
+                }
+              }, 100);
+            } else {
+              audio.pause();
+              audio.src = '';
+              bgmAudioRef.current = null;
+            }
           }
           break;
         }
         case 'ambiance':
-          if (ambianceAudioRef.current) { ambianceAudioRef.current.pause(); ambianceAudioRef.current.src = ''; ambianceAudioRef.current = null; }
+          if (ambianceAudioRef.current) {
+            ambianceAudioRef.current.pause();
+            ambianceAudioRef.current.src = '';
+            ambianceAudioRef.current = null;
+          }
           if (event.url) {
-            try { const a = new Audio(event.url); a.volume = event.volume ?? 0.5; a.loop = event.loop; a.play().catch(() => {}); ambianceAudioRef.current = a; } catch { /* ignore */ }
+            try {
+              const a = new Audio(event.url);
+              a.volume = event.volume ?? 0.5;
+              a.loop = event.loop;
+              a.play().catch(() => {});
+              ambianceAudioRef.current = a;
+            } catch {
+              /* ignore */
+            }
           }
           break;
         case 'characterExpression':
-          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, mood: event.mood } : c));
+          setActiveChars((prev) =>
+            prev.map((c) => (c.characterId === event.characterId ? { ...c, mood: event.mood } : c))
+          );
           break;
         case 'characterMove':
-          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, side: event.side } : c));
+          setActiveChars((prev) =>
+            prev.map((c) => (c.characterId === event.characterId ? { ...c, side: event.side } : c))
+          );
           break;
         case 'characterShake':
-          setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, shaking: true } : c));
-          setTimeout(() => setActiveChars(prev => prev.map(c => c.characterId === event.characterId ? { ...c, shaking: false } : c)), 800);
+          setActiveChars((prev) =>
+            prev.map((c) => (c.characterId === event.characterId ? { ...c, shaking: true } : c))
+          );
+          setTimeout(
+            () =>
+              setActiveChars((prev) =>
+                prev.map((c) =>
+                  c.characterId === event.characterId ? { ...c, shaking: false } : c
+                )
+              ),
+            800
+          );
           break;
         case 'vignette':
           setVignette({ visible: event.on, intensity: event.intensity });
@@ -266,7 +393,7 @@ export function CinematicPlayer({
     // Fin de séquence — utilise les refs pour éviter la stale closure
     const totalMs = getTotalDurationMs(tracks);
     if (currentTimeMs >= totalMs && !waitingForClickRef.current) onSequenceEndRef.current();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getTotalDurationMs/tracks/onSequenceEndRef/waitingForClickRef sont stables (refs ou fonctions pures sur données immuables)
   }, [currentTimeMs]);
 
   // ── Vignette CSS ──────────────────────────────────────────────────────────
@@ -278,10 +405,13 @@ export function CinematicPlayer({
 
   // ── Click handler ─────────────────────────────────────────────────────────
   const handleClick = useCallback(() => {
-    if (!typewriterDone && dialogue) { skipTypewriter(); return; }
+    if (!typewriterDone && dialogue) {
+      skipTypewriter();
+      return;
+    }
     if (waitingForClick) {
       setDialogue(null);
-      setWaitingForClick(false);  // ticker reprend ici ✓
+      setWaitingForClick(false); // ticker reprend ici ✓
     }
   }, [typewriterDone, dialogue, waitingForClick, skipTypewriter]);
 
@@ -299,51 +429,98 @@ export function CinematicPlayer({
         className="absolute inset-0 transition-all duration-500"
         style={{
           backgroundImage: bgUrl ? `url(${bgUrl})` : undefined,
-          backgroundSize: 'cover', backgroundPosition: 'center',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           backgroundColor: '#1a1a2e',
-          filter: [buildFilterCSS(undefined), TINT_FILTERS[tintPreset]].filter(Boolean).join(' ') || undefined,
-          transform: `scale(${zoom})`, transformOrigin: 'center center',
+          filter:
+            [buildFilterCSS(undefined), TINT_FILTERS[tintPreset]].filter(Boolean).join(' ') ||
+            undefined,
+          transform: `scale(${zoom})`,
+          transformOrigin: 'center center',
         }}
       />
 
       {/* Vignette */}
-      {vignette.visible && <div className="absolute inset-0 pointer-events-none transition-all duration-500" style={vignetteStyle} />}
+      {vignette.visible && (
+        <div
+          className="absolute inset-0 pointer-events-none transition-all duration-500"
+          style={vignetteStyle}
+        />
+      )}
 
       {/* Letterbox */}
       <AnimatePresence>
-        {letterbox && (<>
-          <motion.div key="lb-top" initial={{ height: 0 }} animate={{ height: '10%' }} exit={{ height: 0 }} className="absolute top-0 left-0 right-0 bg-black z-20" />
-          <motion.div key="lb-bot" initial={{ height: 0 }} animate={{ height: '10%' }} exit={{ height: 0 }} className="absolute bottom-0 left-0 right-0 bg-black z-20" />
-        </>)}
+        {letterbox && (
+          <>
+            <motion.div
+              key="lb-top"
+              initial={{ height: 0 }}
+              animate={{ height: '10%' }}
+              exit={{ height: 0 }}
+              className="absolute top-0 left-0 right-0 bg-black z-20"
+            />
+            <motion.div
+              key="lb-bot"
+              initial={{ height: 0 }}
+              animate={{ height: '10%' }}
+              exit={{ height: 0 }}
+              className="absolute bottom-0 left-0 right-0 bg-black z-20"
+            />
+          </>
+        )}
       </AnimatePresence>
 
       {/* Personnages */}
       <AnimatePresence>
-        {activeChars.filter(c => c.visible).map(ac => {
-          const char = characterLibrary.find(c => c.id === ac.characterId);
-          const spriteUrl = char?.sprites?.[ac.mood] ?? char?.sprites?.['neutral'] ?? (char?.sprites ? Object.values(char.sprites)[0] : undefined);
-          return (
-            <motion.div
-              key={ac.characterId}
-              initial="initial" animate="animate" exit="exit"
-              variants={getSideVariants(ac.side)}
-              className={ac.shaking ? 'animate-bounce' : ''}
-              style={{ position: 'absolute', width: '25%', height: '70%', ...SIDE_POSITIONS[ac.side] }}
-            >
-              {spriteUrl && <img src={spriteUrl} alt={char?.name ?? ''} className="w-full h-full object-contain object-bottom" />}
-            </motion.div>
-          );
-        })}
+        {activeChars
+          .filter((c) => c.visible)
+          .map((ac) => {
+            const char = characterLibrary.find((c) => c.id === ac.characterId);
+            const spriteUrl =
+              char?.sprites?.[ac.mood] ??
+              char?.sprites?.['neutral'] ??
+              (char?.sprites ? Object.values(char.sprites)[0] : undefined);
+            return (
+              <motion.div
+                key={ac.characterId}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={getSideVariants(ac.side)}
+                className={ac.shaking ? 'animate-bounce' : ''}
+                style={{
+                  position: 'absolute',
+                  width: '25%',
+                  height: '70%',
+                  ...SIDE_POSITIONS[ac.side],
+                }}
+              >
+                {spriteUrl && (
+                  <img
+                    src={spriteUrl}
+                    alt={char?.name ?? ''}
+                    className="w-full h-full object-contain object-bottom"
+                  />
+                )}
+              </motion.div>
+            );
+          })}
       </AnimatePresence>
 
       {/* Carte titre */}
       <AnimatePresence>
         {titleCard && (
-          <motion.div key="titlecard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div
+            key="titlecard"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-30 text-center px-8"
           >
             <p className="text-white text-3xl font-bold drop-shadow-lg">{titleCard.title}</p>
-            {titleCard.subtitle && <p className="text-white/75 text-lg mt-3 drop-shadow-md">{titleCard.subtitle}</p>}
+            {titleCard.subtitle && (
+              <p className="text-white/75 text-lg mt-3 drop-shadow-md">{titleCard.subtitle}</p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -351,7 +528,11 @@ export function CinematicPlayer({
       {/* Flash */}
       <AnimatePresence>
         {flashKey > 0 && (
-          <motion.div key={flashKey} initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.3 }}
+          <motion.div
+            key={flashKey}
+            initial={{ opacity: 0.9 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             className="absolute inset-0 pointer-events-none z-40"
             style={{ backgroundColor: flashColor === 'white' ? 'white' : 'black' }}
           />
@@ -359,8 +540,12 @@ export function CinematicPlayer({
       </AnimatePresence>
 
       {/* Fondu */}
-      <div className="absolute inset-0 pointer-events-none z-40 transition-opacity duration-500"
-        style={{ backgroundColor: fadeOverlay.color === 'black' ? 'black' : 'white', opacity: fadeOverlay.visible ? fadeOverlay.opacity : 0 }}
+      <div
+        className="absolute inset-0 pointer-events-none z-40 transition-opacity duration-500"
+        style={{
+          backgroundColor: fadeOverlay.color === 'black' ? 'black' : 'white',
+          opacity: fadeOverlay.visible ? fadeOverlay.opacity : 0,
+        }}
       />
 
       {/* Shake keyframe */}

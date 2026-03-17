@@ -926,6 +926,7 @@ export default function TopdownEditor() {
                 }
               : undefined
           }
+          sceneEffect={mapMetadata?.sceneEffect}
         />
         {/* ── Entity property panel ── */}
         {selectedEntityId &&

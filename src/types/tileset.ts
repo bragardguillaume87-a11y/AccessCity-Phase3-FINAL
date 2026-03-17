@@ -11,16 +11,16 @@ import type { Asset } from '@/types/assets';
 // ============================================================================
 
 export const TILESET_CATEGORIES = [
-  { id: 'terrain',    emoji: '🌿', label: 'Terrain' },
+  { id: 'terrain', emoji: '🌿', label: 'Terrain' },
   { id: 'structures', emoji: '🧱', label: 'Structures' },
   { id: 'vegetation', emoji: '🌳', label: 'Végétation' },
-  { id: 'mobilier',   emoji: '🪑', label: 'Mobilier' },
-  { id: 'water',      emoji: '💧', label: 'Eau & Nature' },
-  { id: 'effects',    emoji: '✨', label: 'Effets' },
-  { id: 'divers',     emoji: '📦', label: 'Divers' },
+  { id: 'mobilier', emoji: '🪑', label: 'Mobilier' },
+  { id: 'water', emoji: '💧', label: 'Eau & Nature' },
+  { id: 'effects', emoji: '✨', label: 'Effets' },
+  { id: 'divers', emoji: '📦', label: 'Divers' },
 ] as const;
 
-export type TilesetCategoryId = typeof TILESET_CATEGORIES[number]['id'];
+export type TilesetCategoryId = (typeof TILESET_CATEGORIES)[number]['id'];
 
 // ============================================================================
 // TILESET CONFIG — per-asset slicing metadata
@@ -43,6 +43,32 @@ export interface TilesetConfig {
   category?: TilesetCategoryId | string;
   /** Nom d'affichage personnalisé dans la palette (défaut: nom du fichier) */
   displayName?: string;
+  /**
+   * Carte de hitbox de collision par tuile du sheet.
+   * Clé = `"${tileX}_${tileY}"` (coords pixel dans le sheet, "0_0" pour image entière).
+   * Valeur = rectangle de collision en pourcentage des dimensions de la tuile.
+   *
+   * À la lecture de la carte (GameScene), chaque tuile présente dans "Objets"
+   * ayant une entrée ici génère un Actor invisible Fixed au bon offset monde.
+   */
+  hitboxMap?: Record<string, HitboxDef>;
+}
+
+/**
+ * Rectangle de collision en % de la tuile (0–100 pour chaque axe).
+ * Indépendant de la grille — précision sub-pixel.
+ *
+ * @example tronc d'arbre : { xPct: 30, yPct: 70, wPct: 40, hPct: 30 }
+ */
+export interface HitboxDef {
+  /** Décalage gauche en % de la largeur de la tuile */
+  xPct: number;
+  /** Décalage haut en % de la hauteur de la tuile */
+  yPct: number;
+  /** Largeur en % de la largeur de la tuile */
+  wPct: number;
+  /** Hauteur en % de la hauteur de la tuile */
+  hPct: number;
 }
 
 // ============================================================================

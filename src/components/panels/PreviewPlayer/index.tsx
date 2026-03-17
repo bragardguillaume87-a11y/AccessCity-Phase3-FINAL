@@ -36,6 +36,8 @@ import { useCanvasDimensions } from '../MainCanvas/hooks/useCanvasDimensions';
 import { Volume2, VolumeX, BarChart3 } from 'lucide-react';
 import { audioManager } from '../../../utils/audioManager';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
+import type { CharacterHitbox } from '@/components/ui/SceneEffectCanvas';
 import { CinematicPlayer } from './CinematicPlayer';
 import { logger } from '@/utils/logger';
 import { GAME_STATS } from '@/i18n';
@@ -107,6 +109,7 @@ export default function PreviewPlayer({
   // ── UI state ─────────────────────────────────────────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [audioInitialized, setAudioInitialized] = useState(false);
+  const playerRootRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [moodOverrides, setMoodOverrides] = useState<Record<string, string>>({});
 
@@ -156,6 +159,24 @@ export default function PreviewPlayer({
     // Priorité : standalone > protagoniste > variables globales > vide
     initialStats: standaloneInitialVariables ?? protagonistStats ?? (variables as GameStats) ?? {},
   });
+
+  // ── Hitboxes personnages — bounding boxes en pixels canvas pour la pluie ──
+  // Même formule que le positionnement CSS des sprites (960×540 référence).
+  const characterHitboxes = useMemo<CharacterHitbox[]>(() => {
+    if (!currentScene || canvasSize.width === 0) return [];
+    const REF_W = 960;
+    const REF_H = 540;
+    return currentScene.characters.map((sc) => {
+      const wPct = ((128 * (sc.scale ?? 1)) / REF_W) * 100;
+      const hPct = ((128 * (sc.scale ?? 1)) / REF_H) * 100;
+      return {
+        x: ((sc.position.x - wPct / 2) / 100) * canvasSize.width,
+        y: ((sc.position.y - hPct / 2) / 100) * canvasSize.height,
+        w: (wPct / 100) * canvasSize.width,
+        h: (hPct / 100) * canvasSize.height,
+      };
+    });
+  }, [currentScene, canvasSize]);
 
   // ── Config boîte de dialogue (hook partagé avec DialoguePreviewOverlay) ──
   const dialogueBoxConfig = useDialogueBoxConfig(currentDialogue?.boxStyle);
@@ -310,6 +331,21 @@ export default function PreviewPlayer({
       });
   }, []);
 
+  // ── Plein écran natif (Fullscreen API) ───────────────────────────────────
+  const toggleFullscreen = useCallback(async () => {
+    if (!document.fullscreenElement) {
+      await playerRootRef.current?.requestFullscreen?.();
+    } else {
+      await document.exitFullscreen?.();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleChange);
+    return () => document.removeEventListener('fullscreenchange', handleChange);
+  }, []);
+
   // ── Accessibilité ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (currentDialogue && liveRegionRef.current) {
@@ -401,7 +437,8 @@ export default function PreviewPlayer({
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <div
-      className={`flex flex-col w-full h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'bg-background text-white'}`}
+      ref={playerRootRef}
+      className="flex flex-col w-full h-full bg-background text-white"
       onClick={initializeAudio}
     >
       <div ref={liveRegionRef} className="sr-only" aria-live="polite" />
@@ -438,7 +475,7 @@ export default function PreviewPlayer({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setIsFullscreen(!isFullscreen);
+              toggleFullscreen();
             }}
             className="px-3 py-1 bg-muted rounded text-sm"
           >
@@ -550,6 +587,12 @@ export default function PreviewPlayer({
               })}
             </AnimatePresence>
 
+            {/* ── Effet atmosphérique (au-dessus des sprites, sous le dégradé UI) ── */}
+            <SceneEffectCanvas
+              effect={currentScene.sceneEffect}
+              characterHitboxes={characterHitboxes}
+            />
+
             {/* ── Dégradé adaptatif (selon position de la boîte) ── */}
             {dialogueBoxConfig.position !== 'center' && (
               <div
@@ -584,44 +627,69 @@ export default function PreviewPlayer({
               }`}
               style={{ zIndex: 10 }}
             >
-              <div
-                className={`pointer-events-auto px-4 mx-auto w-full ${
-                  dialogueBoxConfig.position === 'top'
-                    ? 'mt-4'
-                    : dialogueBoxConfig.position === 'center'
-                      ? 'my-2'
-                      : 'mb-4'
-                }`}
-                style={{ maxWidth: `${dialogueBoxMaxWidth}px` }}
-                onClick={handleAdvance}
-                role="button"
-                aria-label="Cliquez pour avancer le dialogue"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAdvance();
-                  }
-                }}
-              >
-                <DialogueBox
-                  speaker={speakerDisplayName || undefined}
-                  displayText={displayText}
-                  choices={currentDialogue?.choices}
-                  isTypewriterDone={typewriterDone}
-                  hasChoices={hasChoices}
-                  isAtLastDialogue={isAtLastDialogue}
-                  config={dialogueBoxConfig}
-                  scaleFactor={dialogueScaleFactor}
-                  speakerPortraitUrl={speakerPortraitUrl}
-                  speakerIsOnRight={speakerIsOnRight}
-                  speakerColor={speakerColor}
-                  isRolling={diceState.lastRoll !== null}
-                  onChoose={handleChoose}
-                  onRestart={() => goToScene(currentScene.id, null)}
-                  onClose={onClose}
-                />
-              </div>
+              {/* AnimatePresence : keyed sur currentDialogue.id → rejoue enter/exit à chaque dialogue */}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentDialogue?.id ?? 'no-dialogue'}
+                  className={`pointer-events-auto px-4 mx-auto w-full ${
+                    dialogueBoxConfig.position === 'top'
+                      ? 'mt-4'
+                      : dialogueBoxConfig.position === 'center'
+                        ? 'my-2'
+                        : 'mb-4'
+                  }`}
+                  style={{ maxWidth: `${dialogueBoxMaxWidth}px` }}
+                  {...(dialogueBoxConfig.dialogueTransition === 'fondu'
+                    ? {
+                        initial: { opacity: 0 },
+                        animate: { opacity: 1 },
+                        exit: { opacity: 0 },
+                        transition: { duration: 0.12, ease: 'easeOut' },
+                      }
+                    : dialogueBoxConfig.dialogueTransition === 'glisse'
+                      ? {
+                          initial: { opacity: 0, y: 7 },
+                          animate: { opacity: 1, y: 0 },
+                          exit: { opacity: 0, y: -5 },
+                          transition: { duration: 0.16, ease: 'easeOut' },
+                        }
+                      : {
+                          // 'aucune' — pas d'animation, AnimatePresence gère juste le remontage
+                          initial: false,
+                          animate: {},
+                          exit: {},
+                          transition: { duration: 0 },
+                        })}
+                  onClick={handleAdvance}
+                  role="button"
+                  aria-label="Cliquez pour avancer le dialogue"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAdvance();
+                    }
+                  }}
+                >
+                  <DialogueBox
+                    speaker={speakerDisplayName || undefined}
+                    displayText={displayText}
+                    choices={currentDialogue?.choices}
+                    isTypewriterDone={typewriterDone}
+                    hasChoices={hasChoices}
+                    isAtLastDialogue={isAtLastDialogue}
+                    config={dialogueBoxConfig}
+                    scaleFactor={dialogueScaleFactor}
+                    speakerPortraitUrl={speakerPortraitUrl}
+                    speakerIsOnRight={speakerIsOnRight}
+                    speakerColor={speakerColor}
+                    isRolling={diceState.lastRoll !== null}
+                    onChoose={handleChoose}
+                    onRestart={() => goToScene(currentScene.id, null)}
+                    onClose={onClose}
+                  />
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* ── Stats HUD — tous modes (Pro + Élève) ── */}

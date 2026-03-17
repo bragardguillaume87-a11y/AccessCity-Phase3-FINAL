@@ -1,6 +1,7 @@
 import type { Condition, DiceCheck, Effect } from './game';
 import type { SceneAudio, DialogueAudio, AmbientAudio } from './audio';
 import type { CinematicEvent, CinematicTracks } from './cinematic';
+import type { SceneEffectConfig } from './sceneEffect';
 
 /** Type de scène : dialogue interactif ou cinématique auto-play */
 export type SceneType = 'standard' | 'cinematic';
@@ -50,6 +51,12 @@ export interface SceneMetadata {
   cinematicTracks?: CinematicTracks;
   /** Couleur de la pastille dans le filmstrip (hex). Défaut: --color-primary. */
   color?: string;
+  /**
+   * Effet atmosphérique de la scène VN (pluie, brouillard, neige…).
+   * Rendu via <SceneEffectCanvas> overlay sur le fond de la scène.
+   * Absent → pas d'effet.
+   */
+  sceneEffect?: SceneEffectConfig;
 }
 
 /**
@@ -100,6 +107,24 @@ export interface DialogueBoxStyle {
   portraitOffsetY?: number;
   /** Portrait zoom factor 1.0–3.0 (default: 1.0). Scale CSS + overflow-hidden. */
   portraitScale?: number;
+  /** Box background color as hex (default: '#030712'). Combined with boxOpacity. */
+  bgColor?: string;
+  /** Main dialogue text color as hex (default: '#ffffff'). */
+  textColor?: string;
+  /** Border color as hex (default: '#ffffff'). Opacity derived from borderStyle. */
+  borderColor?: string;
+  /** Box border radius preset (default: 'xl' = 24px). */
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Layout preset: 'classique' = all-in-one box (default), 'visual' = separate nameplate tab + text box */
+  layout?: 'classique' | 'visual';
+  /**
+   * Transition entre dialogues (paramètre global projet uniquement).
+   * - 'aucune'  : swap instantané (comportement legacy)
+   * - 'fondu'   : fade opacity, boîte fixe — discret, adapté aux rythmes rapides
+   * - 'glisse'  : fade + léger slide vertical — style VN japonais
+   * Défaut : 'fondu'
+   */
+  dialogueTransition?: 'aucune' | 'fondu' | 'glisse';
 }
 
 export interface Dialogue {
@@ -138,7 +163,6 @@ export interface DialogueChoice {
   nextDialogueId?: string;
   diceCheck?: DiceCheck;
 }
-
 
 export interface SceneCharacter {
   id: string;
@@ -189,4 +213,6 @@ export interface Scene {
   cinematicEvents?: CinematicEvent[];
   /** Multi-track timeline (nouveau format NLE). Inherited from SceneMetadata. */
   cinematicTracks?: CinematicTracks;
+  /** Effet atmosphérique de la scène. Inherited from SceneMetadata. */
+  sceneEffect?: SceneEffectConfig;
 }

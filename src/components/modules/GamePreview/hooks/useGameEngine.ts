@@ -141,6 +141,8 @@ export function useGameEngine({
 
     const bgmBrickId = mapMetadata?.bgmBrickId;
     const bgmAudioUrl = mapMetadata?.bgmAudioUrl;
+    const tilesetConfigs = useSettingsStore.getState().tilesetConfigs;
+    const sceneEffect = mapMetadata?.sceneEffect;
     const scene = new TopdownScene(
       mapData,
       bridge,
@@ -150,7 +152,9 @@ export function useGameEngine({
       spriteConfigs,
       resolvedSpawn,
       bgmBrickId,
-      bgmAudioUrl
+      bgmAudioUrl,
+      tilesetConfigs,
+      sceneEffect
     );
     sceneInstance = scene;
     engine.addScene('topdown', scene);

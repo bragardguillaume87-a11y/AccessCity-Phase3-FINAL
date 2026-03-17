@@ -8,12 +8,12 @@
  * @module components/modules/TopdownEditor/TilesetImportDialog
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Grid3X3, ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { TILESET_CATEGORIES } from '@/types/tileset';
-import type { TilesetConfig } from '@/types/tileset';
+import type { TilesetConfig, HitboxDef } from '@/types/tileset';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,11 @@ interface ImgSize {
   h: number;
 }
 
+interface SelectedCell {
+  col: number;
+  row: number;
+}
+
 // ── Presets ──────────────────────────────────────────────────────────────────
 
 const PRESETS = [
@@ -41,15 +46,12 @@ const PRESETS = [
   { label: '64×64', w: 64, h: 64 },
 ];
 
+const DEFAULT_HITBOX: HitboxDef = { xPct: 10, yPct: 10, wPct: 80, hPct: 80 };
+const PREVIEW_PX = 96; // Canvas preview size in px
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Converts a raw filename into a readable display name.
- *  - Removes file extension
- *  - Strips trailing numeric hashes (e.g. '-1773573693258')
- *  - Replaces hyphens/underscores with spaces, trims
- *  - Title-cases each word
- *  - Returns '' if result is empty or all-numeric
- */
+/** Converts a raw filename into a readable display name. */
 function cleanFileName(raw: string): string {
   const noExt = raw.replace(/\.[^.]+$/, '');
   const noHash = noExt.replace(/-\d{8,}$/, '');
@@ -81,6 +83,14 @@ export default function TilesetImportDialog({
   );
   const [imgSize, setImgSize] = useState<ImgSize | null>(null);
 
+  // ── Hitbox state ─────────────────────────────────────────────────────────
+  const [hitboxMap, setHitboxMap] = useState<Record<string, HitboxDef>>(
+    initialConfig?.hitboxMap ?? {}
+  );
+  const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+  const [hitboxDraft, setHitboxDraft] = useState<HitboxDef>({ ...DEFAULT_HITBOX });
+  const hitboxCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // Reset state when dialog opens with new image
   useEffect(() => {
     if (isOpen) {
@@ -92,6 +102,9 @@ export default function TilesetImportDialog({
       setImgSize(null);
       setCategory(initialConfig?.category ?? 'divers');
       setDisplayName(initialConfig?.displayName ?? cleanFileName(imageName ?? ''));
+      setHitboxMap(initialConfig?.hitboxMap ?? {});
+      setSelectedCell(null);
+      setHitboxDraft({ ...DEFAULT_HITBOX });
     }
   }, [isOpen, imagePath, initialConfig, imageName]);
 
@@ -103,7 +116,7 @@ export default function TilesetImportDialog({
     img.src = imageSrc;
   }, [isOpen, imageSrc]);
 
-  // ── Grid computation (auto depuis dimensions image) ───────────────────────
+  // ── Grid computation ───────────────────────────────────────────────────────
   const eTileW = Math.max(1, tileW);
   const eTileH = Math.max(1, tileH);
   const innerW = imgSize ? imgSize.w - margin * 2 : 0;
@@ -112,6 +125,88 @@ export default function TilesetImportDialog({
   const rows = imgSize && eTileH > 0 ? Math.floor((innerH + spacing) / (eTileH + spacing)) : 0;
   const totalTiles = cols * rows;
 
+  // ── Clé hitbox map pour une cellule (col, row) ────────────────────────────
+  const cellKey = useCallback(
+    (col: number, row: number): string => {
+      const tileX = eTileW > 0 ? margin + col * (eTileW + spacing) : 0;
+      const tileY = eTileH > 0 ? margin + row * (eTileH + spacing) : 0;
+      return `${tileX}_${tileY}`;
+    },
+    [margin, spacing, eTileW, eTileH]
+  );
+
+  // ── Canvas preview — redraw when selection or draft changes ───────────────
+  useEffect(() => {
+    if (!selectedCell || !hitboxCanvasRef.current || !imageSrc) return;
+    const canvas = hitboxCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      canvas.width = PREVIEW_PX;
+      canvas.height = PREVIEW_PX;
+
+      // Checkerboard background (transparency indicator)
+      const sz = 8;
+      for (let cy = 0; cy < PREVIEW_PX; cy += sz) {
+        for (let cx = 0; cx < PREVIEW_PX; cx += sz) {
+          ctx.fillStyle =
+            (Math.floor(cx / sz) + Math.floor(cy / sz)) % 2 === 0 ? '#3a3a3a' : '#555';
+          ctx.fillRect(cx, cy, sz, sz);
+        }
+      }
+
+      const srcX = margin + selectedCell.col * (eTileW + spacing);
+      const srcY = margin + selectedCell.row * (eTileH + spacing);
+      ctx.drawImage(img, srcX, srcY, eTileW, eTileH, 0, 0, PREVIEW_PX, PREVIEW_PX);
+
+      // Hitbox overlay
+      const hx = (hitboxDraft.xPct / 100) * PREVIEW_PX;
+      const hy = (hitboxDraft.yPct / 100) * PREVIEW_PX;
+      const hw = (hitboxDraft.wPct / 100) * PREVIEW_PX;
+      const hh = (hitboxDraft.hPct / 100) * PREVIEW_PX;
+      ctx.fillStyle = 'rgba(255, 80, 80, 0.3)';
+      ctx.fillRect(hx, hy, hw, hh);
+      ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(hx, hy, hw, hh);
+    };
+    img.src = imageSrc;
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCell, hitboxDraft, imageSrc, margin, spacing, eTileW, eTileH]);
+
+  // ── Hitbox actions ────────────────────────────────────────────────────────
+  const applyHitbox = useCallback(() => {
+    if (!selectedCell) return;
+    const key = cellKey(selectedCell.col, selectedCell.row);
+    setHitboxMap((prev) => ({ ...prev, [key]: { ...hitboxDraft } }));
+  }, [selectedCell, hitboxDraft, cellKey]);
+
+  const deleteHitbox = useCallback(() => {
+    if (!selectedCell) return;
+    const key = cellKey(selectedCell.col, selectedCell.row);
+    setHitboxMap((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, [selectedCell, cellKey]);
+
+  const handleCellClick = useCallback(
+    (col: number, row: number) => {
+      const key = cellKey(col, row);
+      const existing = hitboxMap[key];
+      setSelectedCell({ col, row });
+      setHitboxDraft(existing ? { ...existing } : { ...DEFAULT_HITBOX });
+    },
+    [cellKey, hitboxMap]
+  );
+
   const handleConfirm = () => {
     onConfirm(imagePath, {
       tileW: eTileW,
@@ -119,9 +214,12 @@ export default function TilesetImportDialog({
       margin,
       spacing,
       category,
+      hitboxMap: Object.keys(hitboxMap).length > 0 ? hitboxMap : undefined,
       displayName: displayName.trim() || undefined,
     });
   };
+
+  const hitboxCount = Object.keys(hitboxMap).length;
 
   return (
     <Dialog.Root
@@ -257,6 +355,163 @@ export default function TilesetImportDialog({
             </div>
           </div>
 
+          {/* Hitbox de collision */}
+          <div>
+            <p style={sectionLabel}>
+              Hitbox de collision
+              {hitboxCount > 0 && (
+                <span style={{ marginLeft: 6, color: 'var(--color-primary)', fontWeight: 700 }}>
+                  · {hitboxCount} tuile{hitboxCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </p>
+            <p style={{ fontSize: 10, color: 'var(--color-text-muted)', margin: '0 0 8px' }}>
+              Cliquer sur une cellule dans l'aperçu pour définir un rectangle de collision sub-tuile
+              (AABB). Indépendant de la grille — précision pixel.
+            </p>
+
+            {/* Hitbox editor panel — shown when a cell is selected */}
+            {selectedCell !== null && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 14,
+                  padding: 12,
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: 8,
+                  border: '1px solid rgba(255,210,0,0.3)',
+                  marginBottom: 8,
+                }}
+              >
+                {/* Canvas preview */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <p
+                    style={{
+                      ...sectionLabel,
+                      margin: 0,
+                      color: 'rgba(255,210,0,0.9)',
+                    }}
+                  >
+                    Cellule {selectedCell.col},{selectedCell.row}
+                  </p>
+                  <canvas
+                    ref={hitboxCanvasRef}
+                    width={PREVIEW_PX}
+                    height={PREVIEW_PX}
+                    style={{
+                      display: 'block',
+                      imageRendering: 'pixelated',
+                      borderRadius: 4,
+                      border: '1px solid rgba(255,210,0,0.4)',
+                      width: PREVIEW_PX,
+                      height: PREVIEW_PX,
+                    }}
+                  />
+                </div>
+
+                {/* Sliders */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {(
+                    [
+                      { key: 'xPct', label: 'Offset X' },
+                      { key: 'yPct', label: 'Offset Y' },
+                      { key: 'wPct', label: 'Largeur' },
+                      { key: 'hPct', label: 'Hauteur' },
+                    ] as const
+                  ).map(({ key, label }) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--color-text-secondary)',
+                          width: 58,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {label}
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={hitboxDraft[key]}
+                        onChange={(e) =>
+                          setHitboxDraft((prev) => ({ ...prev, [key]: Number(e.target.value) }))
+                        }
+                        style={{ flex: 1, accentColor: 'rgba(255,80,80,0.9)' }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: 'rgba(255,140,100,1)',
+                          fontWeight: 700,
+                          width: 36,
+                          textAlign: 'right',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {hitboxDraft[key]}%
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                    <button
+                      onClick={applyHitbox}
+                      style={{
+                        padding: '5px 14px',
+                        borderRadius: 5,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: 'none',
+                        background: 'var(--color-primary)',
+                        color: '#fff',
+                      }}
+                    >
+                      ✓ Appliquer
+                    </button>
+                    <button
+                      onClick={deleteHitbox}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 5,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        border: '1px solid rgba(255,80,80,0.5)',
+                        background: 'rgba(255,80,80,0.1)',
+                        color: 'rgba(255,140,140,1)',
+                      }}
+                    >
+                      🗑 Supprimer
+                    </button>
+                    <button
+                      onClick={() => setSelectedCell(null)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 5,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        border: '1px solid var(--color-border-base)',
+                        background: 'transparent',
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedCell === null && hitboxCount === 0 && (
+              <p style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                → Cliquer sur une cellule dans l'aperçu ci-dessous pour définir sa hitbox
+              </p>
+            )}
+          </div>
+
           {/* Tile size presets */}
           <div>
             <p style={sectionLabel}>Taille de tuile</p>
@@ -372,7 +627,9 @@ export default function TilesetImportDialog({
 
           {/* Preview — zoomable */}
           <div>
-            <p style={sectionLabel}>Aperçu — scroll molette pour zoomer</p>
+            <p style={sectionLabel}>
+              Aperçu — scroll molette pour zoomer · clic pour sélectionner une cellule
+            </p>
             <TransformWrapper minScale={0.15} maxScale={10} initialScale={1} wheel={{ step: 0.15 }}>
               {({ zoomIn, zoomOut, resetTransform }) => (
                 <>
@@ -413,32 +670,75 @@ export default function TilesetImportDialog({
                         style={{ display: 'block', imageRendering: 'pixelated', maxWidth: '100%' }}
                         draggable={false}
                       />
-                      {/* Grid overlay */}
+                      {/* Grid overlay — cellules cliquables, hitbox overlay */}
                       {cols > 0 && rows > 0 && imgSize && (
                         <div
                           style={{
                             position: 'absolute',
                             top: margin,
                             left: margin,
-                            pointerEvents: 'none',
                           }}
                         >
                           {Array.from({ length: rows }).map((_, r) =>
-                            Array.from({ length: cols }).map((_, c) => (
-                              <div
-                                key={`${r}-${c}`}
-                                style={{
-                                  position: 'absolute',
-                                  left: c * (eTileW + spacing),
-                                  top: r * (eTileH + spacing),
-                                  width: eTileW,
-                                  height: eTileH,
-                                  boxSizing: 'border-box',
-                                  border: '1px solid var(--color-primary-60)',
-                                  background: 'var(--color-primary-04)',
-                                }}
-                              />
-                            ))
+                            Array.from({ length: cols }).map((_, c) => {
+                              const key = cellKey(c, r);
+                              const hitbox = hitboxMap[key];
+                              const isSelected = selectedCell?.col === c && selectedCell?.row === r;
+                              return (
+                                <div
+                                  key={`${r}-${c}`}
+                                  title={
+                                    isSelected
+                                      ? `Sélectionné — modifier dans le panneau ci-dessus`
+                                      : hitbox
+                                        ? `Hitbox définie — clic pour modifier`
+                                        : `Cellule ${c},${r} — clic pour ajouter une hitbox`
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCellClick(c, r);
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    left: c * (eTileW + spacing),
+                                    top: r * (eTileH + spacing),
+                                    width: eTileW,
+                                    height: eTileH,
+                                    boxSizing: 'border-box',
+                                    border: isSelected
+                                      ? '2px solid rgba(255,210,0,0.95)'
+                                      : hitbox
+                                        ? '1.5px solid rgba(255,140,0,0.7)'
+                                        : '1px solid var(--color-primary-60)',
+                                    background: isSelected
+                                      ? 'rgba(255,210,0,0.1)'
+                                      : 'rgba(139,92,246,0.04)',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {/* Hitbox preview overlay within the cell */}
+                                  {hitbox && (
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        left: `${hitbox.xPct}%`,
+                                        top: `${hitbox.yPct}%`,
+                                        width: `${hitbox.wPct}%`,
+                                        height: `${hitbox.hPct}%`,
+                                        background: isSelected
+                                          ? 'rgba(255,210,0,0.3)'
+                                          : 'rgba(255,80,80,0.35)',
+                                        border: isSelected
+                                          ? '1px solid rgba(255,210,0,0.8)'
+                                          : '1px solid rgba(255,80,80,0.7)',
+                                        boxSizing: 'border-box',
+                                        pointerEvents: 'none',
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       )}

@@ -8,6 +8,7 @@
  */
 
 import type { EntityInstance } from './sprite';
+import type { SceneEffectConfig } from './sceneEffect';
 export type { EntityInstance };
 
 // ============================================================================
@@ -64,6 +65,13 @@ export interface MapMetadata {
    */
   playerStartCx?: number;
   playerStartCy?: number;
+  /**
+   * Effet atmosphérique de la carte (pluie, brouillard, neige…).
+   * Rendu via GpuParticleEmitter + PostProcessor dans GameScene, et via
+   * <SceneEffectCanvas> overlay dans l'aperçu éditeur.
+   * Absent → pas d'effet (équivalent à { type: 'none' }).
+   */
+  sceneEffect?: SceneEffectConfig;
   createdAt: string;
   updatedAt: string;
 }

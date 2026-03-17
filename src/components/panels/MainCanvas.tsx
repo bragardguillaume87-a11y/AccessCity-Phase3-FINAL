@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Film } from 'lucide-react';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
 import { getSceneDuration, getDialogueIndexAtTime } from '@/utils/dialogueDuration';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
@@ -442,6 +443,9 @@ export default function MainCanvas({
                   }}
                 />
               )}
+
+              {/* Effet atmosphérique — overlay canvas entre le fond et les personnages */}
+              <SceneEffectCanvas effect={selectedScene.sceneEffect} />
 
               <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
 

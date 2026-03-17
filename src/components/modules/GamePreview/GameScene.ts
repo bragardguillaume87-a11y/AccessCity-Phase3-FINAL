@@ -15,8 +15,17 @@ import jsfxrLib, { sfxr } from 'jsfxr';
 const Params = jsfxrLib.Params;
 import type { MapData, TileInstance, LayerInstance } from '@/types/map';
 import type { SpriteSheetConfig, AnimationRange, EntityInstance } from '@/types/sprite';
+import type { TilesetConfig } from '@/types/tileset';
+import type { SceneEffectConfig } from '@/types/sceneEffect';
 import type { DialogueBridge } from './DialogueBridge';
 import { SOUND_BRICKS, childParamsToJsfxr } from '@/config/soundBricks';
+
+/** Extrait un canal RGB (0=R,1=G,2=B) d'une couleur hex et retourne la valeur 0..1 en string GLSL */
+function parseHexChannel(hex: string, channel: 0 | 1 | 2): string {
+  const h = hex.startsWith('#') ? hex.slice(1) : 'b0c8e0';
+  const start = channel * 2;
+  return (parseInt(h.slice(start, start + 2), 16) / 255).toFixed(3);
+}
 
 // ============================================================================
 // CONSTANTS
@@ -122,6 +131,8 @@ export class TopdownScene extends ex.Scene {
   private playerSpritePath?: string;
   private playerSpriteConfig?: SpriteSheetConfig;
   private spriteSheetConfigs: Record<string, SpriteSheetConfig>;
+  private tilesetConfigs: Record<string, TilesetConfig>;
+  private sceneEffect?: SceneEffectConfig;
   private imageCache: Map<string, ex.ImageSource>;
 
   // Player animation state
@@ -160,7 +171,9 @@ export class TopdownScene extends ex.Scene {
     spriteSheetConfigs?: Record<string, SpriteSheetConfig>,
     initialPlayerPos?: { x: number; y: number },
     bgmBrickId?: string,
-    bgmAudioUrl?: string
+    bgmAudioUrl?: string,
+    tilesetConfigs?: Record<string, TilesetConfig>,
+    sceneEffect?: SceneEffectConfig
   ) {
     super();
     this.mapData = mapData;
@@ -169,13 +182,16 @@ export class TopdownScene extends ex.Scene {
     this.playerSpriteConfig = playerSpriteConfig;
     this.imageCache = imageCache ?? new Map();
     this.spriteSheetConfigs = spriteSheetConfigs ?? {};
+    this.tilesetConfigs = tilesetConfigs ?? {};
     this.initialPlayerPos = initialPlayerPos;
     this.bgmBrickId = bgmBrickId;
     this.bgmAudioUrl = bgmAudioUrl;
+    this.sceneEffect = sceneEffect;
   }
 
   onInitialize(engine: ex.Engine): void {
     this.buildTileMap();
+    this.buildHitboxActors();
     this.buildTriggerZones();
     this.buildExitZones();
     this.buildAudioZones();
@@ -183,6 +199,7 @@ export class TopdownScene extends ex.Scene {
     this.applyPlayerSprite();
     this.buildEntities();
     this.startBgm();
+    this.applySceneEffect(engine);
   }
 
   /** Arrête la BGM — appelé explicitement à l'arrêt du moteur (engine.stop() ne déclenche pas onDeactivate). */
@@ -323,6 +340,55 @@ export class TopdownScene extends ex.Scene {
         sprite.flipVertical = (tileInst.f & 2) !== 0;
         if (opacity < 1) sprite.opacity = opacity;
         tile.addGraphic(sprite);
+      }
+    }
+  }
+
+  // ── Hitbox actors (AABB sub-tile collision) ───────────────────────────────
+
+  /**
+   * Pour chaque tuile sur les couches de type 'tiles' qui a une entrée dans le
+   * hitboxMap de son TilesetConfig, crée un Actor Fixed invisible avec le rectangle
+   * de collision AABB défini en pourcentage de la tuile.
+   *
+   * Permet des collisions précises (ex: tronc d'arbre) indépendantes de la grille.
+   */
+  private buildHitboxActors(): void {
+    if (Object.keys(this.tilesetConfigs).length === 0) return;
+    const tileSize = this.mapData.__gridSize || 32;
+    const tileLayers = this.mapData.layerInstances.filter((l) => l.__type === 'tiles');
+
+    for (const layer of tileLayers) {
+      for (const ti of layer.gridTiles) {
+        const cfg = this.tilesetConfigs[ti.src];
+        if (!cfg?.hitboxMap) continue;
+
+        // Clé dans la hitboxMap = "${tileX}_${tileY}" (pixels dans le sheet)
+        const key = ti.tileW && ti.tileW > 0 ? `${ti.tileX ?? 0}_${ti.tileY ?? 0}` : '0_0';
+        const hitbox = cfg.hitboxMap[key];
+        if (!hitbox) continue;
+
+        // Coin supérieur-gauche de la cellule en coordonnées monde
+        const cellLeft = ti.cx * tileSize;
+        const cellTop = ti.cy * tileSize;
+
+        // Dimensions de la hitbox en pixels monde
+        const hitW = (hitbox.wPct / 100) * tileSize;
+        const hitH = (hitbox.hPct / 100) * tileSize;
+
+        // Centre de la hitbox en coordonnées monde
+        const posX = cellLeft + (hitbox.xPct / 100) * tileSize + hitW / 2;
+        const posY = cellTop + (hitbox.yPct / 100) * tileSize + hitH / 2;
+
+        const actor = new ex.Actor({
+          name: `hitbox-${ti.cx}-${ti.cy}`,
+          pos: ex.vec(posX, posY),
+          width: Math.max(1, hitW),
+          height: Math.max(1, hitH),
+          collisionType: ex.CollisionType.Fixed,
+          color: ex.Color.Transparent,
+        });
+        this.add(actor);
       }
     }
   }
@@ -749,6 +815,120 @@ export class TopdownScene extends ex.Scene {
 
       this.npcActors.push({ actor: npc, entity });
       this.add(npc);
+    }
+  }
+
+  // ── Scene effect (pluie, neige, brouillard, bloom, god rays) ──────────────
+
+  /**
+   * Applique l'effet atmosphérique de la carte :
+   * - Pluie / neige → GpuParticleEmitter (natif Excalibur, GPU)
+   * - Brouillard    → PostProcessor (ScreenShader GLSL plein écran)
+   * - Bloom / god rays → Phase 2 (PostProcessor avancé)
+   */
+  private applySceneEffect(engine: ex.Engine): void {
+    if (!this.sceneEffect || this.sceneEffect.type === 'none') return;
+    const effect = this.sceneEffect;
+
+    if (effect.type === 'rain' || effect.type === 'snow') {
+      const isRain = effect.type === 'rain';
+      const angleRad = isRain ? ((effect.angle ?? 10) * Math.PI) / 180 : 0;
+      const snowEffect = !isRain
+        ? (effect as { drift: number; density: number; size: number })
+        : null;
+      const baseSpeed = isRain ? 380 : 60;
+      const emitterW = this.mapData.pxWid;
+
+      const rain = new ex.GpuParticleEmitter({
+        pos: ex.vec(emitterW / 2, -10),
+        emitterType: ex.EmitterType.Rectangle,
+        width: emitterW,
+        height: 4,
+        particle: {
+          minSpeed: baseSpeed * 0.7,
+          maxSpeed: baseSpeed * 1.3,
+          minAngle: isRain ? Math.PI / 2 - 0.15 + angleRad : Math.PI / 2 - 0.3,
+          maxAngle: isRain ? Math.PI / 2 + 0.15 + angleRad : Math.PI / 2 + 0.3,
+          life: isRain ? 2200 : 5000,
+          minSize: isRain ? 1 : snowEffect!.size * 0.5,
+          maxSize: isRain ? 1.8 : snowEffect!.size,
+          opacity: isRain ? 0.55 : 0.75,
+          fade: true,
+          acc: isRain ? ex.vec(Math.sin(angleRad) * 30, 0) : ex.vec(snowEffect!.drift * 15, 0),
+          beginColor: isRain ? ex.Color.fromRGB(160, 200, 255, 0.55) : ex.Color.White,
+          endColor: isRain
+            ? ex.Color.fromRGB(160, 200, 255, 0)
+            : ex.Color.fromRGB(255, 255, 255, 0),
+        },
+        emitRate: isRain
+          ? (effect as { density: number }).density * 0.8
+          : snowEffect!.density * 0.4,
+        isEmitting: true,
+        z: 9998,
+      });
+      this.add(rain);
+      return;
+    }
+
+    if (effect.type === 'fog') {
+      // Fog PostProcessor — implémente l'interface PostProcessor correctement
+      // ScreenShader doit être créé dans initialize() car il nécessite le graphicsContext WebGL
+      const fogGlsl = `#version 300 es
+precision mediump float;
+
+uniform sampler2D u_image;
+uniform float     u_time_ms;
+in vec2 v_texcoord;
+out vec4 fragColor;
+
+vec3 permute(vec3 x) { return mod(x*x*34.0+x, 289.0); }
+float snoise(vec2 v) {
+  const vec4 C = vec4(0.211324865405187,0.366025403784439,-0.577350269189626,0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1  = (x0.x > x0.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+  vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute(permute(i.y+vec3(0.0,i1.y,1.0))+i.x+vec3(0.0,i1.x,1.0));
+  vec3 m = max(0.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.0);
+  m=m*m; m=m*m;
+  vec3 x_=2.0*fract(p*C.www)-1.0; vec3 h=abs(x_)-0.5;
+  vec3 ox=floor(x_+0.5); vec3 a0=x_-ox;
+  m*=1.79284291400159-0.85373472095314*(a0*a0+h*h);
+  vec3 g; g.x=a0.x*x0.x+h.x*x0.y; g.yz=a0.yz*x12.xz+h.yz*x12.yw;
+  return 130.0*dot(m,g);
+}
+
+void main() {
+  vec4 scene = texture(u_image, v_texcoord);
+  float t = u_time_ms * ${(effect.speed * 0.0003).toFixed(6)};
+  vec2 uv = v_texcoord * ${effect.scale.toFixed(2)};
+  float n  = snoise(uv + vec2(t*0.7, t*0.4)) * 0.55;
+         n += snoise(uv*2.1 + vec2(-t*0.5, t*0.6)) * 0.30;
+         n += snoise(uv*4.3 + vec2(t*0.3, -t*0.8)) * 0.15;
+  float fog = clamp(n*0.5+0.5, 0.0, 1.0);
+  fog *= smoothstep(0.0, 0.35, v_texcoord.y) * smoothstep(1.0, 0.65, v_texcoord.y);
+  float alpha = fog * ${effect.opacity.toFixed(2)};
+  vec3 fogColor = vec3(${parseHexChannel(effect.color, 0)}, ${parseHexChannel(effect.color, 1)}, ${parseHexChannel(effect.color, 2)});
+  fragColor = vec4(mix(scene.rgb, fogColor, alpha), scene.a);
+}`;
+
+      const fogProcessor: ex.PostProcessor = {
+        initialize(ctx: ex.ExcaliburGraphicsContextWebGL) {
+          (fogProcessor as unknown as { _shader: ex.ScreenShader })._shader = new ex.ScreenShader(
+            ctx,
+            fogGlsl
+          );
+        },
+        getShader() {
+          return (fogProcessor as unknown as { _shader: ex.ScreenShader })._shader.getShader();
+        },
+        getLayout() {
+          return (fogProcessor as unknown as { _shader: ex.ScreenShader })._shader.getLayout();
+        },
+      };
+
+      (engine.graphicsContext as ex.ExcaliburGraphicsContextWebGL).addPostProcessor(fogProcessor);
     }
   }
 }

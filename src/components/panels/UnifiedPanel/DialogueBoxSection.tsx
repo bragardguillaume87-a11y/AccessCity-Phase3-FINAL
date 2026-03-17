@@ -365,15 +365,16 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
                         aria-pressed={!activeMood}
                         style={{
                           flexShrink: 0,
-                          padding: '3px 7px',
-                          borderRadius: 6,
+                          padding: '5px 10px',
+                          borderRadius: 8,
                           border: `2px solid ${!activeMood ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
                           background: !activeMood ? 'var(--color-primary-15)' : 'transparent',
                           color: !activeMood ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                          fontSize: '9px',
+                          fontSize: '11px',
                           fontWeight: 700,
                           cursor: 'pointer',
                           boxShadow: !activeMood ? '0 3px 10px var(--color-primary-30)' : 'none',
+                          alignSelf: 'center',
                         }}
                       >
                         ✦ Défaut
@@ -388,7 +389,7 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
                           sprite={char.sprites?.[mood]}
                           isActive={activeMood === mood}
                           onClick={() => setMood(activeMood === mood ? '' : mood)}
-                          size={38}
+                          size={60}
                           entryDelay={idx * 0.04}
                         />
                       ))}

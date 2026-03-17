@@ -15,8 +15,10 @@ import { createPortal } from 'react-dom';
 import { Stage, Layer, Image as KonvaImage, Rect, Line, Text, Circle, Group } from 'react-konva';
 import Konva from 'konva';
 import type { MapData, LayerType, EntityInstance } from '@/types/map';
+import type { SceneEffectConfig } from '@/types/sceneEffect';
 import type { TileImageCache } from './hooks/useTileset';
 import type { EditorTool } from './hooks/useMapEditor';
+import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
 import {
   MAP_ZOOM,
   MAP_LAYER_COLORS,
@@ -88,6 +90,8 @@ interface MapCanvasProps {
   onTileMoveToLayer?: (cx: number, cy: number, fromLayerIdx: number, toLayerIdx: number) => void;
   /** Appelé quand l'utilisateur efface une tuile depuis un calque spécifique (menu clic droit) */
   onCellEraseFromLayer?: (cx: number, cy: number, layerIdx: number) => void;
+  /** Effet atmosphérique de la carte — overlay canvas au-dessus du Stage. */
+  sceneEffect?: SceneEffectConfig;
 }
 
 // ============================================================================
@@ -271,6 +275,7 @@ export default function MapCanvas({
   activeTileLayerIndex = 0,
   onTileMoveToLayer,
   onCellEraseFromLayer,
+  sceneEffect,
 }: MapCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const isMouseDown = useRef(false);
@@ -767,6 +772,7 @@ export default function MapCanvas({
     // Wrapper — outline rouge en mode effacer (D1), touchAction pour tablette (konva-patterns §8)
     <div
       style={{
+        position: 'relative',
         width: containerWidth,
         height: containerHeight,
         outline: isErasing ? '2px solid rgba(255,60,60,0.45)' : 'none',
@@ -1439,6 +1445,9 @@ export default function MapCanvas({
           </Layer>
         )}
       </Stage>
+
+      {/* ── Atmospheric effect overlay (above Konva canvas, pointer-events none) ── */}
+      {sceneEffect && <SceneEffectCanvas effect={sceneEffect} />}
 
       {/* ── Tile context menu (right-click → move to layer) ── */}
       {tileContextMenu &&

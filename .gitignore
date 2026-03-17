@@ -20,7 +20,11 @@ coverage/
 .cache/
 dist/
 dist-ssr/
+dist-player-tauri/
 tmp/
+
+# Tauri build artifacts (commiter uniquement public/player-win.exe)
+src-tauri/target/
 
 # OS artifacts
 Thumbs.db

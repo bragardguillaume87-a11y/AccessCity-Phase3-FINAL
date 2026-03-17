@@ -32,6 +32,9 @@ export type SelectedElementType =
 
 export type FullscreenMode = 'graph' | 'canvas' | 'preview' | null;
 
+/** Mode d'interface — 'kid' = simplifié (8-10 ans), 'pro' = avancé (enseignant) */
+export type EditorMode = 'kid' | 'pro';
+
 export type ModalType =
   | 'characters'
   | 'assets'
@@ -42,16 +45,16 @@ export type ModalType =
   | 'addCharacter'
   | null;
 
-export interface ModalBaseProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
 export interface ModalContext {
   characterId?: string;
   category?: string;
   targetSceneId?: string;
   sceneId?: string;
+  /** ID du dialogue de départ pour PreviewPlayer.
+   *  Transmis quand l'utilisateur ouvre le preview avec un dialogue sélectionné.
+   *  null ou absent → premier dialogue de la scène (comportement par défaut). */
+  dialogueId?: string | null;
   /** Selection purpose when opening the assets modal from a specific tool.
    *  'sceneAudio'    → BGM : "Utiliser cette musique" assigne scene.audio.
    *  'ambientTrack'  → Ambiance : "Utiliser" assigne scene.ambientTracks[slot]. */
@@ -59,3 +62,4 @@ export interface ModalContext {
   /** Ambient track slot (0 or 1). Only used when purpose === 'ambientTrack'. */
   slot?: 0 | 1;
 }
+export type StudioModule = 'vn-editor' | 'topdown' | 'behavior' | 'ui-builder' | 'preview';

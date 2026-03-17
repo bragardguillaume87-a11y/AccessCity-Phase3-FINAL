@@ -188,15 +188,14 @@ export function CharactersModal({
 
   const validationErrors = useMemo(() => {
     const errors: Record<string, Array<{ field: string; message: string; severity: 'error' | 'warning' }>> = {};
-    const charErrors = validation.errors?.characters || {};
-    Object.entries(charErrors).forEach(([charId, charErrorList]) => {
-      if (Array.isArray(charErrorList)) {
-        errors[charId] = charErrorList.map((err) => ({
-          field: err.field || 'unknown',
-          message: err.message || 'Erreur inconnue',
-          severity: (err.severity as 'error' | 'warning') || 'error',
-        }));
-      }
+    type ErrEntry = { field: string; message: string; severity: string };
+    const charErrors = (validation.errors?.characters ?? {}) as unknown as Record<string, ErrEntry[]>;
+    Object.entries(charErrors).forEach(([charId, charErrorList]: [string, ErrEntry[]]) => {
+      errors[charId] = charErrorList.map((err) => ({
+        field: err.field || 'unknown',
+        message: err.message || 'Erreur inconnue',
+        severity: (err.severity as 'error' | 'warning') || 'error',
+      }));
     });
 
     return errors;
@@ -207,7 +206,7 @@ export function CharactersModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
-        <DialogContent className="max-w-[1200px] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
+        <DialogContent className="max-w-[min(1200px,95vw)] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-slate-700/50 bg-slate-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

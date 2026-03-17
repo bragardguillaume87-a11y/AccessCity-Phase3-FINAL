@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import type { Dialogue } from '../types';
 
 /**
@@ -48,6 +49,9 @@ interface DialoguesState {
 
   // Cascade delete (appelé par scenesStore)
   deleteAllDialoguesForScene: (sceneId: string) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importDialoguesByScene: (data: Record<string, Dialogue[]>) => void;
 }
 
 // ============================================================================
@@ -71,6 +75,9 @@ function generateChoiceId(index: number): string {
 // ============================================================================
 // SAMPLE DATA - Dialogues de démonstration
 // ============================================================================
+
+// ⚠️ Référence stable — évite || [] inline dans getDialoguesByScene (selector réactif).
+const EMPTY_DIALOGUES: Dialogue[] = [];
 
 const SAMPLE_DIALOGUES: Record<string, Dialogue[]> = {
   scenetest01: [
@@ -120,7 +127,7 @@ export const useDialoguesStore = create<DialoguesState>()(
           // ============================================================
 
           getDialoguesByScene: (sceneId) => {
-            return get().dialoguesByScene[sceneId] || [];
+            return get().dialoguesByScene[sceneId] ?? EMPTY_DIALOGUES;
           },
 
           getDialogueByIndex: (sceneId, index) => {
@@ -368,6 +375,9 @@ export const useDialoguesStore = create<DialoguesState>()(
               'dialogues/duplicateDialogue'
             );
           },
+          importDialoguesByScene: (data) => {
+            set(() => ({ dialoguesByScene: data }), false, 'dialogues/importDialoguesByScene');
+          },
         })),
         { name: 'DialoguesStore' }
       ),
@@ -379,7 +389,7 @@ export const useDialoguesStore = create<DialoguesState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

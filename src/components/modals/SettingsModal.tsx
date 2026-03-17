@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/index';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import { TIMING } from '@/config/timing';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  FileText,
-  Palette,
-  Gamepad2,
-  Keyboard,
-  Accessibility
-} from 'lucide-react';
+import { FileText, Palette, Gamepad2, Keyboard, Accessibility, Volume2 } from 'lucide-react';
 
 // Hooks
-import { useSettingsImportExport, type SettingsFormData } from './SettingsModal/hooks/useSettingsImportExport';
+import {
+  useSettingsImportExport,
+  type SettingsFormData,
+} from './SettingsModal/hooks/useSettingsImportExport';
 import { useSettingsSearch, type SettingsSection } from './SettingsModal/hooks/useSettingsSearch';
 
 // Components
@@ -24,7 +22,8 @@ import {
   EditorSettingsSection,
   GameSettingsSection,
   ShortcutsSection,
-  AccessibilitySection
+  AccessibilitySection,
+  AudioSettingsSection,
 } from './SettingsModal/components';
 
 /**
@@ -65,15 +64,24 @@ export interface SettingsModalProps {
  * />
  * ```
  */
-export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): React.ReactElement | null {
+export default function SettingsModal({
+  isOpen,
+  onClose,
+}: SettingsModalProps): React.ReactElement | null {
   // Zustand stores (granular selectors)
-  const projectSettings = useSettingsStore(state => state.projectSettings);
-  const updateProjectSettings = useSettingsStore(state => state.updateProjectSettings);
+  const projectSettings = useSettingsStore((state) => state.projectSettings);
+  const updateProjectSettings = useSettingsStore((state) => state.updateProjectSettings);
+  const enableStatsHUD = useSettingsStore((state) => state.enableStatsHUD);
+  const setEnableStatsHUD = useSettingsStore((state) => state.setEnableStatsHUD);
+
+  const isKid = useIsKidMode();
 
   // Local state
   const [activeSection, setActiveSection] = useState<string>('project');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [formData, setFormData] = useState<SettingsFormData>(projectSettings || {} as SettingsFormData);
+  const [formData, setFormData] = useState<SettingsFormData>(
+    projectSettings || ({} as SettingsFormData)
+  );
 
   // Sidebar sections configuration
   const sections: SettingsSection[] = [
@@ -81,58 +89,89 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
       id: 'project',
       label: 'Projet',
       icon: FileText,
-      keywords: ['titre', 'auteur', 'description', 'version', 'métadonnées']
+      keywords: ['titre', 'auteur', 'description', 'version', 'métadonnées'],
     },
     {
       id: 'editor',
       label: 'Éditeur',
       icon: Palette,
-      keywords: ['thème', 'sauvegarde auto', 'grille', 'aimantation', 'préférences']
+      keywords: ['thème', 'sauvegarde auto', 'grille', 'aimantation', 'préférences'],
     },
     {
       id: 'game',
       label: 'Jeu',
       icon: Gamepad2,
-      keywords: ['variables', 'physique', 'mentale', 'stats', 'hud', 'moral']
+      keywords: ['variables', 'physique', 'mentale', 'stats', 'hud', 'moral'],
     },
     {
       id: 'shortcuts',
       label: 'Raccourcis',
       icon: Keyboard,
-      keywords: ['clavier', 'raccourcis', 'touches rapides']
+      keywords: ['clavier', 'raccourcis', 'touches rapides'],
     },
     {
       id: 'accessibility',
       label: 'Accessibilité',
       icon: Accessibility,
-      keywords: ['a11y', 'contraste', 'lecteur écran', 'aria']
-    }
+      keywords: ['a11y', 'contraste', 'lecteur écran', 'aria'],
+    },
+    {
+      id: 'audio',
+      label: 'Audio',
+      icon: Volume2,
+      keywords: ['son', 'musique', 'bruitage', 'typewriter', 'volume', 'ui', 'ambiance', 'bgm'],
+    },
   ];
 
-  // Custom hooks
-  const filteredSections = useSettingsSearch(sections, searchQuery);
-  const { handleExport, handleImport } = useSettingsImportExport(formData, setFormData);
+  // En mode kid, masquer les sections de configuration avancée
+  const KID_HIDDEN_SECTIONS = ['editor', 'shortcuts'];
+  const visibleSections = isKid
+    ? sections.filter((s) => !KID_HIDDEN_SECTIONS.includes(s.id))
+    : sections;
 
-  // Sync form data when modal opens or projectSettings change
+  // Custom hooks
+  const filteredSections = useSettingsSearch(visibleSections, searchQuery);
+  const [isExporting, setIsExporting] = useState(false);
+  const { handleExport: _handleExport, handleImport } = useSettingsImportExport(
+    formData,
+    setFormData
+  );
+
+  const handleExport = async (): Promise<void> => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await _handleExport();
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Sync form data when modal opens (capture current store values)
   useEffect(() => {
     if (isOpen && projectSettings) {
-      setFormData(projectSettings);
+      setFormData({ ...projectSettings, game: { ...projectSettings.game, enableStatsHUD } });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- enableStatsHUD intentionnellement omis : sync uniquement à l'ouverture
   }, [isOpen, projectSettings]);
 
   // Field change handlers
-  const handleFieldChange = (section: string, field: string, value: string | boolean | number): void => {
-    setFormData(prev => ({
+  const handleFieldChange = (
+    section: string,
+    field: string,
+    value: string | boolean | number
+  ): void => {
+    setFormData((prev) => ({
       ...prev,
       [section]: {
         ...prev[section as keyof SettingsFormData],
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const handleVariableChange = (varName: string, field: string, value: number): void => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       game: {
         ...prev.game,
@@ -140,21 +179,22 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
           ...prev.game.variables,
           [varName]: {
             ...prev.game.variables[varName],
-            [field]: value
-          }
-        }
-      }
+            [field]: value,
+          },
+        },
+      },
     }));
   };
 
   // Modal actions
   const handleSave = (): void => {
     updateProjectSettings(formData);
+    setEnableStatsHUD(formData.game.enableStatsHUD ?? false);
     onClose();
   };
 
   const handleCancel = (): void => {
-    setFormData(projectSettings || {} as SettingsFormData);
+    setFormData(projectSettings || ({} as SettingsFormData));
     setSearchQuery('');
     onClose();
   };
@@ -166,7 +206,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
           title: 'Projet sans titre',
           author: '',
           description: '',
-          version: '1.0.0'
+          version: '1.0.0',
         },
         editor: {
           theme: 'dark',
@@ -174,14 +214,15 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
           autosaveInterval: TIMING.AUTOSAVE_INTERVAL_MS,
           gridSize: 20,
           snapToGrid: false,
-          showGrid: true
+          showGrid: true,
         },
         game: {
           variables: {
             physique: { initial: 100, min: 0, max: 100 },
-            mentale: { initial: 100, min: 0, max: 100 }
-          }
-        }
+            mentale: { initial: 100, min: 0, max: 100 },
+          },
+          enableStatsHUD: true,
+        },
       };
       setFormData(defaults);
     }
@@ -201,6 +242,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
           onResetDefaults={handleResetDefaults}
           onExport={handleExport}
           onImport={handleImport}
+          isExporting={isExporting}
         />
 
         <div className="flex flex-1 overflow-hidden">
@@ -219,18 +261,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
             <ScrollArea className="flex-1 p-8">
               {/* Project Section */}
               {activeSection === 'project' && (
-                <ProjectSettingsSection
-                  formData={formData}
-                  onFieldChange={handleFieldChange}
-                />
+                <ProjectSettingsSection formData={formData} onFieldChange={handleFieldChange} />
               )}
 
               {/* Editor Section */}
               {activeSection === 'editor' && (
-                <EditorSettingsSection
-                  formData={formData}
-                  onFieldChange={handleFieldChange}
-                />
+                <EditorSettingsSection formData={formData} onFieldChange={handleFieldChange} />
               )}
 
               {/* Game Section */}
@@ -238,6 +274,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
                 <GameSettingsSection
                   formData={formData}
                   onVariableChange={handleVariableChange}
+                  onFieldChange={handleFieldChange}
                 />
               )}
 
@@ -246,6 +283,9 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
 
               {/* Accessibility Section */}
               {activeSection === 'accessibility' && <AccessibilitySection />}
+
+              {/* Audio Section */}
+              {activeSection === 'audio' && <AudioSettingsSection />}
             </ScrollArea>
 
             {/* Footer */}

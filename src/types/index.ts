@@ -6,6 +6,7 @@
 export * from './game';
 export * from './audio';
 export * from './scenes';
+export * from './cinematic';
 export * from './characters';
 export * from './ui';
 export * from './validation';

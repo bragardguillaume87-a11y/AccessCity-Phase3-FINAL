@@ -100,12 +100,12 @@ export default function CharacterPreviewPanel({
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Character Preview */}
-            <div className="relative aspect-square bg-gradient-to-br from-muted/50 to-muted rounded-xl flex items-center justify-center overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="relative aspect-[3/4] bg-gradient-to-br from-muted/50 to-muted rounded-xl flex items-center justify-center overflow-hidden transition-all duration-300 hover:shadow-lg">
               {currentPreviewSprite ? (
                 <img
                   src={currentPreviewSprite}
                   alt={`${name} - ${previewMood}`}
-                  className="max-w-full max-h-full object-contain p-8 transition-all duration-300 hover:scale-105"
+                  className="max-w-full max-h-full object-contain p-3 transition-all duration-300 hover:scale-105"
                 />
               ) : (
                 <div className="text-center p-8">

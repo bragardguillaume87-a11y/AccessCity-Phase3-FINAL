@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext } from '@/types';
+import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext, EditorMode, StudioModule } from '@/types';
 
 /**
  * UI Store
@@ -42,7 +42,7 @@ function persistThemeId(themeId: string): void {
 /**
  * SERP-5: Serpentine configuration type
  */
-export interface SerpentineConfig {
+interface SerpentineConfig {
   enabled: boolean;
   mode: 'auto-y' | 'by-count' | 'branch-aware';
   direction: 'zigzag' | 'grid';
@@ -90,7 +90,7 @@ function persistSerpentineConfig(config: SerpentineConfig): void {
 /**
  * Pro mode configuration type
  */
-export interface ProModeConfig {
+interface ProModeConfig {
   enabled: boolean;
   direction: 'TB' | 'LR';
 }
@@ -116,6 +116,24 @@ function persistProConfig(config: ProModeConfig): void {
   try {
     localStorage.setItem(PRO_MODE_CONFIG_KEY, JSON.stringify(config));
   } catch { /* ignore */ }
+}
+
+/**
+ * Editor mode persistence (kid / pro)
+ */
+const EDITOR_MODE_KEY = 'accesscity-editor-mode';
+
+function getPersistedEditorMode(): EditorMode {
+  if (typeof window === 'undefined') return 'pro';
+  try {
+    const stored = localStorage.getItem(EDITOR_MODE_KEY);
+    return stored === 'kid' ? 'kid' : 'pro';
+  } catch { return 'pro'; }
+}
+
+function persistEditorMode(mode: EditorMode): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(EDITOR_MODE_KEY, mode); } catch { /* ignore */ }
 }
 
 // ============================================================================
@@ -145,6 +163,9 @@ interface UIState {
   dialogueWizardInitialComplexity: ComplexityLevel | null;
   dialogueGraphModalOpen: boolean;
   dialogueGraphSelectedScene: string | null;
+  // Cinematic editor
+  cinematicEditorOpen: boolean;
+  cinematicEditorSceneId: string | null;
   graphThemeId: string;
   // SERP-5: Serpentine layout configuration
   serpentineEnabled: boolean;
@@ -181,13 +202,14 @@ interface UIState {
   clearDialogueWizardInitialComplexity: () => void;
   setDialogueGraphModalOpen: (open: boolean) => void;
   setDialogueGraphSelectedScene: (sceneId: string | null) => void;
+  // Cinematic editor actions
+  setCinematicEditorOpen: (open: boolean, sceneId?: string | null) => void;
   setGraphThemeId: (themeId: string) => void;
   // SERP-5: Serpentine layout actions
   setSerpentineEnabled: (enabled: boolean) => void;
   setSerpentineMode: (mode: 'auto-y' | 'by-count' | 'branch-aware') => void;
   setSerpentineDirection: (direction: 'zigzag' | 'grid') => void;
   setSerpentineGroupSize: (size: number) => void;
-  updateSerpentineConfig: (updates: Partial<SerpentineConfig>) => void;
   // Pro mode actions
   setProModeEnabled: (enabled: boolean) => void;
   setProModeDirection: (direction: 'TB' | 'LR') => void;
@@ -198,6 +220,13 @@ interface UIState {
   setProPaginationEnabled: (enabled: boolean) => void;
   setProPageSize: (size: number) => void;
   setProCurrentPage: (page: number) => void;
+  // Editor mode (kid/pro)
+  editorMode: EditorMode;
+  setEditorMode: (mode: EditorMode) => void;
+
+  // Studio module switcher (non-persistent — resets to 'vn-editor' on each launch)
+  activeModule: StudioModule;
+  setActiveModule: (module: StudioModule) => void;
 }
 
 // ============================================================================
@@ -232,17 +261,23 @@ export const useUIStore = create<UIState>()(
         dialogueWizardInitialComplexity: null,
         dialogueGraphModalOpen: false,
         dialogueGraphSelectedScene: null,
+        cinematicEditorOpen: false,
+        cinematicEditorSceneId: null,
         graphThemeId: getPersistedThemeId(),  // PHASE 4: Persist theme selection
         // SERP-5: Serpentine layout state (persisted)
         serpentineEnabled: serpentineConfig.enabled,
         serpentineMode: serpentineConfig.mode,
         serpentineDirection: serpentineConfig.direction,
         serpentineGroupSize: serpentineConfig.groupSize,
+        // Editor mode state (persisted)
+        editorMode: getPersistedEditorMode(),
+        // Studio module (non-persistent — always start on vn-editor)
+        activeModule: 'vn-editor' as StudioModule,
         // Pro mode state (persisted)
         proModeEnabled: proConfig.enabled,
         proModeDirection: proConfig.direction,
-        proCollapseEnabled: true,  // Clusters collapsed by default in Pro mode
-        proExpandedClusters: [],   // All collapsed initially
+        proCollapseEnabled: false, // Nodes expanded by default — clustering is opt-in
+        proExpandedClusters: [],
         proPaginationEnabled: false,
         proPageSize: 8,
         proCurrentPage: 0,
@@ -321,30 +356,20 @@ export const useUIStore = create<UIState>()(
         set({ dialogueGraphSelectedScene: sceneId }, false, 'ui/setDialogueGraphSelectedScene');
       },
 
+      setCinematicEditorOpen: (open, sceneId) => {
+        set(
+          { cinematicEditorOpen: open, cinematicEditorSceneId: sceneId !== undefined ? sceneId : null },
+          false,
+          'ui/setCinematicEditorOpen'
+        );
+      },
+
       setGraphThemeId: (themeId) => {
         persistThemeId(themeId);  // PHASE 4: Persist to localStorage
         set({ graphThemeId: themeId }, false, 'ui/setGraphThemeId');
       },
 
       // SERP-5: Serpentine layout actions
-      updateSerpentineConfig: (updates) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = {
-            enabled: updates.enabled ?? state.serpentineEnabled,
-            mode: updates.mode ?? state.serpentineMode,
-            direction: updates.direction ?? state.serpentineDirection,
-            groupSize: updates.groupSize ?? state.serpentineGroupSize,
-          };
-          persistSerpentineConfig(newConfig);
-          return {
-            serpentineEnabled: newConfig.enabled,
-            serpentineMode: newConfig.mode,
-            serpentineDirection: newConfig.direction,
-            serpentineGroupSize: newConfig.groupSize,
-          };
-        }, false, 'ui/updateSerpentineConfig');
-      },
-
       setSerpentineEnabled: (enabled) => {
         set((state) => {
           const newConfig: SerpentineConfig = { enabled, mode: state.serpentineMode, direction: state.serpentineDirection, groupSize: state.serpentineGroupSize };
@@ -440,6 +465,15 @@ export const useUIStore = create<UIState>()(
 
       setProCurrentPage: (page) => {
         set({ proCurrentPage: page }, false, 'ui/setProCurrentPage');
+      },
+
+      setEditorMode: (mode) => {
+        persistEditorMode(mode);
+        set({ editorMode: mode }, false, 'ui/setEditorMode');
+      },
+
+      setActiveModule: (module) => {
+        set({ activeModule: module }, false, 'ui/setActiveModule');
       },
     };
     }),

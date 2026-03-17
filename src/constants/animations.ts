@@ -58,53 +58,82 @@ export type CharacterAnimationVariantName =
   | 'pop'
   | 'bounce';
 
-export const CHARACTER_ANIMATION_VARIANTS: Record<CharacterAnimationVariantName, AnimationVariant> = {
-  // No animation
-  none: {
-    initial: { opacity: 1, scale: 1, x: 0, y: 0 },
-    animate: { opacity: 1, scale: 1, x: 0, y: 0 },
-    exit: { opacity: 1, scale: 1, x: 0, y: 0 }
-  },
-  // Fade animations
-  fadeIn: {
-    initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW) } },
-    exit: { opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
-  },
-  // Slide animations
-  slideInLeft: {
-    initial: { x: -100, opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
-    exit: { x: -100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
-  },
-  slideInRight: {
-    initial: { x: 100, opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
-    exit: { x: 100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
-  },
-  slideInUp: {
-    initial: { y: 100, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
-    exit: { y: 100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
-  },
-  slideInDown: {
-    initial: { y: -100, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' } },
-    exit: { y: -100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
-  },
-  // Pop animations
-  pop: {
-    initial: { scale: 0, opacity: 0 },
-    animate: { scale: 1, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_MEDIUM), type: 'spring', bounce: 0.5 } },
-    exit: { scale: 0, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_VERY_FAST) } }
-  },
-  // Bounce animation
-  bounce: {
-    initial: { y: -50, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_BOUNCE), type: 'spring', bounce: 0.6 } },
-    exit: { y: 50, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } }
-  }
-} as const;
+export const CHARACTER_ANIMATION_VARIANTS: Record<CharacterAnimationVariantName, AnimationVariant> =
+  {
+    // No animation
+    none: {
+      initial: { opacity: 1, scale: 1, x: 0, y: 0 },
+      animate: { opacity: 1, scale: 1, x: 0, y: 0 },
+      exit: { opacity: 1, scale: 1, x: 0, y: 0 },
+    },
+    // Fade animations
+    fadeIn: {
+      initial: { opacity: 0 },
+      animate: { opacity: 1, transition: { duration: toSeconds(TIMING.ANIMATION_SLOW) } },
+      exit: { opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } },
+    },
+    // Slide animations
+    slideInLeft: {
+      initial: { x: -100, opacity: 0 },
+      animate: {
+        x: 0,
+        opacity: 1,
+        transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' },
+      },
+      exit: { x: -100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } },
+    },
+    slideInRight: {
+      initial: { x: 100, opacity: 0 },
+      animate: {
+        x: 0,
+        opacity: 1,
+        transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' },
+      },
+      exit: { x: 100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } },
+    },
+    slideInUp: {
+      initial: { y: 100, opacity: 0 },
+      animate: {
+        y: 0,
+        opacity: 1,
+        transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' },
+      },
+      exit: { y: 100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } },
+    },
+    slideInDown: {
+      initial: { y: -100, opacity: 0 },
+      animate: {
+        y: 0,
+        opacity: 1,
+        transition: { duration: toSeconds(TIMING.ANIMATION_SLOW), ease: 'easeOut' },
+      },
+      exit: { y: -100, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } },
+    },
+    // Pop animations
+    pop: {
+      initial: { scale: 0, opacity: 0 },
+      animate: {
+        scale: 1,
+        opacity: 1,
+        transition: { duration: toSeconds(TIMING.ANIMATION_MEDIUM), type: 'spring', bounce: 0.5 },
+      },
+      exit: {
+        scale: 0,
+        opacity: 0,
+        transition: { duration: toSeconds(TIMING.ANIMATION_VERY_FAST) },
+      },
+    },
+    // Bounce animation
+    bounce: {
+      initial: { y: -50, opacity: 0 },
+      animate: {
+        y: 0,
+        opacity: 1,
+        transition: { duration: toSeconds(TIMING.ANIMATION_BOUNCE), type: 'spring', bounce: 0.6 },
+      },
+      exit: { y: 50, opacity: 0, transition: { duration: toSeconds(TIMING.ANIMATION_DELAY) } },
+    },
+  } as const;
 
 // ============================================================================
 // WIZARD CARD ANIMATION PRESETS
@@ -116,20 +145,4 @@ export const CARD_SLIDE_UP = {
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -20 },
   transition: { duration: 0.3 },
-} as const;
-
-/** Collapse / expand animation (advanced options panel) */
-export const COLLAPSE_ANIM = {
-  initial: { height: 0, opacity: 0 },
-  animate: { height: 'auto' as const, opacity: 1 },
-  exit: { height: 0, opacity: 0 },
-  transition: { duration: 0.2 },
-} as const;
-
-/** Star celebration spring animation (ChoiceCard validation star) */
-export const STAR_SPRING = {
-  initial: { scale: 0, rotate: -180 },
-  animate: { scale: 1, rotate: 0 },
-  exit: { scale: 0 },
-  transition: { type: 'spring' as const, stiffness: 260, damping: 20 },
 } as const;

@@ -1,5 +1,10 @@
 import type { Condition, DiceCheck, Effect } from './game';
 import type { SceneAudio, DialogueAudio, AmbientAudio } from './audio';
+import type { CinematicEvent, CinematicTracks } from './cinematic';
+import type { SceneEffectConfig } from './sceneEffect';
+
+/** Type de scène : dialogue interactif ou cinématique auto-play */
+export type SceneType = 'standard' | 'cinematic';
 
 /**
  * CSS filter overrides applied to the scene background image only.
@@ -38,6 +43,31 @@ export interface SceneMetadata {
   ambientTracks?: [AmbientAudio?, AmbientAudio?];
   /** CSS filter applied to background image only. Characters and UI are unaffected. */
   backgroundFilter?: BackgroundFilter;
+  /** Scene type: 'standard' (click-to-advance dialogues) or 'cinematic' (auto-play event sequence). Default: 'standard'. */
+  sceneType?: SceneType;
+  /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. */
+  cinematicEvents?: CinematicEvent[];
+  /** Multi-track timeline (nouveau format NLE). Remplace cinematicEvents quand présent. */
+  cinematicTracks?: CinematicTracks;
+  /** Couleur de la pastille dans le filmstrip (hex). Défaut: --color-primary. */
+  color?: string;
+  /**
+   * Effet atmosphérique de la scène VN (pluie, brouillard, neige…).
+   * Rendu via <SceneEffectCanvas> overlay sur le fond de la scène.
+   * Absent → pas d'effet.
+   */
+  sceneEffect?: SceneEffectConfig;
+}
+
+/**
+ * Type guard — retourne true si la scène est une cinématique auto-play.
+ * Utiliser partout où sceneType === 'cinematic' est testé pour centraliser la logique.
+ *
+ * @example
+ * if (isCinematicScene(selectedScene)) { ... }
+ */
+export function isCinematicScene(scene: { sceneType?: SceneType } | null | undefined): boolean {
+  return scene?.sceneType === 'cinematic';
 }
 
 export interface Position {
@@ -77,6 +107,24 @@ export interface DialogueBoxStyle {
   portraitOffsetY?: number;
   /** Portrait zoom factor 1.0–3.0 (default: 1.0). Scale CSS + overflow-hidden. */
   portraitScale?: number;
+  /** Box background color as hex (default: '#030712'). Combined with boxOpacity. */
+  bgColor?: string;
+  /** Main dialogue text color as hex (default: '#ffffff'). */
+  textColor?: string;
+  /** Border color as hex (default: '#ffffff'). Opacity derived from borderStyle. */
+  borderColor?: string;
+  /** Box border radius preset (default: 'xl' = 24px). */
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Layout preset: 'classique' = all-in-one box (default), 'visual' = separate nameplate tab + text box */
+  layout?: 'classique' | 'visual';
+  /**
+   * Transition entre dialogues (paramètre global projet uniquement).
+   * - 'aucune'  : swap instantané (comportement legacy)
+   * - 'fondu'   : fade opacity, boîte fixe — discret, adapté aux rythmes rapides
+   * - 'glisse'  : fade + léger slide vertical — style VN japonais
+   * Défaut : 'fondu'
+   */
+  dialogueTransition?: 'aucune' | 'fondu' | 'glisse';
 }
 
 export interface Dialogue {
@@ -90,13 +138,21 @@ export interface Dialogue {
   speakerMood?: string;
   /** Overrides mood per character for this specific dialogue. Key = sceneCharacterId, value = mood id. */
   characterMoods?: Record<string, string>;
+  /**
+   * Profil vocal procédural pour le typewriter blip (ex: 'homme-neutre', 'femme-joyeuse', 'robot').
+   * Aucun fichier audio requis — synthèse Web Audio API.
+   * @see src/utils/voiceProfiles.ts
+   */
+  voicePreset?: string;
   stageDirections?: string;
   conditions?: Condition[];
   /** Per-dialogue dialogue box style override (merged with project defaults). */
   boxStyle?: DialogueBoxStyle;
+  /** Marque ce dialogue comme nœud de conclusion intentionnel (fin de l'histoire). */
+  isConclusion?: boolean;
 }
 
-export type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
+type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
 
 export interface DialogueChoice {
   id: string;
@@ -106,15 +162,6 @@ export interface DialogueChoice {
   nextSceneId?: string;
   nextDialogueId?: string;
   diceCheck?: DiceCheck;
-}
-
-/** Determine the action type of a choice from its data (backwards compatible) */
-export function getChoiceActionType(choice: DialogueChoice): ChoiceActionType | 'none' {
-  if (choice.actionType) return choice.actionType;
-  if (choice.diceCheck) return 'diceCheck';
-  if (choice.nextSceneId) return 'sceneJump';
-  if (choice.nextDialogueId) return 'continue';
-  return 'none';
 }
 
 export interface SceneCharacter {
@@ -160,4 +207,12 @@ export interface Scene {
   ambientTracks?: [AmbientAudio?, AmbientAudio?];
   /** CSS filter applied to background image only. Inherited from SceneMetadata. */
   backgroundFilter?: BackgroundFilter;
+  /** Scene type: 'standard' (click-to-advance dialogues) or 'cinematic' (auto-play event sequence). Default: 'standard'. */
+  sceneType?: SceneType;
+  /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. Inherited from SceneMetadata. */
+  cinematicEvents?: CinematicEvent[];
+  /** Multi-track timeline (nouveau format NLE). Inherited from SceneMetadata. */
+  cinematicTracks?: CinematicTracks;
+  /** Effet atmosphérique de la scène. Inherited from SceneMetadata. */
+  sceneEffect?: SceneEffectConfig;
 }

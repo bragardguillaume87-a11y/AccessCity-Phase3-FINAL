@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState, startTransition, useRef, useEffect } from 'react';
-import { TIMING } from '@/config/timing';
+import { useCallback, useMemo, useState, startTransition, useRef } from 'react';
 import { STAT_BOUNDS, DICE } from '@/config/gameConstants';
 import type { Scene, Dialogue, DialogueChoice, GameStats, DiceCheckBranch, Condition } from '@/types';
 
@@ -16,10 +15,10 @@ interface HistoryEntry {
 
 
 /**
- * Current state of dice rolling
+ * Current state of dice rolling.
+ * lastRoll !== null means a dice check is awaiting player confirmation.
  */
 interface DiceState {
-  rolling: boolean;
   lastRoll: number | null;
   lastResult: 'success' | 'failure' | null;
 }
@@ -30,8 +29,17 @@ interface DiceState {
 interface UseGameStateOptions {
   scenes: Scene[];
   initialSceneId: string;
+  /** ID du dialogue de départ (optionnel).
+   *  null ou absent → premier dialogue de la scène. */
+  initialDialogueId?: string | null;
   initialStats?: GameStats;
 }
+
+// Navigation target stored when a dice check is pending modal confirmation
+type NavigationTarget = {
+  nextSceneId?: string;
+  nextDialogueId?: string | null;
+} | null;
 
 /**
  * Return type for useGameState hook
@@ -44,10 +52,14 @@ interface UseGameStateReturn {
   isPaused: boolean;
   readingSpeed: number;
   diceState: DiceState;
+  /** Difficulty of the dice check currently awaiting modal confirmation (null = no pending dice) */
+  pendingDiceDifficulty: number | null;
   isAtLastDialogue: boolean;
   goToScene: (sceneId: string, dialogueId?: string | null) => void;
   goToNextDialogue: () => void;
-  chooseOption: (choice: DialogueChoice) => Promise<void>;
+  chooseOption: (choice: DialogueChoice) => void;
+  /** Confirm dice result and execute the stored navigation (called by DiceOverlay.onClose) */
+  confirmDiceNavigation: () => void;
   jumpToHistoryIndex: (index: number) => void;
   setReadingSpeed: (speed: number) => void;
   setIsPaused: (paused: boolean) => void;
@@ -97,25 +109,22 @@ function clampStat(value: number): number {
 export function useGameState({
   scenes,
   initialSceneId,
+  initialDialogueId = null,
   initialStats = DEFAULT_STATS
 }: UseGameStateOptions): UseGameStateReturn {
   const [currentSceneId, setCurrentSceneId] = useState<string>(initialSceneId);
-  const [currentDialogueId, setCurrentDialogueId] = useState<string | null>(null);
+  const [currentDialogueId, setCurrentDialogueId] = useState<string | null>(initialDialogueId);
   const [stats, setStats] = useState<GameStats>(initialStats);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [readingSpeed, setReadingSpeed] = useState<number>(1);
   const [diceState, setDiceState] = useState<DiceState>({
-    rolling: false,
     lastRoll: null,
     lastResult: null
   });
+  const [pendingDiceDifficulty, setPendingDiceDifficulty] = useState<number | null>(null);
+  const pendingNavigationRef = useRef<NavigationTarget>(null);
 
-  // ── Unmount guard (Bug 3 : chooseOption async sans garde) ──────────────────
-  const isMountedRef = useRef(true);
-  useEffect(() => {
-    return () => { isMountedRef.current = false; };
-  }, []);
 
   const currentScene = useMemo(
     () => scenes.find((s) => s.id === currentSceneId) || null,
@@ -130,6 +139,10 @@ export function useGameState({
     const target = currentDialogueId
       ? dialogues.find((d) => d.id === currentDialogueId)
       : dialogues[0];
+
+    // Guard : ID explicite mais dialogue introuvable (ex : nextDialogueId invalide ou dialogue supprimé)
+    // → retourner null plutôt que de repartir de l'index 0, ce qui causerait un rejeu du début.
+    if (currentDialogueId && !target) return null;
 
     // If target passes conditions, use it
     if (target && evaluateConditions(target.conditions, stats)) return target;
@@ -207,7 +220,7 @@ export function useGameState({
       setCurrentDialogueId(item.dialogueId);
       setStats(item.statsSnapshot);
       setHistory(history.slice(0, index + 1));
-      setDiceState({ rolling: false, lastRoll: null, lastResult: null });
+      setDiceState({ lastRoll: null, lastResult: null });
     });
   }, [history]);
 
@@ -275,7 +288,7 @@ export function useGameState({
     return true;
   }, [currentScene, currentDialogue, stats]);
 
-  const chooseOption = useCallback(async (choice: DialogueChoice): Promise<void> => {
+  const chooseOption = useCallback((choice: DialogueChoice): void => {
     if (!currentScene || !currentDialogue || !choice) return;
 
     // 1. Compute effects synchronously BEFORE anything else
@@ -299,33 +312,71 @@ export function useGameState({
       applyStatsDelta(delta);
     }
 
-    // 4. Dice check uses newStats (not stale closure stats)
+    // 4. Dice check — résultat connu immédiatement (synchrone).
+    //    L'animation DiceOverlay fournit la suspense visuelle (1750ms),
+    //    pas besoin d'un await artificiel qui créait une race condition.
     let branch: DiceCheckBranch | null = null;
     if (choice.diceCheck) {
-      // Resolve dice check with the freshly computed stats
-      setDiceState({ rolling: true, lastRoll: null, lastResult: null });
-      await new Promise((r) => setTimeout(r, TIMING.DICE_ROLL_DURATION));
-      // Bug 3 fix : guard unmount — ne pas setState sur un composant démonté
-      if (!isMountedRef.current) return;
+      const difficulty = choice.diceCheck.difficulty ?? DICE.DEFAULT_DIFFICULTY;
+      const checkedStat = choice.diceCheck.stat;
+
+      // Pure d20 roll vs difficulty (matches StageDirector formula).
+      // Stats are NOT added to the roll — they affect narrative branches.
       const roll = Math.floor(Math.random() * DICE.D20_MAX) + 1;
-      const statValue = newStats[choice.diceCheck.stat] ?? 0;
-      const totalRoll = roll + statValue;
-      const success = totalRoll >= choice.diceCheck.difficulty;
-      const result = success ? 'success' : 'failure';
-      setDiceState({ rolling: false, lastRoll: totalRoll, lastResult: result });
+      const success = roll >= difficulty;
+      const result: 'success' | 'failure' = success ? 'success' : 'failure';
+
+      // Tout en une seule mise à jour → success/roll/difficulty cohérents dès frame 1
+      setPendingDiceDifficulty(difficulty);
+      setDiceState({ lastRoll: roll, lastResult: result });
       branch = choice.diceCheck[result] || null;
+
+      // Pénalité / bonus sur la stat testée (aligné avec StageDirector)
+      if (checkedStat) {
+        const statDelta = success
+          ? { [checkedStat]:  DICE.SUCCESS_BONUS }       // +5 en cas de succès
+          : { [checkedStat]: -DICE.FAIL_TARGET_PENALTY }; // -10 en cas d'échec
+        applyStatsDelta(statDelta);
+      }
     }
 
-    // 5. Navigate
-    const target = branch || choice;
-    if (target.nextSceneId) {
-      goToScene(target.nextSceneId, target.nextDialogueId || null);
-    } else if (target.nextDialogueId) {
-      setCurrentDialogueId(target.nextDialogueId);
+    // 5. Navigate — dice checks pause for overlay confirmation; others navigate immediately
+    if (choice.diceCheck) {
+      const target = branch || choice;
+      pendingNavigationRef.current = {
+        // Normaliser "" → undefined pour éviter le piège falsy dans confirmDiceNavigation
+        nextSceneId: target.nextSceneId || undefined,
+        nextDialogueId: target.nextDialogueId || undefined,
+      };
+      // Navigation deferred — DiceOverlay will call confirmDiceNavigation()
+    } else {
+      const target = choice;
+      if (target.nextSceneId) {
+        goToScene(target.nextSceneId, target.nextDialogueId || null);
+      } else if (target.nextDialogueId) {
+        setCurrentDialogueId(target.nextDialogueId);
+      } else {
+        goToNextDialogue();
+      }
+    }
+  }, [currentScene, currentDialogue, stats, addToHistory, applyStatsDelta, computeEffectsDelta, goToNextDialogue, goToScene]);
+
+  /** Execute the navigation stored during a dice check and close the modal. */
+  const confirmDiceNavigation = useCallback(() => {
+    const pending = pendingNavigationRef.current;
+    pendingNavigationRef.current = null;
+    setPendingDiceDifficulty(null);
+    setDiceState({ lastRoll: null, lastResult: null });
+
+    if (!pending) return;
+    if (pending.nextSceneId) {
+      goToScene(pending.nextSceneId, pending.nextDialogueId ?? null);
+    } else if (pending.nextDialogueId) {
+      setCurrentDialogueId(pending.nextDialogueId);
     } else {
       goToNextDialogue();
     }
-  }, [currentScene, currentDialogue, stats, addToHistory, applyStatsDelta, computeEffectsDelta, goToNextDialogue, goToScene]);
+  }, [goToScene, goToNextDialogue]);
 
   return {
     currentScene,
@@ -335,10 +386,12 @@ export function useGameState({
     isPaused,
     readingSpeed,
     diceState,
+    pendingDiceDifficulty,
     isAtLastDialogue,
     goToScene,
     goToNextDialogue,
     chooseOption,
+    confirmDiceNavigation,
     jumpToHistoryIndex,
     setReadingSpeed,
     setIsPaused

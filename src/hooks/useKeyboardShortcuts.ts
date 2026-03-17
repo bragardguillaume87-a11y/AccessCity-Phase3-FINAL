@@ -23,7 +23,7 @@ import { logger } from '@/utils/logger';
  * ```
  */
 
-export interface KeyboardShortcutHandlers {
+interface KeyboardShortcutHandlers {
   /**
    * Save project (Ctrl+S)
    */
@@ -80,7 +80,7 @@ export interface KeyboardShortcutHandlers {
   onCommandPalette?: () => void;
 }
 
-export interface KeyboardShortcutOptions {
+interface KeyboardShortcutOptions {
   /**
    * Enable shortcut handling
    * @default true

@@ -10,7 +10,7 @@ import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { REFERENCE_CANVAS_WIDTH } from '@/config/canvas';
-import type { Dialogue } from '@/types';
+import type { Dialogue, DialogueChoice } from '@/types';
 
 export interface DialoguePreviewOverlayProps {
   dialogue: Dialogue | null;
@@ -19,6 +19,8 @@ export interface DialoguePreviewOverlayProps {
   speakerName: string;
   currentDialogueText: string;
   onNavigate: (direction: 'prev' | 'next') => void;
+  /** Clic sur un choix — navigue vers le dialogue lié (nextDialogueId) ou vers le suivant */
+  onChoose?: (choice: DialogueChoice) => void;
   /** When true, advance automatically after typewriter completes */
   isAutoPlaying?: boolean;
   /** Called when auto-play reaches the end or a choice */
@@ -45,6 +47,7 @@ export function DialoguePreviewOverlay({
   speakerName,
   currentDialogueText,
   onNavigate,
+  onChoose,
   isAutoPlaying = false,
   onAutoPlayComplete,
   canvasWidth,
@@ -175,6 +178,7 @@ export function DialoguePreviewOverlay({
           speakerIsOnRight={speakerIsOnRight}
           speakerColor={speakerColor}
           onAdvance={skip}
+          onChoose={onChoose}
           navigationSlot={navigationSlot}
         />
       </div>

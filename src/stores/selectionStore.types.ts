@@ -80,7 +80,9 @@ export function isCharacterSelection(element: SelectedElement): element is Chara
   return element !== null && element.type === 'character';
 }
 
-export function isSceneCharacterSelection(element: SelectedElement): element is SceneCharacterSelection {
+export function isSceneCharacterSelection(
+  element: SelectedElement
+): element is SceneCharacterSelection {
   return element !== null && element.type === 'sceneCharacter';
 }
 
@@ -95,10 +97,15 @@ export function describeSelection(element: SelectedElement): string {
   const typed = element as Exclude<SelectedElement, NoSelection | null>;
 
   switch (typed.type) {
-    case 'scene': return `Scene: ${typed.id}`;
-    case 'dialogue': return `Dialogue ${typed.index} in scene ${typed.sceneId}`;
-    case 'character': return `Character: ${typed.id}`;
-    case 'sceneCharacter': return `Scene Character: ${typed.sceneCharacterId} in scene ${typed.sceneId}`;
-    default: return 'Unknown selection';
+    case 'scene':
+      return `Scene: ${typed.id}`;
+    case 'dialogue':
+      return `Dialogue ${typed.index} in scene ${typed.sceneId}`;
+    case 'character':
+      return `Character: ${typed.id}`;
+    case 'sceneCharacter':
+      return `Scene Character: ${typed.sceneCharacterId} in scene ${typed.sceneId}`;
+    default:
+      return 'Unknown selection';
   }
 }

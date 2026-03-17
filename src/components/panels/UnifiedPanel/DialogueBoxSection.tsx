@@ -1,87 +1,438 @@
-import { useCallback } from 'react';
-import { MessageSquare, AlignLeft, AlignRight, Eye, EyeOff, RotateCcw } from 'lucide-react';
-import { useSettingsStore } from '@/stores';
-import type { DialogueBoxStyle } from '@/types/scenes';
-
-/** Défauts affichés dans les contrôles quand la valeur n'est pas encore définie */
-const UI_DEFAULTS: Required<DialogueBoxStyle> = {
-  typewriterSpeed: 40,
-  fontSize: 15,
-  boxOpacity: 0.75,
-  position: 'bottom',
-  showPortrait: true,
-  speakerAlign: 'auto',
-  borderStyle: 'subtle',
-  portraitOffsetX: 50,
-  portraitOffsetY: 0,
-  portraitScale: 1,
-};
+import { useState, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, User, MessageSquare, GitBranch, Volume2, X, Plus } from 'lucide-react';
+import { useSelectionStore } from '@/stores/selectionStore';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useCharactersStore } from '@/stores/charactersStore';
+import { useScenesStore } from '@/stores/scenesStore';
+import { useSceneWithElements } from '@/stores/selectors';
+import { isDialogueSelection } from '@/stores/selectionStore.types';
+import { ChoiceEditor } from '../PropertiesPanel/components/ChoiceEditor';
+import {
+  VoicePresetPicker,
+  VoicePresetBadge,
+} from '@/components/dialogue-editor/DialogueComposer/components/VoicePresetPicker';
+import { VOICE_PROFILES, playVoicePreview } from '@/utils/voiceProfiles';
+import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
+import { InlineAccordion } from '@/components/ui/InlineAccordion';
+import { MoodCard } from '@/components/ui/MoodCard';
+import type { Dialogue } from '@/types';
 
 // ============================================================================
-// SUB-COMPONENTS
+// DIALOGUE COURANT — propriétés du dialogue sélectionné
 // ============================================================================
 
-interface SliderRowProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  onChange: (v: number) => void;
-  ariaLabel: string;
-}
+/**
+ * DialogueEditorInner — lit le dialogue sélectionné depuis les stores et permet son édition.
+ * Monté uniquement quand un dialogue est actif (via DialogueCurrentSection).
+ */
+function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: number }) {
+  const updateDialogue = useDialoguesStore((s) => s.updateDialogue);
+  const dialogue = useDialoguesStore((s) => s.getDialoguesByScene(sceneId)[index]);
+  const characters = useCharactersStore((s) => s.characters);
+  const scenes = useScenesStore((s) => s.scenes);
+  const scene = useSceneWithElements(sceneId);
 
-function SliderRow({ label, value, min, max, step, unit, onChange, ariaLabel }: SliderRowProps) {
+  const [choicesOpen, setChoicesOpen] = useState(false);
+  const [sfxOpen, setSfxOpen] = useState(false);
+  const [moodsOpen, setMoodsOpen] = useState(false);
+  const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+  const voiceBtnRef = useRef<HTMLButtonElement>(null);
+
+  if (!dialogue) return null;
+
+  const handleUpdate = (updates: Partial<Dialogue>) => {
+    updateDialogue(sceneId, index, updates);
+  };
+
+  const choiceCount = dialogue.choices?.length ?? 0;
+  const sceneChars = scene?.characters ?? [];
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</label>
-        <span className="text-xs text-[var(--color-text-muted)]">{value} {unit}</span>
+    <>
+      {/* Personnage */}
+      <div className="mb-3">
+        <div className="sp-row mb-1">
+          <span className="flex items-center gap-1">
+            <User className="w-3 h-3 text-blue-400" aria-hidden="true" />
+            Personnage
+          </span>
+        </div>
+        <select
+          value={dialogue.speaker || ''}
+          onChange={(e) => handleUpdate({ speaker: e.target.value })}
+          className="w-full px-2.5 py-1.5 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+        >
+          <option value="">— Aucun —</option>
+          {characters.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 accent-[var(--color-primary)] cursor-pointer"
-        aria-label={ariaLabel}
-      />
-    </div>
+
+      {/* Texte */}
+      <div className="mb-3">
+        <div className="sp-row mb-1">
+          <span className="flex items-center gap-1">
+            <MessageSquare className="w-3 h-3 text-violet-400" aria-hidden="true" />
+            Texte
+          </span>
+        </div>
+        <textarea
+          value={dialogue.text || ''}
+          onChange={(e) => handleUpdate({ text: e.target.value })}
+          rows={4}
+          className="w-full px-2.5 py-2 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded-lg text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] resize-none"
+          placeholder="Saisir le texte du dialogue…"
+        />
+      </div>
+
+      {/* Choix */}
+      <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setChoicesOpen((v) => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        >
+          <GitBranch className="w-3 h-3 text-purple-400 flex-shrink-0" aria-hidden="true" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-400 flex-1">
+            Choix {choiceCount > 0 ? `(${choiceCount})` : ''}
+          </span>
+          <ChevronDown
+            className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${choicesOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <InlineAccordion isOpen={choicesOpen}>
+          <div className="px-3 pb-3 pt-1 space-y-2">
+            <button
+              type="button"
+              onClick={() =>
+                handleUpdate({
+                  choices: [
+                    ...(dialogue.choices || []),
+                    {
+                      id: `choice-${Date.now()}`,
+                      text: 'Nouveau choix',
+                      nextSceneId: '',
+                      effects: [],
+                    },
+                  ],
+                })
+              }
+              className="w-full flex items-center justify-center gap-1 py-1.5 rounded border border-dashed border-[var(--color-border-base)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Ajouter un choix
+            </button>
+            {choiceCount > 0 &&
+              dialogue.choices.map((choice, ci) => (
+                <ChoiceEditor
+                  key={ci}
+                  choice={choice}
+                  choiceIndex={ci}
+                  onUpdate={(idx, updated) => {
+                    const next = [...dialogue.choices];
+                    next[idx] = updated;
+                    handleUpdate({ choices: next });
+                  }}
+                  onDelete={(idx) =>
+                    handleUpdate({ choices: dialogue.choices.filter((_, i) => i !== idx) })
+                  }
+                  scenes={scenes}
+                  currentSceneId={sceneId}
+                />
+              ))}
+          </div>
+        </InlineAccordion>
+      </div>
+
+      {/* SFX + Voix procédurale */}
+      <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setSfxOpen((v) => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        >
+          <Volume2 className="w-3 h-3 text-amber-400 flex-shrink-0" aria-hidden="true" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex-1">
+            Effet sonore {dialogue.voicePreset ? '· 🎙️' : dialogue.sfx?.url ? '· 1 son' : ''}
+          </span>
+          <ChevronDown
+            className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${sfxOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <InlineAccordion isOpen={sfxOpen}>
+          <div className="px-3 pb-3 pt-2 space-y-3">
+            {/* Voix procédurale */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: 'var(--color-text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Voix du personnage
+                </span>
+                <div className="flex items-center gap-1">
+                  {dialogue.voicePreset && <VoicePresetBadge presetId={dialogue.voicePreset} />}
+                  <button
+                    ref={voiceBtnRef}
+                    type="button"
+                    onClick={() => setVoicePickerOpen((v) => !v)}
+                    title={dialogue.voicePreset ? 'Changer la voix' : 'Toutes les voix'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 22,
+                      height: 22,
+                      borderRadius: 'var(--radius-sm)',
+                      border: `1.5px solid ${dialogue.voicePreset ? 'var(--color-primary-glow)' : 'var(--color-border-base)'}`,
+                      background: dialogue.voicePreset
+                        ? 'var(--color-primary-subtle)'
+                        : 'transparent',
+                      color: dialogue.voicePreset
+                        ? 'var(--color-primary)'
+                        : 'var(--color-text-muted)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Volume2 size={10} />
+                  </button>
+                </div>
+              </div>
+              {/* Chips rapides */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                {VOICE_PROFILES.filter((p) => p.category !== 'animal')
+                  .slice(0, 6)
+                  .map((profile) => {
+                    const isActive = dialogue.voicePreset === profile.id;
+                    return (
+                      <motion.button
+                        key={profile.id}
+                        type="button"
+                        onClick={() =>
+                          handleUpdate({ voicePreset: isActive ? undefined : profile.id })
+                        }
+                        onMouseEnter={() => playVoicePreview(profile.id)}
+                        whileHover={{ y: -1, scale: 1.03 }}
+                        whileTap={{ scale: 0.95 }}
+                        aria-pressed={isActive}
+                        title={profile.label}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          padding: '2px 6px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                          background: isActive
+                            ? 'var(--color-primary-muted)'
+                            : 'var(--color-bg-base)',
+                          color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                          fontSize: '10px',
+                          fontWeight: isActive ? 700 : 500,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span>{profile.emoji}</span>
+                        <span>{profile.label}</span>
+                      </motion.button>
+                    );
+                  })}
+                <motion.button
+                  type="button"
+                  onClick={() => setVoicePickerOpen((v) => !v)}
+                  whileHover={{ y: -1 }}
+                  title="Voir toutes les voix"
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--color-border-base)',
+                    background: 'transparent',
+                    color: 'var(--color-text-muted)',
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  +
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {voicePickerOpen && (
+                  <VoicePresetPicker
+                    anchorRef={voiceBtnRef}
+                    value={dialogue.voicePreset}
+                    onChange={(presetId) => handleUpdate({ voicePreset: presetId })}
+                    onClose={() => setVoicePickerOpen(false)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* SFX fichier custom */}
+            {dialogue.sfx?.url && (
+              <div className="flex items-center gap-2 p-2 bg-[var(--color-bg-base)] rounded-lg border border-[var(--color-border-base)]">
+                <Volume2 className="h-3 w-3 text-amber-400 flex-shrink-0" />
+                <span className="text-xs text-[var(--color-text-primary)] truncate flex-1">
+                  {dialogue.sfx.url.split('/').pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleUpdate({ sfx: undefined })}
+                  className="h-5 w-5 flex items-center justify-center text-red-400 hover:text-red-300 rounded"
+                  aria-label="Supprimer le son"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        </InlineAccordion>
+      </div>
+
+      {/* Humeurs — cartes Nintendo style */}
+      {sceneChars.length > 0 && (
+        <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMoodsOpen((v) => !v)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+          >
+            <span className="text-xs" aria-hidden="true">
+              😊
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex-1">
+              Humeurs ({sceneChars.length})
+            </span>
+            <ChevronDown
+              className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${moodsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <InlineAccordion isOpen={moodsOpen}>
+            <div className="px-3 pb-3 pt-2 space-y-3">
+              {sceneChars.map((sc) => {
+                const char = characters.find((c) => c.id === sc.characterId);
+                if (!char) return null;
+                const activeMood = dialogue.characterMoods?.[sc.id] ?? '';
+                const moods = char.moods?.length ? char.moods : ['neutral'];
+                const setMood = (val: string) => {
+                  const next = { ...(dialogue.characterMoods || {}) };
+                  if (val) {
+                    next[sc.id] = val;
+                  } else {
+                    delete next[sc.id];
+                  }
+                  handleUpdate({ characterMoods: Object.keys(next).length > 0 ? next : undefined });
+                };
+                return (
+                  <div key={sc.id}>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--color-text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      {char.name}
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 4,
+                        overflowX: 'auto',
+                        paddingBottom: 2,
+                        scrollbarWidth: 'none',
+                      }}
+                    >
+                      {/* Chip Défaut */}
+                      <motion.button
+                        type="button"
+                        onClick={() => setMood('')}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.93 }}
+                        aria-pressed={!activeMood}
+                        style={{
+                          flexShrink: 0,
+                          padding: '5px 10px',
+                          borderRadius: 8,
+                          border: `2px solid ${!activeMood ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                          background: !activeMood ? 'var(--color-primary-15)' : 'transparent',
+                          color: !activeMood ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: !activeMood ? '0 3px 10px var(--color-primary-30)' : 'none',
+                          alignSelf: 'center',
+                        }}
+                      >
+                        ✦ Défaut
+                      </motion.button>
+                      {/* Cartes humeur */}
+                      {moods.map((mood, idx) => (
+                        <MoodCard
+                          key={mood}
+                          mood={mood}
+                          emoji={getMoodEmoji(mood)}
+                          label={getMoodLabel(mood)}
+                          sprite={char.sprites?.[mood]}
+                          isActive={activeMood === mood}
+                          onClick={() => setMood(activeMood === mood ? '' : mood)}
+                          size={60}
+                          entryDelay={idx * 0.04}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </InlineAccordion>
+        </div>
+      )}
+    </>
   );
 }
 
-interface ToggleGroupProps<T extends string> {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-}
+/**
+ * DialogueCurrentSection — wrapper conditionnel.
+ * Monte DialogueEditorInner uniquement quand un dialogue est actif dans selectionStore.
+ */
+function DialogueCurrentSection() {
+  const selectedElement = useSelectionStore((s) => s.selectedElement);
 
-function ToggleGroup<T extends string>({ label, value, options, onChange }: ToggleGroupProps<T>) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</p>
-      <div className="flex gap-1">
-        {options.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={[
-              'flex-1 text-xs py-1.5 px-2 rounded-lg border transition-colors',
-              value === opt.value
-                ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]',
-            ].join(' ')}
-            aria-pressed={value === opt.value}
-          >
-            {opt.label}
-          </button>
-        ))}
+  if (!isDialogueSelection(selectedElement)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+        <MessageSquare
+          className="w-8 h-8 text-[var(--color-text-secondary)] mb-3"
+          aria-hidden="true"
+        />
+        <p className="text-xs text-[var(--color-text-secondary)]">
+          Sélectionne un dialogue dans la liste pour éditer ses propriétés
+        </p>
       </div>
-    </div>
+    );
+  }
+
+  const { sceneId, index } = selectedElement;
+
+  return (
+    <section className="sp-sec" aria-label="Dialogue sélectionné">
+      <h3 className="sp-lbl">DIALOGUE {String(index + 1).padStart(2, '00')}</h3>
+      <DialogueEditorInner sceneId={sceneId} index={index} />
+    </section>
   );
 }
 
@@ -90,253 +441,15 @@ function ToggleGroup<T extends string>({ label, value, options, onChange }: Togg
 // ============================================================================
 
 /**
- * DialogueBoxSection — Panneau de personnalisation globale de la boîte de dialogue.
+ * DialogueBoxSection — Panneau d'édition du dialogue sélectionné.
  *
- * Les valeurs modifiées ici s'appliquent à toutes les scènes du projet.
- * Chaque dialogue peut ensuite les écraser via `dialogue.boxStyle` (override dans le wizard).
- *
- * Persisté dans : settingsStore.projectSettings.game.dialogueBoxDefaults
+ * Affiche les propriétés du dialogue actif : Personnage, Texte, Choix, SFX, Humeurs.
+ * Les paramètres globaux (Aperçu, Texte, Apparence, Portrait) sont dans TextSection.
  */
 export function DialogueBoxSection() {
-  const dialogueBoxDefaults = useSettingsStore(s => s.projectSettings.game.dialogueBoxDefaults);
-  const updateDialogueBoxDefaults = useSettingsStore(s => s.updateDialogueBoxDefaults);
-
-  // Valeurs effectives (defaults du store ou UI_DEFAULTS si non défini)
-  const cfg: Required<DialogueBoxStyle> = {
-    ...UI_DEFAULTS,
-    ...dialogueBoxDefaults,
-  };
-
-  const update = useCallback((patch: Partial<DialogueBoxStyle>) => {
-    updateDialogueBoxDefaults(patch);
-  }, [updateDialogueBoxDefaults]);
-
-  const resetPortrait = useCallback(() => {
-    update({ portraitOffsetX: 50, portraitOffsetY: 0, portraitScale: 1 });
-  }, [update]);
-
   return (
-    <div className="p-3 space-y-4">
-
-      {/* Intro */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
-        <MessageSquare className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-        <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-          Personnalise la boîte de dialogue pour toutes les scènes du projet.
-          Chaque dialogue peut ensuite avoir ses propres réglages.
-        </p>
-      </div>
-
-      {/* === Texte === */}
-      <section aria-labelledby="dlgbox-text-heading">
-        <h3
-          id="dlgbox-text-heading"
-          className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2"
-        >
-          ✏️ Texte
-        </h3>
-        <div className="space-y-3">
-          <SliderRow
-            label="Vitesse de frappe"
-            value={cfg.typewriterSpeed}
-            min={20}
-            max={120}
-            step={5}
-            unit="ms/car"
-            onChange={(v) => update({ typewriterSpeed: v })}
-            ariaLabel={`Vitesse de frappe : ${cfg.typewriterSpeed} ms par caractère`}
-          />
-          <SliderRow
-            label="Taille du texte"
-            value={cfg.fontSize}
-            min={12}
-            max={24}
-            step={1}
-            unit="px"
-            onChange={(v) => update({ fontSize: v })}
-            ariaLabel={`Taille du texte : ${cfg.fontSize} pixels`}
-          />
-          {/* Aperçu en temps réel — visible sans scène active */}
-          <div
-            className="px-3 py-2 rounded-lg bg-black/70 border border-white/10 backdrop-blur-sm"
-            aria-hidden="true"
-          >
-            <p style={{ fontSize: `${cfg.fontSize}px` }} className="text-white leading-relaxed">
-              — Bonjour ! Je suis Léa, ton guide.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
-
-      {/* === Apparence === */}
-      <section aria-labelledby="dlgbox-style-heading">
-        <h3
-          id="dlgbox-style-heading"
-          className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2"
-        >
-          🎨 Apparence
-        </h3>
-        <div className="space-y-3">
-          <SliderRow
-            label="Opacité du fond"
-            value={Math.round(cfg.boxOpacity * 100)}
-            min={40}
-            max={95}
-            step={5}
-            unit="%"
-            onChange={(v) => update({ boxOpacity: v / 100 })}
-            ariaLabel={`Opacité du fond : ${Math.round(cfg.boxOpacity * 100)} %`}
-          />
-
-          <ToggleGroup
-            label="Bordure"
-            value={cfg.borderStyle}
-            options={[
-              { value: 'none',      label: 'Aucune' },
-              { value: 'subtle',    label: 'Subtile' },
-              { value: 'prominent', label: 'Marquée' },
-            ]}
-            onChange={(v) => update({ borderStyle: v })}
-          />
-
-          <ToggleGroup
-            label="Position de la boîte"
-            value={cfg.position}
-            options={[
-              { value: 'bottom', label: 'Bas' },
-              { value: 'center', label: 'Centre' },
-              { value: 'top',    label: 'Haut' },
-            ]}
-            onChange={(v) => update({ position: v })}
-          />
-        </div>
-      </section>
-
-      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
-
-      {/* === Speaker === */}
-      <section aria-labelledby="dlgbox-speaker-heading">
-        <h3
-          id="dlgbox-speaker-heading"
-          className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2"
-        >
-          🎭 Speaker
-        </h3>
-        <div className="space-y-3">
-
-          {/* Portrait toggle */}
-          <button
-            onClick={() => update({ showPortrait: !cfg.showPortrait })}
-            className={[
-              'w-full flex items-center gap-2 text-xs py-2 px-3 rounded-lg border transition-colors',
-              cfg.showPortrait
-                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
-                : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]',
-            ].join(' ')}
-            aria-pressed={cfg.showPortrait}
-          >
-            {cfg.showPortrait
-              ? <><Eye className="w-4 h-4" aria-hidden="true" /> Portrait affiché (48×48px)</>
-              : <><EyeOff className="w-4 h-4" aria-hidden="true" /> Portrait masqué</>
-            }
-          </button>
-
-          {/* Cadrage portrait — visible uniquement si portrait activé */}
-          {cfg.showPortrait && (
-            <div className="space-y-2.5 pl-2 border-l-2 border-[var(--color-primary)]/30">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-                  🖼️ Cadrage portrait
-                </p>
-                <button
-                  onClick={resetPortrait}
-                  className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                  title="Réinitialiser le cadrage"
-                  aria-label="Réinitialiser le cadrage du portrait"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" aria-hidden="true" />
-                  Réinitialiser
-                </button>
-              </div>
-
-              <SliderRow
-                label="Pan horizontal"
-                value={cfg.portraitOffsetX}
-                min={0}
-                max={100}
-                step={5}
-                unit="%"
-                onChange={(v) => update({ portraitOffsetX: v })}
-                ariaLabel={`Pan horizontal du portrait : ${cfg.portraitOffsetX} %`}
-              />
-              <SliderRow
-                label="Pan vertical"
-                value={cfg.portraitOffsetY}
-                min={0}
-                max={100}
-                step={5}
-                unit="%"
-                onChange={(v) => update({ portraitOffsetY: v })}
-                ariaLabel={`Pan vertical du portrait : ${cfg.portraitOffsetY} %`}
-              />
-              <SliderRow
-                label="Zoom"
-                value={cfg.portraitScale}
-                min={1}
-                max={3}
-                step={0.1}
-                unit="×"
-                onChange={(v) => update({ portraitScale: Math.round(v * 10) / 10 })}
-                ariaLabel={`Zoom du portrait : ${cfg.portraitScale} ×`}
-              />
-              <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
-                Masque non-destructif — déplace et zoome sans recadrer l'image originale.
-              </p>
-            </div>
-          )}
-
-          {/* Speaker name alignment */}
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Alignement du nom</p>
-            <div className="flex gap-1">
-              <button
-                onClick={() => update({ speakerAlign: 'auto' })}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border transition-colors',
-                  cfg.speakerAlign === 'auto'
-                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                    : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]',
-                ].join(' ')}
-                aria-pressed={cfg.speakerAlign === 'auto'}
-                title="Gauche si sprite x<50%, droite sinon"
-              >
-                <AlignLeft className="w-3 h-3" aria-hidden="true" />
-                <AlignRight className="w-3 h-3 -ml-1.5" aria-hidden="true" />
-                Auto
-              </button>
-              <button
-                onClick={() => update({ speakerAlign: 'left' })}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border transition-colors',
-                  cfg.speakerAlign === 'left'
-                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                    : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]',
-                ].join(' ')}
-                aria-pressed={cfg.speakerAlign === 'left'}
-              >
-                <AlignLeft className="w-3 h-3" aria-hidden="true" />
-                Toujours gauche
-              </button>
-            </div>
-            <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
-              Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
-            </p>
-          </div>
-        </div>
-      </section>
-
+    <div>
+      <DialogueCurrentSection />
     </div>
   );
 }

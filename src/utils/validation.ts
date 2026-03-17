@@ -23,20 +23,6 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/**
- * Check if a value is a non-empty string
- */
-export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-/**
- * Check if a value is a valid number (not NaN)
- */
-export function isValidNumber(value: unknown): value is number {
-  return typeof value === 'number' && !Number.isNaN(value);
-}
-
 // ============================================================================
 // URL VALIDATION
 // ============================================================================
@@ -55,8 +41,9 @@ const DANGEROUS_PROTOCOLS = [
 
 /**
  * Allowed URL protocols for assets
+ * 'asset:' = Tauri WebView protocol for local filesystem files (asset://localhost/...)
  */
-const ALLOWED_PROTOCOLS = ['http:', 'https:', ''] as const;
+const ALLOWED_PROTOCOLS = ['http:', 'https:', 'asset:', ''] as const;
 
 /**
  * Validate if a URL is safe for use as an asset URL
@@ -119,6 +106,8 @@ export interface DragDropData {
   type: DragDropType;
   url?: string;
   characterId?: string;
+  /** Mood du personnage dragué (ex: 'neutral', 'happy', 'sad') */
+  mood?: string;
   emoji?: string;
   assetPath?: string;
 }
@@ -162,6 +151,9 @@ export function validateDragDropData(raw: unknown): DragDropData | null {
   }
   if (typeof raw.characterId === 'string') {
     result.characterId = raw.characterId;
+  }
+  if (typeof raw.mood === 'string') {
+    result.mood = raw.mood;
   }
   if (typeof raw.emoji === 'string') {
     result.emoji = raw.emoji;

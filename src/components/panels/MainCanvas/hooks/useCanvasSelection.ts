@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import { logger } from '@/utils/logger';
-import type { Scene, SceneCharacter, SelectedElementType } from '@/types';
+import { useSelectionStore } from '@/stores/selectionStore';
+import { isDialogueSelection } from '@/stores/selectionStore.types';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import type { Scene, SceneCharacter } from '@/types';
 
 /**
  * Selected element metadata type
@@ -15,7 +18,6 @@ export interface SelectedElementMetadata {
  */
 export interface UseCanvasSelectionProps {
   selectedScene: Scene | undefined;
-  selectedElement: SelectedElementType;
   onSelectDialogue?: (sceneId: string, index: number | null, metadata?: SelectedElementMetadata) => void;
 }
 
@@ -48,12 +50,11 @@ export interface UseCanvasSelectionReturn {
  *   handleCharacterClick,
  *   handleDialogueClick,
  *   handleDialogueNavigate
- * } = useCanvasSelection({ selectedScene, selectedElement, onSelectDialogue });
+ * } = useCanvasSelection({ selectedScene, onSelectDialogue });
  * ```
  */
 export function useCanvasSelection({
   selectedScene,
-  selectedElement,
   onSelectDialogue
 }: UseCanvasSelectionProps): UseCanvasSelectionReturn {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
@@ -80,19 +81,27 @@ export function useCanvasSelection({
 
   /**
    * Handle dialogue navigation - Move to previous or next dialogue
+   *
+   * ✅ getState() dans un handler → lecture ponctuelle correcte (CLAUDE.md §6.7)
+   * Évite les stale closures sur selectedElement.index lors de clics rapides :
+   * si l'utilisateur clique avant le re-render React, la closure capturerait
+   * l'ancien index et naviguerait vers le même dialogue.
    */
   const handleDialogueNavigate = useCallback((direction: 'prev' | 'next') => {
-    if (!selectedElement || !selectedScene || selectedElement.type !== 'dialogue') return;
+    if (!selectedScene) return;
+    const currentElement = useSelectionStore.getState().selectedElement;
+    if (!isDialogueSelection(currentElement)) return;
 
-    const currentIndex = selectedElement.index;
-    const totalDialogues = selectedScene.dialogues.length;
+    const currentIndex = currentElement.index;
+    // Lire le nombre de dialogues depuis le store à l'instant du clic
+    const count = useDialoguesStore.getState().dialoguesByScene[selectedScene.id]?.length ?? 0;
 
     if (direction === 'prev' && currentIndex > 0) {
       onSelectDialogue?.(selectedScene.id, currentIndex - 1);
-    } else if (direction === 'next' && currentIndex < totalDialogues - 1) {
+    } else if (direction === 'next' && currentIndex < count - 1) {
       onSelectDialogue?.(selectedScene.id, currentIndex + 1);
     }
-  }, [selectedElement, selectedScene, onSelectDialogue]);
+  }, [selectedScene, onSelectDialogue]);
 
   return {
     selectedCharacterId,

@@ -1,6 +1,6 @@
-import * as React from 'react'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import * as React from 'react';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * CollapsibleSection - Accordion component for organizing properties
@@ -26,19 +26,22 @@ import { cn } from '@/lib/utils'
  *   ...
  * </CollapsibleSection>
  */
-export interface CollapsibleSectionProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onToggle'> {
-  title: string
-  children: React.ReactNode
-  defaultOpen?: boolean
-  icon?: React.ReactNode
-  preview?: string
+export interface CollapsibleSectionProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'onToggle'
+> {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  icon?: React.ReactNode;
+  preview?: string;
   /** Badge informatif affiché à côté du titre (ex : "2 pistes") */
-  badge?: string
+  badge?: string;
   /** 'card' (défaut) : bordure + fond. 'flat' : en-tête texte simple pour les panneaux latéraux. */
-  variant?: 'card' | 'flat'
-  headerClassName?: string
-  contentClassName?: string
-  onToggle?: (isOpen: boolean) => void
+  variant?: 'card' | 'flat';
+  headerClassName?: string;
+  contentClassName?: string;
+  onToggle?: (isOpen: boolean) => void;
 }
 
 export function CollapsibleSection({
@@ -55,22 +58,22 @@ export function CollapsibleSection({
   onToggle,
   ...props
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const handleToggle = () => {
-    const newState = !isOpen
-    setIsOpen(newState)
-    onToggle?.(newState)
-  }
+    const newState = !isOpen;
+    setIsOpen(newState);
+    onToggle?.(newState);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      handleToggle()
+      e.preventDefault();
+      handleToggle();
     }
-  }
+  };
 
-  const sectionId = `section-${title.replace(/\s+/g, '-').toLowerCase()}`
+  const sectionId = `section-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   // ── Variante "flat" (panneaux latéraux AudioSection, BackgroundsSection) ─────
   if (variant === 'flat') {
@@ -81,10 +84,10 @@ export function CollapsibleSection({
           onClick={handleToggle}
           onKeyDown={handleKeyDown}
           className={cn(
-            "w-full flex items-center justify-between py-2.5",
-            "text-[13px] font-semibold text-[var(--color-text-secondary)]",
-            "hover:text-[var(--color-text-primary)] transition-colors",
-            headerClassName,
+            'w-full flex items-center justify-between py-2.5',
+            'text-[13px] font-semibold text-[var(--color-text-secondary)]',
+            'hover:text-[var(--color-text-primary)] transition-colors',
+            headerClassName
           )}
           aria-expanded={isOpen}
           aria-controls={sectionId}
@@ -100,9 +103,15 @@ export function CollapsibleSection({
           </span>
           {/* Chevron */}
           <svg
-            className={cn('w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200', isOpen && 'rotate-180')}
-            fill="none" stroke="currentColor" strokeWidth={2}
-            viewBox="0 0 24 24" aria-hidden="true"
+            className={cn(
+              'w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200',
+              isOpen && 'rotate-180'
+            )}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
@@ -111,25 +120,20 @@ export function CollapsibleSection({
         <div
           id={sectionId}
           className={cn(
-            "grid transition-all duration-200 ease-in-out",
-            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+            'grid transition-all duration-200 ease-in-out',
+            isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
           )}
         >
-          <div className={cn("overflow-hidden", contentClassName)}>
-            {children}
-          </div>
+          <div className={cn('overflow-hidden', contentClassName)}>{children}</div>
         </div>
       </section>
-    )
+    );
   }
 
   // ── Variante "card" (défaut — Inspector style) ─────────────────────────────
   return (
     <div
-      className={cn(
-        "border border-border rounded-lg overflow-hidden bg-card/50",
-        className
-      )}
+      className={cn('border border-border rounded-lg overflow-hidden bg-card/50', className)}
       {...props}
     >
       {/* Header (always visible) */}
@@ -137,9 +141,9 @@ export function CollapsibleSection({
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
         className={cn(
-          "w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors",
-          "hover:bg-muted/50 active:bg-muted",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset",
+          'w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors',
+          'hover:bg-muted/50 active:bg-muted',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset',
           headerClassName
         )}
         aria-expanded={isOpen}
@@ -148,8 +152,8 @@ export function CollapsibleSection({
         {/* Expand/Collapse indicator */}
         <span
           className={cn(
-            "flex-shrink-0 w-4 h-4 flex items-center justify-center text-muted-foreground transition-transform duration-200",
-            isOpen && "rotate-90"
+            'flex-shrink-0 w-4 h-4 flex items-center justify-center text-muted-foreground transition-transform duration-200',
+            isOpen && 'rotate-90'
           )}
           aria-hidden="true"
         >
@@ -164,16 +168,10 @@ export function CollapsibleSection({
         )}
 
         {/* Title */}
-        <span className="flex-1 text-sm font-semibold text-white">
-          {title}
-        </span>
+        <span className="flex-1 text-sm font-semibold text-white">{title}</span>
 
         {/* Badge */}
-        {badge && (
-          <span className="flex-shrink-0 text-xs text-muted-foreground">
-            {badge}
-          </span>
-        )}
+        {badge && <span className="flex-shrink-0 text-xs text-muted-foreground">{badge}</span>}
 
         {/* Preview text when collapsed */}
         {!isOpen && preview && (
@@ -187,18 +185,18 @@ export function CollapsibleSection({
       <div
         id={sectionId}
         className={cn(
-          "grid transition-all duration-200 ease-in-out",
-          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          'grid transition-all duration-200 ease-in-out',
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
         )}
       >
         <div className="overflow-hidden">
-          <div className={cn("p-3 space-y-3 border-t border-border", contentClassName)}>
+          <div className={cn('p-3 space-y-3 border-t border-border', contentClassName)}>
             {children}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -211,27 +209,31 @@ export function CollapsibleSection({
  * </CollapsibleGroup>
  */
 export interface CollapsibleGroupProps {
-  children: React.ReactNode
-  className?: string
-  showExpandAll?: boolean
+  children: React.ReactNode;
+  className?: string;
+  showExpandAll?: boolean;
 }
 
-export function CollapsibleGroup({ children, className, showExpandAll = true }: CollapsibleGroupProps) {
-  const [expandAll, setExpandAll] = useState(false)
+export function CollapsibleGroup({
+  children,
+  className,
+  showExpandAll = true,
+}: CollapsibleGroupProps) {
+  const [expandAll, setExpandAll] = useState(false);
 
   // Clone children and inject expandAll state
-  const enhancedChildren = React.Children.map(children, child => {
+  const enhancedChildren = React.Children.map(children, (child) => {
     if (React.isValidElement(child) && child.type === CollapsibleSection) {
       return React.cloneElement(child, {
         key: (child.props as CollapsibleSectionProps).title,
         defaultOpen: expandAll || (child.props as CollapsibleSectionProps).defaultOpen,
-      } as Partial<CollapsibleSectionProps>)
+      } as Partial<CollapsibleSectionProps>);
     }
-    return child
-  })
+    return child;
+  });
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn('space-y-3', className)}>
       {/* Expand All / Collapse All button */}
       {showExpandAll && (
         <div className="flex justify-end">
@@ -246,7 +248,78 @@ export function CollapsibleGroup({ children, className, showExpandAll = true }: 
 
       {enhancedChildren}
     </div>
-  )
+  );
+}
+
+/**
+ * PanelSection — Section accordéon pour les panneaux latéraux (UnifiedPanel).
+ *
+ * Utilise les classes CSS `sp-sec` / `sp-lbl` définies dans studio.css.
+ * Remplace les définitions locales dupliquées dans AudioSection, BackgroundsSection, TextSection.
+ *
+ * @example
+ * <PanelSection title="Musique" id="audio-music" badge="2 pistes">
+ *   ...
+ * </PanelSection>
+ */
+export function PanelSection({
+  title,
+  id,
+  badge,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  id: string;
+  badge?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="sp-sec">
+      <button
+        type="button"
+        className="sp-lbl w-full flex items-center"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={`${id}-panel`}
+      >
+        <span className="flex-1">{title}</span>
+        {badge && (
+          <span className="ml-2 text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-10)] px-2 py-0.5 rounded-full normal-case tracking-normal">
+            {badge}
+          </span>
+        )}
+        <svg
+          aria-hidden="true"
+          style={{
+            width: 12,
+            height: 12,
+            flexShrink: 0,
+            marginLeft: badge ? 4 : 'auto',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.18s ease',
+          }}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div
+        id={`${id}-panel`}
+        className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="pt-2">{children}</div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 /**
@@ -254,13 +327,13 @@ export function CollapsibleGroup({ children, className, showExpandAll = true }: 
  * Works great inside CollapsibleSection
  */
 export interface FormFieldProps {
-  label?: string
-  htmlFor?: string
-  error?: string
-  description?: string
-  required?: boolean
-  children: React.ReactNode
-  className?: string
+  label?: string;
+  htmlFor?: string;
+  error?: string;
+  description?: string;
+  required?: boolean;
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function FormField({
@@ -273,13 +346,10 @@ export function FormField({
   className,
 }: FormFieldProps) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn('space-y-1.5', className)}>
       {/* Label */}
       {label && (
-        <label
-          htmlFor={htmlFor}
-          className="block text-xs font-semibold text-muted-foreground"
-        >
+        <label htmlFor={htmlFor} className="block text-xs font-semibold text-muted-foreground">
           {label}
           {required && <span className="text-red-400 ml-1">*</span>}
         </label>
@@ -292,7 +362,11 @@ export function FormField({
       {error ? (
         <p className="text-xs text-red-400 flex items-center gap-1">
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
           </svg>
           {error}
         </p>
@@ -300,5 +374,5 @@ export function FormField({
         <p className="text-xs text-muted-foreground">{description}</p>
       ) : null}
     </div>
-  )
+  );
 }

@@ -40,8 +40,10 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
       aria-selected={selected}
       tabIndex={0}
       style={{
-        background: themeColors.bgGradient || themeColors.bg,
-        borderColor: selected ? COLORS.SELECTED : themeColors.border,
+        background: themeColors.headerBg
+          ? `linear-gradient(135deg, ${themeColors.headerBg}cc, ${themeColors.headerBg}88)`
+          : (themeColors.bgGradient || themeColors.bg),
+        borderColor: selected ? COLORS.SELECTED : (themeColors.headerBg || themeColors.border),
         borderWidth: selected ? '3px' : '2px',
         borderStyle: 'dashed',
         borderRadius: `${sizes.nodeBorderRadius}px`,

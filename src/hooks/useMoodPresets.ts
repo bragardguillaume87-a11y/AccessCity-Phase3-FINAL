@@ -1,16 +1,15 @@
 /**
- * useMoodPresets - Hook providing common mood presets for characters
+ * useMoodPresets - Hook fournissant les presets d'humeur pour les personnages
  *
- * This hook returns a curated list of mood templates that can be used
- * for character expressions throughout the application. Each preset
- * includes an ID, human-readable label, emoji icon, and description.
+ * Retourne une liste de templates d'humeur utilisables dans tout l'éditeur.
+ * Chaque preset contient : ID (clé technique), label (FR), emoji et description (FR).
  *
- * @returns {ReadonlyArray<MoodPreset>} Array of mood preset configurations
+ * @returns {ReadonlyArray<MoodPreset>} Tableau de configurations de presets
  *
  * @example
  * ```typescript
  * const presets = useMoodPresets();
- * console.log(presets[0]); // { id: 'neutral', label: 'Neutral', emoji: '😐', ... }
+ * console.log(presets[0]); // { id: 'neutral', label: 'Neutre', emoji: '😐', ... }
  * ```
  */
 
@@ -18,18 +17,18 @@ import type { MoodPreset } from '@/types';
 
 // Mood presets constant (used by both hook and utility functions)
 const MOOD_PRESETS: readonly MoodPreset[] = [
-  { id: 'neutral', label: 'Neutral', emoji: '😐', description: 'Default, calm expression' },
-  { id: 'happy', label: 'Happy', emoji: '😊', description: 'Positive, cheerful mood' },
-  { id: 'sad', label: 'Sad', emoji: '😢', description: 'Sorrowful, downcast expression' },
-  { id: 'angry', label: 'Angry', emoji: '😠', description: 'Frustrated, upset mood' },
-  { id: 'surprised', label: 'Surprised', emoji: '😲', description: 'Shocked, astonished expression' },
-  { id: 'confused', label: 'Confused', emoji: '😕', description: 'Puzzled, uncertain mood' },
-  { id: 'scared', label: 'Scared', emoji: '😨', description: 'Fearful, frightened expression' },
-  { id: 'excited', label: 'Excited', emoji: '🤩', description: 'Energetic, enthusiastic mood' },
-  { id: 'professional', label: 'Professional', emoji: '👔', description: 'Formal, business-like demeanor' },
-  { id: 'helpful', label: 'Helpful', emoji: '🤝', description: 'Supportive, friendly attitude' },
-  { id: 'tired', label: 'Tired', emoji: '😴', description: 'Exhausted, weary expression' },
-  { id: 'thoughtful', label: 'Thoughtful', emoji: '🤔', description: 'Contemplative, pensive mood' }
+  { id: 'neutral',      label: 'Neutre',        emoji: '😐', description: 'Expression calme, par défaut' },
+  { id: 'happy',        label: 'Joyeux',         emoji: '😊', description: 'Humeur positive et joyeuse' },
+  { id: 'sad',          label: 'Triste',         emoji: '😢', description: 'Expression abattue, mélancolique' },
+  { id: 'angry',        label: 'En colère',      emoji: '😠', description: 'Humeur frustrée, irritée' },
+  { id: 'surprised',    label: 'Surpris',        emoji: '😲', description: 'Expression choquée, étonnée' },
+  { id: 'confused',     label: 'Confus',         emoji: '😕', description: 'Humeur perplexe, incertaine' },
+  { id: 'scared',       label: 'Effrayé',        emoji: '😨', description: 'Expression apeurée, craintive' },
+  { id: 'excited',      label: 'Enthousiaste',   emoji: '🤩', description: 'Humeur dynamique, pleine d\'énergie' },
+  { id: 'professional', label: 'Professionnel',  emoji: '👔', description: 'Attitude formelle et sérieuse' },
+  { id: 'helpful',      label: 'Serviable',      emoji: '🤝', description: 'Attitude amicale et coopérative' },
+  { id: 'tired',        label: 'Fatigué',        emoji: '😴', description: 'Expression épuisée, lasse' },
+  { id: 'thoughtful',   label: 'Pensif',         emoji: '🤔', description: 'Humeur contemplative, réfléchie' },
 ] as const;
 
 export function useMoodPresets(): readonly MoodPreset[] {
@@ -37,43 +36,44 @@ export function useMoodPresets(): readonly MoodPreset[] {
 }
 
 /**
- * Get a specific mood preset by ID
+ * Retourne un preset par son ID.
+ * Retourne undefined si l'ID est inconnu.
  *
- * Retrieves a single mood preset matching the provided ID.
- * Returns undefined if no preset with the given ID exists.
- *
- * @param {string} id - The unique identifier of the mood preset
- * @returns {MoodPreset | undefined} The matching mood preset or undefined
+ * @param {string} id - Identifiant technique du preset (ex: 'happy')
+ * @returns {MoodPreset | undefined} Le preset correspondant, ou undefined
  *
  * @example
  * ```typescript
  * const happy = getMoodPreset('happy');
+ * console.log(happy?.label); // 'Joyeux'
  * console.log(happy?.emoji); // '😊'
- *
- * const invalid = getMoodPreset('nonexistent');
- * console.log(invalid); // undefined
  * ```
  */
-export function getMoodPreset(id: string): MoodPreset | undefined {
+function getMoodPreset(id: string): MoodPreset | undefined {
   return MOOD_PRESETS.find((preset) => preset.id === id);
 }
 
 /**
- * Check if a mood ID is a common preset
+ * Retourne le label traduit pour un mood ID.
+ * Si l'ID ne correspond à aucun preset, retourne l'ID lui-même (capitalisé).
  *
- * Validates whether the provided ID corresponds to one of the
- * predefined mood presets available in the system.
- *
- * @param {string} id - The mood identifier to check
- * @returns {boolean} True if the ID matches a preset, false otherwise
- *
- * @example
- * ```typescript
- * isPresetMood('happy'); // true
- * isPresetMood('custom_mood'); // false
- * isPresetMood(''); // false
- * ```
+ * @param {string} id - Identifiant du mood
+ * @returns {string} Label en français (ex: "Joyeux") ou l'ID en fallback
  */
-export function isPresetMood(id: string): boolean {
-  return MOOD_PRESETS.some((preset) => preset.id === id);
+export function getMoodLabel(id: string): string {
+  const preset = getMoodPreset(id);
+  if (preset) return preset.label;
+  // Fallback : capitalise l'ID pour les humeurs custom non-preset
+  return id.charAt(0).toUpperCase() + id.slice(1);
+}
+
+/**
+ * Retourne l'emoji pour un mood ID.
+ * Fallback : '💭' pour les humeurs custom.
+ *
+ * @param {string} id - Identifiant du mood
+ * @returns {string} Emoji (ex: '😊') ou '💭' en fallback
+ */
+export function getMoodEmoji(id: string): string {
+  return getMoodPreset(id)?.emoji ?? '💭';
 }

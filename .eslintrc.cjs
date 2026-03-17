@@ -36,11 +36,11 @@ module.exports = {
     'react/prop-types': 'off', // Not needed with TypeScript
     'react/react-in-jsx-scope': 'off', // Not needed with React 17+
     'react/jsx-no-target-blank': 'warn',
-    'react/no-unescaped-entities': 'warn', // Apostrophes in JSX text
+    'react/no-unescaped-entities': 'off', // Désactivé — texte français avec apostrophes légitimes
 
     // React Hooks
     'react-hooks/rules-of-hooks': 'error',
-    'react-hooks/exhaustive-deps': 'warn',
+    'react-hooks/exhaustive-deps': 'error', // Sprint A2 : promu warn→error (tous les cas existants sont documentés avec raison)
 
     // Accessibility (warnings - to be fixed progressively)
     'jsx-a11y/no-autofocus': 'warn',
@@ -71,6 +71,20 @@ module.exports = {
     'no-unused-vars': 'off',
     'no-debugger': 'warn',
     'prefer-const': 'warn',
+
+    // Anti-hardcoding — couleur primaire doit passer par CSS tokens (tokens.css)
+    // Sprint B1 fixera les violations existantes ; cette règle bloque les nouvelles
+    'no-restricted-syntax': [
+      'warn',
+      {
+        selector: "Literal[value=/rgba\\(139,92,246/]",
+        message: "🎨 Utiliser var(--color-primary-*) depuis tokens.css au lieu de rgba(139,92,246,...)"
+      },
+      {
+        selector: "TemplateElement[value.raw=/rgba\\(139,92,246/]",
+        message: "🎨 Utiliser var(--color-primary-*) depuis tokens.css au lieu de rgba(139,92,246,...)"
+      }
+    ],
   },
   ignorePatterns: [
     'dist',
@@ -80,5 +94,16 @@ module.exports = {
     '*.config.cjs',
     'vite.config.js',
     'tools/',
+  ],
+  // Overrides pour fichiers spécifiques
+  overrides: [
+    {
+      // React Three Fiber — propriétés JSX inconnues du plugin react standard
+      // (ambientLight, directionalLight, pointLight, mesh, geometry, material…)
+      files: ['**/DiceCubeR3F.tsx', '**/CinematicPreviewCanvas.tsx'],
+      rules: {
+        'react/no-unknown-property': 'off',
+      },
+    },
   ],
 };

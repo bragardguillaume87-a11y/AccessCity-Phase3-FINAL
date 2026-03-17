@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import { setupAutoSave } from '../utils/storeSubscribers';
 import type { Character } from '../types';
 
@@ -21,6 +22,9 @@ interface CharactersState {
   addCharacter: () => string;
   updateCharacter: (updated: Partial<Character> & { id: string }) => void;
   deleteCharacter: (charId: string) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importCharacters: (characters: Character[]) => void;
 
   // Helpers (selectors)
   getCharacterById: (charId: string) => Character | undefined;
@@ -98,6 +102,10 @@ export const useCharactersStore = create<CharactersState>()(
             }), false, 'characters/deleteCharacter');
           },
 
+          importCharacters: (characters) => {
+            set(() => ({ characters }), false, 'characters/importCharacters');
+          },
+
           // Helpers (selectors)
           getCharacterById: (charId) => {
             return get().characters.find((c) => c.id === charId);
@@ -113,8 +121,8 @@ export const useCharactersStore = create<CharactersState>()(
     ),
     {
       limit: 50,
-      // PERFORMANCE: Only compare reference equality (fast)
-      equality: (pastState, currentState) => pastState === currentState,
+      // PERFORMANCE: Shallow equality — compare chaque champ de l'état partialisé
+      equality: shallow,
       // PERFORMANCE: Only track 'characters' in undo history (not actions)
       // @ts-expect-error - Zundo partialize expects subset of state (this is correct behavior)
       partialize: (state) => ({

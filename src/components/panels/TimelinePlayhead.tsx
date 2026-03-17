@@ -1,42 +1,36 @@
 import * as React from "react"
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { getDialogueCumulativeTimes } from '@/utils/dialogueDuration'
+import { useIsKidMode } from '@/hooks/useIsKidMode'
 import type { Dialogue } from '@/types'
 
 /**
- * TimelinePlayhead - Timeline scrubber at bottom of canvas (Powtoon-style)
+ * TimelinePlayhead — Design premium "Midnight Bloom" (studio.css classes)
  *
  * Features:
- * - Scrub preview (drag playhead to navigate time)
- * - Play/Pause button
- * - Timecode display (00:00)
- * - Dialogue markers (small dots on timeline)
- * - Scene duration indicator
+ * - Scrub preview (drag playhead) avec magnetic snap sur les marqueurs
+ * - Snap ripple haptics (framer-motion AnimatePresence)
+ * - Scrubber animé au survol (spring whileHover)
+ * - Markers dialogue (normal) et choice (rose)
+ * - Zoom canvas
  */
 
+const SNAP_RADIUS = 4 // % de tolérance pour l'aimantation
+
+interface Ripple { id: number; pct: number; isChoice: boolean }
+
 export interface TimelinePlayheadProps {
-  /** Current playback time in seconds */
   currentTime?: number
-  /** Total scene duration in seconds */
   duration?: number
-  /** Array of dialogues with timestamps */
   dialogues?: Dialogue[]
-  /** Callback when user scrubs timeline */
   onSeek?: (time: number) => void
-  /** Callback when play/pause is toggled */
   onPlayPause?: () => void
-  /** Whether preview is currently playing */
   isPlaying?: boolean
-  /** Canvas zoom level (1.0 = 100%) */
   canvasZoom?: number
-  /** Zoom in one step */
   onZoomIn?: () => void
-  /** Zoom out one step */
   onZoomOut?: () => void
-  /** Reset zoom to 100% */
   onResetZoom?: () => void
 }
 
@@ -53,48 +47,100 @@ export default function TimelinePlayhead({
   onResetZoom,
 }: TimelinePlayheadProps) {
   const [isDragging, setIsDragging] = useState(false)
-  const timelineRef = useRef<HTMLDivElement | null>(null)
+  const [ripples, setRipples] = useState<Ripple[]>([])
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const isKid = useIsKidMode()
 
-  // Format time as MM:SS
+  // Format time MM:SS
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Calculate playhead position (0-100%)
-  const playheadPosition = duration > 0 ? (currentTime / duration) * 100 : 0
+  // Position scrubber (0-100%)
+  const playheadPct = duration > 0 ? (currentTime / duration) * 100 : 0
 
-  // Handle playhead drag
-  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!timelineRef.current) return
+  // Marqueurs positionnés par durée cumulée réelle
+  const dialogueMarkers = useMemo(() => {
+    if (dialogues.length === 0 || duration <= 0) return []
+    const times = getDialogueCumulativeTimes(dialogues)
+    return dialogues.map((dialogue, idx) => {
+      const t = times[idx] ?? 0
+      return {
+        id: dialogue.id || idx,
+        idx,
+        time: t,
+        pct: Math.min(99, (t / duration) * 100),
+        isChoice: (dialogue.choices?.length ?? 0) > 0,
+        preview: dialogue.text?.substring(0, 60) || 'Dialogue',
+      }
+    })
+  }, [dialogues, duration])
 
-    const rect = timelineRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100))
-    const newTime = (percentage / 100) * duration
+  // Snap ripple
+  const fireRipple = useCallback((pct: number, isChoice: boolean) => {
+    const id = Date.now()
+    setRipples((prev) => [...prev, { id, pct, isChoice }])
+    setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 520)
+  }, [])
 
-    onSeek(newTime)
-  }
+  // Récupère le % brut depuis un clientX
+  const getPct = useCallback((clientX: number): number => {
+    const rect = trackRef.current?.getBoundingClientRect()
+    if (!rect) return 0
+    return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+  }, [])
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    setIsDragging(true)
-    handleTimelineClick(e)
-  }
+  // Convertit un % → secondes et appelle onSeek
+  const seekToPct = useCallback((pct: number) => {
+    onSeek((pct / 100) * duration)
+  }, [duration, onSeek])
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging && timelineRef.current) {
-      const rect = timelineRef.current.getBoundingClientRect()
-      const clickX = e.clientX - rect.left
-      const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100))
-      const newTime = (percentage / 100) * duration
-      onSeek(newTime)
+  // Après release : tente de snapper au marqueur le plus proche
+  const trySnap = useCallback((rawPct: number) => {
+    const nearest = dialogueMarkers.reduce<typeof dialogueMarkers[0] | null>((acc, m) => {
+      const d = Math.abs(rawPct - m.pct)
+      if (d > SNAP_RADIUS) return acc
+      if (!acc || d < Math.abs(rawPct - acc.pct)) return m
+      return acc
+    }, null)
+
+    if (nearest) {
+      seekToPct(nearest.pct)
+      fireRipple(nearest.pct, nearest.isChoice)
+    } else {
+      seekToPct(rawPct)
     }
-  }
+  }, [dialogueMarkers, seekToPct, fireRipple])
 
-  const handleMouseUp = () => {
+  // Handlers drag
+  // Prev / Next dialogue marker
+  const handlePrevDialogue = useCallback(() => {
+    if (dialogueMarkers.length === 0) { onSeek(0); return; }
+    const prev = [...dialogueMarkers].reverse().find(m => m.time < currentTime - 0.1);
+    onSeek(prev ? prev.time : 0);
+  }, [dialogueMarkers, currentTime, onSeek]);
+
+  const handleNextDialogue = useCallback(() => {
+    if (dialogueMarkers.length === 0) { onSeek(duration); return; }
+    const next = dialogueMarkers.find(m => m.time > currentTime + 0.1);
+    onSeek(next ? next.time : duration);
+  }, [dialogueMarkers, currentTime, duration, onSeek]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true)
+    seekToPct(getPct(e.clientX))
+  }, [getPct, seekToPct])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    seekToPct(getPct(e.clientX))
+  }, [getPct, seekToPct])
+
+  const handleMouseUp = useCallback((e: MouseEvent) => {
     setIsDragging(false)
-  }
+    trySnap(getPct(e.clientX))
+  }, [getPct, trySnap])
 
   useEffect(() => {
     if (isDragging) {
@@ -105,71 +151,59 @@ export default function TimelinePlayhead({
         window.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isDragging, duration, onSeek])
-
-  // Calculate dialogue marker positions based on estimated reading duration
-  const dialogueMarkers = useMemo(() => {
-    if (dialogues.length === 0 || duration <= 0) return []
-    const times = getDialogueCumulativeTimes(dialogues)
-    return dialogues.map((dialogue, idx) => ({
-      id: dialogue.id || idx,
-      idx,
-      time: times[idx] ?? 0,
-      position: Math.min(99, (times[idx] ?? 0) / duration * 100),
-      preview: dialogue.text?.substring(0, 60) || 'Dialogue',
-    }))
-  }, [dialogues, duration])
+  }, [isDragging, handleMouseMove, handleMouseUp])
 
   return (
     <div
-      className="h-16 bg-[var(--color-bg-elevated)] border-t-2 border-[var(--color-border-base)] flex items-center gap-4 px-4"
+      className="timeline"
       role="region"
       aria-label="Timeline controls"
     >
-      {/* Play/Pause Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onPlayPause}
-        className="flex-shrink-0 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
-        aria-label={isPlaying ? 'Pause preview' : 'Play preview'}
-      >
-        {isPlaying ? (
-          <Pause className="h-5 w-5 text-[var(--color-primary)]" aria-hidden="true" />
-        ) : (
-          <Play className="h-5 w-5 text-[var(--color-text-secondary)]" aria-hidden="true" />
-        )}
-      </Button>
-
-      {/* Skip Backward */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onSeek(Math.max(0, currentTime - 5))}
-        className="flex-shrink-0 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
-        aria-label="Skip backward 5 seconds"
-      >
-        <SkipBack className="h-4 w-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
-      </Button>
-
-      {/* Timecode Display */}
-      <div className="flex-shrink-0 flex items-center gap-2 font-mono text-sm text-[var(--color-text-primary)] bg-[var(--color-bg-base)] px-3 py-1 rounded-md border border-[var(--color-border-base)]">
-        <span aria-label="Current time">{formatTime(currentTime)}</span>
-        <span className="text-[var(--color-text-muted)]">/</span>
-        <span aria-label="Total duration">{formatTime(duration)}</span>
+      {/* ── Transport ── */}
+      <div className="tl-ctrl">
+        <button
+          className="tl-btn"
+          onClick={handlePrevDialogue}
+          title="Dialogue précédent"
+          aria-label="Dialogue précédent"
+        >
+          <SkipBack size={11} aria-hidden="true" />
+        </button>
+        <button
+          className={`tl-btn play`}
+          onClick={onPlayPause}
+          aria-label={isPlaying ? 'Pause' : 'Lecture'}
+        >
+          {isPlaying
+            ? <Pause size={12} aria-hidden="true" />
+            : <Play size={12} aria-hidden="true" />
+          }
+        </button>
+        <button
+          className="tl-btn"
+          onClick={handleNextDialogue}
+          title="Dialogue suivant"
+          aria-label="Dialogue suivant"
+        >
+          <SkipForward size={11} aria-hidden="true" />
+        </button>
       </div>
 
-      {/* Timeline Track */}
+      {/* ── Timecode ── */}
+      <span className="tl-time" aria-label={`${formatTime(currentTime)} sur ${formatTime(duration)}`}>
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
+
+      {/* ── Track ── */}
       <div
-        ref={timelineRef}
-        className="flex-1 h-8 relative cursor-pointer group"
+        className="tl-track-wrap"
         onMouseDown={handleMouseDown}
         role="slider"
         aria-label="Timeline scrubber"
         aria-valuemin={0}
         aria-valuemax={duration}
         aria-valuenow={currentTime}
-        aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+        aria-valuetext={`${formatTime(currentTime)} sur ${formatTime(duration)}`}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'ArrowLeft') onSeek(Math.max(0, currentTime - 1))
@@ -178,94 +212,96 @@ export default function TimelinePlayhead({
           if (e.key === 'End') onSeek(duration)
         }}
       >
-        {/* Track Background */}
-        <div className="absolute inset-0 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded-full" />
+        <div className="tl-track" ref={trackRef}>
+          {/* Barre de progression */}
+          <div className="tl-progress" style={{ width: `${playheadPct}%` }} aria-hidden="true" />
 
-        {/* Progress Bar (filled portion) */}
-        <div
-          className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-full transition-all"
-          style={{ width: `${playheadPosition}%` }}
-          aria-hidden="true"
-        />
+          {/* Marqueurs dialogue/choix */}
+          {dialogueMarkers.map((marker) => (
+            <button
+              key={marker.id}
+              type="button"
+              className={[
+                'tl-marker',
+                marker.isChoice ? 'choice' : '',
+                Math.abs(marker.pct - playheadPct) < 0.5 ? 'active' : '',
+              ].filter(Boolean).join(' ')}
+              style={{ left: `${marker.pct}%` }}
+              title={`${marker.isChoice ? '⇌ Choix' : '◆ Dialogue'} #${marker.idx + 1} — ${formatTime(marker.time)}`}
+              aria-label={`Dialogue ${marker.idx + 1} à ${formatTime(marker.time)}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onSeek(marker.time)
+                fireRipple(marker.pct, marker.isChoice)
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                onSeek(marker.time)
+                fireRipple(marker.pct, marker.isChoice)
+                if (!isPlaying) onPlayPause()
+              }}
+            />
+          ))}
 
-        {/* Dialogue Markers — click = seek + select, double-click = seek + play */}
-        {dialogueMarkers.map((marker) => (
-          <button
-            key={marker.id}
-            type="button"
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] hover:bg-white hover:scale-150 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            style={{ left: `${marker.position}%` }}
-            title={`#${marker.idx + 1} — ${marker.preview}`}
-            aria-label={`Dialogue ${marker.idx + 1} à ${formatTime(marker.time)}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              onSeek(marker.time)
-            }}
-            onDoubleClick={(e) => {
-              e.stopPropagation()
-              onSeek(marker.time)
-              if (!isPlaying) onPlayPause()
-            }}
+          {/* Scrubber animé (framer-motion spring) */}
+          <motion.div
+            className="tl-scrubber"
+            style={{ left: `${playheadPct}%` }}
+            whileHover={{ scale: 1.3 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            aria-hidden="true"
           />
-        ))}
 
-        {/* Playhead (draggable indicator) */}
-        <div
-          className={cn(
-            "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 border-white shadow-lg transition-all z-10",
-            isDragging
-              ? "bg-[var(--color-primary)] scale-125 shadow-[var(--shadow-game-glow)] cursor-grabbing"
-              : "bg-[var(--color-primary)] hover:scale-110 cursor-grab group-hover:shadow-[var(--color-primary-glow)]"
-          )}
-          style={{ left: `${playheadPosition}%` }}
-          aria-hidden="true"
-        />
+          {/* Snap ripples — feedback haptique visuel */}
+          <AnimatePresence>
+            {ripples.map((r) => (
+              <motion.div
+                key={r.id}
+                className="tl-ripple"
+                style={{
+                  left: `${r.pct}%`,
+                  background: r.isChoice ? 'var(--color-pink)' : 'var(--color-primary)',
+                }}
+                initial={{ width: 0, height: 0, opacity: 0.55, x: '-50%', y: '-50%' }}
+                animate={{ width: 32, height: 32, opacity: 0,  x: '-50%', y: '-50%' }}
+                exit={{}}
+                transition={{ duration: 0.48, ease: 'easeOut' }}
+                aria-hidden="true"
+              />
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* Skip Forward */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onSeek(Math.min(duration, currentTime + 5))}
-        className="flex-shrink-0 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
-        aria-label="Skip forward 5 seconds"
-      >
-        <SkipForward className="h-4 w-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
-      </Button>
+      {/* ── Méta ── */}
+      <span className="tl-meta">
+        {dialogues.length} dial.{isKid ? '' : ''}
+      </span>
 
-      {/* Scene Progress Indicator */}
-      <div className="flex-shrink-0 text-xs text-[var(--color-text-muted)]">
-        {dialogues.length} dialogue{dialogues.length !== 1 ? 's' : ''}
-      </div>
-
-      {/* Canvas Zoom Controls — style Powtoon */}
-      <div className="flex-shrink-0 flex items-center gap-1 border-l border-[var(--color-border-base)] pl-3">
-        <Button
-          variant="ghost"
-          size="icon"
+      {/* ── Zoom canvas ── */}
+      <div className="tl-zoom">
+        <button
+          className="tl-btn"
           onClick={onZoomOut}
-          className="h-7 w-7 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
           aria-label="Zoom arrière canvas"
         >
-          <ZoomOut className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
-        </Button>
+          <ZoomOut size={12} aria-hidden="true" />
+        </button>
         <button
-          className="text-xs font-mono w-10 text-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors rounded px-1"
+          className="tl-zoom-val"
           onClick={onResetZoom}
-          title="Réinitialiser le zoom à 100%"
-          aria-label={`Zoom canvas : ${Math.round(canvasZoom * 100)}%, cliquer pour réinitialiser`}
+          title="Réinitialiser le zoom"
+          aria-label={`Zoom ${Math.round(canvasZoom * 100)}%, cliquer pour réinitialiser`}
         >
           {Math.round(canvasZoom * 100)}%
         </button>
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          className="tl-btn"
           onClick={onZoomIn}
-          className="h-7 w-7 hover:bg-[var(--color-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
           aria-label="Zoom avant canvas"
         >
-          <ZoomIn className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
-        </Button>
+          <ZoomIn size={12} aria-hidden="true" />
+        </button>
       </div>
     </div>
   )

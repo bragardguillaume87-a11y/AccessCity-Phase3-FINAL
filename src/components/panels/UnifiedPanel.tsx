@@ -1,10 +1,21 @@
 import { useCallback } from 'react';
-import { Image, Type, Users, Package, Volume2, LayoutTemplate, MessageSquare, Sparkles } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import {
+  Image,
+  Type,
+  Users,
+  Package,
+  Volume2,
+  LayoutTemplate,
+  MessageSquare,
+  Sparkles,
+} from 'lucide-react';
 import { useUIStore } from '@/stores';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import type { SectionId } from '@/types';
 
 /**
- * UnifiedPanel — Barre d'icônes fixe 64px (style Powtoon).
+ * UnifiedPanel — Barre d'icônes fixe (style Powtoon).
  *
  * Architecture 4-panneaux :
  *   Panel gauche   (Explorer/LeftPanel)
@@ -13,16 +24,20 @@ import type { SectionId } from '@/types';
  *   Panel icônes   (UnifiedPanel — ce composant, toujours 64px)
  *
  * activeSection est lu depuis uiStore directement — plus de prop drilling.
+ * Chaque bouton a un Radix Tooltip (side="left") pour l'accessibilité.
  */
 
-const SECTIONS = [
-  { id: 'backgrounds' as SectionId, icon: Image,         label: 'Fond'     },
-  { id: 'text'        as SectionId, icon: Type,          label: 'Texte'    },
-  { id: 'characters'  as SectionId, icon: Users,         label: 'Persos'   },
-  { id: 'objects'     as SectionId, icon: Package,       label: 'Objets'   },
-  { id: 'audio'       as SectionId, icon: Volume2,       label: 'Audio'    },
-  { id: 'dialogue'    as SectionId, icon: MessageSquare, label: 'Dialogue' },
-  { id: 'effects'     as SectionId, icon: Sparkles,      label: 'Effets'   },
+type SectionEntry = { id: SectionId; icon: React.FC<{ size?: number }>; label: string } | null;
+
+const SECTIONS: SectionEntry[] = [
+  { id: 'backgrounds', icon: Image, label: 'Fond' },
+  { id: 'audio', icon: Volume2, label: 'Audio' },
+  { id: 'characters', icon: Users, label: 'Persos' },
+  { id: 'objects', icon: Package, label: 'Objets' },
+  null, // séparateur
+  { id: 'dialogue', icon: MessageSquare, label: 'Dialogue' },
+  { id: 'text', icon: Type, label: 'Texte' },
+  { id: 'effects', icon: Sparkles, label: 'Effets' },
 ];
 
 export interface UnifiedPanelProps {
@@ -31,7 +46,14 @@ export interface UnifiedPanelProps {
 }
 
 export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
-  const activeSection = useUIStore(s => s.activeSection);
+  const activeSection = useUIStore((s) => s.activeSection);
+  const isKid = useIsKidMode();
+
+  // En mode kid, masquer uniquement les effets d'animation (trop complexes pour élèves).
+  // Audio reste visible — les élèves ont besoin d'ajouter de la musique à leurs scènes.
+  const sections = isKid
+    ? SECTIONS.filter((entry) => entry === null || entry.id !== 'effects')
+    : SECTIONS;
 
   const handleIconClick = useCallback((id: SectionId) => {
     const { activeSection: current, setActiveSection } = useUIStore.getState();
@@ -39,54 +61,102 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
   }, []);
 
   return (
-    <div
-      className="h-full w-full flex flex-col items-center bg-[var(--color-bg-base)]"
-      role="toolbar"
-      aria-label="Outils d'édition de scène"
-    >
-      {/* En-tête identité */}
-      <div className="flex-shrink-0 w-full flex items-center justify-center h-9 border-b border-[var(--color-border-base)]">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-secondary)] select-none">
-          Ajouter
-        </span>
-      </div>
-
-      {/* Boutons icônes */}
-      <div className="flex-1 flex flex-col items-center gap-1 py-2 w-full">
-        {SECTIONS.map(({ id, icon: Icon, label }) => (
-          <button
-            key={id}
-            onClick={() => handleIconClick(id)}
-            className={[
-              'flex flex-col items-center gap-1.5 w-full py-3.5 px-2 rounded-lg transition-all',
-              activeSection === id
-                ? 'bg-[var(--color-primary)] text-white'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]',
-            ].join(' ')}
-            aria-pressed={activeSection === id}
-            aria-label={label}
-            title={label}
+    <Tooltip.Provider delayDuration={400}>
+      <div
+        className="h-full w-full flex flex-col items-center bg-[var(--color-bg-elevated)]"
+        role="toolbar"
+        aria-label="Outils d'édition de scène"
+      >
+        {/* En-tête identité */}
+        <div className="flex-shrink-0 w-full flex items-center justify-center h-9 border-b border-[var(--color-border-base)]">
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'var(--color-text-primary)',
+              userSelect: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
           >
-            <Icon className="w-6 h-6" aria-hidden="true" />
-            <span className="text-xs leading-none font-semibold">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Bouton reset layout — bas de la barre */}
-      {onResetLayout && (
-        <div className="flex-shrink-0 w-full border-t border-[var(--color-border-base)] py-1">
-          <button
-            onClick={onResetLayout}
-            className="flex flex-col items-center gap-0.5 w-full py-2 px-1 rounded transition-all text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
-            title="Réinitialiser les proportions des panneaux"
-            aria-label="Réinitialiser les proportions des panneaux"
-          >
-            <LayoutTemplate className="w-5 h-5" aria-hidden="true" />
-            <span className="text-[10px] leading-none font-semibold">Reset</span>
-          </button>
+            <span
+              style={{
+                width: 3,
+                height: 10,
+                borderRadius: 2,
+                background: 'var(--color-primary)',
+                display: 'inline-block',
+                flexShrink: 0,
+              }}
+            />
+            Outils
+          </span>
         </div>
-      )}
-    </div>
+
+        {/* Boutons icônes — classes toolbar-btn de studio.css + Radix Tooltip */}
+        <div className="flex-1 flex flex-col items-center py-2 w-full">
+          {sections.map((entry, i) => {
+            // Séparateur
+            if (entry === null) {
+              return <div key={`sep-${i}`} className="toolbar-sep" aria-hidden="true" />;
+            }
+
+            const { id, icon: Icon, label } = entry;
+            const isActive = activeSection === id;
+
+            return (
+              <Tooltip.Root key={id}>
+                <Tooltip.Trigger asChild>
+                  <button
+                    onClick={() => handleIconClick(id)}
+                    className={`toolbar-btn${isActive ? ' active' : ''}`}
+                    aria-pressed={isActive}
+                    aria-label={label}
+                  >
+                    <Icon size={22} aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content side="left" className="toolbar-tooltip" sideOffset={8}>
+                    {label}
+                    <Tooltip.Arrow className="toolbar-tooltip-arrow" />
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            );
+          })}
+        </div>
+
+        {/* Séparateur + Reset layout */}
+        {onResetLayout && (
+          <>
+            <div className="toolbar-sep" aria-hidden="true" />
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button
+                  onClick={onResetLayout}
+                  className="toolbar-btn toolbar-reset"
+                  aria-label="Réinitialiser les proportions des panneaux"
+                >
+                  <LayoutTemplate size={18} aria-hidden="true" />
+                  <span>Reset</span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content side="left" className="toolbar-tooltip" sideOffset={8}>
+                  Réinitialiser la disposition
+                  <Tooltip.Arrow className="toolbar-tooltip-arrow" />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+            <div style={{ height: 8 }} />
+          </>
+        )}
+      </div>
+    </Tooltip.Provider>
   );
 }

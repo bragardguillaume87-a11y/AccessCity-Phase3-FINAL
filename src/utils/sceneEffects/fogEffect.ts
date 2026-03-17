@@ -199,18 +199,162 @@ export function startFogEffect(canvas: HTMLCanvasElement, params: FogEffectParam
 
 // ── Canvas 2D fallback (navigateurs sans WebGL2) ──────────────────────────────
 
+interface MistHalo {
+  x: number; // position X courante (canvas pixels)
+  y: number; // position Y (fixe relative, 0–1)
+  w: number; // largeur du halo (fraction du canvas width)
+  h: number; // hauteur du halo (fraction du canvas width)
+  speed: number; // vitesse de scroll (px/frame, recalculée depuis baseSpeed)
+  alpha: number; // opacité max de ce halo (0–1)
+  baseSpeed: number; // facteur vitesse avant multiplication par params.speed
+  baseAlpha: number; // facteur alpha avant multiplication par params.opacity
+  wFrac: number; // largeur en fraction de canvas.width (pour resize)
+  hFrac: number; // hauteur en fraction de canvas.width (pour resize)
+}
+
+/** Parse une couleur hex (#rrggbb) en composantes entières 0–255. */
+function hexToRgbInt(hex: string): { r: number; g: number; b: number } {
+  const safe = hex.startsWith('#') ? hex : '#b0c8e0';
+  return {
+    r: parseInt(safe.slice(1, 3), 16),
+    g: parseInt(safe.slice(3, 5), 16),
+    b: parseInt(safe.slice(5, 7), 16),
+  };
+}
+
+function makeMistLayer(
+  count: number,
+  wFrac: number,
+  hFrac: number,
+  baseSpeed: number,
+  baseAlpha: number,
+  yMin: number,
+  yMax: number,
+  canvasW: number
+): MistHalo[] {
+  return Array.from({ length: count }, () => {
+    const w = wFrac * canvasW;
+    const h = hFrac * canvasW;
+    return {
+      x: Math.random() * canvasW,
+      y: yMin + Math.random() * (yMax - yMin),
+      w,
+      h,
+      speed: baseSpeed,
+      alpha: baseAlpha,
+      baseSpeed,
+      baseAlpha,
+      wFrac,
+      hFrac,
+    };
+  });
+}
+
+function drawHalo(
+  ctx: CanvasRenderingContext2D,
+  halo: MistHalo,
+  rgb: { r: number; g: number; b: number },
+  canvasH: number
+): void {
+  const cx = halo.x;
+  const cy = halo.y * canvasH;
+  const rx = halo.w * 0.5;
+  const ry = halo.h * 0.5;
+
+  // Use ellipse if available (all modern browsers), else fall back to scale+arc
+  ctx.save();
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+  grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${halo.alpha})`);
+  grad.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},${halo.alpha * 0.4})`);
+  grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+
+  ctx.beginPath();
+  if (typeof ctx.ellipse === 'function') {
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  } else {
+    ctx.translate(cx, cy);
+    ctx.scale(1, ry / rx);
+    ctx.arc(0, 0, rx, 0, Math.PI * 2);
+  }
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.restore();
+}
+
 function startFogFallback(canvas: HTMLCanvasElement, params: FogEffectParams): FogRenderer {
   const ctx = canvas.getContext('2d')!;
   let running = true;
   let current = { ...params };
 
-  function frame() {
+  // ── Initialise les 3 couches ────────────────────────────────────────────────
+  const w0 = canvas.width;
+
+  // Couche 1 — Nappe de fond (lente, large)
+  const layer1 = makeMistLayer(
+    4,
+    0.8,
+    0.45,
+    current.speed * 0.15,
+    current.opacity * 0.45,
+    0.3,
+    0.7,
+    w0
+  );
+  // Couche 2 — Volutes (intermédiaire)
+  const layer2 = makeMistLayer(
+    6,
+    0.45,
+    0.25,
+    current.speed * 0.32,
+    current.opacity * 0.32,
+    0.2,
+    0.8,
+    w0
+  );
+  // Couche 3 — Filaments rapides (fins)
+  const layer3 = makeMistLayer(
+    8,
+    0.25,
+    0.12,
+    current.speed * 0.55,
+    current.opacity * 0.2,
+    0.1,
+    0.9,
+    w0
+  );
+
+  /** Recalcule les tailles et vitesses après un resize. */
+  function rebuildForSize(cw: number): void {
+    function rebuild(halos: MistHalo[]): void {
+      for (const h of halos) {
+        h.w = h.wFrac * cw;
+        h.h = h.hFrac * cw;
+        // Clamp x dans les bornes valides
+        if (h.x > cw + h.w * 0.5) h.x = Math.random() * cw;
+      }
+    }
+    rebuild(layer1);
+    rebuild(layer2);
+    rebuild(layer3);
+  }
+
+  function frame(): void {
     if (!running) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = current.color;
-    ctx.globalAlpha = current.opacity * 0.5;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = 1;
+    const cw = canvas.width;
+    const ch = canvas.height;
+    ctx.clearRect(0, 0, cw, ch);
+
+    const rgb = hexToRgbInt(current.color.startsWith('#') ? current.color : '#b0c8e0');
+
+    for (const halo of [...layer1, ...layer2, ...layer3]) {
+      drawHalo(ctx, halo, rgb, ch);
+      halo.x += halo.speed;
+      // Wrap-around : si le halo est complètement sorti à droite, le remettre à gauche
+      if (halo.x - halo.w * 0.5 > cw) {
+        halo.x = -halo.w * 0.5;
+      }
+    }
+
     requestAnimationFrame(frame);
   }
 
@@ -221,9 +365,26 @@ function startFogFallback(canvas: HTMLCanvasElement, params: FogEffectParams): F
       running = false;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     },
-    resize: () => {},
+    resize: () => {
+      rebuildForSize(canvas.width);
+    },
     updateParams: (p) => {
       current = { ...p };
+      // Recalcule speeds et alphas proportionnellement aux nouvelles valeurs
+      const speedFactor = p.speed;
+      const opFactor = p.opacity;
+      for (const h of layer1) {
+        h.speed = speedFactor * 0.15;
+        h.alpha = opFactor * 0.45;
+      }
+      for (const h of layer2) {
+        h.speed = speedFactor * 0.32;
+        h.alpha = opFactor * 0.32;
+      }
+      for (const h of layer3) {
+        h.speed = speedFactor * 0.55;
+        h.alpha = opFactor * 0.2;
+      }
     },
   };
 }

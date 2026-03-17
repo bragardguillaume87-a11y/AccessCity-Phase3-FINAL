@@ -20,7 +20,7 @@ import { useSettingsStore, DEFAULT_CHARACTER_FX } from '@/stores/settingsStore';
 import type { CharacterFxSettings } from '@/stores/settingsStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { useUIStore } from '@/stores';
-import type { SceneEffectConfig, SceneEffectType } from '@/types/sceneEffect';
+import type { SceneEffectConfig, SceneEffectType, SceneEffectShared } from '@/types/sceneEffect';
 import { SCENE_EFFECT_TYPES, makeDefaultEffect } from '@/config/sceneEffects';
 
 const DEFAULT_UI_SOUNDS_VOLUME = 0.3;
@@ -180,7 +180,17 @@ function AtmosphereSection() {
     [effect, setEffect]
   );
 
+  const handleShared = useCallback(
+    (patch: Partial<SceneEffectShared>) => {
+      if (effect.type === 'none') return;
+      setEffect({ ...effect, ...patch } as SceneEffectConfig);
+    },
+    [effect, setEffect]
+  );
+
   const hasEffect = effect.type !== 'none';
+  const spriteLight = effect.type !== 'none' ? (effect.spriteLight ?? 'off') : 'off';
+  const cssFilter = effect.type !== 'none' ? (effect.cssFilter ?? false) : false;
 
   return (
     <div
@@ -533,6 +543,91 @@ function AtmosphereSection() {
                     disabled={false}
                     onChange={(v) => handleSlider('density', v)}
                   />
+                </div>
+              )}
+
+              {/* ── Lumière sprites ─────────────────────────────────────── */}
+              {hasEffect && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: '1px solid var(--color-border-subtle)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: 'var(--color-text-muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      marginBottom: 5,
+                    }}
+                  >
+                    💡 Lumière sprites
+                  </div>
+                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    {(
+                      [
+                        { value: 'off', label: 'Off' },
+                        { value: 'tint', label: 'Teinte' },
+                        { value: 'rimlight', label: 'Rim' },
+                        { value: 'both', label: 'Les deux' },
+                      ] as { value: SceneEffectShared['spriteLight']; label: string }[]
+                    ).map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleShared({ spriteLight: value })}
+                        style={{
+                          fontSize: 10,
+                          fontWeight: spriteLight === value ? 700 : 500,
+                          padding: '3px 8px',
+                          borderRadius: 5,
+                          border: `1.5px solid ${
+                            spriteLight === value
+                              ? 'var(--color-primary)'
+                              : 'var(--color-border-base)'
+                          }`,
+                          background:
+                            spriteLight === value ? 'var(--color-primary-muted)' : 'transparent',
+                          color:
+                            spriteLight === value
+                              ? 'var(--color-primary)'
+                              : 'var(--color-text-secondary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Toggle filtre CSS couleur */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 7,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: 'var(--color-text-secondary)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      🎨 Filtre couleur scène
+                    </span>
+                    <IosToggle
+                      enabled={cssFilter}
+                      onToggle={() => handleShared({ cssFilter: !cssFilter })}
+                      label="Filtre couleur scène"
+                    />
+                  </div>
                 </div>
               )}
             </>

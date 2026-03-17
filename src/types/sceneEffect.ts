@@ -86,6 +86,8 @@ export interface BloomEffectParams {
   radius: number;
   /** Seuil — bokeh actif si brightness > threshold (0.2–0.9) */
   threshold: number;
+  /** Couleur de base des halos (hex #rrggbb ou rgba(r,g,b,...)) — défaut warm gold */
+  color?: string;
 }
 
 export interface GodrayEffectParams {
@@ -115,14 +117,34 @@ export interface CharacterHitbox {
 }
 
 // ============================================================================
+// SHARED OPTIONS — disponibles sur tout effet actif
+// ============================================================================
+
+export interface SceneEffectShared {
+  /**
+   * Mode d'éclairage des sprites personnages (style Square Soft).
+   * 'tint'     → overlay coloré ambiant (SNES color math)
+   * 'rimlight' → halo de contour radial (style FF7)
+   * 'both'     → les deux combinés
+   * 'off'      → aucun effet sur les sprites (défaut)
+   */
+  spriteLight?: 'off' | 'tint' | 'rimlight' | 'both';
+  /**
+   * Active le filtre CSS recommandé pour cet effet (saturate + brightness).
+   * Appliqué par le parent (PreviewPlayer, MapCanvas) sur le fond de scène.
+   */
+  cssFilter?: boolean;
+}
+
+// ============================================================================
 // DISCRIMINATED UNION
 // ============================================================================
 
 export type SceneEffectConfig =
   | { type: 'none' }
-  | ({ type: 'rain' } & RainEffectParams)
-  | ({ type: 'drizzle' } & DrizzleEffectParams)
-  | ({ type: 'snow' } & SnowEffectParams)
-  | ({ type: 'fog' } & FogEffectParams)
-  | ({ type: 'bloom' } & BloomEffectParams)
-  | ({ type: 'godrays' } & GodrayEffectParams);
+  | ({ type: 'rain' } & RainEffectParams & SceneEffectShared)
+  | ({ type: 'drizzle' } & DrizzleEffectParams & SceneEffectShared)
+  | ({ type: 'snow' } & SnowEffectParams & SceneEffectShared)
+  | ({ type: 'fog' } & FogEffectParams & SceneEffectShared)
+  | ({ type: 'bloom' } & BloomEffectParams & SceneEffectShared)
+  | ({ type: 'godrays' } & GodrayEffectParams & SceneEffectShared);

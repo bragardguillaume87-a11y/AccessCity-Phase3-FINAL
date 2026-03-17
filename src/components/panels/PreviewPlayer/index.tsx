@@ -38,6 +38,7 @@ import { audioManager } from '../../../utils/audioManager';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
 import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
 import type { CharacterHitbox } from '@/components/ui/SceneEffectCanvas';
+import { EFFECT_CSS_FILTERS } from '@/config/sceneEffects';
 import { CinematicPlayer } from './CinematicPlayer';
 import { logger } from '@/utils/logger';
 import { GAME_STATS } from '@/i18n';
@@ -524,7 +525,17 @@ export default function PreviewPlayer({
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundColor: '#1a1a2e',
-                filter: buildFilterCSS(currentScene.backgroundFilter),
+                filter:
+                  [
+                    buildFilterCSS(currentScene.backgroundFilter),
+                    currentScene.sceneEffect?.type &&
+                    currentScene.sceneEffect.type !== 'none' &&
+                    currentScene.sceneEffect.cssFilter
+                      ? EFFECT_CSS_FILTERS[currentScene.sceneEffect.type]
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined,
               }}
             />
 

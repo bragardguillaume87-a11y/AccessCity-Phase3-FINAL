@@ -144,34 +144,51 @@ export default function SceneEffectCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // ⚠️ Initialiser les dimensions du canvas au montage (défaut HTML = 300×150)
+    const parent = canvas.parentElement;
+    const initW = width ?? parent?.clientWidth ?? 400;
+    const initH = height ?? parent?.clientHeight ?? 300;
+    if (initW > 0 && initH > 0) {
+      canvas.width = initW;
+      canvas.height = initH;
+    }
+
     const tint = EFFECT_SPRITE_TINT[effectType];
     const rimColor = EFFECT_RIM_COLOR[effectType];
     let running = true;
 
     function drawSpriteLighting() {
       if (!running) return;
-      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
+      const cw = canvas!.width;
+      const ch = canvas!.height;
+      ctx!.clearRect(0, 0, cw, ch);
 
       const hitboxes = hitboxesRef.current;
       if (hitboxes.length > 0) {
         for (const hb of hitboxes) {
           // ── Ambient tint (style SNES Square Soft color math) ───────────
           if ((spriteLight === 'tint' || spriteLight === 'both') && tint) {
-            ctx!.fillStyle = `rgba(${tint.r},${tint.g},${tint.b},${tint.a})`;
+            ctx!.globalAlpha = 1;
+            ctx!.fillStyle = `rgba(${tint.r},${tint.g},${tint.b},${tint.a * 3})`;
             ctx!.fillRect(hb.x, hb.y, hb.w, hb.h);
           }
 
-          // ── Rim light (shadowBlur glow autour du sprite) ───────────────
+          // ── Rim light : gradient radial autour des bords du sprite ─────
           if ((spriteLight === 'rimlight' || spriteLight === 'both') && rimColor) {
-            ctx!.save();
-            ctx!.shadowColor = rimColor;
-            ctx!.shadowBlur = 20;
-            ctx!.strokeStyle = rimColor;
-            ctx!.lineWidth = 1.5;
-            // Rect invisible, seule l'ombre est visible → halo doux
-            ctx!.globalAlpha = 0.65;
-            ctx!.strokeRect(hb.x + 1, hb.y + 1, hb.w - 2, hb.h - 2);
-            ctx!.restore();
+            const cx = hb.x + hb.w * 0.5;
+            const cy = hb.y + hb.h * 0.5;
+            const outerR = Math.max(hb.w, hb.h) * 0.72;
+            const innerR = outerR * 0.52;
+            const grad = ctx!.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.7, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.85, rimColor.replace(/[\d.]+\)$/, '0.5)'));
+            grad.addColorStop(1.0, rimColor.replace(/[\d.]+\)$/, '0.9)'));
+            ctx!.globalAlpha = 1;
+            ctx!.fillStyle = grad;
+            ctx!.beginPath();
+            ctx!.ellipse(cx, cy, hb.w * 0.72, hb.h * 0.72, 0, 0, Math.PI * 2);
+            ctx!.fill();
           }
         }
       }
@@ -189,7 +206,7 @@ export default function SceneEffectCanvas({
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [effectType, spriteLight, showSpriteLight]);
+  }, [effectType, spriteLight, showSpriteLight, width, height]);
 
   // ── Resize observer ──────────────────────────────────────────────────────
   useEffect(() => {

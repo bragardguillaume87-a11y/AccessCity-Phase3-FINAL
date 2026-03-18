@@ -312,6 +312,26 @@ export interface LightComponent {
   intensity: number;
 }
 
+// ── Portail / Porte (passage vers une autre carte) ─────────────────────────
+export interface PortalComponent {
+  type: 'portal';
+  /** ID de la carte de destination (vide = non configuré) */
+  targetMapId: string;
+  /** Colonne de spawn sur la carte de destination */
+  targetCx: number;
+  /** Rangée de spawn sur la carte de destination */
+  targetCy: number;
+  /**
+   * 'auto'     : le joueur passe au contact (style Pokémon)
+   * 'interact' : le joueur appuie sur E devant la porte (style JRPG)
+   */
+  interactionMode: 'auto' | 'interact';
+  /** La porte est-elle verrouillée ? */
+  locked: boolean;
+  /** Condition Lua/JS pour déverrouiller (ex: "var.clef_obtenue === true") */
+  unlockCondition?: string;
+}
+
 /** Union discriminante de tous les composants disponibles */
 export type ObjectComponent =
   | SpriteComponent
@@ -321,7 +341,8 @@ export type ObjectComponent =
   | PatrolComponent
   | WindComponent
   | SoundComponent
-  | LightComponent;
+  | LightComponent
+  | PortalComponent;
 
 export type ObjectComponentType = ObjectComponent['type'];
 
@@ -384,4 +405,5 @@ export const OBJECT_COMPONENT_META: Record<
   wind: { emoji: '💨', label: 'Vent', description: 'Animation balancement (arbre, herbe)' },
   sound: { emoji: '🔊', label: 'Son', description: 'Son de proximité' },
   light: { emoji: '💡', label: 'Lumière', description: 'Halo de lumière dynamique (Phase 5)' },
+  portal: { emoji: '🚪', label: 'Portail', description: 'Passage vers une autre carte' },
 };

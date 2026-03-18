@@ -30,6 +30,7 @@ import { useAssetUpload } from '@/components/modals/AssetsLibraryModal/hooks/use
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useMapsStore } from '@/stores/mapsStore';
 import SpriteImportDialog from './SpriteImportDialog';
+import ObjectDefinitionDialog from './ObjectDefinitionDialog';
 import { SPRITE_CATEGORIES, OBJECT_COMPONENT_META } from '@/types/sprite';
 import type {
   SpriteSheetConfig,
@@ -37,6 +38,7 @@ import type {
   AnimatedSpriteComponent,
   SpriteComponent,
 } from '@/types/sprite';
+import { OBJECT_PRESETS } from '@/config/objectPresets';
 
 // ── Stable fallback ─────────────────────────────────────────────────────────
 const EMPTY_OBJECT_INSTANCES: { definitionId: string }[] = [];
@@ -243,6 +245,10 @@ export default function ObjectsPanel({
   const [dialogInitialConfig, setDialogInitialConfig] = useState<SpriteSheetConfig | undefined>();
   /** defId en cours d'édition (null = création) */
   const [editingDefId, setEditingDefId] = useState<string | null>(null);
+  /** defId ouvert dans ObjectDefinitionDialog (null = fermé) */
+  const [objDefDialogId, setObjDefDialogId] = useState<string | null>(null);
+  /** Panneau présets ouvert */
+  const [showPresets, setShowPresets] = useState(false);
 
   // Drag-over overlay
   const [isDragOver, setIsDragOver] = useState(false);
@@ -972,9 +978,9 @@ export default function ObjectsPanel({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openEditSprite(def);
+                                setObjDefDialogId(def.id);
                               }}
-                              title="Configurer le sprite"
+                              title="Configurer l'objet et ses composants"
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1170,41 +1176,177 @@ export default function ObjectsPanel({
       <div
         style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}
       >
-        <button
-          onClick={openCreateFromSprite}
-          style={{
-            width: '100%',
-            height: 32,
-            borderRadius: 6,
-            border: '1px solid rgba(139,92,246,0.35)',
-            background: 'rgba(139,92,246,0.08)',
-            color: 'rgba(139,92,246,0.9)',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            transition: 'all 0.12s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(139,92,246,0.18)';
-            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.6)';
-            e.currentTarget.style.color = '#8b5cf6';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(139,92,246,0.08)';
-            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.35)';
-            e.currentTarget.style.color = 'rgba(139,92,246,0.9)';
-          }}
-        >
-          <Plus size={13} />
-          Ajouter un objet
-        </button>
+        {/* Panneau présets */}
+        {showPresets && (
+          <div
+            style={{
+              marginBottom: 6,
+              borderRadius: 8,
+              border: '1px solid rgba(139,92,246,0.25)',
+              background: 'rgba(16,16,32,0.98)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '7px 10px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                fontSize: 9,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: 'rgba(255,255,255,0.35)',
+              }}
+            >
+              <span>Présets</span>
+              <button
+                onClick={() => setShowPresets(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 2,
+                }}
+              >
+                <X size={10} />
+              </button>
+            </div>
+            <div style={{ padding: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {OBJECT_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    addObjectDefinition({
+                      displayName: preset.label,
+                      category: preset.category,
+                      components: preset.components.map((c) => ({ ...c })),
+                    });
+                    setShowPresets(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${preset.accent}14`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>
+                    {preset.emoji}
+                  </span>
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: preset.accent }}>
+                      {preset.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: 'rgba(255,255,255,0.3)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {preset.description}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Boutons Prédéfinis + Ajouter */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={() => setShowPresets((v) => !v)}
+            title="Créer depuis un préset"
+            style={{
+              height: 32,
+              padding: '0 10px',
+              borderRadius: 6,
+              border: showPresets
+                ? '1px solid rgba(139,92,246,0.6)'
+                : '1px solid rgba(255,255,255,0.1)',
+              background: showPresets ? 'rgba(139,92,246,0.18)' : 'transparent',
+              color: showPresets ? '#8b5cf6' : 'rgba(255,255,255,0.4)',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              flexShrink: 0,
+              transition: 'all 0.12s',
+            }}
+            onMouseEnter={(e) => {
+              if (!showPresets) {
+                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)';
+                e.currentTarget.style.color = '#8b5cf6';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showPresets) {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.4)';
+              }
+            }}
+          >
+            ✦ Prédéfinis
+          </button>
+          <button
+            onClick={openCreateFromSprite}
+            style={{
+              flex: 1,
+              height: 32,
+              borderRadius: 6,
+              border: '1px solid rgba(139,92,246,0.35)',
+              background: 'rgba(139,92,246,0.08)',
+              color: 'rgba(139,92,246,0.9)',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              transition: 'all 0.12s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(139,92,246,0.18)';
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.6)';
+              e.currentTarget.style.color = '#8b5cf6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(139,92,246,0.08)';
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.35)';
+              e.currentTarget.style.color = 'rgba(139,92,246,0.9)';
+            }}
+          >
+            <Plus size={13} />
+            Ajouter un objet
+          </button>
+        </div>
       </div>
 
-      {/* SpriteImportDialog */}
+      {/* SpriteImportDialog — création depuis sprite OU édition depuis ObjectDefinitionDialog */}
       {dialogOpen && dialogUrl && (
         <SpriteImportDialog
           isOpen={dialogOpen}
@@ -1219,6 +1361,18 @@ export default function ObjectsPanel({
           }}
         />
       )}
+
+      {/* ObjectDefinitionDialog — édition complète des composants */}
+      <ObjectDefinitionDialog
+        definitionId={objDefDialogId}
+        onClose={() => setObjDefDialogId(null)}
+        onOpenSpriteImport={(defId) => {
+          // Fermer ObjectDefinitionDialog et ouvrir SpriteImportDialog
+          setObjDefDialogId(null);
+          const def = objectDefinitions.find((d) => d.id === defId);
+          if (def) openEditSprite(def);
+        }}
+      />
     </div>
   );
 }

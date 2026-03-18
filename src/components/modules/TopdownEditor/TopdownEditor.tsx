@@ -17,22 +17,46 @@
 import { useRef, useEffect, useState, useCallback, useLayoutEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useMapsStore, useTemporalMapsStore } from '@/stores/mapsStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { MAP_ZOOM } from '@/config/mapEditorConfig';
 import { useAssets } from '@/hooks/useAssets';
 import { useMapEditor } from './hooks/useMapEditor';
 import { useTileset } from './hooks/useTileset';
 import { useTopdownEditorResize } from './hooks/useTopdownEditorResize';
 import { useTopdownEditorKeyboard } from './hooks/useTopdownEditorKeyboard';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import MapCanvas from './MapCanvas';
-import MapSidebar from './MapSidebar';
-import LayerPanel from './LayerPanel';
+import ObjectsPanel from './ObjectsPanel';
+import MapTabsBar from './MapTabsBar';
+import EntityContextMenu from './EntityContextMenu';
 import TilePalette from './TilePalette';
-import SpritesPanel from './SpritesPanel';
 import EntityPropertyPanel from './EntityPropertyPanel';
 import TriggerZonePanel from './TriggerZonePanel';
 import SoundPalette from './SoundPalette';
+import LayersPanelSection from './LayersPanelSection';
+import MapSettingsDialog from './MapSettingsDialog';
+import {
+  Undo2,
+  Redo2,
+  Pencil,
+  Eraser,
+  PaintBucket,
+  Pipette,
+  RectangleHorizontal,
+  FlipHorizontal2,
+  FlipVertical2,
+  Layers,
+  MapPin,
+  Maximize2,
+  Grid3x3,
+  Focus,
+  Download,
+  ChevronDown,
+  Ghost,
+  Check,
+  Settings,
+} from 'lucide-react';
 import type { MapData } from '@/types/map';
-import type { EntityBehavior } from '@/types/sprite';
 
 // Empty MapData for when no map is selected
 const EMPTY_MAP_DATA: MapData = {
@@ -75,20 +99,34 @@ const EMPTY_MAP_DATA: MapData = {
   _ac_scene_exits: [],
   _ac_audio_zones: [],
   _ac_entities: [],
+  _ac_objects: [],
 };
 
 // (Responsive palette config + sidebar constants → useTopdownEditorResize.ts)
 
 export default function TopdownEditor() {
   const editor = useMapEditor();
+  const spriteConfigs = useSettingsStore((s) => s.spriteSheetConfigs);
 
   // ── Undo/Redo (B1/B2) — temporal store zundo ─────────────────────────────
-  const { undo, redo, pastStates, futureStates } = useTemporalMapsStore((s) => s);
+  const { undo: undoRaw, redo: redoRaw, pastStates, futureStates } = useTemporalMapsStore((s) => s);
   const canUndo = pastStates.length > 0;
   const canRedo = futureStates.length > 0;
 
+  const undo = useCallback(() => {
+    if (!canUndo) return;
+    undoRaw();
+    toast('Annulé', { duration: 900, icon: '↩' });
+  }, [undoRaw, canUndo]);
+
+  const redo = useCallback(() => {
+    if (!canRedo) return;
+    redoRaw();
+    toast('Rétabli', { duration: 900, icon: '↪' });
+  }, [redoRaw, canRedo]);
+
   // ── Right panel tab (Tuiles | Persos | Zones | Sons) ────────────────────
-  const [rightTab, setRightTab] = useState<'tiles' | 'sprites' | 'triggers' | 'sounds'>('tiles');
+  const [rightTab, setRightTab] = useState<'tiles' | 'triggers' | 'sounds'>('tiles');
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [pendingZoneRect, setPendingZoneRect] = useState<{
     xTile: number;
@@ -97,6 +135,23 @@ export default function TopdownEditor() {
     hTile: number;
   } | null>(null);
   const [pendingAudioBrickId, setPendingAudioBrickId] = useState<string | null>(null);
+  const [editingZoneRect, setEditingZoneRect] = useState<{
+    xTile: number;
+    yTile: number;
+    wTile: number;
+    hTile: number;
+  } | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{
+    cx: number;
+    cy: number;
+    cw: number;
+    ch: number;
+  } | null>(null);
+
+  // Effacer la sélection quand on change d'outil (sauf si on revient à 'selection')
+  useEffect(() => {
+    if (editor.activeTool !== 'selection') setSelectionRect(null);
+  }, [editor.activeTool]);
 
   // ── Badge de rechargement sur les onglets ─────────────────────────────────
   // Quand un upload se termine, l'onglet inactif montre un point pulsant
@@ -114,15 +169,17 @@ export default function TopdownEditor() {
     };
   }, []);
 
-  // ── Entity placement state ─────────────────────────────────────────────────
-  const [placingEntity, setPlacingEntity] = useState<{
-    spriteUrl: string;
-    behavior: EntityBehavior;
-    displayName?: string;
-  } | null>(null);
+  // ── Object placement state (Phase 4 — ObjectInstance) ─────────────────────
+  /** ID de la définition en cours de placement (null = mode normal) */
+  const [placingObjectDefId, setPlacingObjectDefId] = useState<string | null>(null);
 
   // ── Entity selection state ────────────────────────────────────────────────
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [entityContextMenu, setEntityContextMenu] = useState<{
+    entityId: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const eraseTileFromLayer = useMapsStore((s) => s.eraseTileFromLayer);
   const addTileLayer = useMapsStore((s) => s.addTileLayer);
@@ -134,6 +191,8 @@ export default function TopdownEditor() {
   const addEntity = useMapsStore((s) => s.addEntity);
   const removeEntity = useMapsStore((s) => s.removeEntity);
   const updateEntity = useMapsStore((s) => s.updateEntity);
+  const addObjectInstance = useMapsStore((s) => s.addObjectInstance);
+  const migrateEntitiesToObjects = useMapsStore((s) => s.migrateEntitiesToObjects);
   const updateDialogueTrigger = useMapsStore((s) => s.updateDialogueTrigger);
   const updateSceneExit = useMapsStore((s) => s.updateSceneExit);
   const updateAudioZone = useMapsStore((s) => s.updateAudioZone);
@@ -142,6 +201,19 @@ export default function TopdownEditor() {
   const removeAudioZone = useMapsStore((s) => s.removeAudioZone);
   const updateMapMetadata = useMapsStore((s) => s.updateMapMetadata);
   const resizeMap = useMapsStore((s) => s.resizeMap);
+  const maps = useMapsStore((s) => s.maps);
+  const addMap = useMapsStore((s) => s.addMap);
+  const deleteMap = useMapsStore((s) => s.deleteMap);
+
+  // ── Migration auto EntityInstance → ObjectInstance (Phase 4) ───────────────
+  useEffect(() => {
+    const state = useMapsStore.getState();
+    const needsMigration = Object.values(state.mapDataById).some(
+      (d) => (d._ac_entities?.length ?? 0) > 0 && d._ac_objects.length === 0
+    );
+    if (needsMigration) migrateEntitiesToObjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once at editor mount
 
   // Player spawn position — read from current map metadata
   const mapMetadata = useMapsStore((s) =>
@@ -159,11 +231,19 @@ export default function TopdownEditor() {
     [editor.selectedMapId, mapMetadata, resizeMap]
   );
 
-  // ── Entity drag-to-move ────────────────────────────────────────────────────
+  // ── Entity / Object drag-to-move ───────────────────────────────────────────
+  // (mapData disponible plus bas — resolvedObjects aussi)
   const handleEntityMove = useCallback(
     (entityId: string, cx: number, cy: number) => {
       if (!editor.selectedMapId) return;
-      updateEntity(editor.selectedMapId, entityId, { cx, cy });
+      // Phase 4 : si l'ID correspond à un ObjectInstance, utiliser updateObjectInstance
+      const currentMapData = useMapsStore.getState().mapDataById[editor.selectedMapId];
+      const isObject = (currentMapData?._ac_objects ?? []).some((o) => o.id === entityId);
+      if (isObject) {
+        useMapsStore.getState().updateObjectInstance(editor.selectedMapId, entityId, { cx, cy });
+      } else {
+        updateEntity(editor.selectedMapId, entityId, { cx, cy });
+      }
     },
     [editor.selectedMapId, updateEntity]
   );
@@ -266,10 +346,29 @@ export default function TopdownEditor() {
   // ── Move spawn via canvas clic (triggered in status bar toggle) ───────────
   const [isMovingSpawn, setIsMovingSpawn] = useState(false);
 
+  // ── Toolbar dropdown states ─────────────────────────────────────────────
+  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
+  const [gridMenuOpen, setGridMenuOpen] = useState(false);
+  const [mapSettingsOpen, setMapSettingsOpen] = useState(false);
+
   // Current map data from store
   const mapData = useMapsStore((s) =>
     editor.selectedMapId ? (s.mapDataById[editor.selectedMapId] ?? EMPTY_MAP_DATA) : EMPTY_MAP_DATA
   );
+
+  // ── Resolved objects (Phase 4) pour MapCanvas ─────────────────────────────
+  const objectDefinitions = useMapsStore((s) => s.objectDefinitions);
+  const resolvedObjects = useMemo(() => {
+    const instances = mapData._ac_objects ?? [];
+    if (instances.length === 0) return undefined;
+    const result = instances
+      .map((inst) => {
+        const definition = objectDefinitions.find((d) => d.id === inst.definitionId);
+        return definition ? { instance: inst, definition } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    return result.length > 0 ? result : undefined;
+  }, [mapData._ac_objects, objectDefinitions]);
 
   // ── Export carte courante en JSON ─────────────────────────────────────────
   const handleExportMap = useCallback(() => {
@@ -371,6 +470,15 @@ export default function TopdownEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fitMapInView est une fonction locale stable via useCallback, non nécessaire en deps
   }, [editor.selectedMapId, containerSize.width, containerSize.height]);
 
+  // ── Selection move callback ────────────────────────────────────────────────
+  const handleSelectionMove = useCallback(
+    (fromRect: { cx: number; cy: number; cw: number; ch: number }, toCx: number, toCy: number) => {
+      editor.moveSelection(fromRect, toCx, toCy);
+      setSelectionRect({ cx: toCx, cy: toCy, cw: fromRect.cw, ch: fromRect.ch });
+    },
+    [editor]
+  );
+
   // ── Eyedropper pick — résolution tile → asset ─────────────────────────────
   const handleEyedropperPick = useCallback(
     (cx: number, cy: number) => {
@@ -407,8 +515,8 @@ export default function TopdownEditor() {
         setIsMovingSpawn(false);
         return;
       }
-      if (placingEntity) {
-        setPlacingEntity(null);
+      if (placingObjectDefId) {
+        setPlacingObjectDefId(null);
         return;
       }
       if (selectedEntityId) {
@@ -417,10 +525,21 @@ export default function TopdownEditor() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isMovingSpawn, placingEntity, selectedEntityId]);
+  }, [isMovingSpawn, placingObjectDefId, selectedEntityId]);
 
   // ── Keyboard shortcuts (logique → useTopdownEditorKeyboard) ─────────────
-  useTopdownEditorKeyboard({ editor, imageCache, undo, redo, mapData, removeEntity, fitMapInView });
+  useTopdownEditorKeyboard({
+    editor,
+    imageCache,
+    undo,
+    redo,
+    mapData,
+    removeEntity,
+    fitMapInView,
+    selectionRect,
+    onClearSelection: () => setSelectionRect(null),
+    onSelectionChange: setSelectionRect,
+  });
 
   // When tile layer is not active, no tile selected
   const effectiveTile = editor.activeLayer === 'tiles' ? editor.selectedTile : null;
@@ -440,13 +559,18 @@ export default function TopdownEditor() {
       .filter((l) => l.hasTile);
   }, [editor.hoveredCell, editor.activeLayer, mapData.layerInstances]);
 
+  // ── Entity sélectionnée — inspector panneau droit (GDevelop pattern) ─────
+  const selectedEntity = selectedEntityId
+    ? (mapData._ac_entities.find((e) => e.id === selectedEntityId) ?? null)
+    : null;
+
   return (
     <div
       className="flex-1 flex overflow-hidden"
       style={{ background: 'var(--color-bg-base)' }}
       aria-label="Éditeur de carte topdown"
     >
-      {/* ── Left sidebar ── */}
+      {/* ── Left sidebar — Palette tuiles (ou Propriétés si entité sélectionnée) ── */}
       <aside
         className="flex-shrink-0 flex flex-col overflow-hidden"
         style={{
@@ -455,523 +579,9 @@ export default function TopdownEditor() {
           position: 'relative',
           borderRight: '1px solid var(--color-border-base)',
         }}
-        aria-label="Cartes et couches"
-      >
-        {/* Map list (top, flex-1) */}
-        <div className="flex-1 overflow-hidden border-b border-border">
-          <MapSidebar selectedMapId={editor.selectedMapId} onSelectMap={editor.selectMap} />
-        </div>
-
-        {/* Layer panel (bottom, fixed height) */}
-        <div className="flex-shrink-0" style={{ minHeight: 180 }}>
-          <div className="px-3 py-2 border-b border-border">
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                color: 'var(--color-text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <span
-                style={{
-                  width: 3,
-                  height: 10,
-                  borderRadius: 2,
-                  background: 'var(--color-accent)',
-                  display: 'inline-block',
-                  flexShrink: 0,
-                }}
-              />
-              Couches & Outils
-            </p>
-          </div>
-          <LayerPanel
-            allLayers={mapData.layerInstances}
-            activeLayer={editor.activeLayer}
-            activeTileLayerIndex={editor.activeTileLayerIndex}
-            activeTool={editor.activeTool}
-            flipX={editor.flipX}
-            flipY={editor.flipY}
-            stackMode={editor.stackMode}
-            onTileLayerSelect={(idx) => {
-              editor.setActiveTileLayerIndex(idx);
-              editor.setActiveLayer('tiles');
-            }}
-            onLayerChange={(layer) => {
-              editor.setActiveLayer(layer);
-              // Auto-switch palette tab on layer change
-              if (layer === 'triggers') setRightTab('triggers');
-              else if (rightTab === 'triggers') setRightTab('tiles');
-            }}
-            onToolChange={editor.setActiveTool}
-            onUpdateLayerProps={(identifier, patch) => {
-              if (editor.selectedMapId) updateLayerProps(editor.selectedMapId, identifier, patch);
-            }}
-            onReorderTileLayer={(from, to) => {
-              if (!editor.selectedMapId) return;
-              reorderTileLayer(editor.selectedMapId, from, to);
-              // Follow the moved layer — keep the active highlight on the same layer
-              const cur = editor.activeTileLayerIndex;
-              if (from === cur) {
-                editor.setActiveTileLayerIndex(to);
-              } else if (from < cur && to >= cur) {
-                editor.setActiveTileLayerIndex(cur - 1);
-              } else if (from > cur && to <= cur) {
-                editor.setActiveTileLayerIndex(cur + 1);
-              }
-            }}
-            onToggleFlipX={editor.toggleFlipX}
-            onToggleFlipY={editor.toggleFlipY}
-            onToggleStackMode={editor.toggleStackMode}
-            onAddTileLayer={(name) => {
-              if (editor.selectedMapId) addTileLayer(editor.selectedMapId, name);
-            }}
-            onRemoveTileLayer={(identifier) => {
-              if (!editor.selectedMapId) return;
-              const tileLayers = mapData.layerInstances.filter((l) => l.__type === 'tiles');
-              const removedIdx = tileLayers.findIndex((l) => l.__identifier === identifier);
-              removeTileLayer(editor.selectedMapId, identifier);
-              // Adjust activeTileLayerIndex so it never goes out-of-bounds after deletion
-              const newCount = tileLayers.length - 1;
-              const cur = editor.activeTileLayerIndex;
-              if (removedIdx !== -1) {
-                if (cur >= newCount) {
-                  editor.setActiveTileLayerIndex(Math.max(0, newCount - 1));
-                } else if (removedIdx < cur) {
-                  editor.setActiveTileLayerIndex(cur - 1);
-                }
-              }
-            }}
-            onRenameTileLayer={(identifier, newName) => {
-              if (editor.selectedMapId) renameTileLayer(editor.selectedMapId, identifier, newName);
-            }}
-          />
-        </div>
-
-        {/* Sidebar resize handle (right edge) */}
-        <div
-          onMouseDown={handleSidebarResizerMouseDown}
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: 4,
-            bottom: 0,
-            cursor: 'col-resize',
-            background: 'var(--color-border-base)',
-            transition: 'background 0.15s',
-            zIndex: 10,
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLDivElement).style.background = 'var(--color-primary-60)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLDivElement).style.background = 'var(--color-border-base)';
-          }}
-          title="Redimensionner la sidebar"
-        />
-      </aside>
-
-      {/* ── Canvas center ── */}
-      <div
-        ref={canvasContainerRef}
-        className="flex-1 overflow-hidden relative"
-        style={{ background: '#0d0d1a' }}
-        aria-label="Canvas de la carte"
-      >
-        {/* Status bar */}
-        <div
-          className="absolute top-0 left-0 right-0 z-10 flex items-center gap-2 px-3 py-1.5 text-xs"
-          style={{
-            background: 'rgba(10,11,18,0.88)',
-            color: 'var(--color-text-secondary)',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          {/* Undo / Redo (B2) */}
-          <button
-            onClick={() => undo()}
-            disabled={!canUndo}
-            title="Annuler (Ctrl+Z)"
-            className="transition-all hover:-translate-y-0.5 active:scale-90"
-            style={{
-              padding: '3px 8px',
-              fontSize: 12,
-              borderRadius: 4,
-              cursor: canUndo ? 'pointer' : 'not-allowed',
-              border: '1px solid var(--color-border-base)',
-              background: 'transparent',
-              color: 'var(--color-text-secondary)',
-              opacity: canUndo ? 1 : 0.3,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-            }}
-          >
-            ↩ <span>Annuler</span>
-          </button>
-          <button
-            onClick={() => redo()}
-            disabled={!canRedo}
-            title="Rétablir (Ctrl+Y)"
-            className="transition-all hover:-translate-y-0.5 active:scale-90"
-            style={{
-              padding: '3px 8px',
-              fontSize: 12,
-              borderRadius: 4,
-              cursor: canRedo ? 'pointer' : 'not-allowed',
-              border: '1px solid var(--color-border-base)',
-              background: 'transparent',
-              color: 'var(--color-text-secondary)',
-              opacity: canRedo ? 1 : 0.3,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-            }}
-          >
-            ↪ <span>Rétablir</span>
-          </button>
-
-          <span>🔍 {Math.round(editor.zoom * 100)}%</span>
-          {editor.hoveredCell && (
-            <span>
-              col {editor.hoveredCell.cx}, rang {editor.hoveredCell.cy}
-            </span>
-          )}
-          {/* Layer indicator — shows which layers have a tile at the hovered cell */}
-          {layersAtHoveredCell.map((l) => (
-            <span
-              key={l.idx}
-              style={{
-                fontSize: 10,
-                padding: '1px 5px',
-                borderRadius: 3,
-                background:
-                  l.idx === editor.activeTileLayerIndex
-                    ? 'var(--color-primary)'
-                    : 'rgba(255,255,255,0.10)',
-                color:
-                  l.idx === editor.activeTileLayerIndex ? '#fff' : 'var(--color-text-secondary)',
-                fontWeight: l.idx === editor.activeTileLayerIndex ? 700 : 400,
-                border:
-                  l.idx === editor.activeTileLayerIndex
-                    ? 'none'
-                    : '1px solid rgba(255,255,255,0.12)',
-              }}
-              title={
-                l.idx === editor.activeTileLayerIndex
-                  ? `Couche active — l'effaceur agira ici`
-                  : `Tuile sur "${l.name}" — non active`
-              }
-            >
-              {l.idx === editor.activeTileLayerIndex ? '✏' : '•'} {l.name}
-            </span>
-          ))}
-
-          {/* Indicateur de mode (D2) */}
-          {editor.activeTool === 'erase' && (
-            <span style={{ color: 'rgba(255,90,90,0.8)' }}>🧹 Clic droit aussi</span>
-          )}
-          {isMovingSpawn && (
-            <span style={{ color: 'rgba(0,220,120,0.9)', fontWeight: 600 }}>
-              ▶ Clic sur la carte pour placer le départ — Échap pour annuler
-            </span>
-          )}
-
-          {/* Spawn move button */}
-          {editor.selectedMapId && (
-            <button
-              onClick={() => setIsMovingSpawn((v) => !v)}
-              title={
-                isMovingSpawn
-                  ? 'Cliquez sur la carte pour placer le départ (Échap pour annuler)'
-                  : 'Déplacer la position de départ du joueur'
-              }
-              className="transition-all hover:-translate-y-0.5"
-              style={{
-                padding: '3px 8px',
-                fontSize: 12,
-                borderRadius: 4,
-                cursor: 'pointer',
-                border: '1px solid',
-                borderColor: isMovingSpawn ? 'rgba(0,220,120,0.8)' : 'var(--color-border-base)',
-                background: isMovingSpawn ? 'rgba(0,220,120,0.18)' : 'transparent',
-                color: isMovingSpawn ? 'rgba(0,220,120,1)' : 'var(--color-text-secondary)',
-                animation: isMovingSpawn ? 'pulse-dot 1s ease-in-out infinite' : 'none',
-              }}
-            >
-              ▶ Départ
-            </button>
-          )}
-
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-            {/* Fit in view (Shift+G) */}
-            <button
-              onClick={fitMapInView}
-              title="Centrer la carte dans la vue (Shift+G)"
-              className="transition-all hover:-translate-y-0.5"
-              style={{
-                padding: '3px 8px',
-                fontSize: 12,
-                borderRadius: 4,
-                cursor: 'pointer',
-                border: '1px solid var(--color-border-base)',
-                background: 'transparent',
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              ⊞ Centrer
-            </button>
-            {/* Grid toggle (G) */}
-            <button
-              onClick={editor.toggleGrid}
-              title={`${editor.showGrid ? 'Masquer' : 'Afficher'} la grille (G)`}
-              className="transition-all hover:-translate-y-0.5"
-              style={{
-                padding: '3px 8px',
-                fontSize: 12,
-                borderRadius: 4,
-                cursor: 'pointer',
-                border: '1px solid var(--color-border-base)',
-                background: editor.showGrid ? 'var(--color-primary-20)' : 'transparent',
-                color: editor.showGrid ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-              }}
-            >
-              ⊞ Grille
-            </button>
-            {/* Dim toggle (D) */}
-            <button
-              onClick={editor.toggleDimInactive}
-              title={`${editor.dimInactiveLayers ? 'Désactiver' : 'Activer'} l'isolation de la couche active (D)`}
-              className="transition-all hover:-translate-y-0.5"
-              style={{
-                padding: '3px 8px',
-                fontSize: 12,
-                borderRadius: 4,
-                cursor: 'pointer',
-                border: '1px solid var(--color-border-base)',
-                background: editor.dimInactiveLayers ? 'var(--color-primary-20)' : 'transparent',
-                color: editor.dimInactiveLayers
-                  ? 'var(--color-primary)'
-                  : 'var(--color-text-secondary)',
-              }}
-            >
-              ◑ Isoler
-            </button>
-            {/* Export carte */}
-            {editor.selectedMapId && (
-              <button
-                onClick={handleExportMap}
-                title="Exporter la carte en JSON (.ac-map.json)"
-                className="transition-all hover:-translate-y-0.5"
-                style={{
-                  padding: '3px 8px',
-                  fontSize: 12,
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  border: '1px solid var(--color-border-base)',
-                  background: 'transparent',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                ↓ Exporter
-              </button>
-            )}
-          </span>
-          {editor.selectedMapId && (
-            <span>
-              {mapData.pxWid / mapData.__gridSize} × {mapData.pxHei / mapData.__gridSize} tuiles
-            </span>
-          )}
-        </div>
-
-        {/* ── Empty state — aucune carte sélectionnée ── */}
-        {!editor.selectedMapId && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 16,
-              zIndex: 5,
-              pointerEvents: 'none',
-              background:
-                'radial-gradient(ellipse at center, var(--color-primary-06) 0%, transparent 70%)',
-            }}
-          >
-            <span
-              style={{
-                fontSize: 64,
-                lineHeight: 1,
-                filter: 'drop-shadow(0 0 20px var(--color-primary-40))',
-              }}
-            >
-              🗺️
-            </span>
-            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: 'var(--color-text-primary)',
-                }}
-              >
-                Choisis une carte
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: 'var(--color-text-secondary)',
-                  lineHeight: 1.5,
-                }}
-              >
-                Sélectionne une carte dans le panneau gauche
-                <br />
-                ou crée-en une nouvelle avec{' '}
-                <strong style={{ color: 'var(--color-primary)' }}>+ Créer une carte</strong>
-              </p>
-            </div>
-          </div>
-        )}
-
-        <MapCanvas
-          mapData={mapData}
-          activeLayer={editor.activeLayer}
-          activeTool={editor.activeTool}
-          imageCache={imageCache}
-          zoom={editor.zoom}
-          stagePos={editor.stagePos}
-          hoveredCell={editor.hoveredCell}
-          containerWidth={containerSize.width}
-          containerHeight={containerSize.height}
-          onZoomChange={editor.setZoom}
-          onStagePosChange={editor.setStagePos}
-          onCellHover={editor.setHoveredCell}
-          onCellPaint={(cx, cy) => {
-            // Spawn move mode takes priority
-            if (isMovingSpawn && editor.selectedMapId) {
-              updateMapMetadata(editor.selectedMapId, { playerStartCx: cx, playerStartCy: cy });
-              setIsMovingSpawn(false);
-              return;
-            }
-            // Entity placement mode
-            if (placingEntity && editor.selectedMapId) {
-              addEntity(editor.selectedMapId, {
-                id: `entity-${Date.now()}`,
-                spriteAssetUrl: placingEntity.spriteUrl,
-                cx,
-                cy,
-                facing: 'down',
-                behavior: placingEntity.behavior,
-                displayName: placingEntity.displayName,
-              });
-              setPlacingEntity(null);
-              return;
-            }
-            if (editor.activeLayer === 'tiles' && !effectiveTile) return;
-            editor.paintCell(cx, cy);
-          }}
-          showGrid={editor.showGrid}
-          dimInactiveLayers={editor.dimInactiveLayers}
-          onCellErase={editor.eraseCell}
-          onCellFill={(cx, cy) => {
-            if (editor.activeLayer === 'tiles' && !effectiveTile) return;
-            editor.fillCell(cx, cy);
-          }}
-          onEyedropperPick={handleEyedropperPick}
-          playerStartCx={playerStartCx}
-          playerStartCy={playerStartCy}
-          entities={mapData._ac_entities}
-          selectedEntityId={selectedEntityId}
-          onEntityClick={setSelectedEntityId}
-          onEntityDelete={
-            editor.selectedMapId
-              ? (entityId) => {
-                  removeEntity(editor.selectedMapId!, entityId);
-                  if (selectedEntityId === entityId) setSelectedEntityId(null);
-                }
-              : undefined
-          }
-          onEntityMove={editor.selectedMapId ? handleEntityMove : undefined}
-          onZoneMove={editor.selectedMapId ? handleZoneMove : undefined}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={handleZoneClick}
-          onZoneDraw={editor.selectedMapId ? handleZoneDraw : undefined}
-          onZoneResize={editor.selectedMapId ? handleZoneResize : undefined}
-          onResizeMap={editor.selectedMapId ? handleResizeMap : undefined}
-          activeTileLayerIndex={editor.activeTileLayerIndex}
-          onTileMoveToLayer={
-            editor.selectedMapId
-              ? (cx, cy, fromIdx, toIdx) => {
-                  moveTilesToLayer(editor.selectedMapId!, [{ cx, cy }], fromIdx, toIdx);
-                }
-              : undefined
-          }
-          onCellEraseFromLayer={
-            editor.selectedMapId
-              ? (cx, cy, layerIdx) => {
-                  eraseTileFromLayer(editor.selectedMapId!, cx, cy, layerIdx);
-                }
-              : undefined
-          }
-          sceneEffect={mapMetadata?.sceneEffect}
-        />
-        {/* ── Entity property panel ── */}
-        {selectedEntityId &&
-          editor.selectedMapId &&
-          (() => {
-            const entity = mapData._ac_entities.find((e) => e.id === selectedEntityId);
-            if (!entity) return null;
-            return (
-              <div className="absolute bottom-0 left-0 right-0 z-20">
-                <EntityPropertyPanel
-                  mapId={editor.selectedMapId}
-                  entity={entity}
-                  onClose={() => setSelectedEntityId(null)}
-                />
-              </div>
-            );
-          })()}
-      </div>
-
-      {/* ── Resizer ── */}
-      <div
-        onMouseDown={handleResizerMouseDown}
-        style={{
-          width: 4,
-          flexShrink: 0,
-          cursor: 'col-resize',
-          background: 'var(--color-border-base)',
-          transition: 'background 0.15s',
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = 'var(--color-primary-60)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = 'var(--color-border-base)';
-        }}
-        title="Redimensionner la palette"
-      />
-
-      {/* ── Right palette ── */}
-      <aside
-        className="flex-shrink-0 border-l border-border overflow-hidden flex flex-col"
-        style={{ width: paletteWidth, background: 'var(--color-bg-surface)' }}
         aria-label="Palette de tuiles et sprites"
       >
-        {/* Tab bar */}
+        {/* Tab bar — palette gauche (toujours visible, même si entité sélectionnée) */}
         <div
           style={{
             display: 'flex',
@@ -983,18 +593,17 @@ export default function TopdownEditor() {
           {(
             [
               { id: 'tiles', label: 'Tuiles', emoji: '🗺️', color: '#60a5fa' },
-              { id: 'sprites', label: 'Persos', emoji: '🧑', color: '#f472b6' },
               { id: 'triggers', label: 'Zones', emoji: '🚪', color: '#4ade80' },
               { id: 'sounds', label: 'Sons', emoji: '🔊', color: '#fb923c' },
             ] as const
           ).map((tab) => {
-            const isActive = rightTab === (tab.id as string);
+            const isActive = rightTab === tab.id;
             const showBadge = assetsReloading && !isActive;
             return (
               <button
                 key={tab.id}
                 onClick={() => {
-                  setRightTab(tab.id as typeof rightTab);
+                  setRightTab(tab.id);
                   setAssetsReloading(false);
                 }}
                 className="transition-all hover:-translate-y-0.5 active:scale-95"
@@ -1037,7 +646,6 @@ export default function TopdownEditor() {
             );
           })}
         </div>
-
         {/* Panel content */}
         <div
           style={{
@@ -1054,15 +662,6 @@ export default function TopdownEditor() {
               selectedTile={editor.selectedTile}
               onSelectTile={editor.setSelectedTile}
               mapGridSize={mapData.__gridSize}
-            />
-          ) : rightTab === 'sprites' ? (
-            <SpritesPanel
-              mapId={editor.selectedMapId}
-              isPlacingEntity={placingEntity !== null}
-              onStartPlacing={(spriteUrl, behavior, displayName) =>
-                setPlacingEntity({ spriteUrl, behavior, displayName })
-              }
-              onCancelPlacing={() => setPlacingEntity(null)}
             />
           ) : rightTab === 'sounds' ? (
             <SoundPalette
@@ -1082,6 +681,7 @@ export default function TopdownEditor() {
               onPendingZoneConsumed={() => setPendingZoneRect(null)}
               pendingAudioBrickId={pendingAudioBrickId}
               onPendingAudioBrickConsumed={() => setPendingAudioBrickId(null)}
+              onEditingZoneChange={setEditingZoneRect}
             />
           ) : (
             <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', padding: 16 }}>
@@ -1089,6 +689,1070 @@ export default function TopdownEditor() {
             </p>
           )}
         </div>
+
+        {/* Sidebar resize handle (right edge) */}
+        <div
+          onMouseDown={handleSidebarResizerMouseDown}
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: 4,
+            bottom: 0,
+            cursor: 'col-resize',
+            background: 'var(--color-border-base)',
+            transition: 'background 0.15s',
+            zIndex: 10,
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLDivElement).style.background = 'var(--color-primary-60)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLDivElement).style.background = 'var(--color-border-base)';
+          }}
+          title="Redimensionner la sidebar"
+        />
+      </aside>
+
+      {/* ── Canvas center ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <MapTabsBar
+          maps={maps}
+          selectedMapId={editor.selectedMapId}
+          onSelectMap={editor.selectMap}
+          onAddMap={() => {
+            const newId = addMap();
+            editor.selectMap(newId);
+          }}
+          onRenameMap={(mapId, newName) => updateMapMetadata(mapId, { name: newName })}
+          onDeleteMap={(mapId) => {
+            deleteMap(mapId);
+            if (editor.selectedMapId === mapId) {
+              const remaining = maps.filter((m) => m.id !== mapId);
+              if (remaining.length > 0) editor.selectMap(remaining[0].id);
+              else editor.selectMap('');
+            }
+          }}
+          onOpenSettings={(mapId) => {
+            editor.selectMap(mapId);
+            setMapSettingsOpen(true);
+          }}
+        />
+        <div
+          ref={canvasContainerRef}
+          className="flex-1 overflow-hidden relative"
+          style={{ background: '#0a0a14' }}
+          aria-label="Canvas de la carte"
+        >
+          {/* ── Toolbar — icônes compactes style GDevelop ── */}
+          <div
+            className="absolute top-0 left-0 right-0 z-10 flex items-center gap-1 px-2"
+            style={{
+              height: 36,
+              background: 'rgba(10,11,18,0.92)',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {/* Undo / Redo */}
+            <button
+              onClick={() => undo()}
+              disabled={!canUndo}
+              title="Annuler (Ctrl+Z)"
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 5,
+                border: '1px solid transparent',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.55)',
+                cursor: canUndo ? 'pointer' : 'not-allowed',
+                opacity: canUndo ? 1 : 0.3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                if (canUndo) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <Undo2 size={13} />
+            </button>
+            <button
+              onClick={() => redo()}
+              disabled={!canRedo}
+              title="Rétablir (Ctrl+Y)"
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 5,
+                border: '1px solid transparent',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.55)',
+                cursor: canRedo ? 'pointer' : 'not-allowed',
+                opacity: canRedo ? 1 : 0.3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                if (canRedo) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <Redo2 size={13} />
+            </button>
+
+            {/* Separator */}
+            <span
+              style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
+            />
+
+            {/* Drawing tools */}
+            {[
+              { id: 'selection' as const, Icon: RectangleHorizontal, title: 'Sélection (S)' },
+              { id: 'paint' as const, Icon: Pencil, title: 'Peindre (B)' },
+              { id: 'erase' as const, Icon: Eraser, title: 'Effacer (E)' },
+              { id: 'fill' as const, Icon: PaintBucket, title: 'Remplir (F)' },
+              { id: 'eyedropper' as const, Icon: Pipette, title: 'Pipette (I)' },
+            ].map(({ id, Icon, title }) => {
+              const isActive = editor.activeTool === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => editor.setActiveTool(id)}
+                  title={title}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 5,
+                    border: '1px solid',
+                    borderColor: isActive ? 'rgba(139,92,246,0.6)' : 'transparent',
+                    background: isActive ? 'rgba(139,92,246,0.18)' : 'transparent',
+                    color: isActive ? '#8b5cf6' : 'rgba(255,255,255,0.55)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: 'all 0.1s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <Icon size={13} />
+                </button>
+              );
+            })}
+
+            {/* Separator */}
+            <span
+              style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
+            />
+
+            {/* Modifiers */}
+            {[
+              {
+                active: editor.flipX,
+                onToggle: editor.toggleFlipX,
+                Icon: FlipHorizontal2,
+                title: 'Miroir X',
+              },
+              {
+                active: editor.flipY,
+                onToggle: editor.toggleFlipY,
+                Icon: FlipVertical2,
+                title: 'Miroir Y',
+              },
+              {
+                active: editor.stackMode,
+                onToggle: editor.toggleStackMode,
+                Icon: Layers,
+                title: 'Empiler (T)',
+              },
+            ].map(({ active, onToggle, Icon, title }) => (
+              <button
+                key={title}
+                onClick={onToggle}
+                title={title}
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 5,
+                  border: '1px solid',
+                  borderColor: active ? 'rgba(139,92,246,0.6)' : 'transparent',
+                  background: active ? 'rgba(139,92,246,0.18)' : 'transparent',
+                  color: active ? '#8b5cf6' : 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.1s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Icon size={13} />
+              </button>
+            ))}
+
+            {/* Separator */}
+            <span
+              style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
+            />
+
+            {/* Spawn move */}
+            {editor.selectedMapId && (
+              <button
+                onClick={() => setIsMovingSpawn((v) => !v)}
+                title={
+                  isMovingSpawn ? 'Annuler (Échap)' : 'Déplacer la position de départ du joueur'
+                }
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 5,
+                  border: '1px solid',
+                  borderColor: isMovingSpawn ? 'rgba(0,220,120,0.8)' : 'transparent',
+                  background: isMovingSpawn ? 'rgba(0,220,120,0.18)' : 'transparent',
+                  color: isMovingSpawn ? 'rgba(0,220,120,1)' : 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.1s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: isMovingSpawn ? 'pulse-dot 1s ease-in-out infinite' : 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isMovingSpawn) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isMovingSpawn)
+                    e.currentTarget.style.background = isMovingSpawn
+                      ? 'rgba(0,220,120,0.18)'
+                      : 'transparent';
+                }}
+              >
+                <MapPin size={13} />
+              </button>
+            )}
+
+            {/* Zoom dropdown */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => {
+                  setZoomMenuOpen((v) => !v);
+                  setGridMenuOpen(false);
+                }}
+                title="Niveau de zoom"
+                style={{
+                  height: 26,
+                  padding: '0 7px',
+                  borderRadius: 5,
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(255,255,255,0.04)',
+                  color: 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = zoomMenuOpen
+                    ? 'rgba(255,255,255,0.08)'
+                    : 'rgba(255,255,255,0.04)';
+                }}
+              >
+                {Math.round(editor.zoom * 100)}%
+                <ChevronDown size={9} />
+              </button>
+              {zoomMenuOpen && (
+                <>
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 50 }}
+                    onClick={() => setZoomMenuOpen(false)}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      marginTop: 4,
+                      width: 120,
+                      zIndex: 51,
+                      padding: 4,
+                      background: 'var(--color-bg-elevated, #1e1e35)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    {([50, 75, 100, 125, 150, 200] as const).map((pct) => {
+                      const isCurrent = Math.round(editor.zoom * 100) === pct;
+                      return (
+                        <button
+                          key={pct}
+                          onClick={() => {
+                            editor.setZoom(pct / 100);
+                            setZoomMenuOpen(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '5px 8px',
+                            borderRadius: 5,
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontSize: 12,
+                            background: 'transparent',
+                            color: isCurrent ? '#8b5cf6' : 'rgba(255,255,255,0.8)',
+                            fontWeight: isCurrent ? 700 : 400,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <Check
+                            size={9}
+                            style={{ opacity: isCurrent ? 1 : 0, color: '#8b5cf6', flexShrink: 0 }}
+                          />
+                          {pct}%
+                        </button>
+                      );
+                    })}
+                    <div
+                      style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 0' }}
+                    />
+                    <button
+                      onClick={() => {
+                        fitMapInView();
+                        setZoomMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        borderRadius: 5,
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontSize: 12,
+                        background: 'transparent',
+                        color: 'rgba(255,255,255,0.8)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      Ajuster à la vue
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Cell coords + layer indicators + mode indicators */}
+            {editor.hoveredCell && (
+              <span
+                style={{
+                  fontSize: 10,
+                  color: 'rgba(255,255,255,0.3)',
+                  flexShrink: 0,
+                  minWidth: 52,
+                }}
+              >
+                {editor.hoveredCell.cx},{editor.hoveredCell.cy}
+              </span>
+            )}
+            {layersAtHoveredCell.map((l) => (
+              <span
+                key={l.idx}
+                style={{
+                  fontSize: 10,
+                  padding: '1px 5px',
+                  borderRadius: 3,
+                  flexShrink: 0,
+                  background:
+                    l.idx === editor.activeTileLayerIndex
+                      ? 'var(--color-primary)'
+                      : 'rgba(255,255,255,0.10)',
+                  color:
+                    l.idx === editor.activeTileLayerIndex ? '#fff' : 'var(--color-text-secondary)',
+                  fontWeight: l.idx === editor.activeTileLayerIndex ? 700 : 400,
+                  border:
+                    l.idx === editor.activeTileLayerIndex
+                      ? 'none'
+                      : '1px solid rgba(255,255,255,0.12)',
+                }}
+                title={
+                  l.idx === editor.activeTileLayerIndex
+                    ? `Couche active — l'effaceur agira ici`
+                    : `Tuile sur "${l.name}" — non active`
+                }
+              >
+                {l.idx === editor.activeTileLayerIndex ? '✏' : '•'} {l.name}
+              </span>
+            ))}
+            {editor.activeTool === 'erase' && (
+              <span style={{ fontSize: 10, color: 'rgba(255,90,90,0.75)', flexShrink: 0 }}>
+                Clic droit aussi
+              </span>
+            )}
+            {isMovingSpawn && (
+              <span
+                style={{
+                  fontSize: 10,
+                  color: 'rgba(0,220,120,0.9)',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                Clic sur la carte — Échap pour annuler
+              </span>
+            )}
+
+            {/* Spacer */}
+            <span style={{ flex: 1 }} />
+
+            {/* Map size info */}
+            {editor.selectedMapId && (
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)', flexShrink: 0 }}>
+                {mapData.pxWid / mapData.__gridSize}×{mapData.pxHei / mapData.__gridSize}
+              </span>
+            )}
+
+            {/* Separator */}
+            <span
+              style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
+            />
+
+            {/* Fit in view */}
+            <button
+              onClick={fitMapInView}
+              title="Ajuster à la vue (Shift+G)"
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 5,
+                border: '1px solid transparent',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.55)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.1s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <Maximize2 size={13} />
+            </button>
+
+            {/* Grid dropdown */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => {
+                  setGridMenuOpen((v) => !v);
+                  setZoomMenuOpen(false);
+                }}
+                title="Options de la grille"
+                style={{
+                  width: 34,
+                  height: 26,
+                  borderRadius: 5,
+                  border: '1px solid',
+                  borderColor:
+                    editor.showGrid || gridMenuOpen ? 'rgba(139,92,246,0.6)' : 'transparent',
+                  background:
+                    editor.showGrid || gridMenuOpen ? 'rgba(139,92,246,0.18)' : 'transparent',
+                  color: editor.showGrid || gridMenuOpen ? '#8b5cf6' : 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.1s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 2,
+                }}
+                onMouseEnter={(e) => {
+                  if (!editor.showGrid && !gridMenuOpen)
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!editor.showGrid && !gridMenuOpen)
+                    e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Grid3x3 size={11} />
+                <ChevronDown size={8} />
+              </button>
+              {gridMenuOpen && (
+                <>
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 50 }}
+                    onClick={() => setGridMenuOpen(false)}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: 4,
+                      width: 220,
+                      zIndex: 51,
+                      padding: 4,
+                      background: 'var(--color-bg-elevated, #1e1e35)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        editor.toggleGrid();
+                        setGridMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        borderRadius: 5,
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontSize: 12,
+                        background: 'transparent',
+                        color: 'rgba(255,255,255,0.85)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <Check
+                        size={10}
+                        style={{
+                          opacity: editor.showGrid ? 1 : 0,
+                          color: '#8b5cf6',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ flex: 1 }}>Afficher la grille</span>
+                      <span style={{ fontSize: 10, opacity: 0.4 }}>G</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        editor.toggleDimInactive();
+                        setGridMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        borderRadius: 5,
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontSize: 12,
+                        background: 'transparent',
+                        color: 'rgba(255,255,255,0.85)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <Focus
+                        size={10}
+                        style={{
+                          opacity: editor.dimInactiveLayers ? 1 : 0,
+                          color: '#8b5cf6',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ flex: 1 }}>Isoler la couche active</span>
+                      <span style={{ fontSize: 10, opacity: 0.4 }}>D</span>
+                    </button>
+                    <div
+                      style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 0' }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (mapMetadata) setMapSettingsOpen(true);
+                        setGridMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        borderRadius: 5,
+                        border: 'none',
+                        cursor: mapMetadata ? 'pointer' : 'not-allowed',
+                        textAlign: 'left',
+                        fontSize: 12,
+                        background: 'transparent',
+                        color: 'rgba(255,255,255,0.85)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        opacity: mapMetadata ? 1 : 0.4,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (mapMetadata)
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <Settings size={10} style={{ flexShrink: 0 }} />
+                      <span>Configurer la carte</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Sprite visuals toggle */}
+            <button
+              onClick={editor.toggleSpriteVisuals}
+              title={`${editor.showSpriteVisuals ? 'Masquer' : 'Afficher'} les sprites des entités`}
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 5,
+                border: '1px solid',
+                borderColor: editor.showSpriteVisuals ? 'rgba(139,92,246,0.6)' : 'transparent',
+                background: editor.showSpriteVisuals ? 'rgba(139,92,246,0.18)' : 'transparent',
+                color: editor.showSpriteVisuals ? '#8b5cf6' : 'rgba(255,255,255,0.55)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.1s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => {
+                if (!editor.showSpriteVisuals)
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              }}
+              onMouseLeave={(e) => {
+                if (!editor.showSpriteVisuals) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <Ghost size={13} />
+            </button>
+
+            {/* Export */}
+            {editor.selectedMapId && (
+              <button
+                onClick={handleExportMap}
+                title="Exporter la carte en JSON (.ac-map.json)"
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 5,
+                  border: '1px solid transparent',
+                  background: 'transparent',
+                  color: 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.1s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Download size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* ── Empty state — aucune carte sélectionnée ── */}
+          {!editor.selectedMapId && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 16,
+                zIndex: 5,
+                pointerEvents: 'none',
+                background:
+                  'radial-gradient(ellipse at center, var(--color-primary-06) 0%, transparent 70%)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 64,
+                  lineHeight: 1,
+                  filter: 'drop-shadow(0 0 20px var(--color-primary-40))',
+                }}
+              >
+                🗺️
+              </span>
+              <div
+                style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  Choisis une carte
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Sélectionne une carte dans la barre en haut
+                  <br />
+                  ou crée-en une nouvelle avec{' '}
+                  <strong style={{ color: 'var(--color-primary)' }}>+</strong>
+                </p>
+              </div>
+            </div>
+          )}
+
+          <MapCanvas
+            mapData={mapData}
+            activeLayer={editor.activeLayer}
+            activeTool={editor.activeTool}
+            imageCache={imageCache}
+            zoom={editor.zoom}
+            stagePos={editor.stagePos}
+            hoveredCell={editor.hoveredCell}
+            containerWidth={containerSize.width}
+            containerHeight={containerSize.height}
+            onZoomChange={editor.setZoom}
+            onStagePosChange={editor.setStagePos}
+            onCellHover={editor.setHoveredCell}
+            onCellPaint={(cx, cy) => {
+              // Spawn move mode takes priority
+              if (isMovingSpawn && editor.selectedMapId) {
+                updateMapMetadata(editor.selectedMapId, { playerStartCx: cx, playerStartCy: cy });
+                setIsMovingSpawn(false);
+                return;
+              }
+              // Object placement mode (Phase 4)
+              if (placingObjectDefId && editor.selectedMapId) {
+                addObjectInstance(editor.selectedMapId, {
+                  id: `obj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                  definitionId: placingObjectDefId,
+                  cx,
+                  cy,
+                  facing: 'down',
+                });
+                setPlacingObjectDefId(null);
+                return;
+              }
+              if (editor.activeLayer === 'tiles' && !effectiveTile) return;
+              editor.paintCell(cx, cy);
+            }}
+            showGrid={editor.showGrid}
+            dimInactiveLayers={editor.dimInactiveLayers}
+            onCellErase={editor.eraseCell}
+            onCellFill={(cx, cy) => {
+              if (editor.activeLayer === 'tiles' && !effectiveTile) return;
+              editor.fillCell(cx, cy);
+            }}
+            onEyedropperPick={handleEyedropperPick}
+            playerStartCx={playerStartCx}
+            playerStartCy={playerStartCy}
+            entities={resolvedObjects ? undefined : mapData._ac_entities}
+            objects={resolvedObjects}
+            selectedEntityId={selectedEntityId}
+            onEntityClick={setSelectedEntityId}
+            onEntityContextMenu={(entityId, x, y) => {
+              setSelectedEntityId(entityId);
+              setEntityContextMenu({ entityId, x, y });
+            }}
+            onEntityDelete={
+              editor.selectedMapId
+                ? (entityId) => {
+                    const isObject = (mapData._ac_objects ?? []).some((o) => o.id === entityId);
+                    if (isObject) {
+                      useMapsStore.getState().removeObjectInstance(editor.selectedMapId!, entityId);
+                    } else {
+                      removeEntity(editor.selectedMapId!, entityId);
+                    }
+                    if (selectedEntityId === entityId) setSelectedEntityId(null);
+                  }
+                : undefined
+            }
+            onEntityMove={editor.selectedMapId ? handleEntityMove : undefined}
+            onZoneMove={editor.selectedMapId ? handleZoneMove : undefined}
+            selectedZoneId={selectedZoneId}
+            onZoneClick={handleZoneClick}
+            onZoneDraw={editor.selectedMapId ? handleZoneDraw : undefined}
+            onZoneResize={editor.selectedMapId ? handleZoneResize : undefined}
+            onResizeMap={editor.selectedMapId ? handleResizeMap : undefined}
+            activeTileLayerIndex={editor.activeTileLayerIndex}
+            onTileMoveToLayer={
+              editor.selectedMapId
+                ? (cx, cy, fromIdx, toIdx) => {
+                    moveTilesToLayer(editor.selectedMapId!, [{ cx, cy }], fromIdx, toIdx);
+                  }
+                : undefined
+            }
+            onCellEraseFromLayer={
+              editor.selectedMapId
+                ? (cx, cy, layerIdx) => {
+                    eraseTileFromLayer(editor.selectedMapId!, cx, cy, layerIdx);
+                  }
+                : undefined
+            }
+            sceneEffect={mapMetadata?.sceneEffect}
+            showSpriteVisuals={editor.showSpriteVisuals}
+            spriteConfigs={spriteConfigs}
+            selectedTile={editor.selectedTile}
+            editingZoneRect={editingZoneRect}
+            selectionRect={selectionRect}
+            onSelectionChange={setSelectionRect}
+            onSelectionMove={handleSelectionMove}
+          />
+        </div>
+
+        {/* ── MapSettingsDialog — ouvert via toolbar (grille > Configurer) ── */}
+        {mapSettingsOpen && mapMetadata && (
+          <MapSettingsDialog map={mapMetadata} onClose={() => setMapSettingsOpen(false)} />
+        )}
+
+        {/* ── Entity context menu (portal) ── */}
+        {entityContextMenu &&
+          editor.selectedMapId &&
+          (() => {
+            const entity = mapData._ac_entities.find((e) => e.id === entityContextMenu.entityId);
+            if (!entity) return null;
+            const cfg = spriteConfigs[entity.spriteAssetUrl];
+            const instanceCount = mapData._ac_entities.filter(
+              (e) => e.spriteAssetUrl === entity.spriteAssetUrl
+            ).length;
+            return (
+              <EntityContextMenu
+                x={entityContextMenu.x}
+                y={entityContextMenu.y}
+                entity={entity}
+                spriteConfig={cfg}
+                isPlayerSprite={mapMetadata?.playerSpritePath === entity.spriteAssetUrl}
+                instanceCount={instanceCount}
+                onClose={() => setEntityContextMenu(null)}
+                onDelete={() => {
+                  removeEntity(editor.selectedMapId!, entity.id);
+                  if (selectedEntityId === entity.id) setSelectedEntityId(null);
+                }}
+                onDuplicate={() => {
+                  addEntity(editor.selectedMapId!, {
+                    id: `entity-${Date.now()}`,
+                    spriteAssetUrl: entity.spriteAssetUrl,
+                    cx: entity.cx + 1,
+                    cy: entity.cy,
+                    facing: entity.facing,
+                    behavior: entity.behavior,
+                    displayName: entity.displayName,
+                  });
+                }}
+                onSetAsPlayer={() => {
+                  updateMapMetadata(editor.selectedMapId!, {
+                    playerSpritePath: entity.spriteAssetUrl,
+                  });
+                }}
+                onConfigureSprite={() => {
+                  // Objects panel (right) is always visible — just close context menu
+                  setEntityContextMenu(null);
+                }}
+              />
+            );
+          })()}
+      </div>
+
+      {/* ── Resizer ── */}
+      <div
+        onMouseDown={handleResizerMouseDown}
+        style={{
+          width: 4,
+          flexShrink: 0,
+          cursor: 'col-resize',
+          background: 'var(--color-border-base)',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.background = 'var(--color-primary-60)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.background = 'var(--color-border-base)';
+        }}
+        title="Redimensionner le panneau droit"
+      />
+
+      {/* ── Right panel — Objets de scène + Calques (style GDevelop) ── */}
+      <aside
+        className="flex-shrink-0 border-l border-border overflow-hidden flex flex-col"
+        style={{ width: paletteWidth, background: 'var(--color-bg-surface)' }}
+        aria-label="Objets de scène et calques"
+      >
+        {/* PanelGroup vertical — Objets (+ Inspector) / Calques (react-resizable-panels) */}
+        <PanelGroup orientation="vertical" style={{ height: '100%' }}>
+          {/* Panel 1 — Objets de scène + Inspector entité inline */}
+          <Panel
+            defaultSize={65}
+            minSize={25}
+            style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            <ObjectsPanel
+              mapId={editor.selectedMapId}
+              isPlacingObject={placingObjectDefId !== null}
+              placingObjectDefId={placingObjectDefId}
+              onStartPlacing={(defId) => setPlacingObjectDefId(defId)}
+              onCancelPlacing={() => setPlacingObjectDefId(null)}
+            />
+            {/* Entity inspector — visible quand entité sélectionnée, GDevelop pattern */}
+            {selectedEntity && editor.selectedMapId && (
+              <div
+                style={{
+                  borderTop: '2px solid var(--color-primary-40, rgba(139,92,246,0.4))',
+                  flexShrink: 0,
+                  overflowY: 'auto',
+                  maxHeight: 260,
+                }}
+              >
+                <EntityPropertyPanel
+                  mapId={editor.selectedMapId}
+                  entity={selectedEntity}
+                  onClose={() => setSelectedEntityId(null)}
+                />
+              </div>
+            )}
+          </Panel>
+
+          {/* Drag handle — barre de redimensionnement Objects / Layers */}
+          <PanelResizeHandle
+            style={{
+              height: 5,
+              background: 'var(--color-border-base)',
+              cursor: 'row-resize',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 2,
+                borderRadius: 1,
+                background: 'rgba(255,255,255,0.2)',
+                pointerEvents: 'none',
+              }}
+            />
+          </PanelResizeHandle>
+
+          {/* Panel 2 — Calques */}
+          <Panel defaultSize={35} minSize={15} style={{ overflow: 'hidden' }}>
+            <LayersPanelSection
+              allLayers={mapData.layerInstances}
+              activeLayer={editor.activeLayer}
+              activeTileLayerIndex={editor.activeTileLayerIndex}
+              onTileLayerSelect={(idx) => {
+                editor.setActiveTileLayerIndex(idx);
+                editor.setActiveLayer('tiles');
+              }}
+              onLayerChange={(layer) => {
+                editor.setActiveLayer(layer);
+                if (layer === 'triggers') setRightTab('triggers');
+                else if (rightTab === 'triggers') setRightTab('tiles');
+              }}
+              onUpdateLayerProps={(identifier, patch) => {
+                if (editor.selectedMapId) updateLayerProps(editor.selectedMapId, identifier, patch);
+              }}
+              onReorderTileLayer={(from, to) => {
+                if (!editor.selectedMapId) return;
+                reorderTileLayer(editor.selectedMapId, from, to);
+                const cur = editor.activeTileLayerIndex;
+                if (from === cur) editor.setActiveTileLayerIndex(to);
+                else if (from < cur && to >= cur) editor.setActiveTileLayerIndex(cur - 1);
+                else if (from > cur && to <= cur) editor.setActiveTileLayerIndex(cur + 1);
+              }}
+              onAddTileLayer={(name) => {
+                if (editor.selectedMapId) addTileLayer(editor.selectedMapId, name);
+              }}
+              onRenameTileLayer={(identifier, newName) => {
+                if (editor.selectedMapId)
+                  renameTileLayer(editor.selectedMapId, identifier, newName);
+              }}
+              onDeleteTileLayer={(idx) => {
+                if (!editor.selectedMapId) return;
+                const tileLayers = mapData.layerInstances.filter((l) => l.__type === 'tiles');
+                const layer = tileLayers[idx];
+                if (!layer) return;
+                removeTileLayer(editor.selectedMapId, layer.__identifier);
+                const cur = editor.activeTileLayerIndex;
+                if (idx <= cur && cur > 0) editor.setActiveTileLayerIndex(cur - 1);
+              }}
+            />
+          </Panel>
+        </PanelGroup>
       </aside>
     </div>
   );

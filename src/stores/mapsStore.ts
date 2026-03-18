@@ -3,7 +3,17 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import type { TemporalState } from 'zundo';
 import type { MapMetadata, MapData, DialogueTrigger, SceneExit, AudioZone } from '@/types/map';
-import type { EntityInstance } from '@/types/sprite';
+import type {
+  EntityInstance,
+  ObjectInstance,
+  ObjectDefinition,
+  ObjectComponent,
+  AnimatedSpriteComponent,
+  SpriteComponent,
+  ColliderComponent,
+  DialogueComponent,
+  PatrolComponent,
+} from '@/types/sprite';
 
 /**
  * Maps Store
@@ -76,6 +86,7 @@ function createEmptyMapData(
     _ac_scene_exits: [],
     _ac_audio_zones: [],
     _ac_entities: [],
+    _ac_objects: [],
   };
 }
 
@@ -87,6 +98,8 @@ interface MapsState {
   // State
   maps: MapMetadata[];
   mapDataById: Record<string, MapData>;
+  /** Blueprints d'objets partagés entre toutes les cartes du projet */
+  objectDefinitions: ObjectDefinition[];
 
   // Queries
   getMapById: (mapId: string) => MapMetadata | undefined;
@@ -107,10 +120,23 @@ interface MapsState {
     tileSize: number
   ) => void;
 
-  // Entities
+  // Entities (legacy — @deprecated, conservé pour migration)
   addEntity: (mapId: string, entity: EntityInstance) => void;
   updateEntity: (mapId: string, entityId: string, patch: Partial<EntityInstance>) => void;
   removeEntity: (mapId: string, entityId: string) => void;
+
+  // ObjectDefinition CRUD (Phase 4)
+  addObjectDefinition: (def: Omit<ObjectDefinition, 'id'>) => string;
+  updateObjectDefinition: (defId: string, patch: Partial<Omit<ObjectDefinition, 'id'>>) => void;
+  removeObjectDefinition: (defId: string) => void;
+
+  // ObjectInstance CRUD per-map (Phase 4)
+  addObjectInstance: (mapId: string, instance: ObjectInstance) => void;
+  updateObjectInstance: (mapId: string, instanceId: string, patch: Partial<ObjectInstance>) => void;
+  removeObjectInstance: (mapId: string, instanceId: string) => void;
+
+  /** Migration automatique des EntityInstance legacy → ObjectInstance + ObjectDefinition */
+  migrateEntitiesToObjects: () => void;
 
   // Dialogue triggers
   addDialogueTrigger: (mapId: string, trigger: DialogueTrigger) => void;
@@ -152,7 +178,79 @@ interface MapsState {
   eraseTileFromLayer: (mapId: string, cx: number, cy: number, layerIdx: number) => void;
 
   // Import
-  importMaps: (maps: MapMetadata[], mapDataById: Record<string, MapData>) => void;
+  importMaps: (
+    maps: MapMetadata[],
+    mapDataById: Record<string, MapData>,
+    objectDefinitions?: ObjectDefinition[]
+  ) => void;
+}
+
+// ============================================================================
+// HELPERS — migration EntityInstance → ObjectInstance
+// ============================================================================
+
+/**
+ * Construit la liste de composants d'un ObjectDefinition à partir d'une EntityInstance legacy.
+ * Règle : behavior 'static' → AnimatedSprite + Collider
+ *         behavior 'patrol' → AnimatedSprite + Patrol + Collider
+ *         behavior 'dialogue' → AnimatedSprite + Dialogue + Collider
+ */
+function buildComponentsFromEntity(entity: EntityInstance): ObjectComponent[] {
+  const components: ObjectComponent[] = [];
+
+  // Composant visuel — AnimatedSprite si spriteAssetUrl présent
+  if (entity.spriteAssetUrl) {
+    const anim: AnimatedSpriteComponent = {
+      type: 'animatedSprite',
+      spriteAssetUrl: entity.spriteAssetUrl,
+      spriteSheetConfigUrl: entity.spriteAssetUrl,
+    };
+    components.push(anim);
+  } else {
+    // Sprite vide (carré de fallback) — sera remplacé par l'utilisateur
+    const sprite: SpriteComponent = {
+      type: 'sprite',
+      spriteAssetUrl: '',
+      srcX: 0,
+      srcY: 0,
+      srcW: 32,
+      srcH: 32,
+    };
+    components.push(sprite);
+  }
+
+  // Composant comportement
+  if (entity.behavior === 'patrol' && entity.patrolTargetCx !== undefined) {
+    const patrol: PatrolComponent = {
+      type: 'patrol',
+      targetCx: entity.patrolTargetCx ?? 0,
+      targetCy: entity.patrolTargetCy ?? 0,
+      speed: 60,
+      loop: true,
+    };
+    components.push(patrol);
+  } else if (entity.behavior === 'dialogue' && (entity.dialogueSceneId || entity.dialogueText)) {
+    const dialogue: DialogueComponent = {
+      type: 'dialogue',
+      sceneId: entity.dialogueSceneId ?? '',
+      text: entity.dialogueText,
+    };
+    components.push(dialogue);
+  }
+
+  // Collider par défaut (box)
+  const collider: ColliderComponent = {
+    type: 'collider',
+    shape: 'box',
+    offsetX: 0,
+    offsetY: 0,
+    w: 28,
+    h: 28,
+    radius: 14,
+  };
+  components.push(collider);
+
+  return components;
 }
 
 // ============================================================================
@@ -166,6 +264,7 @@ export const useMapsStore = create<MapsState>()(
         (set, get) => ({
           maps: [],
           mapDataById: {},
+          objectDefinitions: [],
 
           getMapById: (mapId) => get().maps.find((m) => m.id === mapId),
           getMapData: (mapId) => get().mapDataById[mapId],
@@ -340,6 +439,207 @@ export const useMapsStore = create<MapsState>()(
               },
               false,
               'maps/removeEntity'
+            );
+          },
+
+          // ── ObjectDefinition CRUD ────────────────────────────────────────────
+
+          addObjectDefinition: (def) => {
+            const id = `objdef-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            const newDef: ObjectDefinition = { ...def, id };
+            set(
+              (state) => ({ objectDefinitions: [...state.objectDefinitions, newDef] }),
+              false,
+              'maps/addObjectDefinition'
+            );
+            return id;
+          },
+
+          updateObjectDefinition: (defId, patch) => {
+            set(
+              (state) => ({
+                objectDefinitions: state.objectDefinitions.map((d) =>
+                  d.id === defId ? { ...d, ...patch } : d
+                ),
+              }),
+              false,
+              'maps/updateObjectDefinition'
+            );
+          },
+
+          removeObjectDefinition: (defId) => {
+            set(
+              (state) => {
+                // Supprimer aussi toutes les instances qui référencent cette définition
+                const newMapDataById: Record<string, MapData> = {};
+                for (const [mapId, data] of Object.entries(state.mapDataById)) {
+                  newMapDataById[mapId] = {
+                    ...data,
+                    _ac_objects: data._ac_objects.filter((i) => i.definitionId !== defId),
+                  };
+                }
+                return {
+                  objectDefinitions: state.objectDefinitions.filter((d) => d.id !== defId),
+                  mapDataById: newMapDataById,
+                };
+              },
+              false,
+              'maps/removeObjectDefinition'
+            );
+          },
+
+          // ── ObjectInstance CRUD (par carte) ──────────────────────────────────
+
+          addObjectInstance: (mapId, instance) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: { ...data, _ac_objects: [...data._ac_objects, instance] },
+                  },
+                };
+              },
+              false,
+              'maps/addObjectInstance'
+            );
+          },
+
+          updateObjectInstance: (mapId, instanceId, patch) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_objects: data._ac_objects.map((i) =>
+                        i.id === instanceId ? { ...i, ...patch } : i
+                      ),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/updateObjectInstance'
+            );
+          },
+
+          removeObjectInstance: (mapId, instanceId) => {
+            set(
+              (state) => {
+                const data = state.mapDataById[mapId];
+                if (!data) return state;
+                return {
+                  mapDataById: {
+                    ...state.mapDataById,
+                    [mapId]: {
+                      ...data,
+                      _ac_objects: data._ac_objects.filter((i) => i.id !== instanceId),
+                    },
+                  },
+                };
+              },
+              false,
+              'maps/removeObjectInstance'
+            );
+          },
+
+          // ── Migration EntityInstance → ObjectInstance ────────────────────────
+
+          migrateEntitiesToObjects: () => {
+            const state = get();
+            const newDefs: ObjectDefinition[] = [...state.objectDefinitions];
+            // Lookup: clé = "spriteAssetUrl::behavior" → defId
+            const defKeyToId = new Map<string, string>();
+            for (const def of newDefs) {
+              const spriteComp = def.components.find(
+                (c): c is AnimatedSpriteComponent | SpriteComponent =>
+                  c.type === 'animatedSprite' || c.type === 'sprite'
+              );
+              const url = spriteComp
+                ? 'spriteSheetConfigUrl' in spriteComp
+                  ? spriteComp.spriteSheetConfigUrl
+                  : spriteComp.spriteAssetUrl
+                : '';
+              defKeyToId.set(url, def.id);
+            }
+
+            const newMapDataById: Record<string, MapData> = {};
+            let didMigrate = false;
+
+            for (const [mapId, mapData] of Object.entries(state.mapDataById)) {
+              const entities = mapData._ac_entities ?? [];
+              // Ne migrer que si _ac_entities non vide et _ac_objects vide
+              if (entities.length === 0 || mapData._ac_objects.length > 0) {
+                newMapDataById[mapId] = mapData;
+                continue;
+              }
+
+              didMigrate = true;
+              const instances: ObjectInstance[] = [];
+
+              for (const entity of entities) {
+                const key = entity.spriteAssetUrl;
+                let defId = defKeyToId.get(key);
+
+                if (!defId) {
+                  const components = buildComponentsFromEntity(entity);
+                  const defName =
+                    entity.displayName ??
+                    (entity.spriteAssetUrl
+                      ? (entity.spriteAssetUrl
+                          .split('/')
+                          .pop()
+                          ?.replace(/\.[^.]+$/, '') ?? 'Objet')
+                      : 'Objet sans sprite');
+
+                  const newDef: ObjectDefinition = {
+                    id: `objdef-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                    displayName: defName,
+                    components,
+                    category:
+                      entity.behavior === 'static'
+                        ? 'npc'
+                        : entity.behavior === 'patrol'
+                          ? 'npc'
+                          : 'npc',
+                    thumbnailUrl: entity.spriteAssetUrl || undefined,
+                  };
+                  newDefs.push(newDef);
+                  defKeyToId.set(key, newDef.id);
+                  defId = newDef.id;
+                }
+
+                const instance: ObjectInstance = {
+                  id: entity.id,
+                  definitionId: defId,
+                  cx: entity.cx,
+                  cy: entity.cy,
+                  facing: entity.facing,
+                  overrides: entity.dialogueText
+                    ? { dialogueText: entity.dialogueText }
+                    : undefined,
+                };
+                instances.push(instance);
+              }
+
+              newMapDataById[mapId] = {
+                ...mapData,
+                _ac_objects: instances,
+                // _ac_entities conservé en read-only pour rollback d'urgence
+              };
+            }
+
+            if (!didMigrate) return;
+            set(
+              () => ({ objectDefinitions: newDefs, mapDataById: newMapDataById }),
+              false,
+              'maps/migrateEntitiesToObjects'
             );
           },
 
@@ -688,8 +988,8 @@ export const useMapsStore = create<MapsState>()(
             );
           },
 
-          importMaps: (maps, mapDataById) => {
-            set(() => ({ maps, mapDataById }), false, 'maps/importMaps');
+          importMaps: (maps, mapDataById, objectDefinitions = []) => {
+            set(() => ({ maps, mapDataById, objectDefinitions }), false, 'maps/importMaps');
           },
         }),
         { limit: 30 }
@@ -700,6 +1000,7 @@ export const useMapsStore = create<MapsState>()(
         partialize: (state) => ({
           maps: state.maps,
           mapDataById: state.mapDataById,
+          objectDefinitions: state.objectDefinitions,
         }),
       }
     ),

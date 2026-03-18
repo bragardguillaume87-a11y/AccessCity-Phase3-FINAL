@@ -14,10 +14,18 @@ import { useRef, useCallback, useState, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Stage, Layer, Image as KonvaImage, Rect, Line, Text, Circle, Group } from 'react-konva';
 import Konva from 'konva';
-import type { MapData, LayerType, EntityInstance } from '@/types/map';
+import type {
+  MapData,
+  LayerType,
+  EntityInstance,
+  ObjectInstance,
+  ObjectDefinition,
+} from '@/types/map';
 import type { SceneEffectConfig } from '@/types/sceneEffect';
+import type { SpriteSheetConfig } from '@/types/sprite';
 import type { TileImageCache } from './hooks/useTileset';
 import type { EditorTool } from './hooks/useMapEditor';
+import type { SelectedTile } from '@/types/tileset';
 import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
 import {
   MAP_ZOOM,
@@ -50,12 +58,19 @@ interface MapCanvasProps {
   onCellFill: (cx: number, cy: number) => void;
   /** Appelé quand l'outil pipette ou Alt+clic détecte une tuile à (cx, cy) */
   onEyedropperPick?: (cx: number, cy: number) => void;
-  /** Entités placées sur la carte (rendu dans l'éditeur) */
+  /** Entités placées sur la carte (rendu dans l'éditeur) — @deprecated utiliser objects */
   entities?: EntityInstance[];
+  /**
+   * Objets Phase 4 — instances avec leur définition résolue (composants).
+   * Priorité sur entities si présent.
+   */
+  objects?: Array<{ instance: ObjectInstance; definition: ObjectDefinition }>;
   /** Entité actuellement sélectionnée (affiche un contour violet) */
   selectedEntityId?: string | null;
   /** Appelé quand l'utilisateur clique sur une entité */
   onEntityClick?: (entityId: string) => void;
+  /** Appelé quand l'utilisateur fait un clic droit sur une entité (coordonnées écran) */
+  onEntityContextMenu?: (entityId: string, screenX: number, screenY: number) => void;
   /** Appelé quand l'utilisateur supprime une entité (clic droit ou Suppr) */
   onEntityDelete?: (entityId: string) => void;
   /** Appelé quand l'utilisateur déplace une entité par drag (coordonnées tuile) */
@@ -92,6 +107,27 @@ interface MapCanvasProps {
   onCellEraseFromLayer?: (cx: number, cy: number, layerIdx: number) => void;
   /** Effet atmosphérique de la carte — overlay canvas au-dessus du Stage. */
   sceneEffect?: SceneEffectConfig;
+  /** Affiche les sprites animés des entités (walk_down) à la place des marqueurs couleur */
+  showSpriteVisuals?: boolean;
+  /** Map URL → SpriteSheetConfig pour le rendu des sprites sur le canvas */
+  spriteConfigs?: Record<string, SpriteSheetConfig>;
+  /** Tuile sélectionnée — pour l'aperçu pinceau multi-tuiles sur hover */
+  selectedTile?: SelectedTile | null;
+  /**
+   * Quand non-null, affiche un contour pointillé violet sur le canvas indiquant
+   * la zone en cours d'édition dans TriggerZonePanel (coordonnées en tuiles).
+   */
+  editingZoneRect?: { xTile: number; yTile: number; wTile: number; hTile: number } | null;
+  /** Rect de sélection multi-tuiles (outil sélection) en coordonnées tuile */
+  selectionRect?: { cx: number; cy: number; cw: number; ch: number } | null;
+  /** Appelé quand la sélection est finalisée ou effacée */
+  onSelectionChange?: (rect: { cx: number; cy: number; cw: number; ch: number } | null) => void;
+  /** Appelé quand les tuiles sélectionnées sont déplacées (cut-paste) */
+  onSelectionMove?: (
+    fromRect: { cx: number; cy: number; cw: number; ch: number },
+    toCx: number,
+    toCy: number
+  ) => void;
 }
 
 // ============================================================================
@@ -260,8 +296,10 @@ export default function MapCanvas({
   onCellFill,
   onEyedropperPick,
   entities,
+  objects,
   selectedEntityId,
   onEntityClick,
+  onEntityContextMenu,
   onEntityDelete,
   onEntityMove,
   onZoneMove,
@@ -276,6 +314,13 @@ export default function MapCanvas({
   onTileMoveToLayer,
   onCellEraseFromLayer,
   sceneEffect,
+  showSpriteVisuals = false,
+  spriteConfigs,
+  selectedTile,
+  editingZoneRect,
+  selectionRect,
+  onSelectionChange,
+  onSelectionMove,
 }: MapCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const isMouseDown = useRef(false);
@@ -295,6 +340,30 @@ export default function MapCanvas({
   } | null>(null);
   const [resizeCursor, setResizeCursor] = useState<string | null>(null);
   const [entityCursor, setEntityCursor] = useState<'grab' | 'grabbing' | null>(null);
+
+  // ── Sprite animation tick (~8fps) — incrémenté quand showSpriteVisuals actif ─
+  const [entityAnimTick, setEntityAnimTick] = useState(0);
+  useEffect(() => {
+    if (!showSpriteVisuals) return;
+    const id = setInterval(() => setEntityAnimTick((t) => t + 1), 120);
+    return () => clearInterval(id);
+  }, [showSpriteVisuals]);
+  // ── Selection tool state ────────────────────────────────────────────────────
+  // selDrawing — rectangle de sélection en cours de dessin (coords tuile)
+  const [selDrawing, setSelDrawing] = useState<{
+    startCx: number;
+    startCy: number;
+    curCx: number;
+    curCy: number;
+  } | null>(null);
+  // selMoveDrag — déplacement d'une sélection finalisée (delta en tuiles)
+  const [selMoveDrag, setSelMoveDrag] = useState<{
+    startCx: number; // cellule mousedown
+    startCy: number;
+    curCx: number; // cellule courante
+    curCy: number;
+  } | null>(null);
+
   // drawingZone — rectangle en cours de dessin par drag (world pixels)
   const [drawingZone, setDrawingZone] = useState<{
     sx: number;
@@ -469,6 +538,16 @@ export default function MapCanvas({
         return;
       }
 
+      // Outil sélection — mettre à jour le drawing ou le move drag
+      if (isMouseDown.current && activeTool === 'selection') {
+        if (selDrawing) {
+          setSelDrawing((prev) => (prev ? { ...prev, curCx: cell.cx, curCy: cell.cy } : null));
+        } else if (selMoveDrag) {
+          setSelMoveDrag((prev) => (prev ? { ...prev, curCx: cell.cx, curCy: cell.cy } : null));
+        }
+        return;
+      }
+
       // Clic gauche maintenu — paint/erase continu (fill uniquement au clic)
       if (isMouseDown.current && activeTool === 'paint') {
         onCellPaint(cell.cx, cell.cy);
@@ -480,6 +559,8 @@ export default function MapCanvas({
       isMiddlePanning,
       isRightErasing,
       drawingZone,
+      selDrawing,
+      selMoveDrag,
       getGridCell,
       mapData,
       onCellHover,
@@ -580,6 +661,26 @@ export default function MapCanvas({
         return;
       }
 
+      // Outil sélection
+      if (activeTool === 'selection') {
+        const inside =
+          selectionRect &&
+          cell.cx >= selectionRect.cx &&
+          cell.cx < selectionRect.cx + selectionRect.cw &&
+          cell.cy >= selectionRect.cy &&
+          cell.cy < selectionRect.cy + selectionRect.ch;
+
+        if (inside && selectionRect) {
+          // Démarrer un déplacement de la sélection existante
+          setSelMoveDrag({ startCx: cell.cx, startCy: cell.cy, curCx: cell.cx, curCy: cell.cy });
+        } else {
+          // Démarrer un nouveau dessin de sélection (efface l'ancienne)
+          onSelectionChange?.(null);
+          setSelDrawing({ startCx: cell.cx, startCy: cell.cy, curCx: cell.cx, curCy: cell.cy });
+        }
+        return;
+      }
+
       if (activeTool === 'paint') onCellPaint(cell.cx, cell.cy);
       else if (activeTool === 'erase') onCellErase(cell.cx, cell.cy);
       else if (activeTool === 'fill') {
@@ -600,6 +701,8 @@ export default function MapCanvas({
       onEyedropperPick,
       entities,
       onEntityDelete,
+      selectionRect,
+      onSelectionChange,
     ]
   );
 
@@ -632,8 +735,40 @@ export default function MapCanvas({
         }
         setDrawingZone(null);
       }
+
+      // Finaliser la sélection — dessin
+      if (selDrawing) {
+        const cx = Math.min(selDrawing.startCx, selDrawing.curCx);
+        const cy = Math.min(selDrawing.startCy, selDrawing.curCy);
+        const cw = Math.abs(selDrawing.curCx - selDrawing.startCx) + 1;
+        const ch = Math.abs(selDrawing.curCy - selDrawing.startCy) + 1;
+        onSelectionChange?.({ cx, cy, cw, ch });
+        setSelDrawing(null);
+        return;
+      }
+
+      // Finaliser le déplacement de la sélection
+      if (selMoveDrag && selectionRect && onSelectionMove) {
+        const dx = selMoveDrag.curCx - selMoveDrag.startCx;
+        const dy = selMoveDrag.curCy - selMoveDrag.startCy;
+        if (dx !== 0 || dy !== 0) {
+          onSelectionMove(selectionRect, selectionRect.cx + dx, selectionRect.cy + dy);
+        }
+        setSelMoveDrag(null);
+        return;
+      }
+      setSelMoveDrag(null);
     },
-    [drawingZone, mapData, onZoneDraw]
+    [
+      drawingZone,
+      mapData,
+      onZoneDraw,
+      selDrawing,
+      selMoveDrag,
+      selectionRect,
+      onSelectionChange,
+      onSelectionMove,
+    ]
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -641,6 +776,8 @@ export default function MapCanvas({
     setIsRightErasing(false);
     setIsMiddlePanning(false);
     middlePanStart.current = null;
+    setSelDrawing(null);
+    setSelMoveDrag(null);
     onCellHover(null);
   }, [onCellHover]);
 
@@ -691,6 +828,9 @@ export default function MapCanvas({
   const gridLines = useMemo(() => {
     if (!showGrid) return [];
     const lines: React.ReactElement[] = [];
+    // Label interval: every 5 tiles (or every tile if tileSize >= 64)
+    const labelStep = tileSize >= 64 ? 1 : 5;
+    const labelFontSize = Math.max(7, Math.min(10, 9 / zoom));
     for (let col = 0; col <= gridW; col++) {
       lines.push(
         <Line
@@ -701,6 +841,20 @@ export default function MapCanvas({
           listening={false}
         />
       );
+      // Pixel label on X axis (top) — every labelStep cols, skip col 0
+      if (col > 0 && col % labelStep === 0) {
+        lines.push(
+          <Text
+            key={`lx${col}`}
+            x={col * tileSize + 2 / zoom}
+            y={2 / zoom}
+            text={`${col * tileSize}`}
+            fontSize={labelFontSize / zoom}
+            fill="rgba(255,255,255,0.28)"
+            listening={false}
+          />
+        );
+      }
     }
     for (let row = 0; row <= gridH; row++) {
       lines.push(
@@ -712,6 +866,20 @@ export default function MapCanvas({
           listening={false}
         />
       );
+      // Pixel label on Y axis (left) — every labelStep rows, skip row 0
+      if (row > 0 && row % labelStep === 0) {
+        lines.push(
+          <Text
+            key={`ly${row}`}
+            x={2 / zoom}
+            y={row * tileSize + 2 / zoom}
+            text={`${row * tileSize}`}
+            fontSize={labelFontSize / zoom}
+            fill="rgba(255,255,255,0.28)"
+            listening={false}
+          />
+        );
+      }
     }
     return lines;
   }, [showGrid, gridW, gridH, tileSize, zoom]);
@@ -730,10 +898,18 @@ export default function MapCanvas({
   }
 
   // ── Cursor (D1) ───────────────────────────────────────────────────────────
-  // Priorités : resize handle > pan (espace/milieu) > erase > outils normaux
+  // Priorités : resize handle > pan (espace/milieu) > outil sélection > autres outils
 
   const isErasing = activeTool === 'erase' || isRightErasing;
   const isPanning = isSpacePanning || isMiddlePanning;
+
+  const insideSelection =
+    selectionRect &&
+    hoveredCell &&
+    hoveredCell.cx >= selectionRect.cx &&
+    hoveredCell.cx < selectionRect.cx + selectionRect.cw &&
+    hoveredCell.cy >= selectionRect.cy &&
+    hoveredCell.cy < selectionRect.cy + selectionRect.ch;
 
   const cursor =
     resizeCursor ??
@@ -748,7 +924,15 @@ export default function MapCanvas({
           ? 'cell'
           : activeTool === 'fill'
             ? 'copy'
-            : 'default');
+            : activeTool === 'selection'
+              ? selMoveDrag
+                ? 'grabbing'
+                : insideSelection
+                  ? 'move'
+                  : 'crosshair'
+              : activeTool === 'paint'
+                ? 'crosshair'
+                : 'default');
 
   // Zones interactives dès que la couche Triggers est visible (pas besoin de la sélectionner)
   const zonesInteractive = triggersLayer?._ac_visible ?? true;
@@ -762,7 +946,8 @@ export default function MapCanvas({
       (activeTool !== 'paint' &&
         activeTool !== 'erase' &&
         activeTool !== 'eyedropper' &&
-        activeTool !== 'fill'));
+        activeTool !== 'fill' &&
+        activeTool !== 'selection'));
 
   // ── Resize handles helpers ────────────────────────────────────────────────
   const mapPixelW = gridW * tileSize;
@@ -799,14 +984,35 @@ export default function MapCanvas({
         onContextMenu={(e) => e.evt.preventDefault()}
         style={{ cursor }}
       >
-        {/* ── Map background ── */}
+        {/* ── Map background + border ── */}
         <Layer listening={false}>
+          {/* Shadow (offset rect derrière la map) */}
+          <Rect
+            x={4}
+            y={6}
+            width={gridW * tileSize}
+            height={gridH * tileSize}
+            fill="rgba(0,0,0,0.35)"
+            shadowBlur={0}
+          />
+          {/* Map fill */}
           <Rect
             x={0}
             y={0}
             width={gridW * tileSize}
             height={gridH * tileSize}
             fill={MAP_CANVAS_COLORS.MAP_BACKGROUND}
+          />
+          {/* Map border */}
+          <Rect
+            x={0}
+            y={0}
+            width={gridW * tileSize}
+            height={gridH * tileSize}
+            fill="transparent"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth={1}
+            listening={false}
           />
         </Layer>
 
@@ -1044,12 +1250,6 @@ export default function MapCanvas({
             const y = entity.cy * tileSize;
             const pad = Math.max(2, tileSize * 0.08);
             const isSelected = entity.id === selectedEntityId;
-            const fill =
-              entity.behavior === 'dialogue'
-                ? 'rgba(60,220,100,0.35)'
-                : entity.behavior === 'patrol'
-                  ? 'rgba(255,200,50,0.35)'
-                  : 'rgba(100,149,237,0.35)';
             const stroke =
               entity.behavior === 'dialogue'
                 ? 'rgba(60,220,100,0.9)'
@@ -1058,6 +1258,128 @@ export default function MapCanvas({
                   : 'rgba(100,149,237,0.9)';
             const label =
               entity.behavior === 'dialogue' ? 'D' : entity.behavior === 'patrol' ? 'P' : '·';
+
+            // ── Sprite live rendering ──────────────────────────────────────
+            const spritePath = entity.spriteAssetUrl;
+            const cfg = spritePath && spriteConfigs ? spriteConfigs[spritePath] : undefined;
+            const spriteImg = spritePath ? imageCache.get(spritePath) : undefined;
+            const useSpriteRender = showSpriteVisuals && !!cfg && !!spriteImg;
+
+            if (useSpriteRender && cfg && spriteImg) {
+              // Compute current frame for walk_down (or idle_down fallback)
+              const anim = cfg.animations['walk_down'] ?? cfg.animations['idle_down'];
+              const frames = anim?.frames ?? [];
+              const frameIdx = frames.length > 0 ? frames[entityAnimTick % frames.length] : 0;
+              const col = frameIdx % Math.max(1, cfg.cols);
+              const row = Math.floor(frameIdx / Math.max(1, cfg.cols));
+              return [
+                // Sprite image
+                <KonvaImage
+                  key={`entity-sprite-${entity.id}`}
+                  image={spriteImg}
+                  x={x}
+                  y={y}
+                  width={tileSize}
+                  height={tileSize}
+                  crop={{
+                    x: col * cfg.frameW,
+                    y: row * cfg.frameH,
+                    width: cfg.frameW,
+                    height: cfg.frameH,
+                  }}
+                  imageSmoothingEnabled={false}
+                  draggable={!!onEntityMove}
+                  dragBoundFunc={(pos) => {
+                    const stage = stageRef.current;
+                    if (!stage) return pos;
+                    const sc = stage.scaleX(),
+                      sx = stage.x(),
+                      sy = stage.y();
+                    const newCx = Math.max(
+                      0,
+                      Math.min(gridW - 1, Math.round((pos.x - sx) / sc / tileSize))
+                    );
+                    const newCy = Math.max(
+                      0,
+                      Math.min(gridH - 1, Math.round((pos.y - sy) / sc / tileSize))
+                    );
+                    return { x: newCx * tileSize * sc + sx, y: newCy * tileSize * sc + sy };
+                  }}
+                  onDragStart={() => {
+                    onEntityClick?.(entity.id);
+                    setEntityCursor('grabbing');
+                  }}
+                  onDragEnd={(e) => {
+                    setEntityCursor(null);
+                    const newCx = Math.max(
+                      0,
+                      Math.min(gridW - 1, Math.round(e.target.x() / tileSize))
+                    );
+                    const newCy = Math.max(
+                      0,
+                      Math.min(gridH - 1, Math.round(e.target.y() / tileSize))
+                    );
+                    onEntityMove?.(entity.id, newCx, newCy);
+                  }}
+                  onMouseEnter={() => {
+                    if (onEntityMove) setEntityCursor('grab');
+                  }}
+                  onMouseLeave={() =>
+                    setEntityCursor((prev) => (prev === 'grabbing' ? 'grabbing' : null))
+                  }
+                  onClick={() => onEntityClick?.(entity.id)}
+                  onTap={() => onEntityClick?.(entity.id)}
+                  onContextMenu={(e) => {
+                    e.evt.preventDefault();
+                    const pos = stageRef.current?.getPointerPosition();
+                    if (pos) {
+                      const rect = (e.evt.target as HTMLCanvasElement).getBoundingClientRect?.();
+                      onEntityContextMenu?.(
+                        entity.id,
+                        rect ? rect.left + pos.x : e.evt.clientX,
+                        rect ? rect.top + pos.y : e.evt.clientY
+                      );
+                    }
+                  }}
+                />,
+                // Selection border overlay
+                isSelected && (
+                  <Rect
+                    key={`entity-sel-${entity.id}`}
+                    x={x + 1}
+                    y={y + 1}
+                    width={tileSize - 2}
+                    height={tileSize - 2}
+                    fill="transparent"
+                    stroke="var(--color-primary)"
+                    strokeWidth={2.5 / zoom}
+                    cornerRadius={2}
+                    listening={false}
+                  />
+                ),
+                // Behavior badge (small corner indicator)
+                <Text
+                  key={`entity-badge-${entity.id}`}
+                  x={x + tileSize * 0.6}
+                  y={y + tileSize * 0.65}
+                  width={tileSize * 0.4}
+                  text={label}
+                  fontSize={Math.max(6, tileSize * 0.28)}
+                  fontStyle="bold"
+                  fill="rgba(255,255,255,0.9)"
+                  align="center"
+                  listening={false}
+                />,
+              ].filter(Boolean);
+            }
+
+            // ── Fallback: colored rect + letter badge ──────────────────────
+            const fill =
+              entity.behavior === 'dialogue'
+                ? 'rgba(60,220,100,0.35)'
+                : entity.behavior === 'patrol'
+                  ? 'rgba(255,200,50,0.35)'
+                  : 'rgba(100,149,237,0.35)';
             return [
               <Rect
                 key={`entity-bg-${entity.id}`}
@@ -1113,6 +1435,18 @@ export default function MapCanvas({
                 }
                 onClick={() => onEntityClick?.(entity.id)}
                 onTap={() => onEntityClick?.(entity.id)}
+                onContextMenu={(e) => {
+                  e.evt.preventDefault();
+                  const pos = stageRef.current?.getPointerPosition();
+                  if (pos) {
+                    const rect = (e.evt.target as HTMLCanvasElement).getBoundingClientRect?.();
+                    onEntityContextMenu?.(
+                      entity.id,
+                      rect ? rect.left + pos.x : e.evt.clientX,
+                      rect ? rect.top + pos.y : e.evt.clientY
+                    );
+                  }
+                }}
               />,
               <Text
                 key={`entity-lbl-${entity.id}`}
@@ -1128,6 +1462,249 @@ export default function MapCanvas({
               />,
             ];
           })}
+
+          {/* ── Object markers (Phase 4 — ObjectInstance + ObjectDefinition) ── */}
+          {(objects ?? []).map(({ instance, definition }) => {
+            const x = instance.cx * tileSize;
+            const y = instance.cy * tileSize;
+            const pad = Math.max(2, tileSize * 0.08);
+            const isSelected = instance.id === selectedEntityId;
+
+            const hasDialogue = definition.components.some((c) => c.type === 'dialogue');
+            const hasPatrol = definition.components.some((c) => c.type === 'patrol');
+            const hasWind = definition.components.some((c) => c.type === 'wind');
+            const stroke = hasDialogue
+              ? 'rgba(60,220,100,0.9)'
+              : hasPatrol
+                ? 'rgba(255,200,50,0.9)'
+                : hasWind
+                  ? 'rgba(100,220,255,0.9)'
+                  : 'rgba(100,149,237,0.9)';
+            const label = hasDialogue ? 'D' : hasPatrol ? 'P' : hasWind ? '💨' : '·';
+
+            // Résoudre le composant sprite
+            const spriteComp = definition.components.find(
+              (
+                c
+              ): c is
+                | { type: 'animatedSprite'; spriteAssetUrl: string; spriteSheetConfigUrl: string }
+                | {
+                    type: 'sprite';
+                    spriteAssetUrl: string;
+                    srcX: number;
+                    srcY: number;
+                    srcW: number;
+                    srcH: number;
+                  } => c.type === 'animatedSprite' || c.type === 'sprite'
+            );
+            const spritePath = spriteComp?.spriteAssetUrl ?? '';
+            const cfg = spritePath && spriteConfigs ? spriteConfigs[spritePath] : undefined;
+            const spriteImg = spritePath ? imageCache.get(spritePath) : undefined;
+            const useSprite = showSpriteVisuals && !!cfg && !!spriteImg;
+
+            if (useSprite && cfg && spriteImg) {
+              const anim = cfg.animations['walk_down'] ?? cfg.animations['idle_down'];
+              const frames = anim?.frames ?? [];
+              const frameIdx = frames.length > 0 ? frames[entityAnimTick % frames.length] : 0;
+              const col = frameIdx % Math.max(1, cfg.cols);
+              const row = Math.floor(frameIdx / Math.max(1, cfg.cols));
+              return [
+                <KonvaImage
+                  key={`obj-sprite-${instance.id}`}
+                  image={spriteImg}
+                  x={x}
+                  y={y}
+                  width={tileSize}
+                  height={tileSize}
+                  crop={{
+                    x: col * cfg.frameW,
+                    y: row * cfg.frameH,
+                    width: cfg.frameW,
+                    height: cfg.frameH,
+                  }}
+                  imageSmoothingEnabled={false}
+                  draggable={!!onEntityMove}
+                  dragBoundFunc={(pos) => {
+                    const stage = stageRef.current;
+                    if (!stage) return pos;
+                    const sc = stage.scaleX(),
+                      sx = stage.x(),
+                      sy = stage.y();
+                    const newCx = Math.max(
+                      0,
+                      Math.min(gridW - 1, Math.round((pos.x - sx) / sc / tileSize))
+                    );
+                    const newCy = Math.max(
+                      0,
+                      Math.min(gridH - 1, Math.round((pos.y - sy) / sc / tileSize))
+                    );
+                    return { x: newCx * tileSize * sc + sx, y: newCy * tileSize * sc + sy };
+                  }}
+                  onDragStart={() => {
+                    onEntityClick?.(instance.id);
+                    setEntityCursor('grabbing');
+                  }}
+                  onDragEnd={(e) => {
+                    setEntityCursor(null);
+                    const newCx = Math.max(
+                      0,
+                      Math.min(gridW - 1, Math.round(e.target.x() / tileSize))
+                    );
+                    const newCy = Math.max(
+                      0,
+                      Math.min(gridH - 1, Math.round(e.target.y() / tileSize))
+                    );
+                    onEntityMove?.(instance.id, newCx, newCy);
+                  }}
+                  onMouseEnter={() => {
+                    if (onEntityMove) setEntityCursor('grab');
+                  }}
+                  onMouseLeave={() =>
+                    setEntityCursor((prev) => (prev === 'grabbing' ? 'grabbing' : null))
+                  }
+                  onClick={() => onEntityClick?.(instance.id)}
+                  onTap={() => onEntityClick?.(instance.id)}
+                  onContextMenu={(e) => {
+                    e.evt.preventDefault();
+                    const pos = stageRef.current?.getPointerPosition();
+                    if (pos) {
+                      const rect = (e.evt.target as HTMLCanvasElement).getBoundingClientRect?.();
+                      onEntityContextMenu?.(
+                        instance.id,
+                        rect ? rect.left + pos.x : e.evt.clientX,
+                        rect ? rect.top + pos.y : e.evt.clientY
+                      );
+                    }
+                  }}
+                />,
+                isSelected && (
+                  <Rect
+                    key={`obj-sel-${instance.id}`}
+                    x={x + 1}
+                    y={y + 1}
+                    width={tileSize - 2}
+                    height={tileSize - 2}
+                    fill="transparent"
+                    stroke="var(--color-primary)"
+                    strokeWidth={2.5 / zoom}
+                    cornerRadius={2}
+                    listening={false}
+                  />
+                ),
+                <Text
+                  key={`obj-badge-${instance.id}`}
+                  x={x + tileSize * 0.6}
+                  y={y + tileSize * 0.65}
+                  width={tileSize * 0.4}
+                  text={label}
+                  fontSize={Math.max(6, tileSize * 0.28)}
+                  fontStyle="bold"
+                  fill="rgba(255,255,255,0.9)"
+                  align="center"
+                  listening={false}
+                />,
+              ].filter(Boolean);
+            }
+
+            // Fallback : carré coloré
+            const fill = hasDialogue
+              ? 'rgba(60,220,100,0.35)'
+              : hasPatrol
+                ? 'rgba(255,200,50,0.35)'
+                : 'rgba(100,149,237,0.35)';
+            return [
+              <Rect
+                key={`obj-bg-${instance.id}`}
+                x={x + pad}
+                y={y + pad}
+                width={tileSize - pad * 2}
+                height={tileSize - pad * 2}
+                fill={fill}
+                stroke={isSelected ? 'var(--color-primary)' : stroke}
+                strokeWidth={isSelected ? 2.5 / zoom : 1.5 / zoom}
+                cornerRadius={3}
+                draggable={!!onEntityMove}
+                dragBoundFunc={(pos) => {
+                  const stage = stageRef.current;
+                  if (!stage) return pos;
+                  const sc = stage.scaleX(),
+                    sx = stage.x(),
+                    sy = stage.y();
+                  const newCx = Math.max(
+                    0,
+                    Math.min(gridW - 1, Math.round(((pos.x - sx) / sc - pad) / tileSize))
+                  );
+                  const newCy = Math.max(
+                    0,
+                    Math.min(gridH - 1, Math.round(((pos.y - sy) / sc - pad) / tileSize))
+                  );
+                  return {
+                    x: (newCx * tileSize + pad) * sc + sx,
+                    y: (newCy * tileSize + pad) * sc + sy,
+                  };
+                }}
+                onDragStart={() => {
+                  onEntityClick?.(instance.id);
+                  setEntityCursor('grabbing');
+                }}
+                onDragEnd={(e) => {
+                  setEntityCursor(null);
+                  const newCx = Math.max(
+                    0,
+                    Math.min(gridW - 1, Math.round((e.target.x() - pad) / tileSize))
+                  );
+                  const newCy = Math.max(
+                    0,
+                    Math.min(gridH - 1, Math.round((e.target.y() - pad) / tileSize))
+                  );
+                  onEntityMove?.(instance.id, newCx, newCy);
+                }}
+                onMouseEnter={() => {
+                  if (onEntityMove) setEntityCursor('grab');
+                }}
+                onMouseLeave={() =>
+                  setEntityCursor((prev) => (prev === 'grabbing' ? 'grabbing' : null))
+                }
+                onClick={() => onEntityClick?.(instance.id)}
+                onTap={() => onEntityClick?.(instance.id)}
+                onContextMenu={(e) => {
+                  e.evt.preventDefault();
+                  const pos = stageRef.current?.getPointerPosition();
+                  if (pos) {
+                    const rect = (e.evt.target as HTMLCanvasElement).getBoundingClientRect?.();
+                    onEntityContextMenu?.(
+                      instance.id,
+                      rect ? rect.left + pos.x : e.evt.clientX,
+                      rect ? rect.top + pos.y : e.evt.clientY
+                    );
+                  }
+                }}
+              />,
+              <Text
+                key={`obj-lbl-${instance.id}`}
+                x={x}
+                y={y + tileSize * 0.25}
+                width={tileSize}
+                text={label}
+                fontSize={Math.max(8, tileSize * 0.45)}
+                fontStyle="bold"
+                fill={isSelected ? 'var(--color-primary)' : stroke}
+                align="center"
+                listening={false}
+              />,
+              <Text
+                key={`obj-name-${instance.id}`}
+                x={x}
+                y={y + tileSize * 0.72}
+                width={tileSize}
+                text={definition.displayName.slice(0, 8)}
+                fontSize={Math.max(5, tileSize * 0.16)}
+                fill="rgba(255,255,255,0.55)"
+                align="center"
+                listening={false}
+              />,
+            ];
+          })}
         </Layer>
 
         {/* ── Grid overlay + hover preview (couche fusionnée — konva-patterns §9)
@@ -1135,30 +1712,47 @@ export default function MapCanvas({
         {(showGrid || (hoveredCell && isInBounds(hoveredCell.cx, hoveredCell.cy, mapData))) && (
           <Layer listening={false}>
             {showGrid && gridLines}
-            {hoveredCell && isInBounds(hoveredCell.cx, hoveredCell.cy, mapData) && (
-              <Rect
-                x={hoveredCell.cx * tileSize}
-                y={hoveredCell.cy * tileSize}
-                width={tileSize}
-                height={tileSize}
-                fill={
-                  isErasing
-                    ? MAP_CANVAS_COLORS.HOVER_ERASE_FILL
-                    : activeTool === 'fill'
-                      ? MAP_CANVAS_COLORS.HOVER_FILL_FILL
-                      : MAP_CANVAS_COLORS.HOVER_DEFAULT_FILL
-                }
-                stroke={
-                  isErasing
-                    ? MAP_CANVAS_COLORS.HOVER_ERASE_STROKE
-                    : activeTool === 'fill'
-                      ? MAP_CANVAS_COLORS.HOVER_FILL_STROKE
-                      : MAP_CANVAS_COLORS.HOVER_DEFAULT_STROKE
-                }
-                strokeWidth={1.5 / zoom}
-                listening={false}
-              />
-            )}
+            {hoveredCell &&
+              isInBounds(hoveredCell.cx, hoveredCell.cy, mapData) &&
+              (() => {
+                // Pinceau multi-tuiles : étendre le rect hover à toute la région sélectionnée
+                const brushCols = activeTool === 'paint' ? (selectedTile?.regionCols ?? 1) : 1;
+                const brushRows = activeTool === 'paint' ? (selectedTile?.regionRows ?? 1) : 1;
+                const isMultiBrush = brushCols > 1 || brushRows > 1;
+
+                const fillColor = isErasing
+                  ? MAP_CANVAS_COLORS.HOVER_ERASE_FILL
+                  : activeTool === 'fill'
+                    ? MAP_CANVAS_COLORS.HOVER_FILL_FILL
+                    : activeTool === 'selection'
+                      ? MAP_CANVAS_COLORS.HOVER_SELECTION_FILL
+                      : isMultiBrush
+                        ? MAP_CANVAS_COLORS.HOVER_BRUSH_FILL
+                        : MAP_CANVAS_COLORS.HOVER_DEFAULT_FILL;
+
+                const strokeColor = isErasing
+                  ? MAP_CANVAS_COLORS.HOVER_ERASE_STROKE
+                  : activeTool === 'fill'
+                    ? MAP_CANVAS_COLORS.HOVER_FILL_STROKE
+                    : activeTool === 'selection'
+                      ? MAP_CANVAS_COLORS.HOVER_SELECTION_STROKE
+                      : isMultiBrush
+                        ? MAP_CANVAS_COLORS.HOVER_BRUSH_STROKE
+                        : MAP_CANVAS_COLORS.HOVER_DEFAULT_STROKE;
+
+                return (
+                  <Rect
+                    x={hoveredCell.cx * tileSize}
+                    y={hoveredCell.cy * tileSize}
+                    width={tileSize * brushCols}
+                    height={tileSize * brushRows}
+                    fill={fillColor}
+                    stroke={strokeColor}
+                    strokeWidth={isMultiBrush ? 2 / zoom : 1.5 / zoom}
+                    listening={false}
+                  />
+                );
+              })()}
           </Layer>
         )}
 
@@ -1279,6 +1873,116 @@ export default function MapCanvas({
                     y={y + h / 2 - 7 / zoom}
                     width={w}
                     text={`${wT} × ${hT}`}
+                    fontSize={11 / zoom}
+                    fontStyle="bold"
+                    fill="rgba(255,255,255,0.95)"
+                    stroke="rgba(0,0,0,0.6)"
+                    strokeWidth={2 / zoom}
+                    fillAfterStrokeEnabled
+                    align="center"
+                    listening={false}
+                  />
+                </>
+              );
+            })()}
+          </Layer>
+        )}
+
+        {/* ── Outil sélection multi-tuiles ── */}
+        {activeTool === 'selection' && (selDrawing || selectionRect) && (
+          <Layer listening={false}>
+            {/* Rect en cours de dessin */}
+            {selDrawing &&
+              (() => {
+                const cx = Math.min(selDrawing.startCx, selDrawing.curCx);
+                const cy = Math.min(selDrawing.startCy, selDrawing.curCy);
+                const cw = Math.abs(selDrawing.curCx - selDrawing.startCx) + 1;
+                const ch = Math.abs(selDrawing.curCy - selDrawing.startCy) + 1;
+                return (
+                  <Rect
+                    x={cx * tileSize}
+                    y={cy * tileSize}
+                    width={cw * tileSize}
+                    height={ch * tileSize}
+                    fill="rgba(99,179,237,0.1)"
+                    stroke="rgba(99,179,237,0.9)"
+                    strokeWidth={2 / zoom}
+                    dash={[5 / zoom, 3 / zoom]}
+                    cornerRadius={2}
+                    listening={false}
+                  />
+                );
+              })()}
+            {/* Sélection finalisée (avec ghost de déplacement si en cours) */}
+            {selectionRect &&
+              (() => {
+                const moveDx = selMoveDrag ? selMoveDrag.curCx - selMoveDrag.startCx : 0;
+                const moveDy = selMoveDrag ? selMoveDrag.curCy - selMoveDrag.startCy : 0;
+                const ghostCx = selectionRect.cx + moveDx;
+                const ghostCy = selectionRect.cy + moveDy;
+                return (
+                  <>
+                    {/* Source (toujours visible pour référence) */}
+                    <Rect
+                      x={selectionRect.cx * tileSize}
+                      y={selectionRect.cy * tileSize}
+                      width={selectionRect.cw * tileSize}
+                      height={selectionRect.ch * tileSize}
+                      fill={selMoveDrag ? 'rgba(99,179,237,0.05)' : 'rgba(99,179,237,0.12)'}
+                      stroke="rgba(99,179,237,0.8)"
+                      strokeWidth={2 / zoom}
+                      dash={[5 / zoom, 3 / zoom]}
+                      cornerRadius={2}
+                      listening={false}
+                    />
+                    {/* Ghost destination pendant le déplacement */}
+                    {selMoveDrag && (moveDx !== 0 || moveDy !== 0) && (
+                      <Rect
+                        x={ghostCx * tileSize}
+                        y={ghostCy * tileSize}
+                        width={selectionRect.cw * tileSize}
+                        height={selectionRect.ch * tileSize}
+                        fill="rgba(99,179,237,0.22)"
+                        stroke="rgba(99,179,237,1)"
+                        strokeWidth={2 / zoom}
+                        dash={[5 / zoom, 3 / zoom]}
+                        cornerRadius={2}
+                        listening={false}
+                      />
+                    )}
+                  </>
+                );
+              })()}
+          </Layer>
+        )}
+
+        {/* ── Contour zone en cours d'édition dans TriggerZonePanel ── */}
+        {editingZoneRect && (
+          <Layer listening={false}>
+            {(() => {
+              const x = editingZoneRect.xTile * tileSize;
+              const y = editingZoneRect.yTile * tileSize;
+              const w = editingZoneRect.wTile * tileSize;
+              const h = editingZoneRect.hTile * tileSize;
+              return (
+                <>
+                  <Rect
+                    x={x}
+                    y={y}
+                    width={w}
+                    height={h}
+                    fill="rgba(139,92,246,0.12)"
+                    stroke="rgba(139,92,246,0.9)"
+                    strokeWidth={2 / zoom}
+                    dash={[5 / zoom, 3 / zoom]}
+                    cornerRadius={4}
+                    listening={false}
+                  />
+                  <Text
+                    x={x}
+                    y={y + h / 2 - 7 / zoom}
+                    width={w}
+                    text={`${editingZoneRect.wTile} × ${editingZoneRect.hTile}`}
                     fontSize={11 / zoom}
                     fontStyle="bold"
                     fill="rgba(255,255,255,0.95)"
@@ -1448,6 +2152,153 @@ export default function MapCanvas({
 
       {/* ── Atmospheric effect overlay (above Konva canvas, pointer-events none) ── */}
       {sceneEffect && <SceneEffectCanvas effect={sceneEffect} />}
+
+      {/* ── HUD coordonnées (bottom-left, pointer-events none) ── */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 8,
+          left: 8,
+          display: 'flex',
+          gap: 6,
+          pointerEvents: 'none',
+          zIndex: 5,
+        }}
+      >
+        {hoveredCell && (
+          <span
+            style={{
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(4px)',
+              color: 'rgba(255,255,255,0.8)',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              padding: '2px 6px',
+              borderRadius: 4,
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            {hoveredCell.cx}, {hoveredCell.cy}
+          </span>
+        )}
+        {activeTool === 'selection' && selectionRect && (
+          <span
+            style={{
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(4px)',
+              color: 'rgba(99,179,237,0.9)',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              padding: '2px 6px',
+              borderRadius: 4,
+              border: '1px solid rgba(99,179,237,0.2)',
+            }}
+          >
+            ▣ {selectionRect.cw}×{selectionRect.ch}
+          </span>
+        )}
+        <span
+          style={{
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
+            color: 'rgba(255,255,255,0.55)',
+            fontSize: 10,
+            fontFamily: 'monospace',
+            padding: '2px 6px',
+            borderRadius: 4,
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          {Math.round(zoom * 100)}%
+        </span>
+        {(() => {
+          if (activeLayer === 'collision')
+            return (
+              <span
+                style={{
+                  background: 'rgba(0,0,0,0.55)',
+                  backdropFilter: 'blur(4px)',
+                  color: 'rgba(255,100,100,0.85)',
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  border: '1px solid rgba(255,100,100,0.15)',
+                }}
+              >
+                Collision
+              </span>
+            );
+          if (activeLayer === 'triggers')
+            return (
+              <span
+                style={{
+                  background: 'rgba(0,0,0,0.55)',
+                  backdropFilter: 'blur(4px)',
+                  color: 'rgba(139,92,246,0.9)',
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  border: '1px solid rgba(139,92,246,0.2)',
+                }}
+              >
+                Triggers
+              </span>
+            );
+          const tileLayers = mapData.layerInstances.filter((l) => l.__type === 'tiles');
+          const layerName = tileLayers[activeTileLayerIndex]?.__identifier ?? 'Tuiles';
+          return (
+            <span
+              style={{
+                background: 'rgba(0,0,0,0.55)',
+                backdropFilter: 'blur(4px)',
+                color: 'rgba(99,179,237,0.85)',
+                fontSize: 10,
+                fontFamily: 'monospace',
+                padding: '2px 6px',
+                borderRadius: 4,
+                border: '1px solid rgba(99,179,237,0.15)',
+              }}
+            >
+              {layerName}
+            </span>
+          );
+        })()}
+        {(() => {
+          const TOOL_LABEL: Record<string, string> = {
+            paint: 'B',
+            erase: 'E',
+            fill: 'F',
+            eyedropper: 'I',
+            selection: 'S',
+          };
+          const label = TOOL_LABEL[activeTool];
+          if (!label) return null;
+          const isErase = activeTool === 'erase';
+          const isSel = activeTool === 'selection';
+          return (
+            <span
+              style={{
+                background: 'rgba(0,0,0,0.55)',
+                backdropFilter: 'blur(4px)',
+                color: isErase
+                  ? 'rgba(255,100,100,0.85)'
+                  : isSel
+                    ? 'rgba(99,179,237,0.85)'
+                    : 'rgba(255,255,255,0.4)',
+                fontSize: 10,
+                fontFamily: 'monospace',
+                padding: '2px 6px',
+                borderRadius: 4,
+                border: `1px solid ${isErase ? 'rgba(255,100,100,0.15)' : isSel ? 'rgba(99,179,237,0.15)' : 'rgba(255,255,255,0.06)'}`,
+              }}
+            >
+              {label}
+            </span>
+          );
+        })()}
+      </div>
 
       {/* ── Tile context menu (right-click → move to layer) ── */}
       {tileContextMenu &&

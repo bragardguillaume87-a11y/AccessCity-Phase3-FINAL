@@ -7,9 +7,30 @@
  * @module types/map
  */
 
-import type { EntityInstance } from './sprite';
+import type {
+  EntityInstance,
+  ObjectInstance,
+  ObjectDefinition,
+  PlayerColliderConfig,
+} from './sprite';
 import type { SceneEffectConfig } from './sceneEffect';
 export type { EntityInstance };
+export type { ObjectInstance, ObjectDefinition };
+// Re-export pour les consommateurs existants qui importent PlayerColliderConfig depuis map.ts
+export type { PlayerColliderConfig } from './sprite';
+export type {
+  ObjectComponent,
+  ObjectComponentType,
+  SpriteComponent,
+  AnimatedSpriteComponent,
+  ColliderComponent,
+  DialogueComponent,
+  PatrolComponent,
+  WindComponent,
+  SoundComponent,
+  LightComponent,
+  FacingDir,
+} from './sprite';
 
 // ============================================================================
 // PRIMITIVES
@@ -67,11 +88,27 @@ export interface MapMetadata {
   playerStartCy?: number;
   /**
    * Effet atmosphérique de la carte (pluie, brouillard, neige…).
-   * Rendu via GpuParticleEmitter + PostProcessor dans GameScene, et via
-   * <SceneEffectCanvas> overlay dans l'aperçu éditeur.
+   * Rendu via <SceneEffectCanvas> overlay dans l'aperçu éditeur et la prévisualisation.
    * Absent → pas d'effet (équivalent à { type: 'none' }).
    */
   sceneEffect?: SceneEffectConfig;
+  /**
+   * Mode de zoom de la caméra en prévisualisation.
+   * - 'auto'   : zoom calculé pour remplir le viewport sans bandes noires (défaut)
+   * - 'manual' : utilise previewZoom (défaut 1.5)
+   */
+  previewDisplayMode?: 'auto' | 'manual';
+  /** Zoom fixe quand previewDisplayMode === 'manual'. Défaut : 1.5. */
+  previewZoom?: number;
+  /** Active l'antialiasing dans le moteur de prévisualisation. Défaut : false (pixel art). */
+  previewAntialiasing?: boolean;
+  /** Limite de FPS pour le moteur de prévisualisation. Défaut : 60. */
+  previewFpsCap?: number;
+  /**
+   * Configuration de la hitbox du joueur.
+   * Absent → box par défaut : (tileSize-4) × (tileSize-4), centrée.
+   */
+  playerCollider?: PlayerColliderConfig;
   createdAt: string;
   updatedAt: string;
 }
@@ -223,6 +260,16 @@ export interface MapData {
   _ac_scene_exits: SceneExit[];
   /** Zones sonores — jouent une brique jsfxr quand le joueur entre dedans */
   _ac_audio_zones: AudioZone[];
-  /** Entités placées sur la carte (PNJ, monstres, objets…) */
-  _ac_entities: EntityInstance[];
+  /**
+   * @deprecated Utiliser _ac_objects (Phase 4+).
+   * Conservé uniquement pour la migration automatique des données existantes.
+   * Présent sur les cartes créées avant la Phase 4 ; absent sur les nouvelles cartes.
+   */
+  _ac_entities?: EntityInstance[];
+  /**
+   * Instances d'objets placées sur la carte (Phase 4+).
+   * Chaque instance référence un ObjectDefinition via definitionId.
+   * Les définitions sont stockées dans mapsStore.objectDefinitions (projet-global).
+   */
+  _ac_objects: ObjectInstance[];
 }

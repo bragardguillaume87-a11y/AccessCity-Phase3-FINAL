@@ -116,7 +116,7 @@ export default function LayersPanelSection({
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: 300,
+        maxHeight: 360,
       }}
     >
       {/* Header */}
@@ -124,14 +124,14 @@ export default function LayersPanelSection({
         style={{
           display: 'flex',
           alignItems: 'center',
-          padding: '8px 12px 5px',
+          padding: '10px 12px 7px',
           flexShrink: 0,
         }}
       >
         <span
           style={{
             flex: 1,
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
@@ -213,7 +213,7 @@ export default function LayersPanelSection({
               }}
             >
               {/* Main row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '9px 10px' }}>
                 <span
                   style={{
                     color: 'var(--color-text-muted)',
@@ -248,7 +248,7 @@ export default function LayersPanelSection({
                       border: '1px solid rgba(139,92,246,0.6)',
                       background: 'rgba(139,92,246,0.12)',
                       color: '#c4b5fd',
-                      fontSize: 13,
+                      fontSize: 14,
                       outline: 'none',
                       minWidth: 0,
                     }}
@@ -261,7 +261,7 @@ export default function LayersPanelSection({
                     }}
                     style={{
                       flex: 1,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: isActive ? 600 : 400,
                       color: isActive ? '#c4b5fd' : 'rgba(255,255,255,0.65)',
                       overflow: 'hidden',
@@ -438,7 +438,7 @@ export default function LayersPanelSection({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                padding: '6px 8px',
+                padding: '9px 10px',
                 borderRadius: 5,
                 border: isActive ? `1px solid ${sys.color}55` : '1px solid transparent',
                 background: isActive ? `${sys.color}12` : 'transparent',
@@ -456,11 +456,11 @@ export default function LayersPanelSection({
                 if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
               }}
             >
-              <span style={{ fontSize: 13, flexShrink: 0 }}>{sys.emoji}</span>
+              <span style={{ fontSize: 14, flexShrink: 0 }}>{sys.emoji}</span>
               <span
                 style={{
                   flex: 1,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: isActive ? 600 : 400,
                   color: isActive ? sys.color : 'rgba(255,255,255,0.65)',
                   whiteSpace: 'nowrap',
@@ -516,7 +516,7 @@ export default function LayersPanelSection({
               border: '1px solid var(--color-primary, #8b5cf6)',
               background: 'rgba(139,92,246,0.12)',
               color: '#c4b5fd',
-              fontSize: 13,
+              fontSize: 14,
               outline: 'none',
               boxSizing: 'border-box',
             }}

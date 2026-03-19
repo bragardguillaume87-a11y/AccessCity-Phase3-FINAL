@@ -244,6 +244,16 @@ export default function TopdownEditor() {
       const isObject = (currentMapData?._ac_objects ?? []).some((o) => o.id === entityId);
       if (isObject) {
         useMapsStore.getState().updateObjectInstance(editor.selectedMapId, entityId, { cx, cy });
+        // Sync Hero spawn ↔ position : si l'objet déplacé est le Héros, mettre à jour playerStart
+        const inst = currentMapData?._ac_objects?.find((o) => o.id === entityId);
+        const def = useMapsStore
+          .getState()
+          .objectDefinitions.find((d) => d.id === inst?.definitionId);
+        if (def?.category === 'hero') {
+          useMapsStore
+            .getState()
+            .updateMapMetadata(editor.selectedMapId, { playerStartCx: cx, playerStartCy: cy });
+        }
       } else {
         updateEntity(editor.selectedMapId, entityId, { cx, cy });
       }
@@ -1494,6 +1504,19 @@ export default function TopdownEditor() {
               // Spawn move mode takes priority
               if (isMovingSpawn && editor.selectedMapId) {
                 updateMapMetadata(editor.selectedMapId, { playerStartCx: cx, playerStartCy: cy });
+                // Sync Hero spawn ↔ position : déplacer aussi l'instance Hero si elle existe
+                const spawnMapData = useMapsStore.getState().mapDataById[editor.selectedMapId];
+                const heroInst = spawnMapData?._ac_objects?.find((o) => {
+                  const def = useMapsStore
+                    .getState()
+                    .objectDefinitions.find((d) => d.id === o.definitionId);
+                  return def?.category === 'hero';
+                });
+                if (heroInst) {
+                  useMapsStore
+                    .getState()
+                    .updateObjectInstance(editor.selectedMapId, heroInst.id, { cx, cy });
+                }
                 setIsMovingSpawn(false);
                 return;
               }

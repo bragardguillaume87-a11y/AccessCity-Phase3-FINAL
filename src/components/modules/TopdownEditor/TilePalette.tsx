@@ -373,9 +373,9 @@ export default function TilePalette({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 7,
+            gap: 9,
             width: '100%',
-            padding: '7px 12px',
+            padding: '10px 12px',
             background: isActive ? 'var(--color-primary-subtle)' : 'transparent',
             borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
             cursor: 'pointer',
@@ -393,18 +393,18 @@ export default function TilePalette({
             src={asset.url ?? asset.path}
             alt=""
             style={{
-              width: 28,
-              height: 28,
+              width: 36,
+              height: 36,
               objectFit: 'cover',
               imageRendering: 'pixelated',
-              borderRadius: 3,
+              borderRadius: 4,
               flexShrink: 0,
             }}
           />
           <span
             style={{
               flex: 1,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: isActive ? 600 : 400,
               color: isActive ? 'var(--color-text-base)' : 'var(--color-text-secondary)',
               overflow: 'hidden',
@@ -424,8 +424,8 @@ export default function TilePalette({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 22,
-              height: 22,
+              width: 26,
+              height: 26,
               borderRadius: 4,
               border: configured
                 ? '1px solid var(--color-border-base)'
@@ -450,8 +450,8 @@ export default function TilePalette({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 22,
-              height: 22,
+              width: 26,
+              height: 26,
               borderRadius: 4,
               border: '1px solid transparent',
               background: 'transparent',
@@ -492,7 +492,7 @@ export default function TilePalette({
           <p
             style={{
               margin: 0,
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
@@ -560,7 +560,7 @@ export default function TilePalette({
               style={{
                 margin: 0,
                 flex: 1,
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.07em',
@@ -575,7 +575,7 @@ export default function TilePalette({
               {tileAssets.length > 0 && (
                 <span
                   style={{
-                    fontSize: 10,
+                    fontSize: 14,
                     fontWeight: 600,
                     color: 'var(--color-text-secondary)',
                     background: 'var(--color-overlay-06)',
@@ -590,7 +590,7 @@ export default function TilePalette({
             <p
               style={{
                 margin: '0 0 2px 10px',
-                fontSize: 10,
+                fontSize: 14,
                 color: 'var(--color-text-muted)',
                 letterSpacing: '0.02em',
               }}
@@ -634,8 +634,8 @@ export default function TilePalette({
                   z === 'sm' ? 'Petites tuiles' : z === 'md' ? 'Tuiles moyennes' : 'Grandes tuiles'
                 }
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: 28,
+                  height: 28,
                   borderRadius: 4,
                   border: '1px solid',
                   borderColor:
@@ -643,7 +643,7 @@ export default function TilePalette({
                   background: tileZoomLevel === z ? 'rgba(139,92,246,0.15)' : 'transparent',
                   color: tileZoomLevel === z ? '#8b5cf6' : 'var(--color-text-muted)',
                   cursor: 'pointer',
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: 700,
                   flexShrink: 0,
                   display: 'flex',
@@ -714,8 +714,8 @@ export default function TilePalette({
           <div
             style={{
               display: 'flex',
-              gap: 6,
-              padding: '6px 8px',
+              gap: 8,
+              padding: '8px 10px',
               borderBottom: '1px solid var(--color-border-base)',
               flexShrink: 0,
             }}
@@ -731,9 +731,10 @@ export default function TilePalette({
                 borderRadius: 6,
                 padding: '4px 8px',
                 border: '1px solid var(--color-border-base)',
+                minHeight: 34,
               }}
             >
-              <Search size={13} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+              <Search size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
                 value={searchQuery}
@@ -744,7 +745,7 @@ export default function TilePalette({
                   background: 'none',
                   border: 'none',
                   outline: 'none',
-                  fontSize: 13,
+                  fontSize: 14,
                   color: 'var(--color-text-base)',
                   minWidth: 0,
                 }}
@@ -784,7 +785,7 @@ export default function TilePalette({
                       : '1px solid var(--color-border-base)',
                     background: currentCat ? 'var(--color-primary-15)' : 'var(--color-dark-25)',
                     color: currentCat ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: currentCat ? 600 : 400,
                     maxWidth: 110,
                     overflow: 'hidden',
@@ -858,7 +859,7 @@ export default function TilePalette({
                       outline: 'none',
                       color:
                         filterCategory === null ? 'var(--color-primary)' : 'var(--color-text-base)',
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: filterCategory === null ? 600 : 400,
                     }}
                   >
@@ -879,7 +880,7 @@ export default function TilePalette({
                           cursor: 'pointer',
                           background: isActive ? 'var(--color-primary-15)' : 'transparent',
                           outline: 'none',
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: isActive ? 600 : 400,
                           color: isActive ? 'var(--color-primary)' : 'var(--color-text-base)',
                         }}
@@ -889,7 +890,7 @@ export default function TilePalette({
                         {count > 0 && (
                           <span
                             style={{
-                              fontSize: 11,
+                              fontSize: 14,
                               color: 'var(--color-text-secondary)',
                               background: 'var(--color-overlay-06)',
                               borderRadius: 4,
@@ -943,7 +944,7 @@ export default function TilePalette({
         ) : tileAssets.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-2 p-3 text-center">
             <span style={{ fontSize: 28 }}>🖼️</span>
-            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>
+            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: 0 }}>
               Glissez un PNG ici
               <br />
               ou cliquez sur ⊕
@@ -956,7 +957,7 @@ export default function TilePalette({
                 style={{
                   margin: 0,
                   padding: '10px',
-                  fontSize: 12,
+                  fontSize: 14,
                   color: 'var(--color-text-secondary)',
                   textAlign: 'center',
                 }}
@@ -983,7 +984,7 @@ export default function TilePalette({
                       <span style={{ fontSize: 15, lineHeight: 1 }}>{group.emoji}</span>
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: 700,
                           color: bandColor,
                           textTransform: 'uppercase',
@@ -994,7 +995,7 @@ export default function TilePalette({
                       </span>
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: 14,
                           fontWeight: 600,
                           color: bandColor,
                           marginLeft: 'auto',
@@ -1030,7 +1031,7 @@ export default function TilePalette({
             <p
               style={{
                 margin: 0,
-                fontSize: 13,
+                fontSize: 14,
                 color: 'var(--color-primary)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

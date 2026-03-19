@@ -567,7 +567,7 @@ export default function ObjectsPanel({
           }}
         >
           <Upload size={28} style={{ color: '#8b5cf6' }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#c4b5fd' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#c4b5fd' }}>
             Déposer les sprites ici
           </span>
         </div>
@@ -576,12 +576,12 @@ export default function ObjectsPanel({
       {/* ── Header ── */}
       <div
         style={{
-          padding: '8px 8px 6px',
+          padding: '10px 10px 8px',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 5,
+          gap: 6,
         }}
       >
         {/* Title row */}
@@ -589,7 +589,7 @@ export default function ObjectsPanel({
           <span
             style={{
               flex: 1,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -644,7 +644,7 @@ export default function ObjectsPanel({
                   background: filterCategory ? 'rgba(139,92,246,0.12)' : 'transparent',
                   color: filterCategory ? '#8b5cf6' : 'rgba(255,255,255,0.45)',
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 14,
                 }}
               >
                 {filterCategory
@@ -672,7 +672,7 @@ export default function ObjectsPanel({
                     padding: '6px 8px',
                     borderRadius: 5,
                     cursor: 'pointer',
-                    fontSize: 12,
+                    fontSize: 14,
                     color: !filterCategory ? '#8b5cf6' : 'rgba(255,255,255,0.85)',
                     fontWeight: !filterCategory ? 700 : 400,
                     outline: 'none',
@@ -688,7 +688,7 @@ export default function ObjectsPanel({
                       padding: '6px 8px',
                       borderRadius: 5,
                       cursor: 'pointer',
-                      fontSize: 12,
+                      fontSize: 14,
                       color: filterCategory === cat.id ? '#8b5cf6' : 'rgba(255,255,255,0.85)',
                       fontWeight: filterCategory === cat.id ? 700 : 400,
                       outline: 'none',
@@ -722,14 +722,14 @@ export default function ObjectsPanel({
             placeholder="Filtrer les objets…"
             style={{
               width: '100%',
-              height: 30,
-              paddingLeft: 24,
-              paddingRight: searchQuery ? 28 : 8,
+              height: 36,
+              paddingLeft: 28,
+              paddingRight: searchQuery ? 32 : 10,
               borderRadius: 5,
               border: '1px solid rgba(255,255,255,0.08)',
               background: 'rgba(255,255,255,0.04)',
               color: 'rgba(255,255,255,0.8)',
-              fontSize: 13,
+              fontSize: 14,
               outline: 'none',
               boxSizing: 'border-box',
             }}
@@ -814,7 +814,7 @@ export default function ObjectsPanel({
         {!loading && objectDefinitions.length === 0 && (
           <p
             style={{
-              fontSize: 13,
+              fontSize: 14,
               color: 'rgba(255,255,255,0.3)',
               padding: '12px 10px',
               lineHeight: 1.6,
@@ -828,7 +828,7 @@ export default function ObjectsPanel({
 
         {/* No results */}
         {!loading && objectDefinitions.length > 0 && visibleEntries.length === 0 && (
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', padding: '12px 10px' }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', padding: '12px 10px' }}>
             Aucun résultat{searchQuery ? ` pour "${searchQuery}"` : ''}.
           </p>
         )}
@@ -845,7 +845,7 @@ export default function ObjectsPanel({
                     alignItems: 'center',
                     gap: 5,
                     padding: '7px 10px 4px',
-                    fontSize: 11,
+                    fontSize: 14,
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
@@ -883,10 +883,10 @@ export default function ObjectsPanel({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 8,
-                          padding: '7px 8px',
+                          gap: 10,
+                          padding: '10px 10px',
                           cursor: 'pointer',
-                          borderRadius: 5,
+                          borderRadius: 6,
                           margin: '0 4px',
                           transition: 'background 0.1s',
                           background: isBeingPlaced
@@ -908,11 +908,11 @@ export default function ObjectsPanel({
                           <AnimThumb
                             url={spriteUrl}
                             config={spriteConfig}
-                            size={38}
+                            size={44}
                             animate={isHov || isSelected}
                           />
                         ) : (
-                          <EmojiThumb emoji={catEmoji} size={38} />
+                          <EmojiThumb emoji={catEmoji} size={44} />
                         )}
 
                         {/* Info */}
@@ -930,7 +930,7 @@ export default function ObjectsPanel({
                             )}
                             <span
                               style={{
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: isSelected ? 600 : 400,
                                 color: isSelected
                                   ? '#c4b5fd'
@@ -948,7 +948,7 @@ export default function ObjectsPanel({
                               <span
                                 title={`${instanceCount} instance${instanceCount > 1 ? 's' : ''} sur la carte`}
                                 style={{
-                                  fontSize: 10,
+                                  fontSize: 14,
                                   padding: '1px 5px',
                                   borderRadius: 3,
                                   background: 'rgba(74,222,128,0.15)',
@@ -971,7 +971,7 @@ export default function ObjectsPanel({
                                   key={i}
                                   title={meta.description}
                                   style={{
-                                    fontSize: 10,
+                                    fontSize: 14,
                                     padding: '1px 5px',
                                     borderRadius: 3,
                                     background: 'rgba(255,255,255,0.05)',
@@ -1086,7 +1086,7 @@ export default function ObjectsPanel({
                           {/* All components */}
                           <div
                             style={{
-                              fontSize: 9,
+                              fontSize: 12,
                               color: 'rgba(255,255,255,0.3)',
                               marginBottom: 5,
                               textTransform: 'uppercase',
@@ -1118,10 +1118,10 @@ export default function ObjectsPanel({
                                     border: '1px solid rgba(255,255,255,0.06)',
                                   }}
                                 >
-                                  <span style={{ fontSize: 11 }}>{meta.emoji}</span>
+                                  <span style={{ fontSize: 14 }}>{meta.emoji}</span>
                                   <span
                                     style={{
-                                      fontSize: 10,
+                                      fontSize: 14,
                                       color: 'rgba(255,255,255,0.6)',
                                       fontWeight: 500,
                                     }}
@@ -1130,7 +1130,7 @@ export default function ObjectsPanel({
                                   </span>
                                   <span
                                     style={{
-                                      fontSize: 9,
+                                      fontSize: 12,
                                       color: 'rgba(255,255,255,0.25)',
                                       marginLeft: 'auto',
                                     }}
@@ -1142,7 +1142,7 @@ export default function ObjectsPanel({
                             })}
                             {def.components.length === 0 && (
                               <p
-                                style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', margin: 0 }}
+                                style={{ fontSize: 14, color: 'rgba(255,255,255,0.25)', margin: 0 }}
                               >
                                 Aucun composant. Configurez le sprite ⚙ pour commencer.
                               </p>
@@ -1161,7 +1161,7 @@ export default function ObjectsPanel({
                                 background: 'rgba(239,68,68,0.12)',
                                 color: '#f87171',
                                 cursor: 'pointer',
-                                fontSize: 11,
+                                fontSize: 14,
                                 fontWeight: 600,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1185,7 +1185,7 @@ export default function ObjectsPanel({
                                 color:
                                   def.components.length === 0 ? 'rgba(255,255,255,0.2)' : '#4ade80',
                                 cursor: def.components.length === 0 ? 'not-allowed' : 'pointer',
-                                fontSize: 11,
+                                fontSize: 14,
                                 fontWeight: 600,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1237,7 +1237,7 @@ export default function ObjectsPanel({
                 justifyContent: 'space-between',
                 padding: '7px 10px',
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -1295,12 +1295,12 @@ export default function ObjectsPanel({
                     {preset.emoji}
                   </span>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: preset.accent }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: preset.accent }}>
                       {preset.label}
                     </div>
                     <div
                       style={{
-                        fontSize: 9,
+                        fontSize: 12,
                         color: 'rgba(255,255,255,0.3)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -1331,7 +1331,7 @@ export default function ObjectsPanel({
               background: showPresets ? 'rgba(139,92,246,0.18)' : 'transparent',
               color: showPresets ? '#8b5cf6' : 'rgba(255,255,255,0.4)',
               cursor: 'pointer',
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
@@ -1364,7 +1364,7 @@ export default function ObjectsPanel({
               background: 'rgba(139,92,246,0.08)',
               color: 'rgba(139,92,246,0.9)',
               cursor: 'pointer',
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
@@ -1517,10 +1517,10 @@ function SpritePicker({
         >
           <ImagePlus size={15} style={{ color: '#a78bfa', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.92)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.92)' }}>
               Choisir l'image du sprite
             </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
               Importe un nouveau fichier ou sélectionne un asset existant
             </div>
           </div>
@@ -1567,7 +1567,7 @@ function SpritePicker({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               transition: 'all 0.12s',
             }}
@@ -1597,19 +1597,19 @@ function SpritePicker({
               style={{
                 padding: '20px 0',
                 textAlign: 'center',
-                fontSize: 11,
+                fontSize: 14,
                 color: 'rgba(255,255,255,0.3)',
               }}
             >
               Aucun sprite dans la bibliothèque.
               <br />
-              <span style={{ fontSize: 10 }}>Importez un fichier PNG ci-dessus.</span>
+              <span style={{ fontSize: 14 }}>Importez un fichier PNG ci-dessus.</span>
             </div>
           ) : (
             <>
               <div
                 style={{
-                  fontSize: 9,
+                  fontSize: 12,
                   color: 'rgba(255,255,255,0.25)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
@@ -1657,7 +1657,7 @@ function SpritePicker({
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <div
                         style={{
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: 500,
                           color: isHov ? '#c4b5fd' : 'rgba(255,255,255,0.8)',
                           overflow: 'hidden',
@@ -1669,7 +1669,7 @@ function SpritePicker({
                       </div>
                       <div
                         style={{
-                          fontSize: 9,
+                          fontSize: 12,
                           color: 'rgba(255,255,255,0.3)',
                           marginTop: 1,
                           overflow: 'hidden',

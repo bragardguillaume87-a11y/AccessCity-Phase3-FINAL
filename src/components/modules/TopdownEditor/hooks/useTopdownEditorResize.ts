@@ -11,11 +11,11 @@ import { useState, useCallback, useEffect } from 'react';
 
 // ── Constantes palette ───────────────────────────────────────────────────────
 
-const PALETTE_STORAGE_KEY = 'ac_palette_width';
-const SIDEBAR_STORAGE_KEY = 'ac_sidebar_width';
-const SIDEBAR_MIN = 180;
-const SIDEBAR_MAX = 360;
-const SIDEBAR_DEFAULT = 220;
+const PALETTE_STORAGE_KEY = 'ac_palette_width_v3';
+const SIDEBAR_STORAGE_KEY = 'ac_sidebar_width_v3';
+const SIDEBAR_MIN = 240;
+const SIDEBAR_MAX = 420;
+const SIDEBAR_DEFAULT = 280;
 
 // Breakpoints : 720p (≥1280), 1080p (≥1920), 1440p (≥2560)
 // Valeurs cibles : palette ≈ 22-25% de la largeur d'écran

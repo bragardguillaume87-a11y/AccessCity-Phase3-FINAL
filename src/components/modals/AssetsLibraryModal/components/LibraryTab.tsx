@@ -8,26 +8,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, X, ArrowUpDown, Package, ImageIcon, Users as UsersIcon, Palette, Music, Volume2, Mic, Wind, Grid3X3, PersonStanding } from 'lucide-react';
+import {
+  Search,
+  X,
+  ArrowUpDown,
+  Package,
+  ImageIcon,
+  Users as UsersIcon,
+  Palette,
+  Music,
+  Volume2,
+  Mic,
+  Wind,
+  Grid3X3,
+  PersonStanding,
+} from 'lucide-react';
 import { VirtualAssetGrid } from './VirtualAssetGrid';
 import { AssetsLibrarySidebar, type SidebarSection } from './AssetsLibrarySidebar';
 import type { Asset } from '@/types';
 import type { AssetCollection } from '@/types/collections';
 
 export type SortOrder = 'name-asc' | 'name-desc' | 'recent' | 'oldest';
+export type LibraryContext = 'vn' | '2d' | 'all';
 
 const CATEGORY_ITEMS = [
-  { id: 'all',           label: 'Tous',     icon: Package   },
-  { id: 'backgrounds',   label: 'Fonds',    icon: ImageIcon  },
-  { id: 'characters',    label: 'Sprites',  icon: UsersIcon  },
-  { id: 'illustrations', label: 'Illus.',   icon: Palette    },
-  { id: 'music',         label: 'Musique',  icon: Music      },
-  { id: 'sfx',           label: 'SFX',      icon: Volume2    },
-  { id: 'voices',        label: 'Voix',     icon: Mic             },
-  { id: 'atmosphere',    label: 'Ambiance', icon: Wind            },
-  { id: 'tilesets',      label: 'Tilesets', icon: Grid3X3         },
-  { id: 'sprites-2d',    label: 'Sprites 2D', icon: PersonStanding },
+  { id: 'all', label: 'Tous', icon: Package },
+  { id: 'backgrounds', label: 'Fonds', icon: ImageIcon },
+  { id: 'characters', label: 'Sprites', icon: UsersIcon },
+  { id: 'illustrations', label: 'Illus.', icon: Palette },
+  { id: 'music', label: 'Musique', icon: Music },
+  { id: 'sfx', label: 'SFX', icon: Volume2 },
+  { id: 'voices', label: 'Voix', icon: Mic },
+  { id: 'atmosphere', label: 'Ambiance', icon: Wind },
+  { id: 'tilesets', label: 'Tilesets', icon: Grid3X3 },
+  { id: 'sprites-2d', label: 'Sprites 2D', icon: PersonStanding },
 ];
+
+// Catégories visibles selon le contexte d'utilisation
+const VN_CATEGORY_IDS = new Set([
+  'all',
+  'backgrounds',
+  'characters',
+  'illustrations',
+  'music',
+  'sfx',
+  'voices',
+  'atmosphere',
+]);
+const MAP_CATEGORY_IDS = new Set(['all', 'sprites-2d', 'tilesets', 'music', 'sfx']);
 
 export interface LibraryTabProps {
   assets: Asset[];
@@ -52,6 +80,8 @@ export interface LibraryTabProps {
   onSelectBackground?: (assetPath: string) => void;
   sortOrder?: SortOrder;
   onSortChange?: (order: SortOrder) => void;
+  /** Filtre les catégories affichées selon le contexte d'utilisation */
+  context?: LibraryContext;
 }
 
 /**
@@ -84,11 +114,17 @@ export function LibraryTab({
   onSelectBackground,
   sortOrder = 'name-asc',
   onSortChange,
+  context,
 }: LibraryTabProps) {
-  const categoriesWithCount = useMemo(() => CATEGORY_ITEMS.map(cat => ({
-    ...cat,
-    count: cat.id === 'all' ? (categoryCount.all ?? 0) : (categoryCount[cat.id] ?? 0),
-  })), [categoryCount]);
+  const categoriesWithCount = useMemo(() => {
+    const all = CATEGORY_ITEMS.map((cat) => ({
+      ...cat,
+      count: cat.id === 'all' ? (categoryCount.all ?? 0) : (categoryCount[cat.id] ?? 0),
+    }));
+    if (context === 'vn') return all.filter((c) => VN_CATEGORY_IDS.has(c.id));
+    if (context === '2d') return all.filter((c) => MAP_CATEGORY_IDS.has(c.id));
+    return all;
+  }, [categoryCount, context]);
 
   return (
     <div className="flex h-full min-h-0">

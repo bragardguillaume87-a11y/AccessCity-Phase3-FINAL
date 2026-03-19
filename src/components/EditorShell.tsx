@@ -650,6 +650,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               targetSceneId={modalContext.targetSceneId}
               selectionPurpose={modalContext.purpose}
               selectionSlot={modalContext.slot}
+              context={activeModule === 'topdown' ? '2d' : 'vn'}
             />
           </ErrorBoundary>
         )}

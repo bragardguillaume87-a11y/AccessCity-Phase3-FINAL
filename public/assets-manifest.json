@@ -1,7 +1,7 @@
 {
-  "generated": "2026-03-16T18:47:33.686Z",
+  "generated": "2026-03-19T00:24:38.148Z",
   "version": "1.0.0",
-  "totalAssets": 24,
+  "totalAssets": 25,
   "categories": ["audio", "backgrounds", "characters", "music", "sfx", "sprites-2d", "tilesets"],
   "assets": {
     "audio": [
@@ -118,6 +118,15 @@
         "category": "music",
         "size": 3427288,
         "modified": "2026-01-28T19:18:18.892Z"
+      },
+      {
+        "id": "music/lookupmastered-1773773606985",
+        "name": "lookupmastered-1773773606985",
+        "path": "/assets/music/lookupmastered-1773773606985.mp3",
+        "type": "mp3",
+        "category": "music",
+        "size": 3001838,
+        "modified": "2026-03-17T18:53:27.023Z"
       }
     ],
     "sfx": [
@@ -129,15 +138,6 @@
         "category": "sfx",
         "size": 21403284,
         "modified": "2026-02-22T14:23:17.289Z"
-      },
-      {
-        "id": "sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770227461",
-        "name": "ambbirdcampagne-id-0097lasonotheque.fr-1771770227461",
-        "path": "/assets/sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770227461.wav",
-        "type": "wav",
-        "category": "sfx",
-        "size": 21403284,
-        "modified": "2026-02-22T14:23:47.562Z"
       }
     ],
     "sprites-2d": [
@@ -176,6 +176,15 @@
         "category": "sprites-2d",
         "size": 12754,
         "modified": "2026-03-10T23:20:07.111Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773878786745",
+        "name": "characters-1773878786745",
+        "path": "/assets/sprites-2d/characters-1773878786745.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-19T00:06:26.750Z"
       },
       {
         "id": "sprites-2d/snes---secret-of-evermore---boy---boy-1773185652844",

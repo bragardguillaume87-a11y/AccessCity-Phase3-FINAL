@@ -8,7 +8,11 @@
  * Couches rendues (z-index croissant) :
  *   9  — div ambient color overlay (mix-blend-mode: color, style Square Soft)
  *   10 — canvas effet atmosphérique (pluie, fog, godrays…)
- *   11 — canvas sprite lighting (tint ambiant ou rim light sur les personnages)
+ *   11 — div sprite tint (mix-blend-mode: soft-light, style Octopath Traveler)
+ *   12 — div rim light (mix-blend-mode: screen, gradient directionnel haut-droit)
+ *
+ * Le sprite lighting est un grade de couleur pleine scène (pas par sprite) :
+ * les sprites pixel-art héritent du blend naturellement, comme dans Octopath Traveler.
  *
  * Usage :
  *   <div style={{ position: 'relative' }}>
@@ -30,7 +34,7 @@ import {
 import { startFogEffect } from '@/utils/sceneEffects/fogEffect';
 import { startGodRaysEffect } from '@/utils/sceneEffects/godraysEffect';
 import { startBloomEffect } from '@/utils/sceneEffects/bloomEffect';
-import { EFFECT_AMBIENT_COLORS, EFFECT_SPRITE_TINT, EFFECT_RIM_COLOR } from '@/config/sceneEffects';
+import { EFFECT_AMBIENT_COLORS, EFFECT_RIM_COLOR } from '@/config/sceneEffects';
 
 interface SceneEffectCanvasProps {
   effect?: SceneEffectConfig;
@@ -40,7 +44,8 @@ interface SceneEffectCanvasProps {
   style?: React.CSSProperties;
   /**
    * Bounding boxes des sprites personnages en pixels canvas.
-   * Mis à jour par ref à chaque frame — zéro restart du renderer.
+   * Utilisé par le renderer de pluie pour les collisions goutte→sprite.
+   * Le sprite lighting est désormais pleine scène (pas par hitbox).
    */
   characterHitboxes?: CharacterHitbox[];
 }
@@ -62,10 +67,8 @@ export default function SceneEffectCanvas({
   characterHitboxes,
 }: SceneEffectCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const spriteLightCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<EffectRenderer | null>(null);
-  const spriteLightRafRef = useRef<number | null>(null);
-  // Ref mutable lue à chaque frame par le renderer de pluie et le sprite lighting
+  // Ref mutable lue à chaque frame par le renderer de pluie (collisions)
   const hitboxesRef = useRef<CharacterHitbox[]>([]);
 
   // Sync la prop → ref à chaque render (pas de useEffect nécessaire)
@@ -74,7 +77,7 @@ export default function SceneEffectCanvas({
   const effectType = effect?.type ?? 'none';
   const spriteLight = effect && effect.type !== 'none' ? (effect.spriteLight ?? 'off') : 'off';
   const ambientColor = EFFECT_AMBIENT_COLORS[effectType];
-  const showSpriteLight = spriteLight !== 'off' && (characterHitboxes?.length ?? 0) > 0;
+  const rimColor = EFFECT_RIM_COLOR[effectType];
 
   // ── Lance / recharge le renderer quand l'effet change ────────────────────
   const startRenderer = useCallback(() => {
@@ -130,84 +133,6 @@ export default function SceneEffectCanvas({
     };
   }, [effect, startRenderer]);
 
-  // ── Sprite lighting canvas loop ───────────────────────────────────────────
-  useEffect(() => {
-    const canvas = spriteLightCanvasRef.current;
-    if (!canvas || !showSpriteLight || effectType === 'none') {
-      if (spriteLightRafRef.current) {
-        cancelAnimationFrame(spriteLightRafRef.current);
-        spriteLightRafRef.current = null;
-      }
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // ⚠️ Initialiser les dimensions du canvas au montage (défaut HTML = 300×150)
-    const parent = canvas.parentElement;
-    const initW = width ?? parent?.clientWidth ?? 400;
-    const initH = height ?? parent?.clientHeight ?? 300;
-    if (initW > 0 && initH > 0) {
-      canvas.width = initW;
-      canvas.height = initH;
-    }
-
-    const tint = EFFECT_SPRITE_TINT[effectType];
-    const rimColor = EFFECT_RIM_COLOR[effectType];
-    let running = true;
-
-    function drawSpriteLighting() {
-      if (!running) return;
-      const cw = canvas!.width;
-      const ch = canvas!.height;
-      ctx!.clearRect(0, 0, cw, ch);
-
-      const hitboxes = hitboxesRef.current;
-      if (hitboxes.length > 0) {
-        for (const hb of hitboxes) {
-          // ── Ambient tint (style SNES Square Soft color math) ───────────
-          if ((spriteLight === 'tint' || spriteLight === 'both') && tint) {
-            ctx!.globalAlpha = 1;
-            ctx!.fillStyle = `rgba(${tint.r},${tint.g},${tint.b},${tint.a * 3})`;
-            ctx!.fillRect(hb.x, hb.y, hb.w, hb.h);
-          }
-
-          // ── Rim light : gradient radial autour des bords du sprite ─────
-          if ((spriteLight === 'rimlight' || spriteLight === 'both') && rimColor) {
-            const cx = hb.x + hb.w * 0.5;
-            const cy = hb.y + hb.h * 0.5;
-            const outerR = Math.max(hb.w, hb.h) * 0.72;
-            const innerR = outerR * 0.52;
-            const grad = ctx!.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(0.7, 'rgba(0,0,0,0)');
-            grad.addColorStop(0.85, rimColor.replace(/[\d.]+\)$/, '0.5)'));
-            grad.addColorStop(1.0, rimColor.replace(/[\d.]+\)$/, '0.9)'));
-            ctx!.globalAlpha = 1;
-            ctx!.fillStyle = grad;
-            ctx!.beginPath();
-            ctx!.ellipse(cx, cy, hb.w * 0.72, hb.h * 0.72, 0, 0, Math.PI * 2);
-            ctx!.fill();
-          }
-        }
-      }
-
-      spriteLightRafRef.current = requestAnimationFrame(drawSpriteLighting);
-    }
-
-    drawSpriteLighting();
-
-    return () => {
-      running = false;
-      if (spriteLightRafRef.current) {
-        cancelAnimationFrame(spriteLightRafRef.current);
-        spriteLightRafRef.current = null;
-      }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-  }, [effectType, spriteLight, showSpriteLight, width, height]);
-
   // ── Resize observer ──────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -220,11 +145,6 @@ export default function SceneEffectCanvas({
           canvas.width = nw;
           canvas.height = nh;
           rendererRef.current?.resize(nw, nh);
-        }
-        const sc = spriteLightCanvasRef.current;
-        if (sc && (sc.width !== nw || sc.height !== nh)) {
-          sc.width = nw;
-          sc.height = nh;
         }
       }
     });
@@ -265,19 +185,38 @@ export default function SceneEffectCanvas({
         }}
       />
 
-      {/* Canvas sprite lighting (tint ambiant ou rim light) */}
-      {showSpriteLight && (
-        <canvas
-          ref={spriteLightCanvasRef}
+      {/*
+       * Sprite tint — pleine scène, style Octopath Traveler.
+       * mix-blend-mode: soft-light = la couleur atmosphérique teinte naturellement
+       * tous les sprites pixel-art sans dessiner de rectangles.
+       */}
+      {(spriteLight === 'tint' || spriteLight === 'both') && rimColor && (
+        <div
           style={{
             position: 'absolute',
             inset: 0,
-            width: width ?? '100%',
-            height: height ?? '100%',
+            backgroundColor: rimColor.replace(/[\d.]+\)$/, '0.22)'),
+            mixBlendMode: 'soft-light',
             pointerEvents: 'none',
             zIndex: 11,
-            mixBlendMode:
-              spriteLight === 'rimlight' || spriteLight === 'both' ? 'screen' : 'normal',
+          }}
+        />
+      )}
+
+      {/*
+       * Rim light — gradient directionnel depuis haut-droit (source lumineuse).
+       * mix-blend-mode: screen = lumière additive sur les bords des sprites,
+       * sans masque rectangulaire visible.
+       */}
+      {(spriteLight === 'rimlight' || spriteLight === 'both') && rimColor && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: `radial-gradient(ellipse at 72% 16%, ${rimColor.replace(/[\d.]+\)$/, '0.50)')} 0%, ${rimColor.replace(/[\d.]+\)$/, '0.18)')} 35%, transparent 65%)`,
+            mixBlendMode: 'screen',
+            pointerEvents: 'none',
+            zIndex: 12,
           }}
         />
       )}

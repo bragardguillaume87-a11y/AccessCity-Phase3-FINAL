@@ -18,6 +18,7 @@ import { useMapsStore } from '@/stores/mapsStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useGameEngine } from './hooks/useGameEngine';
 import type { TransitionType } from './DialogueBridge';
+import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
 
 const CONTAINER_ID = 'excalibur-preview-container';
 
@@ -31,9 +32,15 @@ export default function GamePreview() {
     undefined
   );
 
+  // Effet atmosphérique de la carte active (synchronisé avec SceneEffectCanvas du VN editor)
+  const activeMapEffect = activeMapId
+    ? maps.find((m) => m.id === activeMapId)?.sceneEffect
+    : undefined;
+
   const setActiveModal = useUIStore((s) => s.setActiveModal);
   const setModalContext = useUIStore((s) => s.setModalContext);
   const activeModal = useUIStore((s) => s.activeModal);
+  const setActiveModule = useUIStore((s) => s.setActiveModule);
 
   // Tracks whether the current dialogue modal was opened from a game trigger
   const dialoguePendingRef = useRef(false);
@@ -119,6 +126,7 @@ export default function GamePreview() {
   function handleStop() {
     setActiveMapId(null);
     setIsRunning(false);
+    setActiveModule('topdown');
   }
 
   // ── No maps available ─────────────────────────────────────────────────────
@@ -253,6 +261,14 @@ export default function GamePreview() {
           id={CONTAINER_ID}
           style={{ position: 'absolute', inset: 0, display: isRunning ? 'block' : 'none' }}
         />
+
+        {/* Atmospheric effect overlay — même renderer que le VN editor (SceneEffectCanvas) */}
+        {isRunning && activeMapEffect && activeMapEffect.type !== 'none' && (
+          <SceneEffectCanvas
+            effect={activeMapEffect}
+            style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}
+          />
+        )}
 
         {/* Transition overlay — style driven by transitionType from the trigger zone */}
         {activeTransition === 'fade-black' && (

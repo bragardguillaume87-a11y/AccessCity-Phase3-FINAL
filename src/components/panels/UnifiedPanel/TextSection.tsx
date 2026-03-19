@@ -1,8 +1,15 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { useSettingsStore } from '@/stores';
 import { PanelSection } from '@/components/ui/CollapsibleSection';
 import type { DialogueBoxStyle } from '@/types/scenes';
+import {
+  NAME_FONTS,
+  NAME_SHADOW_LABELS,
+  DEFAULT_NAME_FONT_ID,
+  DEFAULT_NAME_SHADOW,
+  type NameShadowPreset,
+} from '@/config/nameFonts';
 
 // ============================================================================
 // HELPERS — boîte de dialogue (paramètres globaux)
@@ -25,6 +32,10 @@ const UI_DEFAULTS: Required<DialogueBoxStyle> = {
   borderRadius: 'xl',
   layout: 'classique',
   dialogueTransition: 'fondu',
+  nameFont: DEFAULT_NAME_FONT_ID,
+  nameColor: '',
+  nameShadow: DEFAULT_NAME_SHADOW,
+  nameLetterSpacing: 1.5,
 };
 
 // ── Presets thème ──────────────────────────────────────────────────────────────
@@ -84,6 +95,10 @@ const THEMES: Array<{
     },
   },
 ];
+
+// ============================================================================
+// SUB-COMPONENTS
+// ============================================================================
 
 function SliderRow({
   label,
@@ -191,6 +206,58 @@ function ColorRow({
   );
 }
 
+/**
+ * SubSection — sous-accordéon léger (sans sp-sec wrapper) pour nester
+ * dans une PanelSection parent sans double padding/border.
+ */
+function SubSection({
+  title,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between mb-1.5 py-1 text-[10.5px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide hover:text-[var(--color-text-secondary)] transition-colors border-b border-[var(--color-border-base)]/40 pb-1"
+      >
+        <span>{title}</span>
+        <svg
+          aria-hidden="true"
+          style={{
+            width: 10,
+            height: 10,
+            flexShrink: 0,
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.18s ease',
+          }}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div
+        className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="pt-1">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -214,9 +281,8 @@ export function TextSection() {
 
   return (
     <div>
-      {/* Aperçu boîte de dialogue */}
-      <section className="sp-sec" aria-label="Aperçu de la boîte de dialogue">
-        <h3 className="sp-lbl">APERÇU</h3>
+      {/* ── Aperçu ── */}
+      <PanelSection title="APERÇU" id="dlgbox-apercu" defaultOpen={true}>
         <div
           className="p-3 rounded border backdrop-blur-sm"
           aria-hidden="true"
@@ -248,13 +314,10 @@ export function TextSection() {
             Bonjour ! Je suis Léa, ton guide.
           </span>
         </div>
-      </section>
+      </PanelSection>
 
-      {/* Mise en page */}
-      <section className="sp-sec" aria-labelledby="dlgbox-layout-heading">
-        <h3 id="dlgbox-layout-heading" className="sp-lbl">
-          MISE EN PAGE
-        </h3>
+      {/* ── Mise en page ── */}
+      <PanelSection title="MISE EN PAGE" id="dlgbox-layout" defaultOpen={true}>
         <div className="grid grid-cols-2 gap-2 mb-1">
           {(
             [
@@ -279,13 +342,10 @@ export function TextSection() {
             </button>
           ))}
         </div>
-      </section>
+      </PanelSection>
 
-      {/* Texte — vitesse + taille */}
-      <section className="sp-sec" aria-labelledby="dlgbox-text-heading">
-        <h3 id="dlgbox-text-heading" className="sp-lbl">
-          TEXTE
-        </h3>
+      {/* ── Texte — vitesse + taille ── */}
+      <PanelSection title="TEXTE" id="dlgbox-text" defaultOpen={true}>
         <SliderRow
           label="Vitesse de frappe"
           value={cfg.typewriterSpeed}
@@ -306,33 +366,15 @@ export function TextSection() {
           onChange={(v) => update({ fontSize: v })}
           ariaLabel={`Taille du texte : ${cfg.fontSize} pixels`}
         />
-      </section>
+      </PanelSection>
 
-      {/* Transitions entre dialogues */}
-      <section className="sp-sec" aria-labelledby="dlgbox-transition-heading">
-        <h3 id="dlgbox-transition-heading" className="sp-lbl">
-          TRANSITIONS
-        </h3>
+      {/* ── Transitions ── */}
+      <PanelSection title="TRANSITIONS" id="dlgbox-transition" defaultOpen={true}>
         <div className="grid grid-cols-3 gap-2 mb-1">
           {[
-            {
-              value: 'aucune' as const,
-              icon: '⚡',
-              label: 'Instantané',
-              desc: 'Swap direct',
-            },
-            {
-              value: 'fondu' as const,
-              icon: '🌅',
-              label: 'Fondu',
-              desc: 'Fade doux',
-            },
-            {
-              value: 'glisse' as const,
-              icon: '🎭',
-              label: 'Glisse',
-              desc: 'Style VN',
-            },
+            { value: 'aucune' as const, icon: '⚡', label: 'Instantané', desc: 'Swap direct' },
+            { value: 'fondu' as const, icon: '🌅', label: 'Fondu', desc: 'Fade doux' },
+            { value: 'glisse' as const, icon: '🎭', label: 'Glisse', desc: 'Style VN' },
           ].map((opt) => (
             <button
               key={opt.value}
@@ -359,99 +401,93 @@ export function TextSection() {
           {cfg.dialogueTransition === 'glisse' &&
             'La boîte glisse légèrement vers le haut à chaque changement de dialogue.'}
         </p>
-      </section>
+      </PanelSection>
 
-      {/* Apparence — thèmes, couleurs, opacité, bordure, rayon, position */}
-      <section className="sp-sec" aria-labelledby="dlgbox-style-heading">
-        <h3 id="dlgbox-style-heading" className="sp-lbl">
-          APPARENCE
-        </h3>
+      {/* ── Apparence — 3 sous-accordéons ── */}
+      <PanelSection title="APPARENCE" id="dlgbox-style" defaultOpen={false}>
+        {/* Thèmes */}
+        <SubSection title="THÈMES" defaultOpen={true}>
+          <div className="grid grid-cols-5 gap-1 mb-2">
+            {THEMES.map((theme) => (
+              <button
+                key={theme.label}
+                onClick={() => update(theme.patch)}
+                title={theme.label}
+                aria-label={`Thème ${theme.label}`}
+                className="flex flex-col items-center gap-0.5 py-1.5 px-0.5 rounded-md border border-[var(--color-border-base)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] transition-all text-center"
+              >
+                <span className="text-base leading-none">{theme.icon}</span>
+                <span className="text-[9px] text-[var(--color-text-muted)] leading-none">
+                  {theme.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </SubSection>
 
-        {/* Presets thème */}
-        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
-          THÈME
-        </p>
-        <div className="grid grid-cols-5 gap-1 mb-4">
-          {THEMES.map((theme) => (
-            <button
-              key={theme.label}
-              onClick={() => update(theme.patch)}
-              title={theme.label}
-              aria-label={`Thème ${theme.label}`}
-              className="flex flex-col items-center gap-0.5 py-1.5 px-0.5 rounded-md border border-[var(--color-border-base)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] transition-all text-center"
-            >
-              <span className="text-base leading-none">{theme.icon}</span>
-              <span className="text-[9px] text-[var(--color-text-muted)] leading-none">
-                {theme.label}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* Couleurs & Opacité */}
+        <SubSection title="COULEURS & OPACITÉ" defaultOpen={true}>
+          <ColorRow label="Fond" value={cfg.bgColor} onChange={(v) => update({ bgColor: v })} />
+          <ColorRow
+            label="Texte"
+            value={cfg.textColor}
+            onChange={(v) => update({ textColor: v })}
+          />
+          <ColorRow
+            label="Bordure"
+            value={cfg.borderColor}
+            onChange={(v) => update({ borderColor: v })}
+          />
+          <SliderRow
+            label="Opacité du fond"
+            value={Math.round(cfg.boxOpacity * 100)}
+            min={20}
+            max={100}
+            step={5}
+            unit="%"
+            onChange={(v) => update({ boxOpacity: v / 100 })}
+            ariaLabel={`Opacité du fond : ${Math.round(cfg.boxOpacity * 100)} %`}
+          />
+        </SubSection>
 
-        {/* Couleurs */}
-        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
-          COULEURS
-        </p>
-        <ColorRow label="Fond" value={cfg.bgColor} onChange={(v) => update({ bgColor: v })} />
-        <ColorRow label="Texte" value={cfg.textColor} onChange={(v) => update({ textColor: v })} />
-        <ColorRow
-          label="Bordure"
-          value={cfg.borderColor}
-          onChange={(v) => update({ borderColor: v })}
-        />
+        {/* Style */}
+        <SubSection title="STYLE" defaultOpen={true}>
+          <ToggleGroup
+            label="BORDURE"
+            value={cfg.borderStyle}
+            options={[
+              { value: 'none', label: 'Aucune' },
+              { value: 'subtle', label: 'Subtile' },
+              { value: 'prominent', label: 'Marquée' },
+            ]}
+            onChange={(v) => update({ borderStyle: v })}
+          />
+          <ToggleGroup
+            label="ARRONDI"
+            value={cfg.borderRadius}
+            options={[
+              { value: 'none', label: 'Carré' },
+              { value: 'sm', label: 'S' },
+              { value: 'md', label: 'M' },
+              { value: 'lg', label: 'L' },
+              { value: 'xl', label: 'XL' },
+            ]}
+            onChange={(v) => update({ borderRadius: v })}
+          />
+          <ToggleGroup
+            label="POSITION"
+            value={cfg.position}
+            options={[
+              { value: 'bottom', label: 'Bas' },
+              { value: 'center', label: 'Centre' },
+              { value: 'top', label: 'Haut' },
+            ]}
+            onChange={(v) => update({ position: v })}
+          />
+        </SubSection>
+      </PanelSection>
 
-        {/* Opacité */}
-        <SliderRow
-          label="Opacité du fond"
-          value={Math.round(cfg.boxOpacity * 100)}
-          min={20}
-          max={100}
-          step={5}
-          unit="%"
-          onChange={(v) => update({ boxOpacity: v / 100 })}
-          ariaLabel={`Opacité du fond : ${Math.round(cfg.boxOpacity * 100)} %`}
-        />
-
-        {/* Bordure */}
-        <ToggleGroup
-          label="STYLE BORDURE"
-          value={cfg.borderStyle}
-          options={[
-            { value: 'none', label: 'Aucune' },
-            { value: 'subtle', label: 'Subtile' },
-            { value: 'prominent', label: 'Marquée' },
-          ]}
-          onChange={(v) => update({ borderStyle: v })}
-        />
-
-        {/* Arrondi */}
-        <ToggleGroup
-          label="ARRONDI"
-          value={cfg.borderRadius}
-          options={[
-            { value: 'none', label: 'Carré' },
-            { value: 'sm', label: 'S' },
-            { value: 'md', label: 'M' },
-            { value: 'lg', label: 'L' },
-            { value: 'xl', label: 'XL' },
-          ]}
-          onChange={(v) => update({ borderRadius: v })}
-        />
-
-        {/* Position */}
-        <ToggleGroup
-          label="POSITION"
-          value={cfg.position}
-          options={[
-            { value: 'bottom', label: 'Bas' },
-            { value: 'center', label: 'Centre' },
-            { value: 'top', label: 'Haut' },
-          ]}
-          onChange={(v) => update({ position: v })}
-        />
-      </section>
-
-      {/* Portrait */}
+      {/* ── Portrait ── */}
       <PanelSection title="PORTRAIT" id="dlgbox-portrait" defaultOpen={false}>
         {/* Afficher / masquer */}
         <div className="flex items-center justify-between mb-3">
@@ -564,6 +600,114 @@ export function TextSection() {
             Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
           </p>
         </div>
+      </PanelSection>
+
+      {/* ── Nom du personnage ── */}
+      <PanelSection title="NOM DU PERSONNAGE" id="dlgbox-name-style" defaultOpen={false}>
+        {/* Polices */}
+        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
+          POLICE
+        </p>
+        <div className="grid grid-cols-4 gap-1 mb-4">
+          {NAME_FONTS.map((font) => {
+            const isActive = (cfg.nameFont ?? DEFAULT_NAME_FONT_ID) === font.id;
+            return (
+              <button
+                key={font.id}
+                onClick={() => update({ nameFont: font.id })}
+                title={font.description}
+                aria-pressed={isActive}
+                className={[
+                  'flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-md border transition-all',
+                  isActive
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                    : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-muted)]',
+                ].join(' ')}
+              >
+                <span className="text-sm leading-none">{font.emoji}</span>
+                <span
+                  className="text-[10px] leading-tight text-center font-bold"
+                  style={{ fontFamily: font.fontFamily }}
+                >
+                  ABC
+                </span>
+                <span className="text-[8.5px] leading-none text-center opacity-80">
+                  {font.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Ombre */}
+        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
+          OMBRE
+        </p>
+        <div className="sp-seg mb-3">
+          {(Object.keys(NAME_SHADOW_LABELS) as NameShadowPreset[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => update({ nameShadow: s })}
+              className={`sp-seg-btn${(cfg.nameShadow ?? DEFAULT_NAME_SHADOW) === s ? ' active' : ''}`}
+              aria-pressed={(cfg.nameShadow ?? DEFAULT_NAME_SHADOW) === s}
+            >
+              {NAME_SHADOW_LABELS[s]}
+            </button>
+          ))}
+        </div>
+
+        {/* Couleur du nom */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs text-[var(--color-text-secondary)]">Couleur du nom</span>
+          <div className="flex items-center gap-2">
+            {cfg.nameColor && cfg.nameColor !== '' && (
+              <button
+                onClick={() => update({ nameColor: '' })}
+                className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors flex items-center gap-1"
+                title="Utiliser la couleur automatique du personnage"
+                aria-label="Réinitialiser la couleur du nom"
+              >
+                <RotateCcw className="w-2.5 h-2.5" aria-hidden="true" />
+                Auto
+              </button>
+            )}
+            {!(cfg.nameColor && cfg.nameColor !== '') && (
+              <span className="text-[10px] text-[var(--color-text-muted)] italic">Auto</span>
+            )}
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <span
+                className="w-5 h-5 rounded border border-[var(--color-border-base)] shadow-inner flex-shrink-0"
+                style={{
+                  background: cfg.nameColor && cfg.nameColor !== '' ? cfg.nameColor : '#8b5cf6',
+                  opacity: cfg.nameColor && cfg.nameColor !== '' ? 1 : 0.35,
+                }}
+                aria-hidden="true"
+              />
+              <input
+                type="color"
+                value={cfg.nameColor && cfg.nameColor !== '' ? cfg.nameColor : '#8b5cf6'}
+                onChange={(e) => update({ nameColor: e.target.value })}
+                className="sr-only"
+                aria-label="Couleur du nom du personnage"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Espacement lettres */}
+        <SliderRow
+          label="Espacement lettres"
+          value={cfg.nameLetterSpacing ?? 1.5}
+          min={0}
+          max={8}
+          step={0.5}
+          unit="px"
+          onChange={(v) => update({ nameLetterSpacing: v })}
+          ariaLabel={`Espacement des lettres du nom : ${cfg.nameLetterSpacing ?? 1.5} px`}
+        />
+        <p className="text-[10px] text-[var(--color-text-muted)] leading-tight -mt-1">
+          Aperçu en temps réel dans la boîte de dialogue.
+        </p>
       </PanelSection>
     </div>
   );

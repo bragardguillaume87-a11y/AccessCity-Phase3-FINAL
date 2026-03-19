@@ -44,6 +44,14 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
     map.sceneEffect ?? { type: 'none' }
   );
 
+  // ── Preview settings ────────────────────────────────────────────────────────
+  const [previewDisplayMode, setPreviewDisplayMode] = useState<'auto' | 'manual'>(
+    map.previewDisplayMode ?? 'auto'
+  );
+  const [previewZoom, setPreviewZoom] = useState(String(map.previewZoom ?? 1.5));
+  const [previewAntialiasing, setPreviewAntialiasing] = useState(map.previewAntialiasing ?? false);
+  const [previewFpsCap, setPreviewFpsCap] = useState(String(map.previewFpsCap ?? 60));
+
   const wNum = parseInt(width, 10);
   const hNum = parseInt(height, 10);
   const tsNum = parseInt(tileSize, 10);
@@ -92,11 +100,18 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
   function handleConfirm() {
     if (!isValid) return;
     resizeMap(map.id, name.trim(), wNum, hNum, tsNum);
+    const previewZoomNum = parseFloat(previewZoom);
+    const previewFpsNum = parseInt(previewFpsCap, 10);
     updateMapMetadata(map.id, {
       playerStartCx: spawnCxNum,
       playerStartCy: spawnCyNum,
       bgmBrickId: bgmBrickId || undefined,
       sceneEffect: sceneEffect.type !== 'none' ? sceneEffect : undefined,
+      previewDisplayMode,
+      previewZoom:
+        previewDisplayMode === 'manual' && !isNaN(previewZoomNum) ? previewZoomNum : undefined,
+      previewAntialiasing: previewAntialiasing || undefined,
+      previewFpsCap: !isNaN(previewFpsNum) && previewFpsNum !== 60 ? previewFpsNum : undefined,
     });
     onClose();
   }
@@ -144,7 +159,9 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
           background: 'var(--color-bg-surface)',
           border: '1px solid var(--color-border-base)',
           borderRadius: 8,
-          width: 380,
+          width: 400,
+          maxHeight: '90vh',
+          overflowY: 'auto',
           padding: '20px 24px',
           boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
           display: 'flex',
@@ -606,6 +623,123 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
           )}
         </div>
 
+        {/* ── PRÉVISUALISATION ─────────────────────────────────────────────── */}
+        <div>
+          <p style={sectionHeaderStyle}>🎥 Prévisualisation</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Mode zoom */}
+            <div>
+              <label style={labelStyle}>Mode zoom</label>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                {(['auto', 'manual'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setPreviewDisplayMode(m)}
+                    style={{
+                      flex: 1,
+                      padding: '5px 0',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      borderRadius: 5,
+                      cursor: 'pointer',
+                      border: `1.5px solid ${previewDisplayMode === m ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                      background:
+                        previewDisplayMode === m ? 'rgba(139,92,246,0.15)' : 'transparent',
+                      color:
+                        previewDisplayMode === m
+                          ? 'var(--color-primary)'
+                          : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {m === 'auto' ? 'Auto (recommandé)' : 'Manuel'}
+                  </button>
+                ))}
+              </div>
+              <p
+                style={{
+                  margin: '4px 0 0',
+                  fontSize: 10,
+                  color: 'var(--color-text-muted)',
+                  lineHeight: 1.4,
+                }}
+              >
+                {previewDisplayMode === 'auto'
+                  ? 'Zoom calculé automatiquement — élimine les bandes noires.'
+                  : 'Zoom fixe défini manuellement.'}
+              </p>
+            </div>
+            {/* Zoom slider (manual only) */}
+            {previewDisplayMode === 'manual' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ ...labelStyle, marginBottom: 0, width: 60, flexShrink: 0 }}>
+                  Zoom
+                </label>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={4}
+                  step={0.1}
+                  value={parseFloat(previewZoom) || 1.5}
+                  onChange={(e) => setPreviewZoom(e.target.value)}
+                  style={{ flex: 1, accentColor: 'var(--color-primary)' }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--color-primary)',
+                    fontWeight: 700,
+                    width: 30,
+                    textAlign: 'right',
+                  }}
+                >
+                  {parseFloat(previewZoom).toFixed(1)}×
+                </span>
+              </div>
+            )}
+            {/* Antialiasing */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={previewAntialiasing}
+                onChange={(e) => setPreviewAntialiasing(e.target.checked)}
+                style={{ accentColor: 'var(--color-primary)', width: 13, height: 13 }}
+              />
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                Antialiasing{' '}
+                <span style={{ color: 'var(--color-text-muted)' }}>
+                  (désactiver pour pixel art)
+                </span>
+              </span>
+            </label>
+            {/* FPS cap */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ ...labelStyle, marginBottom: 0, width: 60, flexShrink: 0 }}>
+                FPS max
+              </label>
+              <input
+                type="range"
+                min={30}
+                max={144}
+                step={1}
+                value={parseInt(previewFpsCap, 10) || 60}
+                onChange={(e) => setPreviewFpsCap(e.target.value)}
+                style={{ flex: 1, accentColor: 'var(--color-primary)' }}
+              />
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--color-primary)',
+                  fontWeight: 700,
+                  width: 30,
+                  textAlign: 'right',
+                }}
+              >
+                {previewFpsCap}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Warning shrink */}
         {(willShrink || willChangeTileSize) && (
           <div
@@ -832,4 +966,23 @@ const inputStyle: React.CSSProperties = {
   padding: '5px 7px',
   boxSizing: 'border-box',
   outline: 'none',
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  margin: '0 0 8px',
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--color-text-secondary)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  paddingBottom: 6,
+  borderBottom: '1px solid var(--color-border-base)',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  color: 'var(--color-text-secondary)',
+  fontWeight: 600,
+  marginBottom: 3,
 };

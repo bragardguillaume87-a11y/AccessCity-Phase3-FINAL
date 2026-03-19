@@ -56,6 +56,13 @@ interface TriggerZonePanelProps {
   pendingAudioBrickId?: string | null;
   /** Appelé après que pendingAudioBrickId a été consommé (pour reset dans le parent) */
   onPendingAudioBrickConsumed?: () => void;
+  /**
+   * Appelé chaque fois que le formulaire d'édition est ouvert/fermé ou que les coordonnées changent.
+   * null = formulaire fermé (pas de contour à afficher sur le canvas).
+   */
+  onEditingZoneChange?: (
+    rect: { xTile: number; yTile: number; wTile: number; hTile: number } | null
+  ) => void;
 }
 
 // ============================================================================
@@ -122,6 +129,7 @@ export default function TriggerZonePanel({
   onPendingZoneConsumed,
   pendingAudioBrickId,
   onPendingAudioBrickConsumed,
+  onEditingZoneChange,
 }: TriggerZonePanelProps) {
   const mapData = useMapsStore((s) => s.mapDataById[mapId]);
   const maps = useMapsStore((s) => s.maps);
@@ -142,6 +150,16 @@ export default function TriggerZonePanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ZoneFormState>(DEFAULT_FORM);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Notifier le parent des coordonnées en cours d'édition (contour sur canvas)
+  useEffect(() => {
+    if (showForm) {
+      onEditingZoneChange?.({ xTile: form.x, yTile: form.y, wTile: form.w, hTile: form.h });
+    } else {
+      onEditingZoneChange?.(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm, form.x, form.y, form.w, form.h]);
 
   // Pré-remplir le formulaire quand une zone est dessinée par drag sur le canvas
   useEffect(() => {

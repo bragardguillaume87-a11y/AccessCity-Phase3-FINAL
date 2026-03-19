@@ -66,6 +66,27 @@ export function useGameEngine({
         ? { x: mapMetadata.playerStartCx * tileSize, y: mapMetadata.playerStartCy * tileSize }
         : undefined);
 
+    // ── Preview display settings ────────────────────────────────────────────
+    const ENGINE_W = 1280;
+    const ENGINE_H = 720;
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 4.0;
+
+    const previewDisplayMode = mapMetadata?.previewDisplayMode ?? 'auto';
+    const previewAntialiasing = mapMetadata?.previewAntialiasing ?? false;
+    const previewFpsCap = mapMetadata?.previewFpsCap ?? 60;
+    // Sprite-level collider takes priority over map-level override
+    const playerCollider = playerSpriteConfig?.playerCollider ?? mapMetadata?.playerCollider;
+
+    // Auto-zoom: scale camera so 1280×720 world viewport ≤ map dimensions → no black bands
+    const resolvedZoom: number =
+      previewDisplayMode === 'auto'
+        ? Math.min(
+            ZOOM_MAX,
+            Math.max(ZOOM_MIN, Math.max(ENGINE_W / mapData.pxWid, ENGINE_H / mapData.pxHei))
+          )
+        : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, mapMetadata?.previewZoom ?? 1.5));
+
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -111,14 +132,15 @@ export function useGameEngine({
     // Excalibur utilise le canvas natif (300×150) et ne remplit pas l'espace.
     const engine = new ex.Engine({
       canvasElement: canvas,
-      width: 1280,
-      height: 720,
+      width: ENGINE_W,
+      height: ENGINE_H,
       displayMode: ex.DisplayMode.FitContainer,
       suppressPlayButton: true,
       suppressConsoleBootMessage: true,
       backgroundColor: ex.Color.fromHex('#0d0d1a'),
-      antialiasing: false,
-      pixelArt: true,
+      antialiasing: previewAntialiasing,
+      pixelArt: !previewAntialiasing,
+      maxFps: previewFpsCap,
     });
 
     engineRef.current = engine;
@@ -154,7 +176,9 @@ export function useGameEngine({
       bgmBrickId,
       bgmAudioUrl,
       tilesetConfigs,
-      sceneEffect
+      sceneEffect,
+      resolvedZoom,
+      playerCollider
     );
     sceneInstance = scene;
     engine.addScene('topdown', scene);

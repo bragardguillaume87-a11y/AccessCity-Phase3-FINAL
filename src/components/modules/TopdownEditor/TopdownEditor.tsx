@@ -29,6 +29,7 @@ import MapCanvas from './MapCanvas';
 import ObjectsPanel from './ObjectsPanel';
 import MapTabsBar from './MapTabsBar';
 import EntityContextMenu from './EntityContextMenu';
+import ObjectDefinitionDialog from './ObjectDefinitionDialog';
 import TilePalette from './TilePalette';
 import EntityPropertyPanel from './EntityPropertyPanel';
 import TriggerZonePanel from './TriggerZonePanel';
@@ -180,6 +181,8 @@ export default function TopdownEditor() {
     x: number;
     y: number;
   } | null>(null);
+  /** ObjectDefinitionDialog ouvert depuis le context menu d'un ObjectInstance */
+  const [objDefDialogFromCtx, setObjDefDialogFromCtx] = useState<string | null>(null);
 
   const eraseTileFromLayer = useMapsStore((s) => s.eraseTileFromLayer);
   const addTileLayer = useMapsStore((s) => s.addTileLayer);
@@ -209,7 +212,7 @@ export default function TopdownEditor() {
   useEffect(() => {
     const state = useMapsStore.getState();
     const needsMigration = Object.values(state.mapDataById).some(
-      (d) => (d._ac_entities?.length ?? 0) > 0 && d._ac_objects.length === 0
+      (d) => (d._ac_entities?.length ?? 0) > 0 && (d._ac_objects?.length ?? 0) === 0
     );
     if (needsMigration) migrateEntitiesToObjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1582,48 +1585,113 @@ export default function TopdownEditor() {
         {entityContextMenu &&
           editor.selectedMapId &&
           (() => {
-            const entity = mapData._ac_entities.find((e) => e.id === entityContextMenu.entityId);
-            if (!entity) return null;
-            const cfg = spriteConfigs[entity.spriteAssetUrl];
-            const instanceCount = mapData._ac_entities.filter(
-              (e) => e.spriteAssetUrl === entity.spriteAssetUrl
-            ).length;
+            // Chercher d'abord dans les ObjectInstances (nouveau système)
+            const objInstance = mapData._ac_objects?.find(
+              (o) => o.id === entityContextMenu.entityId
+            );
+            const objDefinition = objInstance
+              ? objectDefinitions.find((d) => d.id === objInstance.definitionId)
+              : undefined;
+
+            // Fallback sur les EntityInstances legacy
+            const entity = objInstance
+              ? null
+              : mapData._ac_entities.find((e) => e.id === entityContextMenu.entityId);
+
+            // Si ni l'un ni l'autre → ne rien afficher
+            if (!objInstance && !entity) return null;
+
+            // Adapter les props pour EntityContextMenu (fonctionne dans les deux cas)
+            const spriteUrl = objDefinition
+              ? ((
+                  objDefinition.components.find(
+                    (c) => c.type === 'animatedSprite' || c.type === 'sprite'
+                  ) as { spriteAssetUrl?: string } | undefined
+                )?.spriteAssetUrl ?? '')
+              : entity!.spriteAssetUrl;
+            const cfg = spriteConfigs[spriteUrl];
+            const instanceCount = objInstance
+              ? (mapData._ac_objects?.filter((o) => o.definitionId === objInstance.definitionId)
+                  .length ?? 1)
+              : mapData._ac_entities.filter((e) => e.spriteAssetUrl === entity!.spriteAssetUrl)
+                  .length;
+
+            // Construire une EntityInstance synthétique pour ObjectInstances
+            const syntheticEntity = objInstance
+              ? {
+                  id: objInstance.id,
+                  spriteAssetUrl: spriteUrl,
+                  cx: objInstance.cx,
+                  cy: objInstance.cy,
+                  facing: objInstance.facing,
+                  behavior: 'static' as const,
+                  displayName: objDefinition?.displayName,
+                }
+              : entity!;
+
             return (
               <EntityContextMenu
                 x={entityContextMenu.x}
                 y={entityContextMenu.y}
-                entity={entity}
+                entity={syntheticEntity}
                 spriteConfig={cfg}
-                isPlayerSprite={mapMetadata?.playerSpritePath === entity.spriteAssetUrl}
+                isPlayerSprite={mapMetadata?.playerSpritePath === spriteUrl}
                 instanceCount={instanceCount}
+                definitionId={objInstance?.definitionId}
                 onClose={() => setEntityContextMenu(null)}
                 onDelete={() => {
-                  removeEntity(editor.selectedMapId!, entity.id);
-                  if (selectedEntityId === entity.id) setSelectedEntityId(null);
+                  if (objInstance) {
+                    useMapsStore
+                      .getState()
+                      .removeObjectInstance(editor.selectedMapId!, objInstance.id);
+                  } else {
+                    removeEntity(editor.selectedMapId!, entity!.id);
+                    if (selectedEntityId === entity!.id) setSelectedEntityId(null);
+                  }
                 }}
                 onDuplicate={() => {
-                  addEntity(editor.selectedMapId!, {
-                    id: `entity-${Date.now()}`,
-                    spriteAssetUrl: entity.spriteAssetUrl,
-                    cx: entity.cx + 1,
-                    cy: entity.cy,
-                    facing: entity.facing,
-                    behavior: entity.behavior,
-                    displayName: entity.displayName,
-                  });
+                  if (objInstance) {
+                    useMapsStore.getState().addObjectInstance(editor.selectedMapId!, {
+                      ...objInstance,
+                      id: `obj-${Date.now()}`,
+                      cx: objInstance.cx + 1,
+                    });
+                  } else {
+                    addEntity(editor.selectedMapId!, {
+                      id: `entity-${Date.now()}`,
+                      spriteAssetUrl: entity!.spriteAssetUrl,
+                      cx: entity!.cx + 1,
+                      cy: entity!.cy,
+                      facing: entity!.facing,
+                      behavior: entity!.behavior,
+                      displayName: entity!.displayName,
+                    });
+                  }
                 }}
                 onSetAsPlayer={() => {
-                  updateMapMetadata(editor.selectedMapId!, {
-                    playerSpritePath: entity.spriteAssetUrl,
-                  });
+                  updateMapMetadata(editor.selectedMapId!, { playerSpritePath: spriteUrl });
                 }}
                 onConfigureSprite={() => {
-                  // Objects panel (right) is always visible — just close context menu
                   setEntityContextMenu(null);
                 }}
+                onEditDefinition={
+                  objInstance?.definitionId
+                    ? () => {
+                        setEntityContextMenu(null);
+                        setObjDefDialogFromCtx(objInstance.definitionId);
+                      }
+                    : undefined
+                }
               />
             );
           })()}
+
+        {/* ObjectDefinitionDialog ouvert depuis le context menu */}
+        <ObjectDefinitionDialog
+          definitionId={objDefDialogFromCtx}
+          onClose={() => setObjDefDialogFromCtx(null)}
+          onOpenSpriteImport={() => setObjDefDialogFromCtx(null)}
+        />
       </div>
 
       {/* ── Resizer ── */}

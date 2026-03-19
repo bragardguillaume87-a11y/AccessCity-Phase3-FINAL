@@ -17,6 +17,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, ChevronsDown } from 'lucide-react';
 import { Button } from './button';
 import type { DialogueBoxStyle, DialogueChoice } from '@/types/scenes';
+import {
+  NAME_FONTS,
+  NAME_SHADOW_CSS,
+  DEFAULT_NAME_FONT_ID,
+  DEFAULT_NAME_SHADOW,
+} from '@/config/nameFonts';
 
 // ── Defaults & helpers ────────────────────────────────────────────────────────
 
@@ -38,6 +44,10 @@ export const DIALOGUE_BOX_DEFAULTS: Required<DialogueBoxStyle> = {
   borderRadius: 'xl',
   layout: 'classique',
   dialogueTransition: 'fondu',
+  nameFont: DEFAULT_NAME_FONT_ID,
+  nameColor: '',
+  nameShadow: DEFAULT_NAME_SHADOW,
+  nameLetterSpacing: 1.5,
 };
 
 /**
@@ -232,11 +242,16 @@ export function DialogueBox({
   const badgeFontSize = Math.round(11 * sf);
   const badgeSize = Math.round(22 * sf);
 
-  // ── Typo partagée pour le nom du speaker ───────────────────────────────────
+  // ── Typo partagée pour le nom du speaker (config-driven) ─────────────────
+  const nameFontDef =
+    NAME_FONTS.find((f) => f.id === (config.nameFont ?? DEFAULT_NAME_FONT_ID)) ?? NAME_FONTS[0];
+  const nameShadowCss = NAME_SHADOW_CSS[config.nameShadow ?? DEFAULT_NAME_SHADOW];
+  // Couleur du nom : override hex si défini, sinon fallback sur speakerColor
+  const nameColorOverride = config.nameColor && config.nameColor !== '' ? config.nameColor : null;
   const speakerNameBaseStyle: React.CSSProperties = {
-    fontFamily: "Georgia, 'Palatino Linotype', Palatino, serif",
+    fontFamily: nameFontDef.fontFamily,
     fontWeight: 800,
-    letterSpacing: '0.09em',
+    letterSpacing: `${config.nameLetterSpacing ?? 1.5}px`,
     textTransform: 'uppercase',
     flexShrink: 0,
   };
@@ -492,8 +507,8 @@ export function DialogueBox({
               style={{
                 ...speakerNameBaseStyle,
                 fontSize: speakerFontSize,
-                color: '#fff',
-                textShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                color: nameColorOverride ?? '#fff',
+                textShadow: nameShadowCss,
                 lineHeight: 1,
               }}
             >
@@ -579,9 +594,9 @@ export function DialogueBox({
               <span
                 style={{
                   ...speakerNameBaseStyle,
-                  color: speakerColor,
+                  color: nameColorOverride ?? speakerColor,
                   fontSize: speakerFontSize,
-                  textShadow: `0 0 18px ${speakerColor}55`,
+                  textShadow: nameShadowCss,
                 }}
               >
                 {speaker}

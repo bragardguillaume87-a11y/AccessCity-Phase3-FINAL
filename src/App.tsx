@@ -29,7 +29,8 @@ function App() {
   // Check URL for demo mode (?demo=true) and tokens mode (?tokens=true)
   const urlParams = new URLSearchParams(window.location.search);
   const isTokensMode = urlParams.get('tokens') === 'true';
-  const [currentView, setCurrentView] = useState(isTokensMode ? 'tokens-demo' : 'home'); // 'home' | 'studio' | 'tokens-demo'
+  // DEV: skip home page, go directly to editor
+  const [currentView, setCurrentView] = useState(isTokensMode ? 'tokens-demo' : 'studio'); // 'home' | 'studio' | 'tokens-demo'
 
   // Créer une nouvelle quête
   function handleCreateQuest() {

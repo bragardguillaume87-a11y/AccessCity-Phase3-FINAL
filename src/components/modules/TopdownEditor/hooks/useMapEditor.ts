@@ -18,7 +18,14 @@ import type { SelectedTile } from '@/types/tileset';
 // TYPES
 // ============================================================================
 
-export type EditorTool = 'paint' | 'erase' | 'eyedropper' | 'fill';
+export type EditorTool = 'paint' | 'erase' | 'eyedropper' | 'fill' | 'selection';
+
+/** Clipboard tuiles en mémoire session (partagé entre cartes) */
+let TILE_CLIPBOARD: {
+  tiles: Array<{ dcx: number; dcy: number; tile: TileInstance }>;
+  cw: number;
+  ch: number;
+} | null = null;
 
 export interface MapEditorState {
   selectedMapId: string | null;
@@ -38,6 +45,7 @@ export interface MapEditorState {
   // Render options
   showGrid: boolean;
   dimInactiveLayers: boolean;
+  showSpriteVisuals: boolean;
 }
 
 export interface MapEditorActions {
@@ -58,6 +66,22 @@ export interface MapEditorActions {
   toggleFlipX: () => void;
   toggleFlipY: () => void;
   toggleStackMode: () => void;
+  toggleSpriteVisuals: () => void;
+  /** Copie les tuiles de la sélection dans le presse-papier session */
+  copySelection: (rect: { cx: number; cy: number; cw: number; ch: number }) => void;
+  /** Colle les tuiles du presse-papier à (toCx, toCy), retourne le rect collé ou null */
+  pasteSelection: (
+    toCx: number,
+    toCy: number
+  ) => { cx: number; cy: number; cw: number; ch: number } | null;
+  /** Efface les tuiles dans la zone sélectionnée (couche active uniquement) */
+  eraseSelection: (rect: { cx: number; cy: number; cw: number; ch: number }) => void;
+  /** Déplace les tuiles de fromRect vers toCx/toCy (couper-coller, couche active uniquement) */
+  moveSelection: (
+    fromRect: { cx: number; cy: number; cw: number; ch: number },
+    toCx: number,
+    toCy: number
+  ) => void;
 }
 
 // ============================================================================
@@ -136,6 +160,7 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
   // ── Render options ─────────────────────────────────────────────────────────
   const [showGrid, setShowGrid] = useState(true);
   const [dimInactiveLayers, setDimInactiveLayers] = useState(true);
+  const [showSpriteVisuals, setShowSpriteVisuals] = useState(true);
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const selectMap = useCallback((mapId: string) => {
@@ -164,6 +189,7 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
   // ── Render toggles ─────────────────────────────────────────────────────────
   const toggleGrid = useCallback(() => setShowGrid((v) => !v), []);
   const toggleDimInactive = useCallback(() => setDimInactiveLayers((v) => !v), []);
+  const toggleSpriteVisuals = useCallback(() => setShowSpriteVisuals((v) => !v), []);
   const toggleFlipX = useCallback(() => setFlipX((v) => !v), []);
   const toggleFlipY = useCallback(() => setFlipY((v) => !v), []);
   const toggleStackMode = useCallback(() => setStackMode((v) => !v), []);
@@ -377,6 +403,120 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     [selectedMapId, activeLayer, activeTileLayerIndex, selectedTile]
   );
 
+  // ── Selection actions ──────────────────────────────────────────────────────
+
+  const copySelection = useCallback(
+    (rect: { cx: number; cy: number; cw: number; ch: number }) => {
+      if (!selectedMapId || activeLayer !== 'tiles') return;
+      const mapData = useMapsStore.getState().getMapData(selectedMapId);
+      if (!mapData) return;
+      const tileLayers = mapData.layerInstances.filter((l) => l.__type === 'tiles');
+      const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+      if (!layer) return;
+      const tiles = layer.gridTiles
+        .filter(
+          (t) =>
+            t.cx >= rect.cx &&
+            t.cx < rect.cx + rect.cw &&
+            t.cy >= rect.cy &&
+            t.cy < rect.cy + rect.ch
+        )
+        .map((t) => ({ dcx: t.cx - rect.cx, dcy: t.cy - rect.cy, tile: { ...t } }));
+      TILE_CLIPBOARD = { tiles, cw: rect.cw, ch: rect.ch };
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex]
+  );
+
+  const pasteSelection = useCallback(
+    (toCx: number, toCy: number): { cx: number; cy: number; cw: number; ch: number } | null => {
+      if (!selectedMapId || activeLayer !== 'tiles' || !TILE_CLIPBOARD) return null;
+      const store = useMapsStore.getState();
+      const mapData = store.getMapData(selectedMapId);
+      if (!mapData) return null;
+      const newData: MapData = structuredClone(mapData);
+      const tileLayers = newData.layerInstances.filter((l) => l.__type === 'tiles');
+      const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+      if (!layer || layer._ac_locked) return null;
+
+      const { tiles, cw, ch } = TILE_CLIPBOARD;
+      // Remove tiles at destination that will be overwritten
+      const destKeys = new Set(tiles.map(({ dcx, dcy }) => `${toCx + dcx},${toCy + dcy}`));
+      layer.gridTiles = layer.gridTiles.filter((t) => !destKeys.has(`${t.cx},${t.cy}`));
+      // Paint clipboard tiles
+      for (const { dcx, dcy, tile } of tiles) {
+        layer.gridTiles.push({ ...tile, cx: toCx + dcx, cy: toCy + dcy });
+      }
+      store.updateMapData(selectedMapId, newData);
+      return { cx: toCx, cy: toCy, cw, ch };
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex]
+  );
+
+  const eraseSelection = useCallback(
+    (rect: { cx: number; cy: number; cw: number; ch: number }) => {
+      if (!selectedMapId || activeLayer !== 'tiles') return;
+      const store = useMapsStore.getState();
+      const mapData = store.getMapData(selectedMapId);
+      if (!mapData) return;
+      const newData: MapData = structuredClone(mapData);
+      const tileLayers = newData.layerInstances.filter((l) => l.__type === 'tiles');
+      const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+      if (!layer || layer._ac_locked) return;
+      layer.gridTiles = layer.gridTiles.filter(
+        (t) =>
+          t.cx < rect.cx || t.cx >= rect.cx + rect.cw || t.cy < rect.cy || t.cy >= rect.cy + rect.ch
+      );
+      store.updateMapData(selectedMapId, newData);
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex]
+  );
+
+  const moveSelection = useCallback(
+    (fromRect: { cx: number; cy: number; cw: number; ch: number }, toCx: number, toCy: number) => {
+      if (!selectedMapId || activeLayer !== 'tiles') return;
+      const store = useMapsStore.getState();
+      const mapData = store.getMapData(selectedMapId);
+      if (!mapData) return;
+      const newData: MapData = structuredClone(mapData);
+      const tileLayers = newData.layerInstances.filter((l) => l.__type === 'tiles');
+      const layer = tileLayers[activeTileLayerIndex] ?? tileLayers[0];
+      if (!layer || layer._ac_locked) return;
+
+      const dx = toCx - fromRect.cx;
+      const dy = toCy - fromRect.cy;
+
+      // Extract tiles inside selection
+      const selected = layer.gridTiles.filter(
+        (t) =>
+          t.cx >= fromRect.cx &&
+          t.cx < fromRect.cx + fromRect.cw &&
+          t.cy >= fromRect.cy &&
+          t.cy < fromRect.cy + fromRect.ch
+      );
+
+      // Remove source tiles
+      layer.gridTiles = layer.gridTiles.filter(
+        (t) =>
+          t.cx < fromRect.cx ||
+          t.cx >= fromRect.cx + fromRect.cw ||
+          t.cy < fromRect.cy ||
+          t.cy >= fromRect.cy + fromRect.ch
+      );
+
+      // Remove any tiles at destination that would be overwritten
+      const destKeys = new Set(selected.map((t) => `${t.cx + dx},${t.cy + dy}`));
+      layer.gridTiles = layer.gridTiles.filter((t) => !destKeys.has(`${t.cx},${t.cy}`));
+
+      // Paint at destination
+      for (const t of selected) {
+        layer.gridTiles.push({ ...t, cx: t.cx + dx, cy: t.cy + dy });
+      }
+
+      store.updateMapData(selectedMapId, newData);
+    },
+    [selectedMapId, activeLayer, activeTileLayerIndex]
+  );
+
   // ── Return ─────────────────────────────────────────────────────────────────
 
   return {
@@ -394,6 +534,7 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     stackMode,
     showGrid,
     dimInactiveLayers,
+    showSpriteVisuals,
     selectMap,
     setActiveTool,
     setActiveLayer,
@@ -411,5 +552,10 @@ export function useMapEditor(): MapEditorState & MapEditorActions {
     toggleFlipX,
     toggleFlipY,
     toggleStackMode,
+    toggleSpriteVisuals,
+    copySelection,
+    pasteSelection,
+    eraseSelection,
+    moveSelection,
   };
 }

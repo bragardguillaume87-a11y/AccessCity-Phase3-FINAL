@@ -125,6 +125,18 @@ export interface DialogueBoxStyle {
    * Défaut : 'fondu'
    */
   dialogueTransition?: 'aucune' | 'fondu' | 'glisse';
+  // ── Nom du personnage ─────────────────────────────────────────────────────
+  /** Police du nom (ID parmi NAME_FONTS dans config/nameFonts.ts — défaut : 'georgia') */
+  nameFont?: string;
+  /**
+   * Couleur du nom en hex. Vide ou absent = utiliser speakerColor (couleur auto par personnage).
+   * Ex : '#ffffff' forcer blanc, '#ffd700' or.
+   */
+  nameColor?: string;
+  /** Preset d'ombre du nom (défaut : 'glow') */
+  nameShadow?: 'none' | 'subtle' | 'glow' | 'hard' | 'neon';
+  /** Espacement des lettres du nom en px (0–8, défaut : 1.5) */
+  nameLetterSpacing?: number;
 }
 
 export interface Dialogue {

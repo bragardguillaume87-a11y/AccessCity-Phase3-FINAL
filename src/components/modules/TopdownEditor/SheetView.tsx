@@ -39,6 +39,8 @@ export interface SheetViewProps {
     r1: number
   ) => void;
   onOpenConfig: () => void;
+  /** Zoom initial au montage (S=0.75, M=1.5, L=2.5). Par défaut : 1.0 */
+  defaultZoom?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -50,9 +52,10 @@ export function SheetView({
   onSelectWhole,
   onSelectSheetRegion,
   onOpenConfig,
+  defaultZoom = 1.0,
 }: SheetViewProps) {
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
-  const [sheetZoom, setSheetZoom] = useState(1.0);
+  const [sheetZoom, setSheetZoom] = useState(defaultZoom);
   const [dragStart, setDragStart] = useState<{ col: number; row: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ col: number; row: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

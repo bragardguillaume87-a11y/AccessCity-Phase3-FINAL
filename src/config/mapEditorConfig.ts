@@ -77,6 +77,12 @@ export const MAP_CANVAS_COLORS = {
   HOVER_FILL_STROKE: 'rgba(255,200,50,0.9)',
   HOVER_DEFAULT_FILL: 'rgba(255,255,255,0.2)',
   HOVER_DEFAULT_STROKE: 'rgba(255,255,255,0.6)',
+  /** Outil sélection — teinte bleue cohérente avec la sélection */
+  HOVER_SELECTION_FILL: 'rgba(99,179,237,0.15)',
+  HOVER_SELECTION_STROKE: 'rgba(99,179,237,0.7)',
+  /** Aperçu pinceau multi-tuiles (bordure externe du motif) */
+  HOVER_BRUSH_FILL: 'rgba(255,255,255,0.08)',
+  HOVER_BRUSH_STROKE: 'rgba(255,255,255,0.5)',
 } as const;
 
 // ============================================================================

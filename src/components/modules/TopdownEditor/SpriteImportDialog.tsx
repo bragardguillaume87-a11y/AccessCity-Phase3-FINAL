@@ -25,13 +25,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { TransformWrapper, TransformComponent, useControls } from 'react-zoom-pan-pinch';
-import { Grid3X3, Zap, X, Play, Pause, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  Grid3X3,
+  Zap,
+  X,
+  Play,
+  Pause,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  AlertTriangle,
+} from 'lucide-react';
 import { SPRITE_CATEGORIES, SPRITE_ANIM_GROUPS, LPC_PRESET, expandRange } from '@/types/sprite';
 import type {
   SpriteSheetConfig,
   SpriteAnimationTag,
   AnimationRange,
   SpriteAnimGroupId,
+  PlayerColliderConfig,
 } from '@/types/sprite';
 import {
   SPRITE_DIR_COLORS,
@@ -192,6 +203,28 @@ export default function SpriteImportDialog({
   const [rows, setRows] = useState(initialConfig?.rows ?? 1);
   const [animations, setAnimations] = useState<AnimState>(initialConfig?.animations ?? {});
   const [activeTab, setActiveTab] = useState<SpriteAnimGroupId>('walk');
+
+  // ── Collision state ─────────────────────────────────────────────────────────
+  const COLL_DEFAULT_BOX: PlayerColliderConfig = {
+    mode: 'box',
+    widthPct: 0.875,
+    heightPct: 0.875,
+    offsetXPct: 0,
+    offsetYPct: 0,
+  };
+  const COLL_DEFAULT_POLY: { x: number; y: number }[] = [
+    { x: 0, y: -0.75 },
+    { x: 0.6, y: 0 },
+    { x: 0, y: 0.75 },
+    { x: -0.6, y: 0 },
+  ];
+  const [playerCollider, setPlayerCollider] = useState<PlayerColliderConfig>(
+    initialConfig?.playerCollider ?? COLL_DEFAULT_BOX
+  );
+  const [collSelPtIdx, setCollSelPtIdx] = useState<number | null>(null);
+  const [collDragPtIdx, setCollDragPtIdx] = useState<number | null>(null);
+  const collPolyCanvasRef = useRef<HTMLCanvasElement>(null);
+  const collBoxCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // ── UX state ───────────────────────────────────────────────────────────────
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
@@ -504,8 +537,207 @@ export default function SpriteImportDialog({
       category,
       displayName: displayName.trim() || undefined,
       animations,
+      playerCollider,
     });
   };
+
+  // ── Collision editor helpers ───────────────────────────────────────────────
+  const COLL_CS = 140; // canvas size
+  const COLL_CC = 70; // canvas center
+  const COLL_SC = 48; // px per normalised unit
+
+  const collNormToCanvas = useCallback(
+    (nx: number, ny: number) => ({
+      x: COLL_CC + nx * COLL_SC,
+      y: COLL_CC + ny * COLL_SC,
+    }),
+    []
+  );
+  const collCanvasToNorm = useCallback(
+    (cx: number, cy: number) => ({
+      x: Math.max(-1.4, Math.min(1.4, (cx - COLL_CC) / COLL_SC)),
+      y: Math.max(-1.4, Math.min(1.4, (cy - COLL_CC) / COLL_SC)),
+    }),
+    []
+  );
+
+  const collHitTest = useCallback(
+    (pts: { x: number; y: number }[], cx: number, cy: number, r = 9) => {
+      for (let i = pts.length - 1; i >= 0; i--) {
+        const c = collNormToCanvas(pts[i].x, pts[i].y);
+        if ((c.x - cx) ** 2 + (c.y - cy) ** 2 <= r * r) return i;
+      }
+      return -1;
+    },
+    [collNormToCanvas]
+  );
+  function collGetPos(e: React.MouseEvent<HTMLCanvasElement>) {
+    const r = (e.target as HTMLCanvasElement).getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function collGrahamScan(pts: { x: number; y: number }[]) {
+    if (pts.length < 3) return pts;
+    let piv = pts[0];
+    for (const p of pts) if (p.y < piv.y || (p.y === piv.y && p.x < piv.x)) piv = p;
+    const cross = (o: typeof piv, a: typeof piv, b: typeof piv) =>
+      (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const sorted = pts
+      .filter((p) => p !== piv)
+      .sort((a, b) => {
+        const c = cross(piv, a, b);
+        if (c !== 0) return -c;
+        return (a.x - piv.x) ** 2 + (a.y - piv.y) ** 2 - ((b.x - piv.x) ** 2 + (b.y - piv.y) ** 2);
+      });
+    const hull: { x: number; y: number }[] = [piv];
+    for (const p of sorted) {
+      while (hull.length >= 2 && cross(hull[hull.length - 2], hull[hull.length - 1], p) <= 0)
+        hull.pop();
+      hull.push(p);
+    }
+    return hull;
+  }
+
+  function collIsConvex(pts: { x: number; y: number }[]) {
+    if (pts.length < 3) return true;
+    let sign = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i],
+        b = pts[(i + 1) % pts.length],
+        c = pts[(i + 2) % pts.length];
+      const cr = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+      if (cr !== 0) {
+        const s = cr > 0 ? 1 : -1;
+        if (sign === 0) sign = s;
+        else if (sign !== s) return false;
+      }
+    }
+    return true;
+  }
+
+  const handleCollPolyDown = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (playerCollider.mode !== 'polygon') return;
+      const pos = collGetPos(e);
+      const hit = collHitTest(playerCollider.points, pos.x, pos.y);
+      if (hit >= 0) {
+        setCollSelPtIdx(hit);
+        setCollDragPtIdx(hit);
+      } else {
+        const norm = collCanvasToNorm(pos.x, pos.y);
+        setPlayerCollider((prev) =>
+          prev.mode !== 'polygon' ? prev : { ...prev, points: [...prev.points, norm] }
+        );
+        setCollSelPtIdx(playerCollider.points.length);
+      }
+    },
+    [playerCollider, collCanvasToNorm, collHitTest]
+  );
+
+  const handleCollPolyMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (collDragPtIdx === null || playerCollider.mode !== 'polygon') return;
+      const norm = collCanvasToNorm(collGetPos(e).x, collGetPos(e).y);
+      setPlayerCollider((prev) => {
+        if (prev.mode !== 'polygon') return prev;
+        const pts = [...prev.points];
+        pts[collDragPtIdx] = norm;
+        return { ...prev, points: pts };
+      });
+    },
+    [collDragPtIdx, playerCollider.mode, collCanvasToNorm]
+  );
+
+  const handleCollPolyUp = useCallback(() => setCollDragPtIdx(null), []);
+
+  // Box preview draw
+  useEffect(() => {
+    if (playerCollider.mode !== 'box') return;
+    const canvas = collBoxCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const S = 80;
+    ctx.clearRect(0, 0, S, S);
+    ctx.fillStyle = 'rgba(80,80,120,0.2)';
+    ctx.strokeStyle = 'rgba(130,130,180,0.5)';
+    ctx.lineWidth = 1;
+    ctx.fillRect(0, 0, S, S);
+    ctx.strokeRect(0.5, 0.5, S - 1, S - 1);
+    ctx.strokeStyle = 'rgba(200,200,200,0.25)';
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(S / 2, 0);
+    ctx.lineTo(S / 2, S);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, S / 2);
+    ctx.lineTo(S, S / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const bW = playerCollider.widthPct * S,
+      bH = playerCollider.heightPct * S;
+    const ox = playerCollider.offsetXPct * S,
+      oy = playerCollider.offsetYPct * S;
+    ctx.fillStyle = 'rgba(80,220,100,0.28)';
+    ctx.strokeStyle = 'rgba(80,220,100,0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(S / 2 - bW / 2 + ox, S / 2 - bH / 2 + oy, bW, bH);
+    ctx.strokeRect(S / 2 - bW / 2 + ox, S / 2 - bH / 2 + oy, bW, bH);
+  }, [playerCollider]);
+
+  // Polygon canvas draw
+  useEffect(() => {
+    if (playerCollider.mode !== 'polygon') return;
+    const canvas = collPolyCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, COLL_CS, COLL_CS);
+    ctx.fillStyle = 'rgba(80,80,120,0.2)';
+    ctx.strokeStyle = 'rgba(130,130,180,0.45)';
+    ctx.lineWidth = 1;
+    ctx.fillRect(COLL_CC - COLL_SC, COLL_CC - COLL_SC, COLL_SC * 2, COLL_SC * 2);
+    ctx.strokeRect(COLL_CC - COLL_SC, COLL_CC - COLL_SC, COLL_SC * 2, COLL_SC * 2);
+    ctx.strokeStyle = 'rgba(200,200,200,0.25)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(COLL_CC, 0);
+    ctx.lineTo(COLL_CC, COLL_CS);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, COLL_CC);
+    ctx.lineTo(COLL_CS, COLL_CC);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const points = playerCollider.points;
+    if (points.length >= 3) {
+      const first = collNormToCanvas(points[0].x, points[0].y);
+      ctx.beginPath();
+      ctx.moveTo(first.x, first.y);
+      for (let i = 1; i < points.length; i++) {
+        const p = collNormToCanvas(points[i].x, points[i].y);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(80,220,100,0.22)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(80,220,100,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    points.forEach((pt, i) => {
+      const c = collNormToCanvas(pt.x, pt.y);
+      const sel = i === collSelPtIdx;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, sel ? 6 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = sel ? 'rgba(139,92,246,1)' : 'rgba(255,255,255,0.9)';
+      ctx.fill();
+      ctx.strokeStyle = sel ? 'rgba(139,92,246,0.6)' : 'rgba(60,60,60,0.6)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+  }, [playerCollider, collSelPtIdx, collNormToCanvas]);
 
   // ── Computed values ────────────────────────────────────────────────────────
   const configuredCount = Object.keys(animations).length;
@@ -1217,6 +1449,271 @@ export default function SpriteImportDialog({
                     → {cols} col × {rows} rg = {totalFrames} frames
                   </p>
                 )}
+              </div>
+
+              {/* 🔲 Collision joueur */}
+              <div>
+                <p style={sectionLabel}>Collision joueur</p>
+                {/* Mode toggle */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8, marginTop: 6 }}>
+                  {(['box', 'polygon'] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() =>
+                        setPlayerCollider(
+                          m === 'box'
+                            ? COLL_DEFAULT_BOX
+                            : { mode: 'polygon', points: COLL_DEFAULT_POLY }
+                        )
+                      }
+                      style={{
+                        flex: 1,
+                        padding: '5px 0',
+                        borderRadius: 7,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        border:
+                          playerCollider.mode === m
+                            ? '1.5px solid var(--color-primary)'
+                            : '1px solid var(--color-border-base)',
+                        background:
+                          playerCollider.mode === m
+                            ? 'rgba(139,92,246,0.18)'
+                            : 'rgba(255,255,255,0.04)',
+                        color:
+                          playerCollider.mode === m
+                            ? 'var(--color-primary)'
+                            : 'var(--color-text-secondary)',
+                        transition: 'all 0.1s',
+                      }}
+                    >
+                      {m === 'box' ? '◻ Box' : '⬡ Polygone'}
+                    </button>
+                  ))}
+                </div>
+
+                {playerCollider.mode === 'box' && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    {/* Sliders */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {(
+                        [
+                          { key: 'widthPct', label: 'Largeur', min: 0.1, max: 2 },
+                          { key: 'heightPct', label: 'Hauteur', min: 0.1, max: 2 },
+                          { key: 'offsetXPct', label: 'Décal. X', min: -1, max: 1 },
+                          { key: 'offsetYPct', label: 'Décal. Y', min: -1, max: 1 },
+                        ] as {
+                          key: keyof typeof playerCollider &
+                            ('widthPct' | 'heightPct' | 'offsetXPct' | 'offsetYPct');
+                          label: string;
+                          min: number;
+                          max: number;
+                        }[]
+                      ).map(({ key, label, min, max }) => (
+                        <label key={key} style={{ ...labelRow, flexDirection: 'column', gap: 2 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              width: '100%',
+                            }}
+                          >
+                            <span style={{ ...labelText, fontSize: 10 }}>{label}</span>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: 'var(--color-primary)',
+                                fontWeight: 700,
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {(playerCollider as unknown as Record<string, number>)[key].toFixed(
+                                2
+                              )}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={min}
+                            max={max}
+                            step={0.025}
+                            value={(playerCollider as unknown as Record<string, number>)[key]}
+                            onChange={(e) =>
+                              setPlayerCollider((prev) =>
+                                prev.mode !== 'box'
+                                  ? prev
+                                  : { ...prev, [key]: parseFloat(e.target.value) }
+                              )
+                            }
+                            style={{
+                              width: '100%',
+                              accentColor: 'var(--color-primary)',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    {/* Box preview canvas */}
+                    <canvas
+                      ref={collBoxCanvasRef}
+                      width={80}
+                      height={80}
+                      style={{
+                        flexShrink: 0,
+                        borderRadius: 6,
+                        border: '1px solid var(--color-border-base)',
+                        imageRendering: 'pixelated',
+                      }}
+                    />
+                  </div>
+                )}
+
+                {playerCollider.mode === 'polygon' &&
+                  (() => {
+                    const isConvex = collIsConvex(playerCollider.points);
+                    return (
+                      <div>
+                        {/* Canvas */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'flex-start',
+                            marginBottom: 6,
+                          }}
+                        >
+                          <canvas
+                            ref={collPolyCanvasRef}
+                            width={COLL_CS}
+                            height={COLL_CS}
+                            style={{
+                              flexShrink: 0,
+                              borderRadius: 6,
+                              border: `1.5px solid ${isConvex ? 'rgba(80,220,100,0.5)' : 'rgba(255,120,60,0.6)'}`,
+                              cursor: 'crosshair',
+                              imageRendering: 'pixelated',
+                            }}
+                            onMouseDown={handleCollPolyDown}
+                            onMouseMove={handleCollPolyMove}
+                            onMouseUp={handleCollPolyUp}
+                            onMouseLeave={handleCollPolyUp}
+                          />
+                          <div
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}
+                          >
+                            {/* Convexity badge */}
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '3px 7px',
+                                borderRadius: 5,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                background: isConvex
+                                  ? 'rgba(80,220,100,0.14)'
+                                  : 'rgba(255,120,60,0.14)',
+                                border: `1px solid ${isConvex ? 'rgba(80,220,100,0.4)' : 'rgba(255,120,60,0.4)'}`,
+                                color: isConvex ? 'rgb(80,220,100)' : 'rgb(255,120,60)',
+                              }}
+                            >
+                              {isConvex ? (
+                                '✓ Convexe'
+                              ) : (
+                                <>
+                                  <AlertTriangle size={10} /> Concave
+                                </>
+                              )}
+                            </div>
+                            {/* Point count */}
+                            <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                              {playerCollider.points.length} point
+                              {playerCollider.points.length !== 1 ? 's' : ''}
+                            </span>
+                            {/* Hull button */}
+                            <button
+                              onClick={() =>
+                                setPlayerCollider((prev) =>
+                                  prev.mode !== 'polygon'
+                                    ? prev
+                                    : { ...prev, points: collGrahamScan(prev.points) }
+                                )
+                              }
+                              style={{
+                                padding: '4px 0',
+                                borderRadius: 5,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                border: '1px solid var(--color-border-base)',
+                                background: 'rgba(255,255,255,0.05)',
+                                color: 'var(--color-text-secondary)',
+                              }}
+                            >
+                              Enveloppe convexe
+                            </button>
+                            {/* Delete selected */}
+                            {collSelPtIdx !== null && (
+                              <button
+                                onClick={() => {
+                                  setPlayerCollider((prev) => {
+                                    if (prev.mode !== 'polygon') return prev;
+                                    const pts = prev.points.filter((_, i) => i !== collSelPtIdx);
+                                    return { ...prev, points: pts };
+                                  });
+                                  setCollSelPtIdx(null);
+                                }}
+                                style={{
+                                  padding: '4px 0',
+                                  borderRadius: 5,
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  border: '1px solid rgba(255,80,80,0.4)',
+                                  background: 'rgba(255,80,80,0.1)',
+                                  color: 'rgba(255,100,100,1)',
+                                }}
+                              >
+                                Supprimer pt {collSelPtIdx}
+                              </button>
+                            )}
+                            {/* Reset */}
+                            <button
+                              onClick={() =>
+                                setPlayerCollider({ mode: 'polygon', points: COLL_DEFAULT_POLY })
+                              }
+                              style={{
+                                padding: '4px 0',
+                                borderRadius: 5,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                border: '1px solid var(--color-border-base)',
+                                background: 'rgba(255,255,255,0.04)',
+                                color: 'var(--color-text-secondary)',
+                              }}
+                            >
+                              Réinitialiser
+                            </button>
+                          </div>
+                        </div>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 9.5,
+                            color: 'var(--color-text-secondary)',
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          Clic = ajouter · Glisser = déplacer · Zone = tileSize. Excalibur exige un
+                          polygone convexe.
+                        </p>
+                      </div>
+                    );
+                  })()}
               </div>
 
               {/* Directions — avec mini-canvas */}

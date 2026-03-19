@@ -16,6 +16,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { ChevronDown, RotateCcw } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { PanelSection } from '@/components/ui/CollapsibleSection';
 import { useSettingsStore, DEFAULT_CHARACTER_FX } from '@/stores/settingsStore';
 import type { CharacterFxSettings } from '@/stores/settingsStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
@@ -655,7 +656,7 @@ export function EffectsSection() {
 
   return (
     <Tooltip.Provider delayDuration={400}>
-      <section className="sp-sec">
+      <PanelSection title="ANIMATIONS & SONS" id="effects-anims" defaultOpen={true}>
         <EffectCard
           emoji="🫁"
           label="Respiration"
@@ -752,7 +753,7 @@ export function EffectsSection() {
 
         {/* Sous-section atmosphérique par scène */}
         <AtmosphereSection />
-      </section>
+      </PanelSection>
     </Tooltip.Provider>
   );
 }

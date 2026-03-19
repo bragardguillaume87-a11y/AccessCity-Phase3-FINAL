@@ -71,7 +71,7 @@ export default function UnifiedPanel({ onResetLayout }: UnifiedPanelProps) {
         <div className="flex-shrink-0 w-full flex items-center justify-center h-9 border-b border-[var(--color-border-base)]">
           <span
             style={{
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',

@@ -98,6 +98,13 @@ export default function TilePalette({
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ── Tile preview zoom (S/M/L) — persisted in localStorage ─────────────────
+  type TileZoomLevel = 'sm' | 'md' | 'lg';
+  const TILE_ZOOM_VALUES: Record<TileZoomLevel, number> = { sm: 0.75, md: 1.5, lg: 2.5 };
+  const [tileZoomLevel, setTileZoomLevel] = useState<TileZoomLevel>(
+    () => (localStorage.getItem('ac-tile-zoom') as TileZoomLevel) ?? 'md'
+  );
+
   // ── Category dropdown — @radix-ui/react-dropdown-menu (remplace le portal custom) ──
 
   const dropRef = useRef<HTMLDivElement>(null);
@@ -368,7 +375,7 @@ export default function TilePalette({
             alignItems: 'center',
             gap: 7,
             width: '100%',
-            padding: '6px 10px',
+            padding: '7px 12px',
             background: isActive ? 'var(--color-primary-subtle)' : 'transparent',
             borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
             cursor: 'pointer',
@@ -378,16 +385,16 @@ export default function TilePalette({
           }}
         >
           {isActive ? (
-            <ChevronDown size={12} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+            <ChevronDown size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
           ) : (
-            <ChevronRight size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+            <ChevronRight size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
           )}
           <img
             src={asset.url ?? asset.path}
             alt=""
             style={{
-              width: 22,
-              height: 22,
+              width: 28,
+              height: 28,
               objectFit: 'cover',
               imageRendering: 'pixelated',
               borderRadius: 3,
@@ -397,7 +404,7 @@ export default function TilePalette({
           <span
             style={{
               flex: 1,
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: isActive ? 600 : 400,
               color: isActive ? 'var(--color-text-base)' : 'var(--color-text-secondary)',
               overflow: 'hidden',
@@ -417,8 +424,8 @@ export default function TilePalette({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 20,
-              height: 20,
+              width: 22,
+              height: 22,
               borderRadius: 4,
               border: configured
                 ? '1px solid var(--color-border-base)'
@@ -431,7 +438,7 @@ export default function TilePalette({
               transition: 'opacity 0.12s',
             }}
           >
-            <Settings size={11} />
+            <Settings size={13} />
           </button>
           <button
             onClick={(e) => {
@@ -443,8 +450,8 @@ export default function TilePalette({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 20,
-              height: 20,
+              width: 22,
+              height: 22,
               borderRadius: 4,
               border: '1px solid transparent',
               background: 'transparent',
@@ -458,9 +465,10 @@ export default function TilePalette({
             <X size={11} />
           </button>
         </div>
-        {/* Inline SheetView — accordion multi-open */}
+        {/* Inline SheetView — accordion multi-open (key remonte au changement de zoom S/M/L) */}
         {isActive && (
           <SheetView
+            key={`${tileZoomLevel}-${asset.id}`}
             asset={asset}
             config={getConfig(asset)}
             selectedTile={selectedTile}
@@ -468,6 +476,7 @@ export default function TilePalette({
             onSelectWhole={selectWholeTile}
             onSelectSheetRegion={selectSheetRegion}
             onOpenConfig={() => openConfigDialog(asset)}
+            defaultZoom={TILE_ZOOM_VALUES[tileZoomLevel]}
           />
         )}
       </div>
@@ -551,7 +560,7 @@ export default function TilePalette({
               style={{
                 margin: 0,
                 flex: 1,
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.07em',
@@ -613,6 +622,39 @@ export default function TilePalette({
                 </svg>
               </span>
             )}
+            {/* Tile preview size — S/M/L */}
+            {(['sm', 'md', 'lg'] as TileZoomLevel[]).map((z) => (
+              <button
+                key={z}
+                onClick={() => {
+                  setTileZoomLevel(z);
+                  localStorage.setItem('ac-tile-zoom', z);
+                }}
+                title={
+                  z === 'sm' ? 'Petites tuiles' : z === 'md' ? 'Tuiles moyennes' : 'Grandes tuiles'
+                }
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 4,
+                  border: '1px solid',
+                  borderColor:
+                    tileZoomLevel === z ? 'rgba(139,92,246,0.6)' : 'var(--color-border-base)',
+                  background: tileZoomLevel === z ? 'rgba(139,92,246,0.15)' : 'transparent',
+                  color: tileZoomLevel === z ? '#8b5cf6' : 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+              >
+                {z === 'sm' ? 'S' : z === 'md' ? 'M' : 'L'}
+              </button>
+            ))}
             <label
               title="Importer un tileset (ou glissez un PNG)"
               style={{
@@ -691,7 +733,7 @@ export default function TilePalette({
                 border: '1px solid var(--color-border-base)',
               }}
             >
-              <Search size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+              <Search size={13} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
                 value={searchQuery}
@@ -702,7 +744,7 @@ export default function TilePalette({
                   background: 'none',
                   border: 'none',
                   outline: 'none',
-                  fontSize: 12,
+                  fontSize: 13,
                   color: 'var(--color-text-base)',
                   minWidth: 0,
                 }}
@@ -929,7 +971,7 @@ export default function TilePalette({
                   <div key={group.id}>
                     <div
                       style={{
-                        padding: '5px 10px 4px 8px',
+                        padding: '6px 10px 5px 8px',
                         background: `${bandColor}10`,
                         borderTop: '1px solid var(--color-border-base)',
                         borderLeft: `3px solid ${bandColor}`,
@@ -938,10 +980,10 @@ export default function TilePalette({
                         gap: 6,
                       }}
                     >
-                      <span style={{ fontSize: 14, lineHeight: 1 }}>{group.emoji}</span>
+                      <span style={{ fontSize: 15, lineHeight: 1 }}>{group.emoji}</span>
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 700,
                           color: bandColor,
                           textTransform: 'uppercase',
@@ -988,7 +1030,7 @@ export default function TilePalette({
             <p
               style={{
                 margin: 0,
-                fontSize: 11,
+                fontSize: 13,
                 color: 'var(--color-primary)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

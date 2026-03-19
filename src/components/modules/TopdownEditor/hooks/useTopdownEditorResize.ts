@@ -13,17 +13,17 @@ import { useState, useCallback, useEffect } from 'react';
 
 const PALETTE_STORAGE_KEY = 'ac_palette_width';
 const SIDEBAR_STORAGE_KEY = 'ac_sidebar_width';
-const SIDEBAR_MIN = 150;
-const SIDEBAR_MAX = 320;
-const SIDEBAR_DEFAULT = 200;
+const SIDEBAR_MIN = 180;
+const SIDEBAR_MAX = 360;
+const SIDEBAR_DEFAULT = 220;
 
 // Breakpoints : 720p (≥1280), 1080p (≥1920), 1440p (≥2560)
 // Valeurs cibles : palette ≈ 22-25% de la largeur d'écran
 function getPaletteConfig(screenWidth: number) {
-  if (screenWidth >= 2560) return { min: 280, max: 800, default: 520 }; // 1440p
-  if (screenWidth >= 1920) return { min: 240, max: 630, default: 420 }; // 1080p
-  if (screenWidth >= 1280) return { min: 200, max: 480, default: 320 }; // 720p
-  return { min: 180, max: 380, default: 260 }; // < 720p
+  if (screenWidth >= 2560) return { min: 300, max: 820, default: 560 }; // 1440p
+  if (screenWidth >= 1920) return { min: 260, max: 650, default: 460 }; // 1080p
+  if (screenWidth >= 1280) return { min: 220, max: 500, default: 350 }; // 720p
+  return { min: 200, max: 400, default: 280 }; // < 720p
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────

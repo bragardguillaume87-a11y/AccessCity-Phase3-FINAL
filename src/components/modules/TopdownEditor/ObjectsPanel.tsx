@@ -589,7 +589,7 @@ export default function ObjectsPanel({
           <span
             style={{
               flex: 1,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -644,13 +644,13 @@ export default function ObjectsPanel({
                   background: filterCategory ? 'rgba(139,92,246,0.12)' : 'transparent',
                   color: filterCategory ? '#8b5cf6' : 'rgba(255,255,255,0.45)',
                   cursor: 'pointer',
-                  fontSize: 10,
+                  fontSize: 12,
                 }}
               >
                 {filterCategory
                   ? SPRITE_CATEGORIES.find((c) => c.id === filterCategory)?.emoji
                   : '🗂'}
-                <ChevronDown size={8} />
+                <ChevronDown size={10} />
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -722,14 +722,14 @@ export default function ObjectsPanel({
             placeholder="Filtrer les objets…"
             style={{
               width: '100%',
-              height: 26,
-              paddingLeft: 22,
-              paddingRight: searchQuery ? 26 : 8,
+              height: 30,
+              paddingLeft: 24,
+              paddingRight: searchQuery ? 28 : 8,
               borderRadius: 5,
               border: '1px solid rgba(255,255,255,0.08)',
               background: 'rgba(255,255,255,0.04)',
               color: 'rgba(255,255,255,0.8)',
-              fontSize: 11,
+              fontSize: 13,
               outline: 'none',
               boxSizing: 'border-box',
             }}
@@ -814,7 +814,7 @@ export default function ObjectsPanel({
         {!loading && objectDefinitions.length === 0 && (
           <p
             style={{
-              fontSize: 11,
+              fontSize: 13,
               color: 'rgba(255,255,255,0.3)',
               padding: '12px 10px',
               lineHeight: 1.6,
@@ -844,8 +844,8 @@ export default function ObjectsPanel({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 5,
-                    padding: '6px 10px 3px',
-                    fontSize: 9,
+                    padding: '7px 10px 4px',
+                    fontSize: 11,
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
@@ -883,8 +883,8 @@ export default function ObjectsPanel({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 7,
-                          padding: '5px 8px',
+                          gap: 8,
+                          padding: '7px 8px',
                           cursor: 'pointer',
                           borderRadius: 5,
                           margin: '0 4px',
@@ -930,7 +930,7 @@ export default function ObjectsPanel({
                             )}
                             <span
                               style={{
-                                fontSize: 11,
+                                fontSize: 13,
                                 fontWeight: isSelected ? 600 : 400,
                                 color: isSelected
                                   ? '#c4b5fd'
@@ -948,8 +948,8 @@ export default function ObjectsPanel({
                               <span
                                 title={`${instanceCount} instance${instanceCount > 1 ? 's' : ''} sur la carte`}
                                 style={{
-                                  fontSize: 9,
-                                  padding: '0px 4px',
+                                  fontSize: 10,
+                                  padding: '1px 5px',
                                   borderRadius: 3,
                                   background: 'rgba(74,222,128,0.15)',
                                   color: '#4ade80',
@@ -971,8 +971,8 @@ export default function ObjectsPanel({
                                   key={i}
                                   title={meta.description}
                                   style={{
-                                    fontSize: 8,
-                                    padding: '1px 4px',
+                                    fontSize: 10,
+                                    padding: '1px 5px',
                                     borderRadius: 3,
                                     background: 'rgba(255,255,255,0.05)',
                                     color: 'rgba(255,255,255,0.4)',

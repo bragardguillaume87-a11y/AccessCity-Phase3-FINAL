@@ -12,7 +12,17 @@
 
 import { useRef, useCallback, useState, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Stage, Layer, Image as KonvaImage, Rect, Line, Text, Circle, Group } from 'react-konva';
+import {
+  Stage,
+  Layer,
+  Image as KonvaImage,
+  Rect,
+  Line,
+  Text,
+  Circle,
+  Group,
+  Transformer,
+} from 'react-konva';
 import Konva from 'konva';
 import type {
   MapData,
@@ -128,6 +138,18 @@ interface MapCanvasProps {
     toCx: number,
     toCy: number
   ) => void;
+  /**
+   * Appelé quand l'utilisateur glisse-dépose un objet depuis ObjectsPanel sur le canvas.
+   * @param definitionId — ID de la définition d'objet droppée
+   * @param cx — colonne tuile de destination
+   * @param cy — ligne tuile de destination
+   */
+  onObjectDrop?: (definitionId: string, cx: number, cy: number) => void;
+  /**
+   * Appelé quand l'utilisateur redimensionne ou fait pivoter un objet via les poignées GDevelop.
+   * scaleX, scaleY en fraction de tileSize. rotation en degrés (0–360).
+   */
+  onObjectTransform?: (objectId: string, scaleX: number, scaleY: number, rotation: number) => void;
 }
 
 // ============================================================================
@@ -321,9 +343,17 @@ export default function MapCanvas({
   selectionRect,
   onSelectionChange,
   onSelectionMove,
+  onObjectDrop,
+  onObjectTransform,
 }: MapCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const isMouseDown = useRef(false);
+  const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
+
+  // ── GDevelop-style transform handles (Phase 4 objects) ────────────────────
+  const transformerRef = useRef<Konva.Transformer>(null);
+  // Map instance.id → KonvaImage node — pour attacher le Transformer
+  const objNodeRefs = useRef<Map<string, Konva.Image>>(new Map());
 
   // ── QoL navigation state ──────────────────────────────────────────────────
   // isRightErasing : clic droit maintenu → efface en continu (LDtk style)
@@ -401,6 +431,21 @@ export default function MapCanvas({
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [tileContextMenu]);
+
+  // ── Synchronise le Transformer Konva avec l'objet sélectionné ───────────────
+  // Garde konva-patterns §12 : vérifier getStage() avant d'attacher (StrictMode).
+  useEffect(() => {
+    const tr = transformerRef.current;
+    if (!tr) return;
+    if (!tr.getStage()) return; // garde StrictMode — node fantôme du 1er montage
+    const node = selectedEntityId ? objNodeRefs.current.get(selectedEntityId) : undefined;
+    if (node && onObjectTransform) {
+      tr.nodes([node]);
+    } else {
+      tr.nodes([]);
+    }
+    tr.getLayer()?.batchDraw();
+  }, [selectedEntityId, onObjectTransform]);
 
   // NOTE: stage.destroy() is intentionally NOT called here.
   // react-konva 19 handles Stage cleanup automatically on unmount.
@@ -953,14 +998,54 @@ export default function MapCanvas({
   const mapPixelW = gridW * tileSize;
   const mapPixelH = gridH * tileSize;
 
+  // ── Drag-and-drop depuis ObjectsPanel ─────────────────────────────────────
+
+  const handleObjectDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.types.includes('ac-object-def-id')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOverCanvas) setIsDragOverCanvas(true);
+  };
+
+  const handleObjectDragLeave = () => {
+    setIsDragOverCanvas(false);
+  };
+
+  const handleObjectDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragOverCanvas(false);
+    const defId = e.dataTransfer.getData('ac-object-def-id');
+    if (!defId || !onObjectDrop || !stageRef.current) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const localX = e.clientX - rect.left;
+    const localY = e.clientY - rect.top;
+    const stage = stageRef.current;
+    const worldX = (localX - stage.x()) / stage.scaleX();
+    const worldY = (localY - stage.y()) / stage.scaleY();
+    const cx = Math.floor(worldX / tileSize);
+    const cy = Math.floor(worldY / tileSize);
+    const gridW = mapData.pxWid / tileSize;
+    const gridH = mapData.pxHei / tileSize;
+    if (cx >= 0 && cy >= 0 && cx < gridW && cy < gridH) {
+      onObjectDrop(defId, cx, cy);
+    }
+  };
+
   return (
     // Wrapper — outline rouge en mode effacer (D1), touchAction pour tablette (konva-patterns §8)
     <div
+      onDragOver={handleObjectDragOver}
+      onDragLeave={handleObjectDragLeave}
+      onDrop={handleObjectDrop}
       style={{
         position: 'relative',
         width: containerWidth,
         height: containerHeight,
-        outline: isErasing ? '2px solid rgba(255,60,60,0.45)' : 'none',
+        outline: isDragOverCanvas
+          ? '2px solid rgba(139,92,246,0.7)'
+          : isErasing
+            ? '2px solid rgba(255,60,60,0.45)'
+            : 'none',
         outlineOffset: '-2px',
         touchAction: 'none',
       }}
@@ -1508,14 +1593,36 @@ export default function MapCanvas({
               const frameIdx = frames.length > 0 ? frames[entityAnimTick % frames.length] : 0;
               const col = frameIdx % Math.max(1, cfg.cols);
               const row = Math.floor(frameIdx / Math.max(1, cfg.cols));
+              const objScaleX = instance.overrides?.scaleX ?? instance.overrides?.scale ?? 1;
+              const objScaleY = instance.overrides?.scaleY ?? instance.overrides?.scale ?? 1;
+              const objRotation = instance.overrides?.rotation ?? 0;
+              const objW = tileSize * objScaleX;
+              const objH = tileSize * objScaleY;
+              // Point d'origine (ancre) — style GDevelop. Absent → rétrocompat centre (0.5, 0.5).
+              // anchorOff = offset du CENTRE du node par rapport au coin supérieur-gauche de la cellule.
+              // Formule : anchorX = originX*(ts - objW) + objW/2  (place l'ancre sur la cellule)
+              const originXPct = cfg.originXPct ?? 0.5;
+              const originYPct = cfg.originYPct ?? 0.5;
+              const anchorOffX = originXPct * (tileSize - objW) + objW / 2;
+              const anchorOffY = originYPct * (tileSize - objH) + objH / 2;
+              const cx0 = x + anchorOffX;
+              const cy0 = y + anchorOffY;
               return [
                 <KonvaImage
                   key={`obj-sprite-${instance.id}`}
+                  ref={(node) => {
+                    if (node) objNodeRefs.current.set(instance.id, node as Konva.Image);
+                    else objNodeRefs.current.delete(instance.id);
+                  }}
                   image={spriteImg}
-                  x={x}
-                  y={y}
-                  width={tileSize}
-                  height={tileSize}
+                  // Origine au centre : permet rotation + scale autour du milieu (GDevelop)
+                  x={cx0}
+                  y={cy0}
+                  offsetX={objW / 2}
+                  offsetY={objH / 2}
+                  width={objW}
+                  height={objH}
+                  rotation={objRotation}
                   crop={{
                     x: col * cfg.frameW,
                     y: row * cfg.frameH,
@@ -1525,20 +1632,27 @@ export default function MapCanvas({
                   imageSmoothingEnabled={false}
                   draggable={!!onEntityMove}
                   dragBoundFunc={(pos) => {
+                    // pos = position écran du CENTRE du node (offsetX/Y au centre, konva-patterns §2)
+                    // On snap sur la grille selon le point d'ancre (anchorOff = offset cellule→centre node)
                     const stage = stageRef.current;
                     if (!stage) return pos;
                     const sc = stage.scaleX(),
                       sx = stage.x(),
                       sy = stage.y();
+                    const worldCx = (pos.x - sx) / sc;
+                    const worldCy = (pos.y - sy) / sc;
                     const newCx = Math.max(
                       0,
-                      Math.min(gridW - 1, Math.round((pos.x - sx) / sc / tileSize))
+                      Math.min(gridW - 1, Math.round((worldCx - anchorOffX) / tileSize))
                     );
                     const newCy = Math.max(
                       0,
-                      Math.min(gridH - 1, Math.round((pos.y - sy) / sc / tileSize))
+                      Math.min(gridH - 1, Math.round((worldCy - anchorOffY) / tileSize))
                     );
-                    return { x: newCx * tileSize * sc + sx, y: newCy * tileSize * sc + sy };
+                    return {
+                      x: (newCx * tileSize + anchorOffX) * sc + sx,
+                      y: (newCy * tileSize + anchorOffY) * sc + sy,
+                    };
                   }}
                   onDragStart={() => {
                     onEntityClick?.(instance.id);
@@ -1546,15 +1660,39 @@ export default function MapCanvas({
                   }}
                   onDragEnd={(e) => {
                     setEntityCursor(null);
+                    // node.x/y() = centre du node en world coords (offsetX/Y au centre)
+                    // On retrouve la cellule en soustrayant l'offset d'ancre
                     const newCx = Math.max(
                       0,
-                      Math.min(gridW - 1, Math.round(e.target.x() / tileSize))
+                      Math.min(gridW - 1, Math.round((e.target.x() - anchorOffX) / tileSize))
                     );
                     const newCy = Math.max(
                       0,
-                      Math.min(gridH - 1, Math.round(e.target.y() / tileSize))
+                      Math.min(gridH - 1, Math.round((e.target.y() - anchorOffY) / tileSize))
                     );
                     onEntityMove?.(instance.id, newCx, newCy);
+                  }}
+                  onTransformEnd={(e) => {
+                    const node = e.target as Konva.Image;
+                    // Calcul de la nouvelle taille effective (Transformer applique scaleX/Y sur le node)
+                    const newW = node.width() * node.scaleX();
+                    const newH = node.height() * node.scaleY();
+                    const newScaleX = Math.max(0.1, Math.round((newW / tileSize) * 100) / 100);
+                    const newScaleY = Math.max(0.1, Math.round((newH / tileSize) * 100) / 100);
+                    const newRotation = Math.round(node.rotation() * 10) / 10;
+                    // Réinitialiser le scale du node (konva-patterns §3)
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    // Recaler le centre via l'ancre (anchorOff recalculé avec les nouvelles dimensions)
+                    const newObjW = tileSize * newScaleX;
+                    const newObjH = tileSize * newScaleY;
+                    const newAnchorOffX = originXPct * (tileSize - newObjW) + newObjW / 2;
+                    const newAnchorOffY = originYPct * (tileSize - newObjH) + newObjH / 2;
+                    node.x(instance.cx * tileSize + newAnchorOffX);
+                    node.y(instance.cy * tileSize + newAnchorOffY);
+                    node.offsetX(newObjW / 2);
+                    node.offsetY(newObjH / 2);
+                    onObjectTransform?.(instance.id, newScaleX, newScaleY, newRotation);
                   }}
                   onMouseEnter={() => {
                     if (onEntityMove) setEntityCursor('grab');
@@ -1577,7 +1715,8 @@ export default function MapCanvas({
                     }
                   }}
                 />,
-                isSelected && (
+                // Anneau de sélection — affiché uniquement si le Transformer n'est pas actif
+                isSelected && !onObjectTransform && (
                   <Rect
                     key={`obj-sel-${instance.id}`}
                     x={x + 1}
@@ -1591,18 +1730,6 @@ export default function MapCanvas({
                     listening={false}
                   />
                 ),
-                <Text
-                  key={`obj-badge-${instance.id}`}
-                  x={x + tileSize * 0.6}
-                  y={y + tileSize * 0.65}
-                  width={tileSize * 0.4}
-                  text={label}
-                  fontSize={Math.max(6, tileSize * 0.28)}
-                  fontStyle="bold"
-                  fill="rgba(255,255,255,0.9)"
-                  align="center"
-                  listening={false}
-                />,
               ].filter(Boolean);
             }
 
@@ -1705,6 +1832,42 @@ export default function MapCanvas({
               />,
             ];
           })}
+
+          {/* ── Transformer GDevelop-style (8 poignées + rotation) ── */}
+          {onObjectTransform && (
+            <Transformer
+              ref={transformerRef}
+              keepRatio={false}
+              rotateEnabled={true}
+              rotateAnchorOffset={20}
+              borderStroke="rgba(139,92,246,0.85)"
+              borderStrokeWidth={1.5 / zoom}
+              borderDash={[]}
+              anchorFill="white"
+              anchorStroke="rgba(139,92,246,0.9)"
+              anchorStrokeWidth={1.5}
+              anchorSize={8}
+              anchorCornerRadius={1}
+              anchorStyleFunc={(anchor) => {
+                // Poignée rotation → cercle (GDevelop style)
+                if (anchor.hasName('rotater')) {
+                  anchor.cornerRadius(6);
+                  anchor.fill('rgba(139,92,246,0.9)');
+                  anchor.stroke('white');
+                }
+              }}
+              enabledAnchors={[
+                'top-left',
+                'top-center',
+                'top-right',
+                'middle-left',
+                'middle-right',
+                'bottom-left',
+                'bottom-center',
+                'bottom-right',
+              ]}
+            />
+          )}
         </Layer>
 
         {/* ── Grid overlay + hover preview (couche fusionnée — konva-patterns §9)

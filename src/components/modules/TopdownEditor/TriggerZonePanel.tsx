@@ -626,18 +626,36 @@ export default function TriggerZonePanel({
         )}
 
         {isEmpty && (
-          <p
+          <div
             style={{
-              fontSize: 11,
-              color: 'var(--color-text-secondary)',
-              padding: '16px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+              padding: '20px 12px',
               textAlign: 'center',
             }}
           >
-            Aucune zone.
-            <br />
-            Cliquez sur Ajouter.
-          </p>
+            <span style={{ fontSize: 28 }}>🟢</span>
+            <p
+              style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--color-text-base)' }}
+            >
+              Aucune zone
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.5,
+              }}
+            >
+              Les zones déclenchent dialogues, sorties et sons quand le joueur y entre.
+              <br />
+              Dessinez une zone sur la carte ou cliquez{' '}
+              <strong style={{ color: 'var(--color-primary)' }}>+ Ajouter</strong>.
+            </p>
+          </div>
         )}
       </div>
 

@@ -67,8 +67,6 @@ export function useGameEngine({
         : undefined);
 
     // ── Preview display settings ────────────────────────────────────────────
-    const ENGINE_W = 1280;
-    const ENGINE_H = 720;
     const ZOOM_MIN = 0.5;
     const ZOOM_MAX = 4.0;
 
@@ -78,7 +76,19 @@ export function useGameEngine({
     // Sprite-level collider takes priority over map-level override
     const playerCollider = playerSpriteConfig?.playerCollider ?? mapMetadata?.playerCollider;
 
-    // Auto-zoom: scale camera so 1280×720 world viewport ≤ map dimensions → no black bands
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // ── Engine resolution = container réel pour éviter les bandes noires ────
+    // FitContainer maintient le ratio 16:9 interne → si le container n'est pas
+    // exactement 16:9 (barre de contrôle en haut), des bandes noires apparaissent
+    // sur les côtés. Solution : utiliser les dimensions réelles du container comme
+    // résolution interne → FitContainer 1:1 → aucun letterbox/pillarbox.
+    const containerRect = container.getBoundingClientRect();
+    const ENGINE_W = containerRect.width > 0 ? Math.floor(containerRect.width) : 1280;
+    const ENGINE_H = containerRect.height > 0 ? Math.floor(containerRect.height) : 720;
+
+    // Auto-zoom: scale camera so the viewport covers the map → no void outside edges
     const resolvedZoom: number =
       previewDisplayMode === 'auto'
         ? Math.min(
@@ -86,9 +96,6 @@ export function useGameEngine({
             Math.max(ZOOM_MIN, Math.max(ENGINE_W / mapData.pxWid, ENGINE_H / mapData.pxHei))
           )
         : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, mapMetadata?.previewZoom ?? 1.5));
-
-    const container = document.getElementById(containerId);
-    if (!container) return;
 
     // ── Collect all image URLs to preload ──────────────────────────────────
     const uniqueUrls = new Set<string>();
@@ -103,9 +110,21 @@ export function useGameEngine({
     // Player sprite
     if (playerSpritePath) uniqueUrls.add(playerSpritePath);
 
-    // Entity sprites
+    // Entity sprites (legacy)
     for (const entity of mapData._ac_entities ?? []) {
       if (entity.spriteAssetUrl) uniqueUrls.add(entity.spriteAssetUrl);
+    }
+
+    // Object sprites (Phase 4)
+    const objectDefinitions = storeState.objectDefinitions ?? [];
+    for (const instance of mapData._ac_objects ?? []) {
+      const def = objectDefinitions.find((d) => d.id === instance.definitionId);
+      if (!def) continue;
+      for (const comp of def.components) {
+        if (comp.type === 'animatedSprite' || comp.type === 'sprite') {
+          uniqueUrls.add(comp.spriteAssetUrl);
+        }
+      }
     }
 
     // Create ImageSource map (url → source)
@@ -115,16 +134,13 @@ export function useGameEngine({
     }
 
     // ── Engine setup ───────────────────────────────────────────────────────
-    // Centre le canvas Excalibur dans le container.
-    // FitContainer maintient le ratio mais colle le canvas en haut-gauche par défaut.
-    // On passe le container en flexbox centré pour compenser le letterbox/pillarbox.
-    container.style.display = 'flex';
-    container.style.alignItems = 'center';
-    container.style.justifyContent = 'center';
-
+    // La résolution moteur = dimensions réelles du container → FitContainer 1:1
+    // → aucun letterbox/pillarbox, canvas remplit exactement le container.
     const canvas = document.createElement('canvas');
     canvas.style.display = 'block';
-    canvas.style.imageRendering = 'pixelated'; // prevent browser-level smoothing when CSS-scaling the canvas
+    canvas.style.imageRendering = 'pixelated'; // pixel-art net sans antialiasing CSS
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
     container.appendChild(canvas);
 
     // Résolution interne 16:9 — FitContainer scale cette résolution pour remplir
@@ -178,7 +194,8 @@ export function useGameEngine({
       tilesetConfigs,
       sceneEffect,
       resolvedZoom,
-      playerCollider
+      playerCollider,
+      objectDefinitions
     );
     sceneInstance = scene;
     engine.addScene('topdown', scene);
@@ -189,9 +206,18 @@ export function useGameEngine({
     const startPromise =
       resources.length > 0 ? engine.start(new ex.Loader(resources)) : engine.start();
 
-    startPromise.then(() => engine.goToScene('topdown'));
+    // Guard contre la race condition StrictMode : le cleanup peut s'exécuter
+    // avant que startPromise.then() ait eu le temps de lancer goToScene.
+    // Sans ce flag, onInitialize() → startBgm() s'exécuterait APRÈS le cleanup,
+    // créant un HTMLAudioElement orphelin sans possibilité de l'arrêter.
+    let cancelled = false;
+    startPromise.then(() => {
+      if (cancelled) return;
+      engine.goToScene('topdown');
+    });
 
     return () => {
+      cancelled = true;
       // engine.stop() ne déclenche pas onDeactivate — arrêter la BGM explicitement
       sceneRef.stopBgm();
       engine.stop();

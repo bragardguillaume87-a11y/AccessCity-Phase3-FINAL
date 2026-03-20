@@ -587,16 +587,25 @@ export default function TilePalette({
                 </span>
               )}
             </p>
-            <p
+            <span
+              title="Ctrl+clic sur un tileset pour en ouvrir plusieurs simultanément"
               style={{
-                margin: '0 0 2px 10px',
-                fontSize: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                border: '1px solid var(--color-border-base)',
                 color: 'var(--color-text-muted)',
-                letterSpacing: '0.02em',
+                fontSize: 11,
+                cursor: 'help',
+                flexShrink: 0,
+                userSelect: 'none',
               }}
             >
-              Ctrl+clic : ouvrir plusieurs
-            </p>
+              ℹ
+            </span>
             {/* Loading spinner — manifest en cours de rechargement */}
             {loading && (
               <span

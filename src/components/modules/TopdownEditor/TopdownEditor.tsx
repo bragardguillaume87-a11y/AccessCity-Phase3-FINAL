@@ -577,6 +577,12 @@ export default function TopdownEditor() {
     ? (mapData._ac_entities.find((e) => e.id === selectedEntityId) ?? null)
     : null;
 
+  // ── Object instance sélectionnée (Phase 4) ────────────────────────────────
+  const selectedObjectInstance =
+    selectedEntityId && !selectedEntity
+      ? (mapData._ac_objects?.find((o) => o.id === selectedEntityId) ?? null)
+      : null;
+
   return (
     <div
       className="flex-1 flex overflow-hidden"
@@ -1596,6 +1602,48 @@ export default function TopdownEditor() {
             selectionRect={selectionRect}
             onSelectionChange={setSelectionRect}
             onSelectionMove={handleSelectionMove}
+            onObjectDrop={(defId, cx, cy) => {
+              if (!editor.selectedMapId) return;
+              // Auto-scale : si le sprite a des frames non-carrées, initialiser scaleX/scaleY
+              // pour que l'objet s'affiche à ses proportions naturelles sans être tassé dans 1 tuile.
+              const def = objectDefinitions.find((d) => d.id === defId);
+              const spriteComp = def?.components.find(
+                (c) => c.type === 'animatedSprite' || c.type === 'sprite'
+              );
+              const spriteAssetUrl =
+                spriteComp?.type === 'animatedSprite' || spriteComp?.type === 'sprite'
+                  ? (spriteComp as { spriteAssetUrl: string }).spriteAssetUrl
+                  : undefined;
+              const ts = mapData.__gridSize || 32;
+              let initialOverrides: { scaleX?: number; scaleY?: number } | undefined;
+              if (spriteAssetUrl) {
+                const cfg = useSettingsStore.getState().spriteSheetConfigs[spriteAssetUrl];
+                if (cfg && (cfg.frameW !== ts || cfg.frameH !== ts)) {
+                  initialOverrides = {
+                    scaleX: Math.round((cfg.frameW / ts) * 100) / 100,
+                    scaleY: Math.round((cfg.frameH / ts) * 100) / 100,
+                  };
+                }
+              }
+              addObjectInstance(editor.selectedMapId, {
+                id: `obj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                definitionId: defId,
+                cx,
+                cy,
+                facing: 'down',
+                ...(initialOverrides ? { overrides: initialOverrides } : {}),
+              });
+            }}
+            onObjectTransform={(objectId, scaleX, scaleY, rotation) => {
+              if (!editor.selectedMapId) return;
+              const inst = useMapsStore
+                .getState()
+                .mapDataById[editor.selectedMapId]?._ac_objects?.find((o) => o.id === objectId);
+              if (!inst) return;
+              useMapsStore.getState().updateObjectInstance(editor.selectedMapId, objectId, {
+                overrides: { ...inst.overrides, scaleX, scaleY, rotation },
+              });
+            }}
           />
         </div>
 
@@ -1774,6 +1822,119 @@ export default function TopdownEditor() {
                 />
               </div>
             )}
+            {/* Object instance inspector — scaleX/scaleY (Phase 4) */}
+            {selectedObjectInstance &&
+              editor.selectedMapId &&
+              (() => {
+                const inst = selectedObjectInstance;
+                const mapId = editor.selectedMapId!;
+                const sx = inst.overrides?.scaleX ?? inst.overrides?.scale ?? 1;
+                const sy = inst.overrides?.scaleY ?? inst.overrides?.scale ?? 1;
+                const def = objectDefinitions.find((d) => d.id === inst.definitionId);
+                return (
+                  <div
+                    style={{
+                      borderTop: '2px solid var(--color-primary-40, rgba(139,92,246,0.4))',
+                      flexShrink: 0,
+                      padding: '10px 12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: 'var(--color-text-base)',
+                          flex: 1,
+                        }}
+                      >
+                        ↔ Taille — {def?.displayName ?? 'Objet'}
+                      </span>
+                      <button
+                        onClick={() => setSelectedEntityId(null)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--color-text-muted)',
+                          padding: 2,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {(['x', 'y'] as const).map((axis) => {
+                      const val = axis === 'x' ? sx : sy;
+                      const key = axis === 'x' ? 'scaleX' : ('scaleY' as const);
+                      return (
+                        <label
+                          key={axis}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            marginBottom: 8,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                              Échelle {axis.toUpperCase()}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: 'var(--color-primary)',
+                                fontWeight: 700,
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {val.toFixed(2)}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0.1}
+                            max={4}
+                            step={0.05}
+                            value={val}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              useMapsStore.getState().updateObjectInstance(mapId, inst.id, {
+                                overrides: { ...inst.overrides, [key]: v },
+                              });
+                            }}
+                            style={{
+                              width: '100%',
+                              accentColor: 'var(--color-primary)',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </label>
+                      );
+                    })}
+                    <button
+                      onClick={() =>
+                        useMapsStore
+                          .getState()
+                          .updateObjectInstance(mapId, inst.id, {
+                            overrides: { ...inst.overrides, scaleX: 1, scaleY: 1 },
+                          })
+                      }
+                      style={{
+                        fontSize: 10,
+                        padding: '3px 8px',
+                        borderRadius: 5,
+                        border: '1px solid var(--color-border-base)',
+                        background: 'transparent',
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+                );
+              })()}
           </Panel>
 
           {/* Drag handle — barre de redimensionnement Objects / Layers */}

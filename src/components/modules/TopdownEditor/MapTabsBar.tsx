@@ -112,7 +112,7 @@ export default function MapTabsBar({
                 color: isActive
                   ? 'var(--color-primary, #8b5cf6)'
                   : 'var(--color-text-muted, rgba(255,255,255,0.5))',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: isActive ? 600 : 400,
                 cursor: isRenaming ? 'default' : 'pointer',
                 whiteSpace: 'nowrap',
@@ -146,7 +146,7 @@ export default function MapTabsBar({
                     border: '1px solid rgba(139,92,246,0.6)',
                     background: 'rgba(139,92,246,0.12)',
                     color: '#c4b5fd',
-                    fontSize: 13,
+                    fontSize: 14,
                     outline: 'none',
                   }}
                 />

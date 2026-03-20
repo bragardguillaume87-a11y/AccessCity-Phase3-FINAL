@@ -24,7 +24,6 @@ import {
   ChevronDown,
   X,
   MapPin,
-  Trash2,
   ImagePlus,
   Loader2,
 } from 'lucide-react';
@@ -75,33 +74,30 @@ function drawFrame(
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
+
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const fw = cfg.frameW;
+  const fh = cfg.frameH;
+
+  // object-fit: cover — mise à l'échelle pour remplir sans déformer, centré (rogné si déborde)
+  const scale = Math.max(cw / fw, ch / fh);
+  const dw = fw * scale;
+  const dh = fh * scale;
+  const dx = (cw - dw) / 2;
+  const dy = (ch - dh) / 2;
+
+  const sx = col * fw;
+  const sy = row * fh;
+
   if (flipX) {
     ctx.save();
+    ctx.translate(cw, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(
-      img,
-      col * cfg.frameW,
-      row * cfg.frameH,
-      cfg.frameW,
-      cfg.frameH,
-      -canvas.width,
-      0,
-      canvas.width,
-      canvas.height
-    );
+    ctx.drawImage(img, sx, sy, fw, fh, -dx - dw, dy, dw, dh);
     ctx.restore();
   } else {
-    ctx.drawImage(
-      img,
-      col * cfg.frameW,
-      row * cfg.frameH,
-      cfg.frameW,
-      cfg.frameH,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
+    ctx.drawImage(img, sx, sy, fw, fh, dx, dy, dw, dh);
   }
 }
 
@@ -198,6 +194,52 @@ function EmojiThumb({ emoji, size = 38 }: { emoji: string; size?: number }) {
   );
 }
 
+// ── Context menu item ────────────────────────────────────────────────────────
+
+function CtxItem({
+  icon,
+  label,
+  onClick,
+  danger = false,
+}: {
+  icon: string;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+        padding: '7px 12px',
+        borderRadius: 6,
+        border: 'none',
+        background: 'transparent',
+        color: danger ? '#f87171' : 'rgba(255,255,255,0.82)',
+        cursor: 'pointer',
+        fontSize: 13,
+        textAlign: 'left',
+        transition: 'background 0.08s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = danger
+          ? 'rgba(239,68,68,0.12)'
+          : 'rgba(255,255,255,0.07)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+      }}
+    >
+      <span style={{ fontSize: 15, width: 18, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface ObjectsPanelProps {
@@ -258,6 +300,12 @@ export default function ObjectsPanel({
   const [objDefDialogId, setObjDefDialogId] = useState<string | null>(null);
   /** Panneau présets ouvert */
   const [showPresets, setShowPresets] = useState(false);
+  /** Context menu clic droit */
+  const [contextMenu, setContextMenu] = useState<{ defId: string; x: number; y: number } | null>(
+    null
+  );
+  /** Preset survolé dans le panneau grille (pour barre de statut) */
+  const [hoverStatusPreset, setHoverStatusPreset] = useState<string | null>(null);
   /** defId en attente d'un sprite à sélectionner (SpritePicker) */
   const [spritePickerDefId, setSpritePickerDefId] = useState<string | null>(null);
   const spritePickerFileRef = useRef<HTMLInputElement>(null);
@@ -337,6 +385,27 @@ export default function ObjectsPanel({
       entries: visibleEntries.filter((e) => e.def.category === cat.id),
     })).filter((g) => g.entries.length > 0);
   }, [visibleEntries, searchQuery, filterCategory]);
+
+  /** Contenu de la barre de statut (survol objet ou preset) */
+  const statusContent = useMemo(() => {
+    if (hoverStatusPreset) {
+      const preset = OBJECT_PRESETS.find((p) => p.id === hoverStatusPreset);
+      if (preset) return { title: `${preset.emoji} ${preset.label}`, body: preset.description };
+    }
+    if (hoveredDefId) {
+      const entry = allEntries.find((e) => e.def.id === hoveredDefId);
+      if (entry) {
+        const comps = entry.def.components
+          .map((c) => {
+            const m = OBJECT_COMPONENT_META[c.type];
+            return `${m.emoji} ${m.label}`;
+          })
+          .join(' · ');
+        return { title: entry.def.displayName, body: comps || 'Aucun composant' };
+      }
+    }
+    return null;
+  }, [hoverStatusPreset, hoveredDefId, allEntries]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -418,26 +487,46 @@ export default function ObjectsPanel({
       // Toujours sauvegarder la config sprite (pour AnimThumb + GameScene)
       setSpriteSheetConfig(imagePath, config);
 
+      // ── Detect static sprite vs animated ──────────────────────────────────
+      // If idle_down has exactly 1 frame → extract srcX/srcY/srcW/srcH → SpriteComponent.
+      // Multiple frames (or no idle_down) → keep AnimatedSpriteComponent.
+      const idleDownAnim = config.animations?.['idle_down'];
+      const isStaticSprite = !!(idleDownAnim && idleDownAnim.frames?.length === 1);
+
+      /** Convert a flat frame index to source rect using the sheet grid. */
+      const getFrameSrc = (frameIdx: number): Omit<SpriteComponent, 'type' | 'spriteAssetUrl'> => {
+        const cols = Math.max(1, config.cols);
+        const col = frameIdx % cols;
+        const row = Math.floor(frameIdx / cols);
+        return {
+          srcX: col * config.frameW,
+          srcY: row * config.frameH,
+          srcW: config.frameW,
+          srcH: config.frameH,
+        };
+      };
+
       if (editingDefId) {
-        // Mise à jour du composant AnimatedSprite de la définition existante
         const def = objectDefinitions.find((d) => d.id === editingDefId);
         if (def) {
-          const newComponents = def.components.map((c) =>
-            c.type === 'animatedSprite'
-              ? { ...c, spriteAssetUrl: imagePath, spriteSheetConfigUrl: imagePath }
-              : c
+          // Strip existing visual component (sprite or animatedSprite) — replace with new one
+          const nonVisualComps = def.components.filter(
+            (c) => c.type !== 'animatedSprite' && c.type !== 'sprite'
           );
-          // Si pas de composant animatedSprite → en ajouter un
-          const hasAnimSprite = def.components.some((c) => c.type === 'animatedSprite');
-          if (!hasAnimSprite) {
-            newComponents.unshift({
-              type: 'animatedSprite',
-              spriteAssetUrl: imagePath,
-              spriteSheetConfigUrl: imagePath,
-            });
-          }
+          const newVisualComp = isStaticSprite
+            ? ({
+                type: 'sprite',
+                spriteAssetUrl: imagePath,
+                ...getFrameSrc(idleDownAnim!.frames[0]),
+              } satisfies SpriteComponent)
+            : ({
+                type: 'animatedSprite',
+                spriteAssetUrl: imagePath,
+                spriteSheetConfigUrl: imagePath,
+              } satisfies AnimatedSpriteComponent);
+
           updateObjectDefinition(editingDefId, {
-            components: newComponents,
+            components: [newVisualComp, ...nonVisualComps],
             thumbnailUrl: imagePath,
           });
         }
@@ -450,16 +539,25 @@ export default function ObjectsPanel({
             .pop()
             ?.replace(/\.[^.]+$/, '') ??
           'Objet';
+
+        const visualComp = isStaticSprite
+          ? ({
+              type: 'sprite',
+              spriteAssetUrl: imagePath,
+              ...getFrameSrc(idleDownAnim!.frames[0]),
+            } satisfies SpriteComponent)
+          : ({
+              type: 'animatedSprite',
+              spriteAssetUrl: imagePath,
+              spriteSheetConfigUrl: imagePath,
+            } satisfies AnimatedSpriteComponent);
+
         addObjectDefinition({
           displayName: defName,
           category: (config.category as string) ?? 'npc',
           thumbnailUrl: imagePath,
           components: [
-            {
-              type: 'animatedSprite',
-              spriteAssetUrl: imagePath,
-              spriteSheetConfigUrl: imagePath,
-            },
+            visualComp,
             {
               type: 'collider',
               shape: 'box',
@@ -877,15 +975,33 @@ export default function ObjectsPanel({
                     <div key={def.id}>
                       {/* Object row */}
                       <div
+                        draggable
                         onClick={() => setSelectedDefId(isSelected ? null : def.id)}
                         onMouseEnter={() => setHoveredDefId(def.id)}
                         onMouseLeave={() => setHoveredDefId(null)}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setSelectedDefId(def.id);
+                          setContextMenu({ defId: def.id, x: e.clientX, y: e.clientY });
+                        }}
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'copy';
+                          e.dataTransfer.setData('ac-object-def-id', def.id);
+                          // Image de drag : emoji ou thumbnail
+                          const ghost = document.createElement('div');
+                          ghost.textContent = catEmoji;
+                          ghost.style.cssText =
+                            'position:fixed;top:-999px;left:-999px;font-size:28px;padding:4px;background:rgba(20,20,40,0.9);border-radius:8px;border:1px solid rgba(139,92,246,0.5);pointer-events:none;';
+                          document.body.appendChild(ghost);
+                          e.dataTransfer.setDragImage(ghost, 20, 20);
+                          setTimeout(() => document.body.removeChild(ghost), 0);
+                        }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: 10,
                           padding: '10px 10px',
-                          cursor: 'pointer',
+                          cursor: 'grab',
                           borderRadius: 6,
                           margin: '0 4px',
                           transition: 'background 0.1s',
@@ -915,18 +1031,17 @@ export default function ObjectsPanel({
                           <EmojiThumb emoji={catEmoji} size={44} />
                         )}
 
-                        {/* Info */}
+                        {/* Info — nom + badge instances uniquement */}
                         <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
                           <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: 4,
-                              marginBottom: 2,
+                              gap: 5,
                             }}
                           >
                             {isPlayer && (
-                              <Crown size={9} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                              <Crown size={10} style={{ color: '#fbbf24', flexShrink: 0 }} />
                             )}
                             <span
                               style={{
@@ -948,7 +1063,7 @@ export default function ObjectsPanel({
                               <span
                                 title={`${instanceCount} instance${instanceCount > 1 ? 's' : ''} sur la carte`}
                                 style={{
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   padding: '1px 5px',
                                   borderRadius: 3,
                                   background: 'rgba(74,222,128,0.15)',
@@ -962,193 +1077,68 @@ export default function ObjectsPanel({
                               </span>
                             )}
                           </div>
-                          {/* Component chips */}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                            {def.components.map((comp, i) => {
-                              const meta = OBJECT_COMPONENT_META[comp.type];
-                              return (
-                                <span
-                                  key={i}
-                                  title={meta.description}
-                                  style={{
-                                    fontSize: 14,
-                                    padding: '1px 5px',
-                                    borderRadius: 3,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    color: 'rgba(255,255,255,0.4)',
-                                    border: '1px solid rgba(255,255,255,0.07)',
-                                  }}
-                                >
-                                  {meta.emoji} {meta.label}
-                                </span>
-                              );
-                            })}
-                          </div>
                         </div>
 
-                        {/* Row actions (visible on hover) */}
-                        {isHov && (
-                          <div
-                            style={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
+                        {/* Engrenage — visible uniquement sur l'objet sélectionné */}
+                        {isSelected && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setObjDefDialogId(def.id);
+                            }}
+                            title="Configurer l'objet (⌘+clic droit pour plus d'options)"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 28,
+                              height: 28,
+                              borderRadius: 6,
+                              border: '1px solid rgba(139,92,246,0.4)',
+                              background: 'rgba(139,92,246,0.14)',
+                              color: '#a78bfa',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              transition: 'all 0.1s',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(139,92,246,0.28)';
+                              e.currentTarget.style.color = '#c4b5fd';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(139,92,246,0.14)';
+                              e.currentTarget.style.color = '#a78bfa';
+                            }}
                           >
-                            {mapId && !isPlayer && spriteUrl && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateMapMetadata(mapId, { playerSpritePath: spriteUrl });
-                                }}
-                                title="Définir comme sprite joueur"
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: 3,
-                                  color: 'rgba(255,255,255,0.3)',
-                                  borderRadius: 4,
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.color = '#fbbf24';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.color = 'rgba(255,255,255,0.3)';
-                                }}
-                              >
-                                <Crown size={10} />
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setObjDefDialogId(def.id);
-                              }}
-                              title="Configurer l'objet et ses composants"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: 3,
-                                color: 'rgba(255,255,255,0.3)',
-                                borderRadius: 4,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = '#8b5cf6';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'rgba(255,255,255,0.3)';
-                              }}
-                            >
-                              <Settings size={10} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(def);
-                              }}
-                              title="Supprimer de la bibliothèque"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: 3,
-                                color: 'rgba(239,68,68,0.5)',
-                                borderRadius: 4,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = '#f87171';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'rgba(239,68,68,0.5)';
-                              }}
-                            >
-                              <Trash2 size={10} />
-                            </button>
+                            <Settings size={14} />
+                          </button>
+                        )}
+
+                        {/* PLACEHOLDER pour alignement quand non sélectionné mais hover */}
+                        {!isSelected && isHov && (
+                          <div
+                            style={{
+                              width: 28,
+                              flexShrink: 0,
+                              opacity: 0.15,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Settings size={12} color="rgba(255,255,255,0.4)" />
                           </div>
                         )}
                       </div>
 
-                      {/* ── Detail panel (when selected) ── */}
+                      {/* ── Bouton Placer (quand sélectionné) ── */}
                       {isSelected && (
                         <div
                           style={{
                             margin: '2px 4px 4px',
-                            borderRadius: 6,
-                            border: '1px solid rgba(139,92,246,0.25)',
-                            background: 'rgba(139,92,246,0.06)',
-                            padding: '8px 10px',
+                            padding: '0 0 2px',
                           }}
                         >
-                          {/* All components */}
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: 'rgba(255,255,255,0.3)',
-                              marginBottom: 5,
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.06em',
-                            }}
-                          >
-                            Composants
-                          </div>
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 3,
-                              marginBottom: 8,
-                            }}
-                          >
-                            {def.components.map((comp, i) => {
-                              const meta = OBJECT_COMPONENT_META[comp.type];
-                              return (
-                                <div
-                                  key={i}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    padding: '4px 7px',
-                                    borderRadius: 5,
-                                    background: 'rgba(255,255,255,0.04)',
-                                    border: '1px solid rgba(255,255,255,0.06)',
-                                  }}
-                                >
-                                  <span style={{ fontSize: 14 }}>{meta.emoji}</span>
-                                  <span
-                                    style={{
-                                      fontSize: 14,
-                                      color: 'rgba(255,255,255,0.6)',
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {meta.label}
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: 12,
-                                      color: 'rgba(255,255,255,0.25)',
-                                      marginLeft: 'auto',
-                                    }}
-                                  >
-                                    {meta.description}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                            {def.components.length === 0 && (
-                              <p
-                                style={{ fontSize: 14, color: 'rgba(255,255,255,0.25)', margin: 0 }}
-                              >
-                                Aucun composant. Configurez le sprite ⚙ pour commencer.
-                              </p>
-                            )}
-                          </div>
-
                           {/* Place / Cancel button */}
                           {isBeingPlaced ? (
                             <button
@@ -1215,11 +1205,58 @@ export default function ObjectsPanel({
           ))}
       </div>
 
+      {/* ── Barre de statut ── */}
+      <div
+        style={{
+          padding: '5px 10px',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          flexShrink: 0,
+          minHeight: 36,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          background: 'rgba(0,0,0,0.18)',
+        }}
+      >
+        {statusContent ? (
+          <>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.3,
+              }}
+            >
+              {statusContent.title}
+            </div>
+            {statusContent.body && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'rgba(255,255,255,0.28)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  lineHeight: 1.3,
+                }}
+              >
+                {statusContent.body}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>
+            Survoler un objet — Clic droit pour les actions
+          </div>
+        )}
+      </div>
+
       {/* ── Footer — Ajouter un objet ── */}
       <div
         style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}
       >
-        {/* Panneau présets */}
+        {/* Panneau présets — grille 3 colonnes */}
         {showPresets && (
           <div
             style={{
@@ -1230,21 +1267,22 @@ export default function ObjectsPanel({
               overflow: 'hidden',
             }}
           >
+            {/* Header */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '7px 10px',
+                padding: '6px 10px',
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
-                color: 'rgba(255,255,255,0.35)',
+                color: 'rgba(255,255,255,0.3)',
               }}
             >
-              <span>Présets</span>
+              <span>Créer un objet</span>
               <button
                 onClick={() => setShowPresets(false)}
                 style={{
@@ -1260,7 +1298,15 @@ export default function ObjectsPanel({
                 <X size={10} />
               </button>
             </div>
-            <div style={{ padding: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Grille 3 colonnes */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 3,
+                padding: '6px 6px 4px',
+              }}
+            >
               {OBJECT_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
@@ -1271,45 +1317,43 @@ export default function ObjectsPanel({
                       components: preset.components.map((c) => ({ ...c })),
                     });
                     setShowPresets(false);
+                    setHoverStatusPreset(null);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${preset.accent}1a`;
+                    e.currentTarget.style.borderColor = `${preset.accent}55`;
+                    setHoverStatusPreset(preset.id);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                    setHoverStatusPreset(null);
                   }}
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 8,
-                    padding: '6px 8px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: 'transparent',
+                    gap: 4,
+                    padding: '10px 4px 8px',
+                    borderRadius: 7,
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'rgba(255,255,255,0.03)',
                     cursor: 'pointer',
-                    textAlign: 'left',
-                    width: '100%',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = `${preset.accent}14`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
+                    transition: 'all 0.1s',
                   }}
                 >
-                  <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>
-                    {preset.emoji}
+                  <span style={{ fontSize: 26, lineHeight: 1 }}>{preset.emoji}</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: preset.accent,
+                      textAlign: 'center',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {preset.label}
                   </span>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: preset.accent }}>
-                      {preset.label}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: 'rgba(255,255,255,0.3)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {preset.description}
-                    </div>
-                  </div>
                 </button>
               ))}
             </div>
@@ -1389,6 +1433,128 @@ export default function ObjectsPanel({
         </div>
       </div>
 
+      {/* ── Context menu clic droit ── */}
+      {contextMenu &&
+        (() => {
+          const ctxEntry = allEntries.find((e) => e.def.id === contextMenu.defId);
+          if (!ctxEntry) return null;
+          const { def, spriteUrl, isPlayer, instanceCount } = ctxEntry;
+          return createPortal(
+            <>
+              {/* Overlay */}
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                onMouseDown={() => setContextMenu(null)}
+              />
+              {/* Menu */}
+              <div
+                style={{
+                  position: 'fixed',
+                  left: contextMenu.x,
+                  top: contextMenu.y,
+                  zIndex: 9999,
+                  minWidth: 210,
+                  background: 'var(--color-bg-elevated, #1a1a2e)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 9,
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.75)',
+                  padding: 4,
+                }}
+              >
+                {/* Label */}
+                <div
+                  style={{
+                    padding: '5px 12px 4px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.3)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    marginBottom: 3,
+                  }}
+                >
+                  {def.displayName}
+                </div>
+
+                {/* Placer */}
+                {mapId && (
+                  <CtxItem
+                    icon="🎮"
+                    label={
+                      instanceCount > 0
+                        ? `Placer sur la carte (×${instanceCount})`
+                        : 'Placer sur la carte'
+                    }
+                    onClick={() => {
+                      onStartPlacing(def.id);
+                      setContextMenu(null);
+                    }}
+                  />
+                )}
+
+                {/* Configurer */}
+                <CtxItem
+                  icon="⚙️"
+                  label="Configurer..."
+                  onClick={() => {
+                    setObjDefDialogId(def.id);
+                    setContextMenu(null);
+                  }}
+                />
+
+                {/* Changer sprite */}
+                <CtxItem
+                  icon="🖼️"
+                  label="Changer le sprite..."
+                  onClick={() => {
+                    if (spriteUrl) {
+                      openEditSprite(def);
+                    } else {
+                      setSpritePickerDefId(def.id);
+                      spritePickerFileRef.current?.click();
+                    }
+                    setContextMenu(null);
+                  }}
+                />
+
+                {/* Définir comme joueur */}
+                {mapId && !isPlayer && spriteUrl && (
+                  <CtxItem
+                    icon="👑"
+                    label="Définir comme joueur"
+                    onClick={() => {
+                      updateMapMetadata(mapId, { playerSpritePath: spriteUrl });
+                      setContextMenu(null);
+                    }}
+                  />
+                )}
+
+                {/* Séparateur */}
+                <div
+                  style={{
+                    height: 1,
+                    background: 'rgba(255,255,255,0.06)',
+                    margin: '3px 0',
+                  }}
+                />
+
+                {/* Supprimer */}
+                <CtxItem
+                  icon="🗑️"
+                  label="Supprimer"
+                  danger
+                  onClick={() => {
+                    handleDelete(def);
+                    setContextMenu(null);
+                  }}
+                />
+              </div>
+            </>,
+            document.body
+          );
+        })()}
+
       {/* SpriteImportDialog — création depuis sprite OU édition depuis ObjectDefinitionDialog */}
       {dialogOpen && dialogUrl && (
         <SpriteImportDialog
@@ -1402,6 +1568,13 @@ export default function ObjectsPanel({
             setDialogOpen(false);
             setEditingDefId(null);
           }}
+          mode={
+            // En édition : ouvrir le dialog complet pour les héros (catégorie 'hero')
+            editingDefId &&
+            objectDefinitions.find((d) => d.id === editingDefId)?.category === 'hero'
+              ? 'hero'
+              : 'object'
+          }
         />
       )}
 

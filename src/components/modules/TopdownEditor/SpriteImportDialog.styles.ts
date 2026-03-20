@@ -117,3 +117,31 @@ export const previewCtrlBtn: React.CSSProperties = {
   border: '1px solid var(--color-border-base)',
   background: 'transparent',
 };
+
+/** Onglet du panneau droit (inactif) */
+export const rightPanelTab: React.CSSProperties = {
+  flex: 1,
+  padding: '8px 0',
+  fontSize: 11,
+  fontWeight: 600,
+  cursor: 'pointer',
+  border: 'none',
+  borderBottom: '2px solid transparent',
+  background: 'transparent',
+  color: 'var(--color-text-secondary)',
+  transition: 'all 0.15s',
+};
+
+/** Onglet du panneau droit (actif) */
+export const rightPanelTabActive: React.CSSProperties = {
+  flex: 1,
+  padding: '8px 0',
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: 'pointer',
+  border: 'none',
+  borderBottom: '2px solid var(--color-primary)',
+  background: 'transparent',
+  color: 'var(--color-primary)',
+  transition: 'all 0.15s',
+};

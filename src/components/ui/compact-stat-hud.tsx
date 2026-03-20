@@ -5,7 +5,7 @@
  * sans libellé textuel. Style inspiré des RPG (Undertale, Celeste, Hades).
  *
  * - Icône ❤ (Heart) pour Physique    → rouge
- * - Icône ⚡ (Zap)  pour Mentale     → cyan
+ * - Icône 🧠 (Brain) pour Mentale    → cyan
  * - Couleur du chiffre : vert >66, jaune >33, rouge ≤33
  * - Icône pulse si valeur critique (≤33)
  * - Barre fine (3px) sous chaque stat pour lecture rapide au survol
@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Zap } from 'lucide-react';
+import { Heart, Brain } from 'lucide-react';
 import { STAT_BOUNDS, STAT_THRESHOLDS } from '@/config/gameConstants';
 
 // ── Animation constants (module-level — références stables) ───────────────────
@@ -24,28 +24,36 @@ import { STAT_BOUNDS, STAT_THRESHOLDS } from '@/config/gameConstants';
 // détecte de "nouveaux" tableaux et peut relancer les animations, causant
 // un stutter visuel sans charge CPU mesurable (bug connu Chromium + WAAPI).
 
-const HEARTBEAT_NORMAL_ANIM   = { scale: [1, 1.10, 0.96, 1.05, 1] as number[] };
+const HEARTBEAT_NORMAL_ANIM = { scale: [1, 1.1, 0.96, 1.05, 1] as number[] };
 const HEARTBEAT_CRITICAL_ANIM = { scale: [1, 1.32, 0.91, 1.24, 1] as number[] };
-const FLICKER_NORMAL_ANIM     = { opacity: [1, 0.65, 1, 0.78, 1] as number[] };
-const FLICKER_CRITICAL_ANIM   = { opacity: [1, 0.22, 1, 0.18, 1] as number[] };
+const FLICKER_NORMAL_ANIM = { opacity: [1, 0.65, 1, 0.78, 1] as number[] };
+const FLICKER_CRITICAL_ANIM = { opacity: [1, 0.22, 1, 0.18, 1] as number[] };
 
 const HEARTBEAT_NORMAL_TRANS = {
-  times: [0, 0.12, 0.25, 0.38, 1], duration: 2.2,
-  repeat: Infinity, ease: 'easeInOut' as const,
+  times: [0, 0.12, 0.25, 0.38, 1],
+  duration: 2.2,
+  repeat: Infinity,
+  ease: 'easeInOut' as const,
 };
 const HEARTBEAT_CRITICAL_TRANS = {
-  times: [0, 0.10, 0.20, 0.30, 1], duration: 0.80,
-  repeat: Infinity, ease: 'easeInOut' as const,
+  times: [0, 0.1, 0.2, 0.3, 1],
+  duration: 0.8,
+  repeat: Infinity,
+  ease: 'easeInOut' as const,
 };
 const FLICKER_NORMAL_TRANS = {
-  times: [0, 0.08, 0.22, 0.55, 1], duration: 1.9,
-  repeat: Infinity, ease: 'easeOut' as const,
+  times: [0, 0.08, 0.22, 0.55, 1],
+  duration: 1.9,
+  repeat: Infinity,
+  ease: 'easeOut' as const,
 };
 const FLICKER_CRITICAL_TRANS = {
-  times: [0, 0.07, 0.15, 0.45, 1], duration: 0.60,
-  repeat: Infinity, ease: 'easeOut' as const,
+  times: [0, 0.07, 0.15, 0.45, 1],
+  duration: 0.6,
+  repeat: Infinity,
+  ease: 'easeOut' as const,
 };
-const CRITICAL_PULSE_ANIM  = { opacity: [0, 0.7, 0] as number[] };
+const CRITICAL_PULSE_ANIM = { opacity: [0, 0.7, 0] as number[] };
 const CRITICAL_PULSE_TRANS = { duration: 1.5, repeat: Infinity };
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -65,13 +73,13 @@ function clampStat(v: number): number {
 
 function statColor(v: number): string {
   if (v > STAT_THRESHOLDS.HEALTHY) return 'text-emerald-400';
-  if (v > STAT_THRESHOLDS.WARNING)  return 'text-amber-400';
+  if (v > STAT_THRESHOLDS.WARNING) return 'text-amber-400';
   return 'text-red-400';
 }
 
 function barColor(v: number): string {
   if (v > STAT_THRESHOLDS.HEALTHY) return 'bg-emerald-400';
-  if (v > STAT_THRESHOLDS.WARNING)  return 'bg-amber-400';
+  if (v > STAT_THRESHOLDS.WARNING) return 'bg-amber-400';
   return 'bg-red-400';
 }
 
@@ -89,12 +97,12 @@ interface Delta {
 }
 
 function useRollingCounter(targetValue: number) {
-  const [displayValue, setDisplayValue]     = useState(targetValue);
-  const [delta, setDelta]                   = useState<Delta | null>(null);
-  const [isJustChanged, setIsJustChanged]   = useState(false);
-  const prevRef      = useRef(targetValue);
-  const rafRef       = useRef<number>(0);
-  const deltaKeyRef  = useRef(0);
+  const [displayValue, setDisplayValue] = useState(targetValue);
+  const [delta, setDelta] = useState<Delta | null>(null);
+  const [isJustChanged, setIsJustChanged] = useState(false);
+  const prevRef = useRef(targetValue);
+  const rafRef = useRef<number>(0);
+  const deltaKeyRef = useRef(0);
 
   useEffect(() => {
     const prev = prevRef.current;
@@ -109,8 +117,8 @@ function useRollingCounter(targetValue: number) {
     // ── Odometer rolling (Mother 2 style) ──────────────────────────────────
     const DURATION = 700;
     const startTime = performance.now();
-    const startVal  = prev;
-    const endVal    = targetValue;
+    const startVal = prev;
+    const endVal = targetValue;
 
     const step = (now: number) => {
       const elapsed = now - startTime;
@@ -160,31 +168,41 @@ function StatRow({ icon, value, iconColor, animationType, sf, label }: StatRowPr
   const { displayValue, delta, isJustChanged } = useRollingCounter(clamped);
 
   const isCritical = clamped <= STAT_THRESHOLDS.WARNING;
-  const numColor   = statColor(clamped);
-  const bar        = barColor(clamped);
-  const iconSz     = Math.max(12, Math.round(14 * sf));
-  const textSz     = Math.max(11, Math.round(13 * sf));
-  const deltaSz    = Math.max(9,  Math.round(11 * sf));
+  const numColor = statColor(clamped);
+  const bar = barColor(clamped);
+  const iconSz = Math.max(12, Math.round(14 * sf));
+  const textSz = Math.max(11, Math.round(13 * sf));
+  const deltaSz = Math.max(9, Math.round(11 * sf));
 
   // Couleur du halo selon direction du changement
-  const glowColor = delta && delta.amount > 0
-    ? 'rgba(52,211,153,0.95)'   // vert émeraude  → gain
-    : 'rgba(248,113,113,0.95)'; // rouge          → perte
+  const glowColor =
+    delta && delta.amount > 0
+      ? 'rgba(52,211,153,0.95)' // vert émeraude  → gain
+      : 'rgba(248,113,113,0.95)'; // rouge          → perte
 
   // Sélection des constantes d'animation stables (module-level)
-  const iconAnimate = animationType === 'heartbeat'
-    ? (isCritical ? HEARTBEAT_CRITICAL_ANIM : HEARTBEAT_NORMAL_ANIM)
-    : (isCritical ? FLICKER_CRITICAL_ANIM   : FLICKER_NORMAL_ANIM);
+  const iconAnimate =
+    animationType === 'heartbeat'
+      ? isCritical
+        ? HEARTBEAT_CRITICAL_ANIM
+        : HEARTBEAT_NORMAL_ANIM
+      : isCritical
+        ? FLICKER_CRITICAL_ANIM
+        : FLICKER_NORMAL_ANIM;
 
-  const iconTransition = animationType === 'heartbeat'
-    ? (isCritical ? HEARTBEAT_CRITICAL_TRANS : HEARTBEAT_NORMAL_TRANS)
-    : (isCritical ? FLICKER_CRITICAL_TRANS   : FLICKER_NORMAL_TRANS);
+  const iconTransition =
+    animationType === 'heartbeat'
+      ? isCritical
+        ? HEARTBEAT_CRITICAL_TRANS
+        : HEARTBEAT_NORMAL_TRANS
+      : isCritical
+        ? FLICKER_CRITICAL_TRANS
+        : FLICKER_NORMAL_TRANS;
 
   return (
     <div className="flex flex-col gap-0.5">
       {/* justify-between : icône+label à gauche, chiffre aligné à droite */}
       <div className="flex items-center justify-between gap-2">
-
         {/* Groupe gauche : icône + label */}
         <div className="flex items-center gap-1.5">
           {/* Icône — animation idle constante, plus intense si critique */}
@@ -195,9 +213,7 @@ function StatRow({ icon, value, iconColor, animationType, sf, label }: StatRowPr
             aria-hidden="true"
             style={{ display: 'flex', alignItems: 'center' }}
           >
-            <span style={{ width: iconSz, height: iconSz, display: 'flex' }}>
-              {icon}
-            </span>
+            <span style={{ width: iconSz, height: iconSz, display: 'flex' }}>{icon}</span>
           </motion.span>
 
           {/* Libellé — toujours après l'icône (layout fixe) */}
@@ -217,8 +233,10 @@ function StatRow({ icon, value, iconColor, animationType, sf, label }: StatRowPr
         </div>
 
         {/* Chiffre + badge delta — alignés à droite */}
-        <div className="relative flex items-center justify-end" style={{ minWidth: Math.round(28 * sf) }}>
-
+        <div
+          className="relative flex items-center justify-end"
+          style={{ minWidth: Math.round(28 * sf) }}
+        >
           {/* ── Badge delta flottant (Mother 2 style) ──────────────────── */}
           <AnimatePresence>
             {delta !== null && (
@@ -328,7 +346,7 @@ export function CompactStatHUD({ physique, mentale, scaleFactor = 1 }: CompactSt
         label="physique"
       />
       <StatRow
-        icon={<Zap className="w-full h-full" />}
+        icon={<Brain className="w-full h-full" />}
         value={mentale}
         iconColor="text-cyan-400"
         animationType="flicker"

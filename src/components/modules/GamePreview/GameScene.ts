@@ -14,7 +14,13 @@ import * as ex from 'excalibur';
 import jsfxrLib, { sfxr } from 'jsfxr';
 const Params = jsfxrLib.Params;
 import type { MapData, TileInstance, LayerInstance, PlayerColliderConfig } from '@/types/map';
-import type { SpriteSheetConfig, AnimationRange, EntityInstance } from '@/types/sprite';
+import type {
+  SpriteSheetConfig,
+  AnimationRange,
+  EntityInstance,
+  ObjectDefinition,
+  WindComponent,
+} from '@/types/sprite';
 import type { TilesetConfig } from '@/types/tileset';
 import type { SceneEffectConfig } from '@/types/sceneEffect';
 import type { DialogueBridge } from './DialogueBridge';
@@ -133,6 +139,13 @@ export class TopdownScene extends ex.Scene {
   private dirFlipX: DirFlipX = { down: false, left: false, right: false, up: false };
   private lastDir: 'down' | 'left' | 'right' | 'up' = 'down';
 
+  // Object definitions (Phase 4) — resolved from mapsStore before scene construction
+  private objectDefinitions: ObjectDefinition[] = [];
+
+  // Input velocity — set in preupdate (before physics), read in postupdate (for animation)
+  private inputVx = 0;
+  private inputVy = 0;
+
   // NPC actors list — used for key-E interaction
   private npcActors: Array<{ actor: ex.Actor; entity: EntityInstance }> = [];
 
@@ -171,7 +184,8 @@ export class TopdownScene extends ex.Scene {
     tilesetConfigs?: Record<string, TilesetConfig>,
     _sceneEffect?: SceneEffectConfig,
     cameraZoom?: number,
-    playerColliderConfig?: PlayerColliderConfig
+    playerColliderConfig?: PlayerColliderConfig,
+    objectDefinitions?: ObjectDefinition[]
   ) {
     super();
     this.mapData = mapData;
@@ -186,6 +200,7 @@ export class TopdownScene extends ex.Scene {
     this.bgmAudioUrl = bgmAudioUrl;
     this.cameraZoom = cameraZoom ?? 1.5;
     this.playerColliderConfig = playerColliderConfig;
+    this.objectDefinitions = objectDefinitions ?? [];
   }
 
   onInitialize(engine: ex.Engine): void {
@@ -197,6 +212,7 @@ export class TopdownScene extends ex.Scene {
     this.addPlayer(engine);
     this.applyPlayerSprite();
     this.buildEntities();
+    this.buildObjects();
     this.startBgm();
   }
 
@@ -278,18 +294,12 @@ export class TopdownScene extends ex.Scene {
     }
     this.add(tilemap); // z=0 (default) — always behind player
 
-    // Canopy TileMap — last tile layer, drawn above player (z=9999)
+    // Canopy — acteurs individuels Y-sortés (pas de TileMap fixe à z=9999)
+    // Chaque tuile du dernier calque reçoit z = 100 + (cy+1)*tileSize.
+    // Le joueur (z = 100 + pos.y) passe DEVANT quand il marche au sud de la tuile
+    // et DERRIÈRE quand il marche au nord → tri-Y fidèle au style Zelda/Pokémon.
     if (canopyLayer) {
-      const canopyMap = new ex.TileMap({
-        pos: ex.vec(0, 0),
-        tileWidth: tileSize,
-        tileHeight: tileSize,
-        rows,
-        columns,
-      });
-      this.paintTileLayer(canopyMap, canopyLayer, tileSize);
-      canopyMap.z = 9999;
-      this.add(canopyMap);
+      this.buildCanopyActors(canopyLayer, tileSize);
     }
   }
 
@@ -339,6 +349,78 @@ export class TopdownScene extends ex.Scene {
         if (opacity < 1) sprite.opacity = opacity;
         tile.addGraphic(sprite);
       }
+    }
+  }
+
+  /**
+   * Canopy layer : crée un acteur Excalibur par cellule unique du dernier calque.
+   * z = 100 + (cy + 1) * tileSize  → tri-Y correct avec le joueur (z = 100 + pos.y).
+   * CollisionType.PreventCollision : purement visuel, la collision reste dans le
+   * TileMap intGrid et les hitbox actors (buildHitboxActors).
+   */
+  private buildCanopyActors(layer: LayerInstance, tileSize: number): void {
+    if (layer._ac_visible === false) return;
+    const opacity = layer._ac_opacity ?? 1.0;
+
+    // Regrouper les tuiles par cellule (stacking — même logique que paintTileLayer)
+    const stackMap = new Map<string, TileInstance[]>();
+    for (const ti of layer.gridTiles) {
+      const key = `${ti.cx},${ti.cy}`;
+      const existing = stackMap.get(key);
+      if (existing) existing.push(ti);
+      else stackMap.set(key, [ti]);
+    }
+
+    for (const [key, tileInsts] of stackMap) {
+      const [col, row] = key.split(',').map(Number);
+
+      // Construire les sprites pour cette cellule
+      const members: Array<{ graphic: ex.Graphic; offset: ex.Vector }> = [];
+      for (const ti of tileInsts) {
+        const imgSrc = this.imageCache.get(ti.src);
+        if (!imgSrc) continue;
+
+        let sprite: ex.Sprite;
+        if (ti.tileW && ti.tileW > 0) {
+          sprite = new ex.Sprite({
+            image: imgSrc,
+            sourceView: {
+              x: ti.tileX ?? 0,
+              y: ti.tileY ?? 0,
+              width: ti.tileW,
+              height: ti.tileH ?? ti.tileW,
+            },
+            destSize: { width: tileSize, height: tileSize },
+          });
+        } else {
+          sprite = imgSrc.toSprite();
+          sprite.scale = ex.vec(
+            tileSize / (imgSrc.width || tileSize),
+            tileSize / (imgSrc.height || tileSize)
+          );
+        }
+        sprite.flipHorizontal = (ti.f & 1) !== 0;
+        sprite.flipVertical = (ti.f & 2) !== 0;
+        if (opacity < 1) sprite.opacity = opacity;
+        members.push({ graphic: sprite, offset: ex.Vector.Zero });
+      }
+      if (members.length === 0) continue;
+
+      const graphic = members.length === 1 ? members[0].graphic : new ex.GraphicsGroup({ members });
+
+      const actor = new ex.Actor({
+        name: `canopy-${col}-${row}`,
+        pos: ex.vec(col * tileSize + tileSize / 2, row * tileSize + tileSize / 2),
+        width: tileSize,
+        height: tileSize,
+        // Pas de collision physique — purement visuel
+        collisionType: ex.CollisionType.PreventCollision,
+        // Tri-Y : en avant quand joueur.pos.y > (row+1)*tileSize, derrière sinon
+        z: 100 + (row + 1) * tileSize,
+      });
+      actor.color = ex.Color.Transparent;
+      actor.graphics.use(graphic);
+      this.add(actor);
     }
   }
 
@@ -586,47 +668,33 @@ export class TopdownScene extends ex.Scene {
       }
     }
 
-    this.player.on('postupdate', () => {
-      // Y-sort: objects lower on screen appear in front (simulates 3D depth)
-      this.player.z = 100 + this.player.pos.y;
+    // ── preupdate : lecture input + vélocité (AVANT physique) ─────────────────
+    // ⚠️ CRITIQUE : la vélocité DOIT être définie ici, pas dans postupdate.
+    // Excalibur résout les collisions pendant la physique (entre preupdate et
+    // postupdate). Si la vélocité est définie dans postupdate, elle écrase la
+    // résolution physique → le joueur re-pénètre les murs chaque frame.
+    this.player.on('preupdate', () => {
       const kb = engine.input.keyboard;
-      let vx = 0,
-        vy = 0;
+      this.inputVx = 0;
+      this.inputVy = 0;
 
-      if (kb.isHeld(ex.Keys.W) || kb.isHeld(ex.Keys.Up)) vy = -PLAYER_SPEED;
-      if (kb.isHeld(ex.Keys.S) || kb.isHeld(ex.Keys.Down)) vy = PLAYER_SPEED;
-      if (kb.isHeld(ex.Keys.A) || kb.isHeld(ex.Keys.Left)) vx = -PLAYER_SPEED;
-      if (kb.isHeld(ex.Keys.D) || kb.isHeld(ex.Keys.Right)) vx = PLAYER_SPEED;
+      if (kb.isHeld(ex.Keys.W) || kb.isHeld(ex.Keys.Up)) this.inputVy = -PLAYER_SPEED;
+      if (kb.isHeld(ex.Keys.S) || kb.isHeld(ex.Keys.Down)) this.inputVy = PLAYER_SPEED;
+      if (kb.isHeld(ex.Keys.A) || kb.isHeld(ex.Keys.Left)) this.inputVx = -PLAYER_SPEED;
+      if (kb.isHeld(ex.Keys.D) || kb.isHeld(ex.Keys.Right)) this.inputVx = PLAYER_SPEED;
 
-      if (vx !== 0 && vy !== 0) {
+      if (this.inputVx !== 0 && this.inputVy !== 0) {
         const f = 1 / Math.SQRT2;
-        vx *= f;
-        vy *= f;
+        this.inputVx *= f;
+        this.inputVy *= f;
       }
-      this.player.vel = ex.vec(vx, vy);
+      this.player.vel = ex.vec(this.inputVx, this.inputVy);
 
-      if (vy > 0) this.lastDir = 'down';
-      else if (vy < 0) this.lastDir = 'up';
-      else if (vx < 0) this.lastDir = 'left';
-      else if (vx > 0) this.lastDir = 'right';
-
-      if (this.walkAnims) {
-        const moving = vx !== 0 || vy !== 0;
-        if (moving) {
-          const walkAnim = this.walkAnims[this.lastDir];
-          walkAnim.play();
-          this.player.graphics.use(walkAnim);
-          this.player.graphics.flipHorizontal = this.dirFlipX[this.lastDir];
-        } else if (this.idleAnims) {
-          // Switch to idle animation when stopped
-          const idleAnim = this.idleAnims[this.lastDir];
-          idleAnim.play();
-          this.player.graphics.use(idleAnim);
-          this.player.graphics.flipHorizontal = this.dirFlipX[this.lastDir];
-        } else {
-          this.walkAnims[this.lastDir].pause();
-        }
-      }
+      // Direction basée sur l'input (pour l'animation — indépendante de la physique)
+      if (this.inputVy > 0) this.lastDir = 'down';
+      else if (this.inputVy < 0) this.lastDir = 'up';
+      else if (this.inputVx < 0) this.lastDir = 'left';
+      else if (this.inputVx > 0) this.lastDir = 'right';
 
       // ── Key E — interact with nearest dialogue NPC ─────────────────────
       if (kb.wasPressed(ex.Keys.E)) {
@@ -663,6 +731,30 @@ export class TopdownScene extends ex.Scene {
               entry.trigger.transitionType
             );
           }
+        }
+      }
+    });
+
+    // ── postupdate : Y-sort + animation (APRÈS physique) ──────────────────
+    this.player.on('postupdate', () => {
+      // Y-sort: objects lower on screen appear in front (simulates 3D depth)
+      this.player.z = 100 + this.player.pos.y;
+
+      if (this.walkAnims) {
+        const moving = this.inputVx !== 0 || this.inputVy !== 0;
+        if (moving) {
+          const walkAnim = this.walkAnims[this.lastDir];
+          walkAnim.play();
+          this.player.graphics.use(walkAnim);
+          this.player.graphics.flipHorizontal = this.dirFlipX[this.lastDir];
+        } else if (this.idleAnims) {
+          // Switch to idle animation when stopped
+          const idleAnim = this.idleAnims[this.lastDir];
+          idleAnim.play();
+          this.player.graphics.use(idleAnim);
+          this.player.graphics.flipHorizontal = this.dirFlipX[this.lastDir];
+        } else {
+          this.walkAnims[this.lastDir].pause();
         }
       }
     });
@@ -834,6 +926,369 @@ export class TopdownScene extends ex.Scene {
 
       this.npcActors.push({ actor: npc, entity });
       this.add(npc);
+    }
+  }
+
+  // ── Objects Phase 4 (ObjectInstance + ObjectDefinition) ───────────────────
+
+  private buildObjects(): void {
+    const tileSize = this.mapData.__gridSize || 32;
+    const instances = this.mapData._ac_objects ?? [];
+    if (instances.length === 0) return;
+
+    for (const instance of instances) {
+      const definition = this.objectDefinitions.find((d) => d.id === instance.definitionId);
+      if (!definition) continue;
+
+      // ── Les héros (category 'hero') sont déjà créés comme acteur joueur par buildPlayer.
+      // Ne pas créer un second acteur ici — cela causerait un doublon visuellement superposé.
+      if (definition.category === 'hero') continue;
+
+      // ── Résoudre le spriteSheetConfig pour l'origine avant de calculer la position ─────
+      const spriteUrlForOrigin =
+        (
+          definition.components.find((c) => c.type === 'animatedSprite') as
+            | { spriteAssetUrl?: string }
+            | undefined
+        )?.spriteAssetUrl ??
+        (
+          definition.components.find((c) => c.type === 'sprite') as
+            | { spriteAssetUrl?: string }
+            | undefined
+        )?.spriteAssetUrl;
+      const cfgForOrigin = spriteUrlForOrigin
+        ? this.spriteSheetConfigs[spriteUrlForOrigin]
+        : undefined;
+      const scaleXForOrigin = instance.overrides?.scaleX ?? instance.overrides?.scale ?? 1;
+      const scaleYForOrigin = instance.overrides?.scaleY ?? instance.overrides?.scale ?? 1;
+      const originXPct = cfgForOrigin?.originXPct ?? 0.5;
+      const originYPct = cfgForOrigin?.originYPct ?? 0.5;
+      // Taille monde de l'objet
+      const objW = (cfgForOrigin?.frameW ?? tileSize) * scaleXForOrigin;
+      const objH = (cfgForOrigin?.frameH ?? tileSize) * scaleYForOrigin;
+      // Position du CENTRE du sprite = coin sup-gauche de la cellule + anchorOff
+      // anchorOff = originPct*(ts - objSize) + objSize/2  (même formule que MapCanvas.tsx)
+      const anchorOffX = originXPct * (tileSize - objW) + objW / 2;
+      const anchorOffY = originYPct * (tileSize - objH) + objH / 2;
+      const px = instance.cx * tileSize + anchorOffX;
+      const py = instance.cy * tileSize + anchorOffY;
+
+      // ── Resolve components ────────────────────────────────────────────────
+
+      const animComp = definition.components.find(
+        (
+          c
+        ): c is { type: 'animatedSprite'; spriteAssetUrl: string; spriteSheetConfigUrl: string } =>
+          c.type === 'animatedSprite'
+      );
+      const spriteComp = definition.components.find(
+        (
+          c
+        ): c is {
+          type: 'sprite';
+          spriteAssetUrl: string;
+          srcX: number;
+          srcY: number;
+          srcW: number;
+          srcH: number;
+        } => c.type === 'sprite'
+      );
+      const colliderComp = definition.components.find(
+        (
+          c
+        ): c is {
+          type: 'collider';
+          shape: 'box' | 'circle' | 'none';
+          w: number;
+          h: number;
+          radius: number;
+          offsetX: number;
+          offsetY: number;
+        } => c.type === 'collider'
+      );
+      const dialogueComp = definition.components.find(
+        (c): c is { type: 'dialogue'; sceneId: string } => c.type === 'dialogue'
+      );
+      const patrolComp = definition.components.find(
+        (
+          c
+        ): c is {
+          type: 'patrol';
+          targetCx: number;
+          targetCy: number;
+          speed: number;
+          loop: boolean;
+        } => c.type === 'patrol'
+      );
+      const portalComp = definition.components.find(
+        (c): c is import('@/types/sprite').PortalComponent => c.type === 'portal'
+      );
+      const windComp = definition.components.find((c): c is WindComponent => c.type === 'wind');
+
+      // ── Collider ──────────────────────────────────────────────────────────
+
+      let actorCollider: ex.Collider | undefined;
+      if (colliderComp && colliderComp.shape !== 'none') {
+        if (colliderComp.shape === 'circle') {
+          actorCollider = ex.Shape.Circle(
+            colliderComp.radius || tileSize / 2,
+            ex.vec(colliderComp.offsetX, colliderComp.offsetY)
+          );
+        } else {
+          actorCollider = ex.Shape.Box(
+            colliderComp.w || tileSize,
+            colliderComp.h || tileSize,
+            ex.Vector.Half,
+            ex.vec(colliderComp.offsetX, colliderComp.offsetY)
+          );
+        }
+      } else if (!colliderComp) {
+        // Fallback : utiliser playerCollider du SpriteSheetConfig si configuré dans SpriteImportDialog.
+        // Permet de définir la hitbox directement dans le dialog de sprite sans ajouter
+        // un ColliderComponent explicite à la définition.
+        const spriteUrl = animComp?.spriteAssetUrl ?? spriteComp?.spriteAssetUrl;
+        const spriteCfg = spriteUrl ? this.spriteSheetConfigs[spriteUrl] : undefined;
+        const pc = spriteCfg?.playerCollider;
+        if (pc) {
+          if (pc.mode === 'box') {
+            actorCollider = ex.Shape.Box(
+              pc.widthPct * tileSize,
+              pc.heightPct * tileSize,
+              ex.Vector.Half,
+              ex.vec(pc.offsetXPct * tileSize, pc.offsetYPct * tileSize)
+            );
+          } else if (pc.mode === 'polygon' && pc.points.length >= 3) {
+            actorCollider = ex.Shape.Polygon(
+              pc.points.map((p) => ex.vec(p.x * tileSize * 0.5, p.y * tileSize * 0.5))
+            );
+          }
+        }
+      }
+
+      // Fixed = immovable obstacle that blocks the player (ex: fence, barrel).
+      // Passive = fires collision events without blocking (ex: patrol NPC, portal).
+      const hasSolidCollider = !!(colliderComp && colliderComp.shape !== 'none');
+      const isMovable = !!patrolComp;
+      const collType =
+        hasSolidCollider && !isMovable ? ex.CollisionType.Fixed : ex.CollisionType.Passive;
+
+      // Z-sort: use bottom edge of occupied cell (cy+1)*tileSize — same convention as
+      // canopy tiles. Ensures the object is rendered in front of the player when the
+      // player is at the same row, and behind when the player is one row below.
+      const actor = new ex.Actor({
+        name: `object-${instance.id}`,
+        pos: ex.vec(px, py),
+        width: tileSize,
+        height: tileSize,
+        collisionType: collType,
+        z: 100 + py + tileSize / 2,
+      });
+      actor.color = ex.Color.Transparent;
+      if (actorCollider) {
+        actor.collider.set(actorCollider);
+      }
+
+      // ── Graphics ──────────────────────────────────────────────────────────
+
+      const scaleX = instance.overrides?.scaleX ?? instance.overrides?.scale ?? 1;
+      const scaleY = instance.overrides?.scaleY ?? instance.overrides?.scale ?? 1;
+      const rotationDeg = instance.overrides?.rotation ?? 0;
+      if (rotationDeg !== 0) {
+        // Excalibur rotation en radians (sens horaire)
+        actor.rotation = (rotationDeg * Math.PI) / 180;
+      }
+
+      if (animComp) {
+        const imgSrc = this.imageCache.get(animComp.spriteAssetUrl);
+        const cfg =
+          this.spriteSheetConfigs[animComp.spriteSheetConfigUrl ?? animComp.spriteAssetUrl];
+        if (imgSrc && cfg) {
+          const built = buildCharacterAnims(imgSrc, cfg);
+          const facing = instance.facing ?? 'down';
+          const anim = built.idleAnims?.[facing] ?? built.walkAnims?.[facing];
+          if (anim) {
+            anim.play();
+            actor.graphics.use(anim);
+            actor.graphics.flipHorizontal = built.dirFlipX[facing];
+            if (scaleX !== 1 || scaleY !== 1) {
+              actor.scale = ex.vec(scaleX, scaleY);
+            }
+          }
+        }
+      } else if (spriteComp) {
+        const imgSrc = this.imageCache.get(spriteComp.spriteAssetUrl);
+        if (imgSrc) {
+          // destSize = source dimensions × scale (NOT tileSize) to preserve aspect ratio.
+          // Forcing tileSize×tileSize was squishing non-square sprites (ex: 32×64 tree → 32×32).
+          const sprite = new ex.Sprite({
+            image: imgSrc,
+            sourceView: {
+              x: spriteComp.srcX,
+              y: spriteComp.srcY,
+              width: spriteComp.srcW,
+              height: spriteComp.srcH,
+            },
+            destSize: { width: spriteComp.srcW * scaleX, height: spriteComp.srcH * scaleY },
+          });
+          actor.graphics.use(sprite);
+        }
+      } else {
+        // Fallback: colored box so the object is visible even without a sprite
+        actor.color = ex.Color.fromHex('#e87d0d');
+      }
+
+      // ── Wind effect (Stardew Valley style) ────────────────────────────────
+      // Replaces the static spriteComp graphic with a procedural canvas that
+      // draws the sprite in horizontal slices, each shifted by a sinusoidal
+      // offset that increases linearly from 0 (bottom anchor) to full amplitude
+      // at the top — simulating wind deformation without pre-baked animation frames.
+      if (windComp && spriteComp) {
+        const windImgSrc = this.imageCache.get(spriteComp.spriteAssetUrl);
+        if (windImgSrc?.image) {
+          const { amplitude, frequency } = windComp;
+          // Per-instance phase offset so sibling trees don't sway in sync
+          const phase = instance.overrides?.windPhaseOffset ?? windComp.phaseOffset ?? 0;
+          const dW = spriteComp.srcW * scaleX;
+          const dH = spriteComp.srcH * scaleY;
+          // Horizontal padding prevents clipping at extreme sway positions
+          const pad = Math.ceil(Math.abs(amplitude)) + 2;
+          const SLICES = 10; // horizontal strips — more = smoother gradient
+
+          const windGraphic = new ex.Canvas({
+            width: dW + pad * 2,
+            height: dH,
+            cache: false, // re-draw each frame
+            draw: (ctx) => {
+              ctx.clearRect(0, 0, dW + pad * 2, dH);
+              const t = Date.now() / 1000;
+              const swayMax = amplitude * Math.sin(t * frequency * Math.PI * 2 + phase);
+              const sliceH = dH / SLICES;
+              const srcSliceH = spriteComp.srcH / SLICES;
+
+              for (let s = 0; s < SLICES; s++) {
+                // tNorm: 0 at bottom slice (anchored), 1 at top slice (full sway)
+                const tNorm = (SLICES - 1 - s) / (SLICES - 1);
+                // Quadratic ease: subtle at base, pronounced at crown
+                const swayX = swayMax * tNorm * tNorm;
+                ctx.drawImage(
+                  windImgSrc.image,
+                  spriteComp.srcX,
+                  spriteComp.srcY + s * srcSliceH,
+                  spriteComp.srcW,
+                  srcSliceH,
+                  pad + swayX,
+                  s * sliceH,
+                  dW,
+                  sliceH
+                );
+              }
+            },
+          });
+
+          actor.graphics.use(windGraphic);
+        }
+      }
+
+      // ── Ground shadow (Stardew Valley style) ──────────────────────────────
+      // Flat semi-transparent ellipse drawn on the ground below the object.
+      // z=1 keeps it above tile layers (z=0) but below all actors (z≥100).
+      // cache:true → drawn once; patrol NPCs sync position in postupdate.
+
+      let shadowActor: ex.Actor | null = null;
+      let shadowOffsetY = 0;
+
+      if (animComp || spriteComp) {
+        let shadowDW = tileSize * scaleX;
+        let shadowDH = tileSize * scaleY;
+        if (spriteComp) {
+          shadowDW = spriteComp.srcW * scaleX;
+          shadowDH = spriteComp.srcH * scaleY;
+        } else if (animComp) {
+          const shadowCfg =
+            this.spriteSheetConfigs[animComp.spriteSheetConfigUrl ?? animComp.spriteAssetUrl];
+          if (shadowCfg) {
+            shadowDW = shadowCfg.frameW * scaleX;
+            shadowDH = shadowCfg.frameH * scaleY;
+          }
+        }
+        const sRx = Math.max(6, shadowDW * 0.42);
+        const sRy = Math.max(3, sRx * 0.35);
+        const sW = Math.ceil(sRx * 2 + 2);
+        const sH = Math.ceil(sRy * 2 + 2);
+
+        const shadowGraphic = new ex.Canvas({
+          width: sW,
+          height: sH,
+          cache: true,
+          draw: (ctx) => {
+            ctx.clearRect(0, 0, sW, sH);
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#0d0d1a';
+            ctx.beginPath();
+            ctx.ellipse(sW / 2, sH / 2, sRx, sRy, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          },
+        });
+
+        shadowOffsetY = shadowDH * 0.5 - sRy;
+        shadowActor = new ex.Actor({
+          pos: ex.vec(px, py + shadowOffsetY),
+          z: 1,
+          collisionType: ex.CollisionType.PreventCollision,
+        });
+        shadowActor.graphics.use(shadowGraphic);
+        this.add(shadowActor);
+      }
+
+      // ── Y-sort ────────────────────────────────────────────────────────────
+
+      actor.on('postupdate', () => {
+        actor.z = 100 + actor.pos.y + tileSize / 2;
+        if (isMovable && shadowActor) {
+          shadowActor.pos.x = actor.pos.x;
+          shadowActor.pos.y = actor.pos.y + shadowOffsetY;
+        }
+      });
+
+      // ── Patrol ───────────────────────────────────────────────────────────
+
+      if (patrolComp && patrolComp.loop) {
+        const targetX = patrolComp.targetCx * tileSize + tileSize / 2;
+        const targetY = patrolComp.targetCy * tileSize + tileSize / 2;
+        const speed = patrolComp.speed || NPC_PATROL_SPEED;
+        actor.actions.repeatForever((ctx) => {
+          ctx.moveTo(targetX, targetY, speed);
+          ctx.moveTo(px, py, speed);
+        });
+      }
+
+      // ── Dialogue ─────────────────────────────────────────────────────────
+
+      if (dialogueComp?.sceneId) {
+        const sceneId = instance.overrides?.dialogueText ? '' : dialogueComp.sceneId;
+        if (sceneId) {
+          actor.on('collisionstart', (evt) => {
+            if (evt.other.owner === this.player) this.bridge.triggerDialogue(sceneId);
+          });
+        }
+      }
+
+      // ── Portal ───────────────────────────────────────────────────────────
+
+      if (portalComp?.targetMapId) {
+        const { targetMapId, targetCx, targetCy, interactionMode } = portalComp;
+        const targetPos = { x: targetCx * tileSize, y: targetCy * tileSize };
+        if (interactionMode === 'auto') {
+          actor.on('collisionstart', (evt) => {
+            if (evt.other.owner === this.player) this.bridge.triggerMapExit(targetMapId, targetPos);
+          });
+        }
+        // 'interact' mode handled by E-key via npcActors list — add to list for future support
+      }
+
+      this.add(actor);
     }
   }
 }

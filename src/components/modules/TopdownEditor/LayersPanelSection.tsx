@@ -74,6 +74,7 @@ export default function LayersPanelSection({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [hoveredSysId, setHoveredSysId] = useState<string | null>(null);
 
   const handleDragStart = (idx: number) => {
     dragIndexRef.current = idx;
@@ -314,6 +315,7 @@ export default function LayersPanelSection({
                   </>
                 ) : (
                   <>
+                    {/* Œil — hover-only sauf si calque masqué (indicateur d'état) */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -327,11 +329,14 @@ export default function LayersPanelSection({
                         border: 'none',
                         cursor: 'pointer',
                         padding: 2,
-                        color: visible ? 'var(--color-text-muted)' : 'rgba(255,255,255,0.2)',
+                        color: visible ? 'var(--color-text-muted)' : 'rgba(255,255,255,0.35)',
+                        opacity: !visible || isHovered ? 1 : 0,
+                        transition: 'opacity 0.12s',
                       }}
                     >
                       {visible ? <Eye size={12} /> : <EyeOff size={12} />}
                     </button>
+                    {/* Cadenas — hover-only sauf si calque verrouillé (indicateur d'état) */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -346,6 +351,8 @@ export default function LayersPanelSection({
                         cursor: 'pointer',
                         padding: 2,
                         color: locked ? 'var(--color-primary, #8b5cf6)' : 'var(--color-text-muted)',
+                        opacity: locked || isHovered ? 1 : 0,
+                        transition: 'opacity 0.12s',
                       }}
                     >
                       {locked ? <Lock size={12} /> : <Unlock size={12} />}
@@ -451,9 +458,11 @@ export default function LayersPanelSection({
               onMouseEnter={(e) => {
                 if (!isActive)
                   (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)';
+                setHoveredSysId(sys.id);
               }}
               onMouseLeave={(e) => {
                 if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                setHoveredSysId(null);
               }}
             >
               <span style={{ fontSize: 14, flexShrink: 0 }}>{sys.emoji}</span>
@@ -468,6 +477,7 @@ export default function LayersPanelSection({
               >
                 {sys.label}
               </span>
+              {/* Œil calque système — hover-only sauf si masqué */}
               {layer && (
                 <button
                   onClick={(e) => {
@@ -482,7 +492,9 @@ export default function LayersPanelSection({
                     border: 'none',
                     cursor: 'pointer',
                     padding: 2,
-                    color: visible ? 'var(--color-text-muted)' : 'rgba(255,255,255,0.2)',
+                    color: visible ? 'var(--color-text-muted)' : 'rgba(255,255,255,0.35)',
+                    opacity: !visible || hoveredSysId === sys.id ? 1 : 0,
+                    transition: 'opacity 0.12s',
                   }}
                 >
                   {visible ? <Eye size={12} /> : <EyeOff size={12} />}

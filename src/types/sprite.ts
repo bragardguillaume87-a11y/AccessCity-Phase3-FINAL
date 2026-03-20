@@ -154,6 +154,20 @@ export interface SpriteSheetConfig {
    * Prioritaire sur MapMetadata.playerCollider.
    */
   playerCollider?: PlayerColliderConfig;
+  /**
+   * Point d'origine (ancre) du sprite en espace normalisé [0, 1].
+   * Détermine quel point du sprite s'aligne sur la grille lors du placement.
+   *
+   * Convention GDevelop / RPG Maker :
+   *   (0.5, 1.0) = bas-centre  → personnages, arbres (le pied ancre sur la cellule)
+   *   (0.5, 0.5) = centre      → objets petits (coffre, tonneau)
+   *   (0,   0)   = haut-gauche → compatible GDevelop (origine classique)
+   *
+   * Absent → comportement rétrocompatible : centre (0.5, 0.5).
+   */
+  originXPct?: number;
+  /** @see originXPct */
+  originYPct?: number;
 }
 
 // ============================================================================
@@ -380,10 +394,16 @@ export interface ObjectInstance {
   overrides?: {
     /** Texte de dialogue spécifique à cette instance */
     dialogueText?: string;
-    /** Facteur d'échelle visuel (0.5 – 2.0, défaut 1.0) */
+    /** Facteur d'échelle uniforme (rétrocompat, remplacé par scaleX/scaleY si présents) */
     scale?: number;
+    /** Étirement horizontal indépendant (0.1 – 4.0, défaut 1.0) */
+    scaleX?: number;
+    /** Étirement vertical indépendant (0.1 – 4.0, défaut 1.0) */
+    scaleY?: number;
     /** Décalage de phase pour l'animation vent (chaque arbre ondule différemment) */
     windPhaseOffset?: number;
+    /** Rotation en degrés (sens horaire, 0–360, défaut 0) */
+    rotation?: number;
   };
 }
 

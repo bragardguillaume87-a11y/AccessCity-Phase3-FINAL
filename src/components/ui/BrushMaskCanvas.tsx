@@ -86,6 +86,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
     // Canvas refs
     const resultCanvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+    const previewCanvasRef = useRef<HTMLCanvasElement>(null); // aperçu temps réel sans overlay
     const containerRef = useRef<HTMLDivElement>(null);
 
     // ImageData stockées en mémoire (lues une seule fois à l'init)
@@ -156,7 +157,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
         resultDataRef.current = ctxResult.getImageData(0, 0, w, h);
 
         // Configurer les canvas affichés
-        for (const canvasRef of [resultCanvasRef, overlayCanvasRef]) {
+        for (const canvasRef of [resultCanvasRef, overlayCanvasRef, previewCanvasRef]) {
           const c = canvasRef.current;
           if (!c) continue;
           c.width = w;
@@ -187,6 +188,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
 
     const repaintResult = useCallback(() => {
       const canvas = resultCanvasRef.current;
+      const preview = previewCanvasRef.current;
       const orig = originalDataRef.current;
       const result = resultDataRef.current;
       const masks = masksRef.current;
@@ -194,11 +196,20 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-
       ctx.imageSmoothingEnabled = false;
 
       const corrected = applyMasks(result, orig, masks);
       ctx.putImageData(corrected, 0, 0);
+
+      // Mettre à jour l'aperçu temps réel (sans overlay)
+      if (preview) {
+        const pCtx = preview.getContext('2d');
+        if (pCtx) {
+          pCtx.imageSmoothingEnabled = false;
+          pCtx.clearRect(0, 0, preview.width, preview.height);
+          pCtx.putImageData(corrected, 0, 0);
+        }
+      }
     }, []);
 
     const repaintOverlay = useCallback(() => {
@@ -586,112 +597,213 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
           </span>
         </div>
 
-        {/* ── Canvas zone ── */}
-        <div
-          ref={containerRef}
-          style={{
-            flex: 1,
-            position: 'relative',
-            borderRadius: 10,
-            overflow: 'hidden',
-            backgroundImage: CHECKERBOARD,
-            backgroundSize: '16px 16px',
-            border: '2px solid var(--color-border-base)',
-            // cursor:none → cercle CSS personnalisé affiché à la place
-            cursor: isReady ? 'none' : 'wait',
-          }}
-        >
-          {/* Canvas 1 : résultat composité */}
-          <canvas
-            ref={resultCanvasRef}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              imageRendering: 'pixelated',
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Canvas 2 : overlay pinceau — intercepte les événements pointer */}
-          <canvas
-            ref={overlayCanvasRef}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              imageRendering: 'pixelated',
-              opacity: 0.85,
-              // Curseur CSS masqué : on affiche notre propre cercle
-              cursor: isReady ? 'none' : 'wait',
-            }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerEnter={updateCursor}
-            onPointerLeave={() => setCursor(null)}
-            onContextMenu={handleContextMenu}
-          />
-
-          {/* Cercle curseur pinceau — suit la souris, montre la taille réelle */}
-          {isReady && cursor && (
+        {/* ── Canvas zone — layout 2 colonnes ── */}
+        <div style={{ flex: 1, display: 'flex', gap: 8, minHeight: 0 }}>
+          {/* ── Colonne gauche : zone de pinceau ── */}
+          <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div
               style={{
-                position: 'absolute',
-                left: cursor.x - cursor.r,
-                top: cursor.y - cursor.r,
-                width: cursor.r * 2,
-                height: cursor.r * 2,
-                borderRadius: '50%',
-                border: `2px solid ${brushMode === 'keep' ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)'}`,
-                boxShadow: '0 0 0 1px rgba(0,0,0,0.6)',
-                pointerEvents: 'none',
-                zIndex: 10,
-              }}
-            />
-          )}
-
-          {/* Indicateur de chargement */}
-          {!isReady && (
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'rgba(0,0,0,0.5)',
-                color: 'var(--color-text-muted)',
-                fontSize: 13,
-              }}
-            >
-              Chargement…
-            </div>
-          )}
-
-          {/* Indicateur visuel du mode en overlay discret */}
-          {isReady && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                padding: '3px 8px',
-                borderRadius: 6,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 700,
-                background: brushMode === 'keep' ? 'rgba(16,185,129,0.85)' : 'rgba(239,68,68,0.85)',
-                color: '#fff',
-                pointerEvents: 'none',
+                color: 'var(--color-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                paddingLeft: 2,
               }}
             >
-              {brushMode === 'keep' ? '✓ Conserver' : '✕ Effacer'}
+              ✏️ Zone de retouche
             </div>
-          )}
+            <div
+              ref={containerRef}
+              style={{
+                flex: 1,
+                position: 'relative',
+                borderRadius: 10,
+                overflow: 'hidden',
+                backgroundImage: CHECKERBOARD,
+                backgroundSize: '16px 16px',
+                border: '2px solid var(--color-border-base)',
+                cursor: isReady ? 'none' : 'wait',
+              }}
+            >
+              {/* Canvas 1 : résultat composité */}
+              <canvas
+                ref={resultCanvasRef}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  imageRendering: 'pixelated',
+                  pointerEvents: 'none',
+                }}
+              />
+
+              {/* Canvas 2 : overlay pinceau — intercepte les événements pointer */}
+              <canvas
+                ref={overlayCanvasRef}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  imageRendering: 'pixelated',
+                  opacity: 0.85,
+                  cursor: isReady ? 'none' : 'wait',
+                }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerEnter={updateCursor}
+                onPointerLeave={() => setCursor(null)}
+                onContextMenu={handleContextMenu}
+              />
+
+              {/* Cercle curseur pinceau */}
+              {isReady && cursor && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: cursor.x - cursor.r,
+                    top: cursor.y - cursor.r,
+                    width: cursor.r * 2,
+                    height: cursor.r * 2,
+                    borderRadius: '50%',
+                    border: `2px solid ${brushMode === 'keep' ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)'}`,
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.6)',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}
+                />
+              )}
+
+              {/* Indicateur de chargement */}
+              {!isReady && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'var(--color-text-muted)',
+                    fontSize: 13,
+                  }}
+                >
+                  Chargement…
+                </div>
+              )}
+
+              {/* Badge mode actif */}
+              {isReady && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background:
+                      brushMode === 'keep' ? 'rgba(16,185,129,0.85)' : 'rgba(239,68,68,0.85)',
+                    color: '#fff',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {brushMode === 'keep' ? '✓ Conserver' : '✕ Effacer'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Colonne droite : aperçu résultat temps réel ── */}
+          <div
+            style={{
+              flex: '0 0 calc(45% - 8px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: 'var(--color-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                paddingLeft: 2,
+              }}
+            >
+              👁️ Aperçu résultat
+            </div>
+            <div
+              style={{
+                flex: 1,
+                position: 'relative',
+                borderRadius: 10,
+                overflow: 'hidden',
+                backgroundImage: CHECKERBOARD,
+                backgroundSize: '16px 16px',
+                border: '2px solid var(--color-border-base)',
+              }}
+            >
+              {/* Canvas aperçu — copie exacte du résultat sans overlay */}
+              <canvas
+                ref={previewCanvasRef}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  imageRendering: 'pixelated',
+                  pointerEvents: 'none',
+                }}
+              />
+
+              {/* Placeholder tant que non prêt */}
+              {!isReady && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--color-text-muted)',
+                    fontSize: 12,
+                  }}
+                >
+                  Chargement…
+                </div>
+              )}
+
+              {/* Badge "Aperçu en direct" */}
+              {isReady && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 8,
+                    padding: '2px 7px',
+                    borderRadius: 5,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    background: 'rgba(0,0,0,0.6)',
+                    color: 'rgba(255,255,255,0.7)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  ⚡ En direct
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

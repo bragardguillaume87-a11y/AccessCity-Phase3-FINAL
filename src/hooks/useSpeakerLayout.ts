@@ -25,6 +25,8 @@ interface SpeakerLayout {
   speakerPortraitUrl: string | null;
   /** Couleur HSL stable dérivée du nom du speaker. */
   speakerColor: string;
+  /** Vrai si le speaker est un narrateur (role='narrator' ou id='narrator'). Affichage pleine largeur sans portrait. */
+  isNarrator: boolean;
 }
 
 /**
@@ -38,29 +40,31 @@ interface SpeakerLayout {
 function resolveSceneChar(
   speakerNameOrId: string,
   sceneCharacters: SceneCharacter[],
-  characterLibrary: Character[],
+  characterLibrary: Character[]
 ): SceneCharacter | null {
   const lower = speakerNameOrId.toLowerCase().trim();
   if (!lower) return null;
 
-  return sceneCharacters.find(sc => {
-    // 1. ID exact (le dialogue.speaker stocke l'ID du personnage)
-    if (sc.characterId === speakerNameOrId) return true;
+  return (
+    sceneCharacters.find((sc) => {
+      // 1. ID exact (le dialogue.speaker stocke l'ID du personnage)
+      if (sc.characterId === speakerNameOrId) return true;
 
-    const char = characterLibrary.find(c => c.id === sc.characterId);
-    const charNameLower = char?.name?.toLowerCase().trim() ?? '';
-    if (!charNameLower) return false;
+      const char = characterLibrary.find((c) => c.id === sc.characterId);
+      const charNameLower = char?.name?.toLowerCase().trim() ?? '';
+      if (!charNameLower) return false;
 
-    // 2. Nom exact (case-insensitive)
-    if (charNameLower === lower) return true;
+      // 2. Nom exact (case-insensitive)
+      if (charNameLower === lower) return true;
 
-    // 3. Préfixe bidirectionnel (≥ 3 chars pour limiter les faux positifs)
-    const minLen = Math.min(charNameLower.length, lower.length);
-    if (minLen >= 3) {
-      return charNameLower.startsWith(lower) || lower.startsWith(charNameLower);
-    }
-    return false;
-  }) ?? null;
+      // 3. Préfixe bidirectionnel (≥ 3 chars pour limiter les faux positifs)
+      const minLen = Math.min(charNameLower.length, lower.length);
+      if (minLen >= 3) {
+        return charNameLower.startsWith(lower) || lower.startsWith(charNameLower);
+      }
+      return false;
+    }) ?? null
+  );
 }
 
 /**
@@ -80,10 +84,9 @@ export function useSpeakerLayout({
   moodOverrides = {},
 }: UseSpeakerLayoutParams): SpeakerLayout {
   const speakerSceneChar = useMemo(
-    () => speakerNameOrId
-      ? resolveSceneChar(speakerNameOrId, sceneCharacters, characterLibrary)
-      : null,
-    [speakerNameOrId, sceneCharacters, characterLibrary],
+    () =>
+      speakerNameOrId ? resolveSceneChar(speakerNameOrId, sceneCharacters, characterLibrary) : null,
+    [speakerNameOrId, sceneCharacters, characterLibrary]
   );
 
   /** Nom affiché : résolu depuis la bibliothèque, ou fallback sur la valeur brute. */
@@ -91,18 +94,16 @@ export function useSpeakerLayout({
     if (!speakerNameOrId) return '';
     if (!speakerSceneChar) {
       // Dernier recours : chercher par ID direct dans la bibliothèque (hors scène)
-      const char = characterLibrary.find(c => c.id === speakerNameOrId);
+      const char = characterLibrary.find((c) => c.id === speakerNameOrId);
       return char?.name ?? speakerNameOrId;
     }
-    const char = characterLibrary.find(c => c.id === speakerSceneChar.characterId);
+    const char = characterLibrary.find((c) => c.id === speakerSceneChar.characterId);
     return char?.name ?? speakerNameOrId;
   }, [speakerNameOrId, speakerSceneChar, characterLibrary]);
 
   const speakerIsOnRight = useMemo(
-    () => config.speakerAlign === 'left'
-      ? false
-      : (speakerSceneChar?.position.x ?? 0) >= 50,
-    [speakerSceneChar, config.speakerAlign],
+    () => (config.speakerAlign === 'left' ? false : (speakerSceneChar?.position.x ?? 0) >= 50),
+    [speakerSceneChar, config.speakerAlign]
   );
 
   const speakerPortraitUrl = useMemo(() => {
@@ -110,32 +111,39 @@ export function useSpeakerLayout({
 
     if (speakerSceneChar) {
       // Cas principal : speaker placé sur la scène → utilise son mood courant
-      const char = characterLibrary.find(c => c.id === speakerSceneChar.characterId);
+      const char = characterLibrary.find((c) => c.id === speakerSceneChar.characterId);
       if (!char?.sprites) return null;
       const mood = moodOverrides[speakerSceneChar.id] ?? speakerSceneChar.mood ?? 'neutral';
-      return char.sprites[mood]
-        ?? char.sprites['neutral']
-        ?? Object.values(char.sprites)[0]
-        ?? null;
+      return (
+        char.sprites[mood] ?? char.sprites['neutral'] ?? Object.values(char.sprites)[0] ?? null
+      );
     }
 
     // Fallback : speaker dans la bibliothèque mais non placé sur le canvas
     // (ex. protagoniste narrateur, PNJ hors-scène)
     if (speakerNameOrId) {
-      const char = characterLibrary.find(c => c.id === speakerNameOrId);
+      const char = characterLibrary.find((c) => c.id === speakerNameOrId);
       if (!char?.sprites) return null;
-      return char.sprites['neutral']
-        ?? Object.values(char.sprites)[0]
-        ?? null;
+      return char.sprites['neutral'] ?? Object.values(char.sprites)[0] ?? null;
     }
 
     return null;
   }, [speakerSceneChar, speakerNameOrId, characterLibrary, config.showPortrait, moodOverrides]);
 
   const speakerColor = useMemo(
-    () => speakerDisplayName ? hashStringToColor(speakerDisplayName) : '#22d3ee',
-    [speakerDisplayName],
+    () => (speakerDisplayName ? hashStringToColor(speakerDisplayName) : '#22d3ee'),
+    [speakerDisplayName]
   );
 
-  return { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor };
+  const isNarrator = useMemo(() => {
+    // Pas de speaker assigné = narration par convention VN (style Octopath Traveler)
+    if (!speakerNameOrId) return true;
+    if (speakerNameOrId === 'narrator') return true;
+    const char = characterLibrary.find(
+      (c) => c.id === speakerNameOrId || c.name?.toLowerCase() === speakerNameOrId.toLowerCase()
+    );
+    return char?.role === 'narrator';
+  }, [speakerNameOrId, characterLibrary]);
+
+  return { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor, isNarrator };
 }

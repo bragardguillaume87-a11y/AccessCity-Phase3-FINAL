@@ -264,7 +264,8 @@ export function DialogueBox({
   };
 
   // ── Layout VISUAL (mode visual novel séparé) ────────────────────────────────
-  if (config.layout === 'visual') {
+  // ⚠️ isNarrator prend toujours la priorité — le bloc narrateur est plus bas dans le code
+  if (config.layout === 'visual' && !isNarrator) {
     const nameplatePadTop = Math.round(36 * sf);
     const nameplateRadius = `${Math.round(8 * sf)}px ${Math.round(8 * sf)}px 0 0`;
     const nameplateX: React.CSSProperties = speakerIsOnRight

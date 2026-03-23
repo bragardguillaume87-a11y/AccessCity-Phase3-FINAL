@@ -134,6 +134,111 @@ export function applyMasks(result: ImageData, original: ImageData, masks: BrushM
   return new ImageData(out, result.width, result.height);
 }
 
+// ── Affinement intelligent depuis les graines ──────────────────────────────
+
+/**
+ * Propage les graines peintes à tout l'image via une table de correspondance couleur
+ * (style GrabCut simplifié, O(n) grâce à une quantification 4096 bins).
+ *
+ * Chaque pixel non-peint est classifié selon sa distance couleur minimale aux graines
+ * keepMask (vert) ou removeMask (rouge). Nécessite des graines des deux classes.
+ * Les pixels classifiés reçoivent la valeur 128 (vs 255 pour les tracés manuels).
+ *
+ * @param masks        - Masques à affiner (modifiés en place)
+ * @param originalData - ImageData de l'image originale (référence couleur)
+ * @param maxSeeds     - Nombre max de graines par classe (subsampling pour perf)
+ */
+export function smartRefineFromSeeds(
+  masks: BrushMasks,
+  originalData: ImageData,
+  maxSeeds = 200
+): void {
+  const { keepMask, removeMask, width, height } = masks;
+  const pixels = originalData.data;
+  const n = width * height;
+
+  // ── Collecter les graines ────────────────────────────────────────────────
+  const keepR: number[] = [];
+  const keepG: number[] = [];
+  const keepB: number[] = [];
+  const removeR: number[] = [];
+  const removeG: number[] = [];
+  const removeB: number[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const o = i * 4;
+    if (keepMask[i] > 0) {
+      keepR.push(pixels[o]);
+      keepG.push(pixels[o + 1]);
+      keepB.push(pixels[o + 2]);
+    } else if (removeMask[i] > 0) {
+      removeR.push(pixels[o]);
+      removeG.push(pixels[o + 1]);
+      removeB.push(pixels[o + 2]);
+    }
+  }
+
+  if (keepR.length === 0 || removeR.length === 0) return; // besoin des deux classes
+
+  // ── Subsampling uniforme ─────────────────────────────────────────────────
+  function sampleIdx(total: number, max: number): number[] {
+    if (total <= max) return Array.from({ length: total }, (_, i) => i);
+    const step = total / max;
+    return Array.from({ length: max }, (_, i) => Math.floor(i * step));
+  }
+
+  const kIdx = sampleIdx(keepR.length, maxSeeds);
+  const rIdx = sampleIdx(removeR.length, maxSeeds);
+
+  // ── Table de correspondance couleur — 4 bits/canal = 4096 bins ──────────
+  // key = (R >> 4) << 8 | (G >> 4) << 4 | (B >> 4)
+  const TABLE_SIZE = 4096;
+  const table = new Int8Array(TABLE_SIZE); // 1 = keep, -1 = remove
+
+  for (let bin = 0; bin < TABLE_SIZE; bin++) {
+    // Centre de la cellule quantifiée
+    const br = ((bin >> 8) & 0xf) * 16 + 8;
+    const bg = ((bin >> 4) & 0xf) * 16 + 8;
+    const bb = (bin & 0xf) * 16 + 8;
+
+    let minKeep = Infinity;
+    for (let ji = 0; ji < kIdx.length; ji++) {
+      const j = kIdx[ji];
+      const dr = br - keepR[j];
+      const dg = bg - keepG[j];
+      const db = bb - keepB[j];
+      const d = dr * dr + dg * dg + db * db;
+      if (d < minKeep) minKeep = d;
+    }
+
+    let minRemove = Infinity;
+    for (let ji = 0; ji < rIdx.length; ji++) {
+      const j = rIdx[ji];
+      const dr = br - removeR[j];
+      const dg = bg - removeG[j];
+      const db = bb - removeB[j];
+      const d = dr * dr + dg * dg + db * db;
+      if (d < minRemove) minRemove = d;
+    }
+
+    table[bin] = minKeep <= minRemove ? 1 : -1;
+  }
+
+  // ── Classification des pixels non-peints ─────────────────────────────────
+  for (let i = 0; i < n; i++) {
+    if (keepMask[i] > 0 || removeMask[i] > 0) continue;
+
+    const o = i * 4;
+    const bin = ((pixels[o] >> 4) << 8) | ((pixels[o + 1] >> 4) << 4) | (pixels[o + 2] >> 4);
+
+    if (table[bin] === 1) {
+      keepMask[i] = 128;
+    } else {
+      removeMask[i] = 128;
+    }
+  }
+}
+
 // ── Rendu de l'overlay canvas ──────────────────────────────────────────────
 
 /**

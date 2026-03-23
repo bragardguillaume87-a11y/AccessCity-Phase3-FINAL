@@ -21,7 +21,7 @@
 
 import { forwardRef, useEffect, useRef, useState, useCallback, useImperativeHandle } from 'react';
 import { motion } from 'framer-motion';
-import { Undo2, RotateCcw } from 'lucide-react';
+import { Undo2, RotateCcw, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   createEmptyMasks,
@@ -29,6 +29,7 @@ import {
   paintStroke,
   applyMasks,
   renderMaskOverlay,
+  smartRefineFromSeeds,
   type BrushMode,
   type BrushMasks,
 } from '@/utils/brushMask';
@@ -97,6 +98,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
     const [brushSize, setBrushSize] = useState(20); // en pixels image naturels
     const [canUndo, setCanUndo] = useState(false);
     const [isReady, setIsReady] = useState(false);
+    const [isRefining, setIsRefining] = useState(false);
     const isReadyRef = useRef(false); // accès stable dans l'imperative handle
 
     // Masques courants (ref pour accès stable dans les handlers pointer)
@@ -220,16 +222,43 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
     }, [repaintResult, repaintOverlay]);
 
     // ── Pointer → coordonnées image ───────────────────────────────────────
+    // IMPORTANT : objectFit:contain sur un canvas crée des bandes letterbox.
+    // getBoundingClientRect() retourne le conteneur entier, pas la zone image.
+    // Il faut calculer les offsets (imageLeft/imageTop) avant de mapper les coords.
 
     const toImageCoords = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
       const canvas = overlayCanvasRef.current;
       if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+
+      const naturalAspect = canvas.width / canvas.height; // ratio de l'image réelle
+      const displayAspect = rect.width / rect.height; // ratio du conteneur CSS
+
+      let imageW: number, imageH: number, imageLeft: number, imageTop: number;
+
+      if (naturalAspect > displayAspect) {
+        // Image + large que haute → barres en haut et en bas (letterbox vertical)
+        imageW = rect.width;
+        imageH = rect.width / naturalAspect;
+        imageLeft = 0;
+        imageTop = (rect.height - imageH) / 2;
+      } else {
+        // Image + haute que large → barres à gauche et à droite (pillarbox)
+        imageH = rect.height;
+        imageW = rect.height * naturalAspect;
+        imageLeft = (rect.width - imageW) / 2;
+        imageTop = 0;
+      }
+
       return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+        x: Math.max(
+          0,
+          Math.min(canvas.width - 1, (e.clientX - rect.left - imageLeft) * (canvas.width / imageW))
+        ),
+        y: Math.max(
+          0,
+          Math.min(canvas.height - 1, (e.clientY - rect.top - imageTop) * (canvas.height / imageH))
+        ),
       };
     }, []);
 
@@ -329,6 +358,27 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
       setCanUndo(false);
       scheduleRepaint();
     }, [scheduleRepaint]);
+
+    // ── Affinement intelligent ────────────────────────────────────────────
+
+    const handleSmartRefine = useCallback(() => {
+      const masks = masksRef.current;
+      const origData = originalDataRef.current;
+      if (!masks || !origData || isRefining) return;
+
+      // Sauvegarder un snapshot annulable
+      const snapshot = cloneMasks(masks);
+      historyRef.current = [...historyRef.current.slice(-MAX_HISTORY + 1), snapshot];
+      setCanUndo(true);
+      setIsRefining(true);
+
+      // Lancer dans une micro-tâche pour laisser React mettre à jour l'UI d'abord
+      requestAnimationFrame(() => {
+        smartRefineFromSeeds(masks, origData);
+        setIsRefining(false);
+        scheduleRepaint();
+      });
+    }, [isRefining, scheduleRepaint]);
 
     // ── Imperative handle ─────────────────────────────────────────────────
 
@@ -438,8 +488,34 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
             />
           </div>
 
-          {/* Undo + Reset */}
+          {/* Affiner + Undo + Reset */}
           <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.94 }}
+              disabled={!canUndo || isRefining}
+              onClick={handleSmartRefine}
+              title="Propager les zones peintes à toute l'image selon les couleurs (style GrabCut)"
+              style={{
+                height: 28,
+                padding: '0 10px',
+                fontSize: 11,
+                fontWeight: 700,
+                borderRadius: 7,
+                cursor: canUndo && !isRefining ? 'pointer' : 'default',
+                border: '2px solid rgba(139,92,246,0.5)',
+                background: canUndo && !isRefining ? 'rgba(139,92,246,0.18)' : 'transparent',
+                color:
+                  canUndo && !isRefining ? 'var(--color-primary)' : 'var(--color-text-disabled)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all 0.15s',
+              }}
+            >
+              <Wand2 size={12} />
+              {isRefining ? 'Analyse…' : '✨ Affiner'}
+            </motion.button>
             <Button
               size="sm"
               variant="ghost"
@@ -483,7 +559,9 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
             <span style={{ color: '#ef4444', fontWeight: 700 }}>●</span> Rouge : zone à effacer
             (clic gauche en mode "Effacer")
           </span>
-          <span style={{ opacity: 0.6 }}>Clic droit = outil inverse · Ctrl+Z = annuler</span>
+          <span style={{ opacity: 0.6 }}>
+            Clic droit = outil inverse · Ctrl+Z = annuler · ✨ Affiner = propager par couleur
+          </span>
         </div>
 
         {/* ── Canvas zone ── */}

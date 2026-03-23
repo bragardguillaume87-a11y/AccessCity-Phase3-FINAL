@@ -166,7 +166,9 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
         <Button
           variant="token-primary"
           size="sm"
-          onClick={() => onOpenModal('assets', { category: 'backgrounds' })}
+          onClick={() =>
+            onOpenModal('assets', { category: 'backgrounds', targetSceneId: sceneId ?? undefined })
+          }
           className="w-full justify-start"
           aria-label="Parcourir la bibliothèque de fonds"
         >

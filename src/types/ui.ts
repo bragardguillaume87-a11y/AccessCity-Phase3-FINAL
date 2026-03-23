@@ -2,11 +2,18 @@
  * Section identifiers for the UnifiedPanel icon bar (Panel 4).
  * Controls which content is shown in Panel 3.
  */
-export type SectionId = 'backgrounds' | 'text' | 'characters' | 'objects' | 'audio' | 'dialogue' | 'effects';
+export type SectionId =
+  | 'backgrounds'
+  | 'text'
+  | 'characters'
+  | 'objects'
+  | 'audio'
+  | 'dialogue'
+  | 'effects';
 
 export const SECTION_LABELS: Record<SectionId, string> = {
   backgrounds: 'Fond',
-  text: 'Texte',
+  text: 'Style',
   characters: 'Persos',
   objects: 'Objets',
   audio: 'Audio',
@@ -20,8 +27,9 @@ export const SECTION_LABELS: Record<SectionId, string> = {
  * - binary: Dialogue with 2 simple choices
  * - dice: Dialogue with dice checks (1-2 tests)
  * - expert: Dialogue with multiple choices and effects (2-4 choices)
+ * - minigame: Dialogue replaced by an interactive mini-game (FALC, QTE, Braille)
  */
-export type ComplexityLevel = 'linear' | 'binary' | 'dice' | 'expert';
+export type ComplexityLevel = 'linear' | 'binary' | 'dice' | 'expert' | 'minigame';
 
 export type SelectedElementType =
   | { type: 'scene'; id: string }
@@ -45,7 +53,6 @@ export type ModalType =
   | 'addCharacter'
   | null;
 
-
 export interface ModalContext {
   characterId?: string;
   category?: string;
@@ -62,4 +69,10 @@ export interface ModalContext {
   /** Ambient track slot (0 or 1). Only used when purpose === 'ambientTrack'. */
   slot?: 0 | 1;
 }
-export type StudioModule = 'vn-editor' | 'topdown' | 'behavior' | 'ui-builder' | 'preview';
+export type StudioModule =
+  | 'vn-editor'
+  | 'topdown'
+  | 'behavior'
+  | 'ui-builder'
+  | 'distribution'
+  | 'preview';

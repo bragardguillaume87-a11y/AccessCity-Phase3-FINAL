@@ -12,14 +12,17 @@ import { useUIStore } from '@/stores';
 import type { SectionId } from '@/types';
 import { SECTION_LABELS } from '@/types';
 
-const SECTION_ICONS: Record<SectionId, React.FC<{ size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>> = {
+const SECTION_ICONS: Record<
+  SectionId,
+  React.FC<{ size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>
+> = {
   backgrounds: Image,
-  audio:       Volume2,
-  characters:  Users,
-  objects:     Package,
-  dialogue:    MessageSquare,
-  text:        Type,
-  effects:     Sparkles,
+  audio: Volume2,
+  characters: Users,
+  objects: Package,
+  dialogue: MessageSquare,
+  text: Type,
+  effects: Sparkles,
 };
 
 // Re-exports for backward compatibility
@@ -36,8 +39,8 @@ export { SECTION_LABELS } from '@/types';
  * Lit `activeSection` directement depuis uiStore — aucune prop nécessaire.
  */
 export function SectionContentPanel() {
-  const activeSection = useUIStore(s => s.activeSection);
-  const setActiveSection = useUIStore(s => s.setActiveSection);
+  const activeSection = useUIStore((s) => s.activeSection);
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
 
   const activeLabel = activeSection ? SECTION_LABELS[activeSection as SectionId] : '';
   const SectionIcon = activeSection ? SECTION_ICONS[activeSection as SectionId] : null;
@@ -85,6 +88,21 @@ export function SectionContentPanel() {
             </button>
           </div>
 
+          {/* Sous-titre : portée globale du panneau Style */}
+          {activeSection === 'text' && (
+            <div
+              style={{
+                padding: '4px 12px 5px',
+                fontSize: 10,
+                color: 'var(--color-text-muted)',
+                borderBottom: '1px solid var(--color-border-base)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Tous les dialogues du projet
+            </div>
+          )}
+
           {/* Zone de contenu défilable */}
           <div className="flex-1 overflow-y-auto">
             {activeSection === 'backgrounds' && (
@@ -97,9 +115,7 @@ export function SectionContentPanel() {
               </div>
             )}
             {activeSection === 'objects' && <ObjectsSection />}
-            {activeSection === 'audio' && (
-              <AudioSection onOpenModal={handleOpenModal} />
-            )}
+            {activeSection === 'audio' && <AudioSection onOpenModal={handleOpenModal} />}
             {activeSection === 'dialogue' && <DialogueBoxSection />}
             {activeSection === 'effects' && <EffectsSection />}
           </div>

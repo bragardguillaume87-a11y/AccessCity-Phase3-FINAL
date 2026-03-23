@@ -577,33 +577,6 @@ export function TextSection() {
             </p>
           </div>
         )}
-
-        {/* Alignement du nom */}
-        <div>
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
-            Alignement du nom
-          </p>
-          <div className="sp-seg">
-            <button
-              onClick={() => update({ speakerAlign: 'auto' })}
-              className={`sp-seg-btn${cfg.speakerAlign === 'auto' ? ' active' : ''}`}
-              aria-pressed={cfg.speakerAlign === 'auto'}
-              title="Gauche si sprite x<50%, droite sinon"
-            >
-              Auto
-            </button>
-            <button
-              onClick={() => update({ speakerAlign: 'left' })}
-              className={`sp-seg-btn${cfg.speakerAlign === 'left' ? ' active' : ''}`}
-              aria-pressed={cfg.speakerAlign === 'left'}
-            >
-              Toujours gauche
-            </button>
-          </div>
-          <p className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">
-            Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
-          </p>
-        </div>
       </PanelSection>
 
       {/* ── Nom du personnage ── */}
@@ -712,6 +685,33 @@ export function TextSection() {
         <p className="text-[10px] text-[var(--color-text-muted)] leading-tight -mt-1">
           Aperçu en temps réel dans la boîte de dialogue.
         </p>
+
+        {/* Alignement du nom — déplacé ici depuis PORTRAIT (propriété du nom, pas du portrait) */}
+        <div className="mt-3">
+          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
+            Alignement du nom
+          </p>
+          <div className="sp-seg">
+            <button
+              onClick={() => update({ speakerAlign: 'auto' })}
+              className={`sp-seg-btn${cfg.speakerAlign === 'auto' ? ' active' : ''}`}
+              aria-pressed={cfg.speakerAlign === 'auto'}
+              title="Gauche si sprite x<50%, droite sinon"
+            >
+              Auto
+            </button>
+            <button
+              onClick={() => update({ speakerAlign: 'left' })}
+              className={`sp-seg-btn${cfg.speakerAlign === 'left' ? ' active' : ''}`}
+              aria-pressed={cfg.speakerAlign === 'left'}
+            >
+              Toujours gauche
+            </button>
+          </div>
+          <p className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">
+            Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
+          </p>
+        </div>
       </PanelSection>
 
       {/* ── Narrateur ── */}

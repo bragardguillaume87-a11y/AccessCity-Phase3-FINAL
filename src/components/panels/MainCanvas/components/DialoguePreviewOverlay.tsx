@@ -53,29 +53,28 @@ export function DialoguePreviewOverlay({
   canvasWidth,
 }: DialoguePreviewOverlayProps) {
   // Facteur d'échelle : typographie proportionnelle au canvas de l'éditeur
-  const scaleFactor = (canvasWidth && canvasWidth > 0)
-    ? canvasWidth / REFERENCE_CANVAS_WIDTH
-    : 1;
+  const scaleFactor = canvasWidth && canvasWidth > 0 ? canvasWidth / REFERENCE_CANVAS_WIDTH : 1;
   // ── Store reads ──────────────────────────────────────────────────────────────
-  const characterLibrary = useCharactersStore(s => s.characters);
-  const sceneId = useUIStore(s => s.selectedSceneForEdit);
-  const getCharactersForScene = useSceneElementsStore(s => s.getCharactersForScene);
+  const characterLibrary = useCharactersStore((s) => s.characters);
+  const sceneId = useUIStore((s) => s.selectedSceneForEdit);
+  const getCharactersForScene = useSceneElementsStore((s) => s.getCharactersForScene);
 
   const sceneCharacters = useMemo(
     () => (sceneId ? getCharactersForScene(sceneId) : []),
-    [sceneId, getCharactersForScene],
+    [sceneId, getCharactersForScene]
   );
 
   // ── Config (hook partagé avec PreviewPlayer) ──────────────────────────────
   const dialogueBoxConfig = useDialogueBoxConfig(dialogue?.boxStyle);
 
   // ── Speaker layout (hook partagé avec PreviewPlayer) ─────────────────────
-  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor } = useSpeakerLayout({
-    speakerNameOrId: speakerName,
-    sceneCharacters,
-    characterLibrary,
-    config: dialogueBoxConfig,
-  });
+  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor, isNarrator } =
+    useSpeakerLayout({
+      speakerNameOrId: speakerName,
+      sceneCharacters,
+      characterLibrary,
+      config: dialogueBoxConfig,
+    });
 
   // ── Typewriter ────────────────────────────────────────────────────────────────
   const { displayText, isComplete, skip } = useTypewriter(currentDialogueText, {
@@ -102,7 +101,15 @@ export function DialoguePreviewOverlay({
 
     const timer = setTimeout(() => onNavigate('next'), 1200);
     return () => clearTimeout(timer);
-  }, [isAutoPlaying, isComplete, dialogue, dialogueIndex, totalDialogues, onNavigate, onAutoPlayComplete]);
+  }, [
+    isAutoPlaying,
+    isComplete,
+    dialogue,
+    dialogueIndex,
+    totalDialogues,
+    onNavigate,
+    onAutoPlayComplete,
+  ]);
 
   if (!dialogue) return null;
 
@@ -114,7 +121,10 @@ export function DialoguePreviewOverlay({
       <Button
         variant="ghost"
         size="sm"
-        onClick={(e) => { e.stopPropagation(); onNavigate('prev'); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onNavigate('prev');
+        }}
         disabled={dialogueIndex === 0}
         className="h-5 w-5 p-0 disabled:opacity-30 text-white/60 hover:text-white hover:bg-white/10"
         aria-label="Dialogue précédent"
@@ -127,7 +137,10 @@ export function DialoguePreviewOverlay({
       <Button
         variant="ghost"
         size="sm"
-        onClick={(e) => { e.stopPropagation(); onNavigate('next'); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onNavigate('next');
+        }}
         disabled={dialogueIndex >= totalDialogues - 1}
         className="h-5 w-5 p-0 disabled:opacity-30 text-white/60 hover:text-white hover:bg-white/10"
         aria-label="Dialogue suivant"
@@ -137,14 +150,18 @@ export function DialoguePreviewOverlay({
     </div>
   );
 
-  const position = dialogueBoxConfig.position;
+  // Les narrateurs s'affichent toujours au centre (style Octopath Traveler),
+  // même règle que dans PreviewPlayer.
+  const position = isNarrator ? 'center' : dialogueBoxConfig.position;
 
   return (
     <div
       className={`absolute pointer-events-none ${
-        position === 'top'    ? 'top-0 left-0 right-0' :
-        position === 'center' ? 'inset-0 flex items-center' :
-        'bottom-0 left-0 right-0'
+        position === 'top'
+          ? 'top-0 left-0 right-0'
+          : position === 'center'
+            ? 'inset-0 flex items-center'
+            : 'bottom-0 left-0 right-0'
       }`}
       style={{ zIndex: Z_INDEX.CANVAS_DIALOGUE_OVERLAY }}
     >
@@ -154,27 +171,40 @@ export function DialoguePreviewOverlay({
           className="absolute left-0 right-0 pointer-events-none"
           style={{
             ...(position === 'top'
-              ? { top: 0, height: '50%', background: 'linear-gradient(to bottom, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)' }
-              : { bottom: 0, height: '55%', background: 'linear-gradient(to top, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)' }
-            ),
+              ? {
+                  top: 0,
+                  height: '50%',
+                  background:
+                    'linear-gradient(to bottom, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
+                }
+              : {
+                  bottom: 0,
+                  height: '55%',
+                  background:
+                    'linear-gradient(to top, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
+                }),
           }}
           aria-hidden="true"
         />
       )}
 
       {/* Boîte de dialogue partagée — 76% de la largeur du canvas (identique à PreviewPlayer) */}
-      <div className={`relative px-4 max-w-[76%] mx-auto w-full pointer-events-auto ${
-        position === 'top' ? 'pt-3' : position === 'center' ? 'py-2' : 'pb-3'
-      }`}>
+      <div
+        className={`relative px-4 max-w-[76%] mx-auto w-full pointer-events-auto ${
+          position === 'top' ? 'pt-3' : position === 'center' ? 'py-2' : 'pb-3'
+        }`}
+      >
         <DialogueBox
-          speaker={speakerDisplayName || undefined}
+          speaker={isNarrator ? undefined : speakerDisplayName || undefined}
           displayText={displayText}
+          richText={isNarrator ? undefined : dialogue.richText}
           choices={hasChoices ? dialogue.choices : undefined}
+          isNarrator={isNarrator}
           isTypewriterDone={isComplete}
           hasChoices={hasChoices}
           config={dialogueBoxConfig}
           scaleFactor={scaleFactor}
-          speakerPortraitUrl={speakerPortraitUrl}
+          speakerPortraitUrl={isNarrator ? null : speakerPortraitUrl}
           speakerIsOnRight={speakerIsOnRight}
           speakerColor={speakerColor}
           onAdvance={skip}

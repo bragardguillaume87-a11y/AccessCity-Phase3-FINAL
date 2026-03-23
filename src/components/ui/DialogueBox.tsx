@@ -48,6 +48,11 @@ export const DIALOGUE_BOX_DEFAULTS: Required<DialogueBoxStyle> = {
   nameColor: '',
   nameShadow: DEFAULT_NAME_SHADOW,
   nameLetterSpacing: 1.5,
+  // Narrateur — style Octopath Traveler par défaut
+  narratorBgColor: '#070a1a',
+  narratorTextColor: '#ede8d5',
+  narratorBorderColor: '#c9a84c',
+  narratorBgOpacity: 0.93,
 };
 
 /**
@@ -576,9 +581,9 @@ export function DialogueBox({
   // Boîte navy semi-transparente, bordure dorée, coins ornementaux, texte Crimson Pro italique crème.
   // Pas de nameplate — l'absence du nom signale la narration (convention VN universelle).
   if (isNarrator) {
-    const GOLD = '#c9a84c';
-    const CREAM = '#ede8d5';
-    const BOX_BG = 'rgba(7, 10, 26, 0.93)';
+    const GOLD = config.narratorBorderColor;
+    const CREAM = config.narratorTextColor;
+    const BOX_BG = hexToRgba(config.narratorBgColor, config.narratorBgOpacity);
 
     const padX = Math.round(30 * sf);
     const padY = Math.round(18 * sf);

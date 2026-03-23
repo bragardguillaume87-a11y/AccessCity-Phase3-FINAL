@@ -36,6 +36,10 @@ const UI_DEFAULTS: Required<DialogueBoxStyle> = {
   nameColor: '',
   nameShadow: DEFAULT_NAME_SHADOW,
   nameLetterSpacing: 1.5,
+  narratorBgColor: '#070a1a',
+  narratorTextColor: '#ede8d5',
+  narratorBorderColor: '#c9a84c',
+  narratorBgOpacity: 0.93,
 };
 
 // ── Presets thème ──────────────────────────────────────────────────────────────
@@ -708,6 +712,146 @@ export function TextSection() {
         <p className="text-[10px] text-[var(--color-text-muted)] leading-tight -mt-1">
           Aperçu en temps réel dans la boîte de dialogue.
         </p>
+      </PanelSection>
+
+      {/* ── Narrateur ── */}
+      <PanelSection title="NARRATEUR" id="dlgbox-narrator" defaultOpen={false}>
+        <p className="text-[10px] text-[var(--color-text-muted)] mb-3 leading-relaxed">
+          Dialogues sans speaker — style Octopath Traveler (boîte navy + bordure dorée).
+        </p>
+
+        {/* Mini-preview live (Bret Victor — montrer la chose réelle) */}
+        <div
+          className="mb-3 relative overflow-hidden"
+          style={{
+            background: `${cfg.narratorBgColor}${Math.round((cfg.narratorBgOpacity ?? 0.93) * 255)
+              .toString(16)
+              .padStart(2, '0')}`,
+            border: `1.5px solid ${cfg.narratorBorderColor}`,
+            borderRadius: 4,
+            padding: '10px 14px',
+            boxShadow: `0 0 0 1px ${cfg.narratorBorderColor}18, inset 0 0 20px rgba(0,0,0,0.3)`,
+          }}
+          aria-hidden="true"
+        >
+          {/* Coins décoratifs */}
+          {(['tl', 'tr', 'bl', 'br'] as const).map((pos) => (
+            <span
+              key={pos}
+              style={{
+                position: 'absolute',
+                width: 7,
+                height: 7,
+                top: pos.startsWith('t') ? 3 : undefined,
+                bottom: pos.startsWith('b') ? 3 : undefined,
+                left: pos.endsWith('l') ? 4 : undefined,
+                right: pos.endsWith('r') ? 4 : undefined,
+                borderTop: pos.startsWith('t')
+                  ? `1.5px solid ${cfg.narratorBorderColor}`
+                  : undefined,
+                borderBottom: pos.startsWith('b')
+                  ? `1.5px solid ${cfg.narratorBorderColor}`
+                  : undefined,
+                borderLeft: pos.endsWith('l')
+                  ? `1.5px solid ${cfg.narratorBorderColor}`
+                  : undefined,
+                borderRight: pos.endsWith('r')
+                  ? `1.5px solid ${cfg.narratorBorderColor}`
+                  : undefined,
+              }}
+            />
+          ))}
+          {/* Séparateur ornemental */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to right, transparent, ${cfg.narratorBorderColor}55)`,
+              }}
+            />
+            <span style={{ color: cfg.narratorBorderColor, fontSize: 7, lineHeight: 1 }}>✦</span>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to left, transparent, ${cfg.narratorBorderColor}55)`,
+              }}
+            />
+          </div>
+          <p
+            style={{
+              fontFamily: "'Crimson Pro', Georgia, serif",
+              fontStyle: 'italic',
+              fontSize: 11,
+              color: cfg.narratorTextColor,
+              lineHeight: 1.7,
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            Le vent soufflait sur la plaine silencieuse…
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to right, transparent, ${cfg.narratorBorderColor}55)`,
+              }}
+            />
+            <span style={{ color: cfg.narratorBorderColor, fontSize: 7, lineHeight: 1 }}>✦</span>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to left, transparent, ${cfg.narratorBorderColor}55)`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Couleurs */}
+        <ColorRow
+          label="Fond"
+          value={cfg.narratorBgColor ?? '#070a1a'}
+          onChange={(v) => update({ narratorBgColor: v })}
+        />
+        <ColorRow
+          label="Texte"
+          value={cfg.narratorTextColor ?? '#ede8d5'}
+          onChange={(v) => update({ narratorTextColor: v })}
+        />
+        <ColorRow
+          label="Bordure / ✦"
+          value={cfg.narratorBorderColor ?? '#c9a84c'}
+          onChange={(v) => update({ narratorBorderColor: v })}
+        />
+        <SliderRow
+          label="Opacité du fond"
+          value={Math.round((cfg.narratorBgOpacity ?? 0.93) * 100)}
+          min={20}
+          max={100}
+          step={5}
+          unit="%"
+          onChange={(v) => update({ narratorBgOpacity: v / 100 })}
+          ariaLabel={`Opacité fond narrateur : ${Math.round((cfg.narratorBgOpacity ?? 0.93) * 100)} %`}
+        />
+
+        {/* Reset Octopath */}
+        <button
+          onClick={() =>
+            update({
+              narratorBgColor: '#070a1a',
+              narratorTextColor: '#ede8d5',
+              narratorBorderColor: '#c9a84c',
+              narratorBgOpacity: 0.93,
+            })
+          }
+          className="mt-2 w-full text-xs py-1.5 px-3 rounded-lg border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/60 hover:text-[var(--color-primary)] transition-colors"
+        >
+          ↩ Réinitialiser style Octopath
+        </button>
       </PanelSection>
     </div>
   );

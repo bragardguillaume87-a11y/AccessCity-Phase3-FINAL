@@ -1,4 +1,4 @@
-import type { Condition, DiceCheck, Effect } from './game';
+import type { Condition, DiceCheck, Effect, MinigameConfig } from './game';
 import type { SceneAudio, DialogueAudio, AmbientAudio } from './audio';
 import type { CinematicEvent, CinematicTracks } from './cinematic';
 import type { SceneEffectConfig } from './sceneEffect';
@@ -137,12 +137,27 @@ export interface DialogueBoxStyle {
   nameShadow?: 'none' | 'subtle' | 'glow' | 'hard' | 'neon';
   /** Espacement des lettres du nom en px (0–8, défaut : 1.5) */
   nameLetterSpacing?: number;
+  // ── Boîte narrateur (dialogues sans speaker) ──────────────────────────────
+  /** Fond de la boîte narrateur en hex (défaut : '#070a1a' — bleu nuit Octopath). */
+  narratorBgColor?: string;
+  /** Couleur du texte narrateur en hex (défaut : '#ede8d5' — crème Octopath). */
+  narratorTextColor?: string;
+  /** Couleur de la bordure et des ornements narrateur en hex (défaut : '#c9a84c' — or). */
+  narratorBorderColor?: string;
+  /** Opacité du fond narrateur 0–1 (défaut : 0.93). */
+  narratorBgOpacity?: number;
 }
 
 export interface Dialogue {
   id: string;
   speaker: string;
   text: string;
+  /**
+   * Texte enrichi en HTML (gras, couleurs) — set par le Surligneur dans TextTab.
+   * Toujours synchronisé avec `text` (version plain text pour le typewriter).
+   * Si absent, le rendu utilise `text` directement.
+   */
+  richText?: string;
   choices: DialogueChoice[];
   sfx?: DialogueAudio;
   nextDialogueId?: string;
@@ -162,6 +177,14 @@ export interface Dialogue {
   boxStyle?: DialogueBoxStyle;
   /** Marque ce dialogue comme nœud de conclusion intentionnel (fin de l'histoire). */
   isConclusion?: boolean;
+  /** Config mini-jeu — uniquement quand ComplexityLevel === 'minigame'. */
+  minigame?: MinigameConfig;
+  /**
+   * Sous-type visuel du dialogue.
+   * - 'phonecall' : vignette sombre, icône téléphone, fond neutre.
+   * - 'normal'    : rendu standard (défaut).
+   */
+  dialogueSubtype?: 'normal' | 'phonecall';
 }
 
 type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
@@ -174,6 +197,8 @@ export interface DialogueChoice {
   nextSceneId?: string;
   nextDialogueId?: string;
   diceCheck?: DiceCheck;
+  /** Conditions de visibilité — le choix est masqué si une condition échoue. Vide = toujours visible. */
+  conditions?: Condition[];
 }
 
 export interface SceneCharacter {

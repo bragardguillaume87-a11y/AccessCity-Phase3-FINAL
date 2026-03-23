@@ -320,34 +320,6 @@ export function TextSection() {
         </div>
       </PanelSection>
 
-      {/* ── Mise en page ── */}
-      <PanelSection title="MISE EN PAGE" id="dlgbox-layout" defaultOpen={true}>
-        <div className="grid grid-cols-2 gap-2 mb-1">
-          {(
-            [
-              { value: 'classique', icon: '🗨️', label: 'Classique', desc: 'Tout-en-un' },
-              { value: 'visual', icon: '🎭', label: 'Visual', desc: 'Tab + boîte' },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => update({ layout: opt.value })}
-              aria-pressed={cfg.layout === opt.value}
-              className={[
-                'flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all',
-                cfg.layout === opt.value
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                  : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-muted)]',
-              ].join(' ')}
-            >
-              <span className="text-xl leading-none">{opt.icon}</span>
-              <span className="text-[11px] font-semibold leading-none">{opt.label}</span>
-              <span className="text-[9px] leading-none opacity-70">{opt.desc}</span>
-            </button>
-          ))}
-        </div>
-      </PanelSection>
-
       {/* ── Texte — vitesse + taille ── */}
       <PanelSection title="TEXTE" id="dlgbox-text" defaultOpen={true}>
         <SliderRow
@@ -372,43 +344,71 @@ export function TextSection() {
         />
       </PanelSection>
 
-      {/* ── Transitions ── */}
-      <PanelSection title="TRANSITIONS" id="dlgbox-transition" defaultOpen={true}>
-        <div className="grid grid-cols-3 gap-2 mb-1">
-          {[
-            { value: 'aucune' as const, icon: '⚡', label: 'Instantané', desc: 'Swap direct' },
-            { value: 'fondu' as const, icon: '🌅', label: 'Fondu', desc: 'Fade doux' },
-            { value: 'glisse' as const, icon: '🎭', label: 'Glisse', desc: 'Style VN' },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => update({ dialogueTransition: opt.value })}
-              aria-pressed={cfg.dialogueTransition === opt.value}
-              className={[
-                'flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all',
-                cfg.dialogueTransition === opt.value
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                  : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-muted)]',
-              ].join(' ')}
-            >
-              <span className="text-xl leading-none">{opt.icon}</span>
-              <span className="text-[11px] font-semibold leading-none">{opt.label}</span>
-              <span className="text-[9px] leading-none opacity-70">{opt.desc}</span>
-            </button>
-          ))}
-        </div>
-        <p className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">
-          {cfg.dialogueTransition === 'aucune' &&
-            'Le texte change sans animation — idéal pour les lecteurs rapides.'}
-          {cfg.dialogueTransition === 'fondu' &&
-            'La boîte reste fixe, le texte disparaît puis réapparaît en douceur (150 ms).'}
-          {cfg.dialogueTransition === 'glisse' &&
-            'La boîte glisse légèrement vers le haut à chaque changement de dialogue.'}
-        </p>
-      </PanelSection>
+      {/* ── Apparence — 5 sous-accordéons (mise en page, transitions, thèmes, couleurs, style) ── */}
+      <PanelSection title="APPARENCE" id="dlgbox-style" defaultOpen={true}>
+        {/* Mise en page — intégré depuis PanelSection de premier niveau */}
+        <SubSection title="MISE EN PAGE" defaultOpen={true}>
+          <div className="grid grid-cols-2 gap-2 mb-1">
+            {(
+              [
+                { value: 'classique', icon: '🗨️', label: 'Classique', desc: 'Tout-en-un' },
+                { value: 'visual', icon: '🎭', label: 'Visual', desc: 'Tab + boîte' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => update({ layout: opt.value })}
+                aria-pressed={cfg.layout === opt.value}
+                className={[
+                  'flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all',
+                  cfg.layout === opt.value
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                    : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-muted)]',
+                ].join(' ')}
+              >
+                <span className="text-xl leading-none">{opt.icon}</span>
+                <span className="text-[11px] font-semibold leading-none">{opt.label}</span>
+                <span className="text-[9px] leading-none opacity-70">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </SubSection>
 
-      {/* ── Apparence — 3 sous-accordéons ── */}
-      <PanelSection title="APPARENCE" id="dlgbox-style" defaultOpen={false}>
+        {/* Transitions — intégré depuis PanelSection de premier niveau */}
+        <SubSection title="TRANSITIONS" defaultOpen={true}>
+          <div className="grid grid-cols-3 gap-2 mb-1">
+            {[
+              { value: 'aucune' as const, icon: '⚡', label: 'Instantané', desc: 'Swap direct' },
+              { value: 'fondu' as const, icon: '🌅', label: 'Fondu', desc: 'Fade doux' },
+              { value: 'glisse' as const, icon: '🎭', label: 'Glisse', desc: 'Style VN' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => update({ dialogueTransition: opt.value })}
+                aria-pressed={cfg.dialogueTransition === opt.value}
+                className={[
+                  'flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all',
+                  cfg.dialogueTransition === opt.value
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                    : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-muted)]',
+                ].join(' ')}
+              >
+                <span className="text-xl leading-none">{opt.icon}</span>
+                <span className="text-[11px] font-semibold leading-none">{opt.label}</span>
+                <span className="text-[9px] leading-none opacity-70">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">
+            {cfg.dialogueTransition === 'aucune' &&
+              'Le texte change sans animation — idéal pour les lecteurs rapides.'}
+            {cfg.dialogueTransition === 'fondu' &&
+              'La boîte reste fixe, le texte disparaît puis réapparaît en douceur (150 ms).'}
+            {cfg.dialogueTransition === 'glisse' &&
+              'La boîte glisse légèrement vers le haut à chaque changement de dialogue.'}
+          </p>
+        </SubSection>
+
         {/* Thèmes */}
         <SubSection title="THÈMES" defaultOpen={true}>
           <div className="grid grid-cols-5 gap-1 mb-2">

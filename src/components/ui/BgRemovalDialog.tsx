@@ -13,7 +13,7 @@
  * @module components/ui/BgRemovalDialog
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wand2, Cpu, Loader2, RotateCcw, Check, ArrowLeft, Pencil } from 'lucide-react';
@@ -166,40 +166,57 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
     [mode, imageUrl, tolerance, processing]
   );
 
-  // Changer de mode : reset systématique + chargement immédiat en mode manuel
-  useEffect(() => {
-    setResultBlob(null);
-    setResultDataUrl(null);
-    setError(null);
-    setCorrectionPhase(false);
-    setAiProgress(null);
+  // Changement de mode — géré via callback pour pouvoir transporter le résultat chroma → Manuel
+  const handleSetMode = useCallback(
+    (newMode: Mode) => {
+      setError(null);
+      setAiProgress(null);
 
-    if (mode !== 'manual') return;
-
-    // Mode manuel : charger l'original comme point de départ de Phase 2
-    let cancelled = false;
-    setProcessing(true);
-
-    (async () => {
-      try {
-        const blob = await imageUrlToBlob(imageUrl);
-        if (cancelled) return;
-        const dataUrl = await blobToDataURL(blob);
-        if (cancelled) return;
-        setResultBlob(blob);
-        setResultDataUrl(dataUrl);
-        setCorrectionPhase(true);
-      } catch {
-        if (!cancelled) setError("Impossible de charger l'image originale");
-      } finally {
-        if (!cancelled) setProcessing(false);
+      if (newMode !== 'manual') {
+        // Basculer vers IA ou Baguette : reset complet
+        setResultBlob(null);
+        setResultDataUrl(null);
+        setCorrectionPhase(false);
+        setProcessing(false);
+        setMode(newMode);
+        return;
       }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, imageUrl]);
+      // → Manuel
+      setMode('manual');
+
+      if (resultBlob && resultDataUrl) {
+        // Résultat chroma-key existant → transporter directement en Phase 2
+        setCorrectionPhase(true);
+        setProcessing(false);
+        return;
+      }
+
+      // Aucun résultat préalable → charger l'original comme point de départ du pinceau
+      setResultBlob(null);
+      setResultDataUrl(null);
+      setCorrectionPhase(false);
+      setProcessing(true);
+
+      const cancelled = { current: false };
+      (async () => {
+        try {
+          const blob = await imageUrlToBlob(imageUrl);
+          if (cancelled.current) return;
+          const dataUrl = await blobToDataURL(blob);
+          if (cancelled.current) return;
+          setResultBlob(blob);
+          setResultDataUrl(dataUrl);
+          setCorrectionPhase(true);
+        } catch {
+          if (!cancelled.current) setError("Impossible de charger l'image originale");
+        } finally {
+          if (!cancelled.current) setProcessing(false);
+        }
+      })();
+    },
+    [resultBlob, resultDataUrl, imageUrl]
+  );
 
   // ── Handler phase 2 : Enregistrer ─────────────────────────────────────
 
@@ -349,7 +366,7 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
                 ).map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => setMode(m.id)}
+                    onClick={() => handleSetMode(m.id)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -770,7 +787,14 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={mode === 'manual' ? () => setMode('ai') : resetToPhase1}
+                onClick={
+                  mode === 'manual'
+                    ? () => {
+                        resetToPhase1();
+                        setMode('ai');
+                      }
+                    : resetToPhase1
+                }
                 style={{ marginRight: 'auto' }}
               >
                 <ArrowLeft size={13} style={{ marginRight: 4 }} />

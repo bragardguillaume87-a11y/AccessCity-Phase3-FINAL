@@ -22,6 +22,7 @@ import {
   removeBackgroundAI,
   removeBackgroundChromaKey,
   blobToDataURL,
+  type AiProgressCallback,
 } from '@/utils/backgroundRemoval';
 import { BrushMaskCanvas } from '@/components/ui/BrushMaskCanvas';
 import type { BrushMaskCanvasHandle } from '@/components/ui/BrushMaskCanvas';
@@ -55,6 +56,8 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
   const [resultDataUrl, setResultDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tolerance, setTolerance] = useState(30);
+  // Progression du téléchargement du modèle IA (null = pas en cours)
+  const [aiProgress, setAiProgress] = useState<{ stage: string; pct: number } | null>(null);
   const previewImgRef = useRef<HTMLImageElement>(null);
 
   // ── State phase 2 ──────────────────────────────────────────────────────
@@ -79,15 +82,34 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
     setError(null);
     setResultBlob(null);
     setResultDataUrl(null);
+    setAiProgress(null);
+
+    const onProgress: AiProgressCallback = (stage, current, total) => {
+      const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+      const label = stage.startsWith('fetch:') ? stage.replace('fetch:', '') : stage;
+      setAiProgress({ stage: label, pct });
+    };
+
     try {
-      const blob = await removeBackgroundAI(imageUrl);
+      const blob = await removeBackgroundAI(imageUrl, onProgress);
       const dataUrl = await blobToDataURL(blob);
       setResultBlob(blob);
       setResultDataUrl(dataUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      // Erreur réseau → message actionnable avec fallback suggéré
+      const isNetworkError =
+        msg.toLowerCase().includes('fetch') ||
+        msg.toLowerCase().includes('network') ||
+        msg.toLowerCase().includes('metadata not found');
+      setError(
+        isNetworkError
+          ? 'Téléchargement du modèle impossible (~80 MB via CDN). Vérifiez votre connexion internet, ou utilisez la Baguette Magique ✨ qui fonctionne hors-ligne.'
+          : msg
+      );
     } finally {
       setProcessing(false);
+      setAiProgress(null);
     }
   }, [imageUrl]);
 
@@ -97,8 +119,28 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
       const img = previewImgRef.current;
       if (!img) return;
       const rect = img.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
+
+      // Letterbox correction : objectFit:contain sur <img> → même décalage que sur canvas.
+      // getBoundingClientRect() retourne la boîte CSS entière, pas la zone image.
+      const naturalAspect = img.naturalWidth / img.naturalHeight;
+      const displayAspect = rect.width / rect.height;
+      let imageW: number, imageH: number, imageLeft: number, imageTop: number;
+      if (naturalAspect > displayAspect) {
+        imageW = rect.width;
+        imageH = rect.width / naturalAspect;
+        imageLeft = 0;
+        imageTop = (rect.height - imageH) / 2;
+      } else {
+        imageH = rect.height;
+        imageW = rect.height * naturalAspect;
+        imageLeft = (rect.width - imageW) / 2;
+        imageTop = 0;
+      }
+
+      const clickX = e.clientX - rect.left - imageLeft;
+      const clickY = e.clientY - rect.top - imageTop;
+      // Ignorer les clics dans les bandes letterbox
+      if (clickX < 0 || clickX > imageW || clickY < 0 || clickY > imageH) return;
 
       setProcessing(true);
       setError(null);
@@ -107,8 +149,8 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
           imageUrl,
           clickX,
           clickY,
-          rect.width,
-          rect.height,
+          imageW,
+          imageH,
           tolerance
         );
         const dataUrl = await blobToDataURL(blob);
@@ -545,6 +587,7 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
                                 alignItems: 'center',
                                 gap: 10,
                                 color: 'var(--color-text-muted)',
+                                width: '80%',
                               }}
                             >
                               <motion.div
@@ -559,7 +602,48 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
                               <span style={{ fontSize: 12 }}>
                                 {mode === 'ai' ? 'Traitement IA en cours…' : 'Analyse du fond…'}
                               </span>
-                              {mode === 'ai' && (
+                              {/* Barre de progression téléchargement modèle */}
+                              {mode === 'ai' && aiProgress && (
+                                <div
+                                  style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      fontSize: 10,
+                                      color: 'var(--color-text-muted)',
+                                    }}
+                                  >
+                                    <span>{aiProgress.stage}</span>
+                                    <span>{aiProgress.pct}%</span>
+                                  </div>
+                                  <div
+                                    style={{
+                                      height: 4,
+                                      borderRadius: 2,
+                                      background: 'rgba(139,92,246,0.2)',
+                                      overflow: 'hidden',
+                                    }}
+                                  >
+                                    <motion.div
+                                      animate={{ width: `${aiProgress.pct}%` }}
+                                      transition={{ ease: 'linear', duration: 0.3 }}
+                                      style={{
+                                        height: '100%',
+                                        background: 'var(--color-primary)',
+                                        borderRadius: 2,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {mode === 'ai' && !aiProgress && (
                                 <span
                                   style={{
                                     fontSize: 11,

@@ -99,6 +99,8 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
     const [canUndo, setCanUndo] = useState(false);
     const [isReady, setIsReady] = useState(false);
     const [isRefining, setIsRefining] = useState(false);
+    // Cercle curseur : position + rayon en coordonnées d'affichage (px CSS)
+    const [cursor, setCursor] = useState<{ x: number; y: number; r: number } | null>(null);
     const isReadyRef = useRef(false); // accès stable dans l'imperative handle
 
     // Masques courants (ref pour accès stable dans les handlers pointer)
@@ -262,12 +264,34 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
       };
     }, []);
 
+    // ── Curseur visuel : calcule position + rayon en px display ─────────
+    // Utilise le même calcul letterbox que toImageCoords, mais dans le sens inverse.
+
+    const updateCursor = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+      const canvas = overlayCanvasRef.current;
+      if (!canvas || naturalSizeRef.current.w === 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const nw = naturalSizeRef.current.w;
+      const nh = naturalSizeRef.current.h;
+      const naturalAspect = nw / nh;
+      const displayAspect = rect.width / rect.height;
+      const imageW = naturalAspect > displayAspect ? rect.width : rect.height * naturalAspect;
+      // Scale image→display (px display par px image)
+      const scale = imageW / nw;
+      setCursor({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        r: brushSizeRef.current * scale,
+      });
+    }, []);
+
     // ── Pointer handlers ──────────────────────────────────────────────────
 
     const handlePointerDown = useCallback(
       (e: React.PointerEvent<HTMLCanvasElement>) => {
         e.preventDefault();
         (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
+        updateCursor(e);
 
         // Clic droit = outil inverse
         const mode: BrushMode =
@@ -291,11 +315,12 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
         paintStroke(masksRef.current, pos, pos, brushSizeRef.current, mode, 1);
         scheduleRepaint();
       },
-      [toImageCoords, scheduleRepaint]
+      [toImageCoords, scheduleRepaint, updateCursor]
     );
 
     const handlePointerMove = useCallback(
       (e: React.PointerEvent<HTMLCanvasElement>) => {
+        updateCursor(e);
         if ((e.buttons & 1) === 0 && (e.buttons & 2) === 0) return; // pas de bouton enfoncé
 
         const mode: BrushMode =
@@ -314,7 +339,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
         paintStroke(masksRef.current, last, pos, brushSizeRef.current, mode, 12);
         scheduleRepaint();
       },
-      [toImageCoords, scheduleRepaint]
+      [toImageCoords, scheduleRepaint, updateCursor]
     );
 
     const handlePointerUp = useCallback(() => {
@@ -398,9 +423,6 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
         cancelAnimationFrame(rafRef.current);
       };
     }, []);
-
-    // ── Cursor CSS selon le mode ──────────────────────────────────────────
-    const cursorStyle = brushMode === 'keep' ? 'crosshair' : 'cell';
 
     // ── Render ────────────────────────────────────────────────────────────
 
@@ -575,8 +597,8 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
             backgroundImage: CHECKERBOARD,
             backgroundSize: '16px 16px',
             border: '2px solid var(--color-border-base)',
-            // Curseur personnalisé selon le mode
-            cursor: isReady ? cursorStyle : 'wait',
+            // cursor:none → cercle CSS personnalisé affiché à la place
+            cursor: isReady ? 'none' : 'wait',
           }}
         >
           {/* Canvas 1 : résultat composité */}
@@ -604,12 +626,34 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
               objectFit: 'contain',
               imageRendering: 'pixelated',
               opacity: 0.85,
+              // Curseur CSS masqué : on affiche notre propre cercle
+              cursor: isReady ? 'none' : 'wait',
             }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onPointerEnter={updateCursor}
+            onPointerLeave={() => setCursor(null)}
             onContextMenu={handleContextMenu}
           />
+
+          {/* Cercle curseur pinceau — suit la souris, montre la taille réelle */}
+          {isReady && cursor && (
+            <div
+              style={{
+                position: 'absolute',
+                left: cursor.x - cursor.r,
+                top: cursor.y - cursor.r,
+                width: cursor.r * 2,
+                height: cursor.r * 2,
+                borderRadius: '50%',
+                border: `2px solid ${brushMode === 'keep' ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)'}`,
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.6)',
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}
+            />
+          )}
 
           {/* Indicateur de chargement */}
           {!isReady && (

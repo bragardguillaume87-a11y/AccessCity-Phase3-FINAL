@@ -21,7 +21,29 @@
  * @returns Blob PNG avec canal alpha
  * @throws Error si le modèle ne peut pas être chargé
  */
-export async function removeBackgroundAI(imageUrl: string): Promise<Blob> {
+// Version de @imgly/background-removal installée — doit correspondre au publicPath CDN
+const BG_REMOVAL_VERSION = '1.7.0';
+
+// CDN jsDelivr (npm mondial) — plus fiable que le CDN privé staticimgly.com par défaut
+const BG_REMOVAL_PUBLIC_PATH = `https://cdn.jsdelivr.net/npm/@imgly/background-removal-data@${BG_REMOVAL_VERSION}/dist/`;
+
+/**
+ * Callback de progression : `stage` = "fetch:model" | "fetch:ort-wasm-simd",
+ * `current` et `total` en octets.
+ */
+export type AiProgressCallback = (stage: string, current: number, total: number) => void;
+
+/**
+ * Supprime le fond d'une image via l'IA (ISNet fp16).
+ *
+ * @param imageUrl    - URL ou dataURL de l'image source
+ * @param onProgress  - Callback optionnel pour suivre le téléchargement du modèle
+ * @returns Blob PNG avec canal alpha
+ */
+export async function removeBackgroundAI(
+  imageUrl: string,
+  onProgress?: AiProgressCallback
+): Promise<Blob> {
   // Lazy-import : ne charge le bundle ONNX qu'au 1er appel
   const { removeBackground } = await import('@imgly/background-removal');
 
@@ -38,6 +60,9 @@ export async function removeBackgroundAI(imageUrl: string): Promise<Blob> {
   const resultBlob = await removeBackground(inputBlob, {
     model: 'isnet_fp16',
     output: { format: 'image/png' },
+    // jsDelivr CDN — plus fiable que le CDN privé staticimgly.com (défaut de la lib)
+    publicPath: BG_REMOVAL_PUBLIC_PATH,
+    ...(onProgress ? { progress: onProgress } : {}),
   });
 
   return resultBlob;

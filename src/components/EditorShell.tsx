@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, Map, LayoutDashboard, Play, GitBranch, type LucideIcon } from 'lucide-react';
+import {
+  BookOpen,
+  Map,
+  LayoutDashboard,
+  Play,
+  GitBranch,
+  Users2,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   useUIStore,
   useScenesStore,
@@ -49,12 +57,16 @@ const AssetsLibraryModal = React.lazy(() => import('./modals/AssetsLibraryModal'
 const SettingsModal = React.lazy(() => import('./modals/SettingsModal'));
 const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
 const ExportModal = React.lazy(() => import('./modals/ExportModal'));
+const VisualFiltersModal = React.lazy(() => import('./modals/VisualFiltersModal'));
 const CinematicEditorModal = React.lazy(() =>
   import('./modals/CinematicEditor').then((m) => ({ default: m.CinematicEditor }))
 );
 const TopdownEditor = React.lazy(() => import('./modules/TopdownEditor/TopdownEditor'));
 const GamePreview = React.lazy(() => import('./modules/GamePreview/GamePreview'));
 const BehaviorGraph = React.lazy(() => import('./modules/BehaviorGraph/BehaviorGraph'));
+const DistributionModule = React.lazy(
+  () => import('./modules/DistributionModule/DistributionModule')
+);
 
 /**
  * EditorShell — Layout 4-panneaux inspiré de Powtoon :
@@ -105,6 +117,7 @@ const MODULE_TABS: Array<{ id: StudioModule; label: string; Icon: LucideIcon }> 
   { id: 'topdown', label: 'Carte 2D', Icon: Map },
   { id: 'behavior', label: 'Comportements', Icon: GitBranch },
   { id: 'ui-builder', label: 'Interface', Icon: LayoutDashboard },
+  { id: 'distribution', label: 'Distribution', Icon: Users2 },
   { id: 'preview', label: 'Prévisualiser', Icon: Play },
 ];
 
@@ -168,6 +181,12 @@ const MODULE_PLACEHOLDER_LABELS: Record<
     emoji: '🎨',
     title: "Constructeur d'interface",
     description: 'Construisez les HUD, menus et écrans du jeu par glisser-déposer.',
+  },
+  distribution: {
+    emoji: '🎭',
+    title: 'Distribution',
+    description:
+      'Gérez les sprites par humeur (table de casting) et animez les personnages par squelette cut-out.',
   },
   preview: {
     emoji: '🎮',
@@ -489,6 +508,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         </React.Suspense>
       )}
       {activeModule === 'ui-builder' && <StudioModulePlaceholder module={activeModule} />}
+      {activeModule === 'distribution' && (
+        <React.Suspense fallback={<ModuleLoadingFallback />}>
+          <DistributionModule />
+        </React.Suspense>
+      )}
 
       {/* Layout 4-panneaux style Powtoon
           Structure :  [Group: Panel1 + Panel2]  [Panel3 CSS]  [Panel4 CSS]
@@ -667,6 +691,11 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
         {activeModal === 'export' && (
           <ErrorBoundary name="ExportModal">
             <ExportModal onClose={() => setActiveModal(null)} />
+          </ErrorBoundary>
+        )}
+        {activeModal === 'visual-filters' && (
+          <ErrorBoundary name="VisualFiltersModal">
+            <VisualFiltersModal isOpen={true} onClose={() => setActiveModal(null)} />
           </ErrorBoundary>
         )}
         {cinematicEditorOpen && (

@@ -1,25 +1,44 @@
-
-import { Users, Image, Settings, Download, Play, Network, Undo2, Redo2, AlertTriangle, Check, Loader2, ChevronLeft, Sparkles } from "lucide-react"
-import { AutoSaveTimestamp } from "../ui/AutoSaveTimestamp"
-import { useUIStore } from "@/stores"
-import { useTranslation } from "@/i18n"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { useState, useEffect, useRef } from 'react';
+import {
+  Users,
+  Image,
+  Settings,
+  Download,
+  Play,
+  Network,
+  Undo2,
+  Redo2,
+  AlertTriangle,
+  Check,
+  Loader2,
+  ChevronLeft,
+  Sparkles,
+  ChevronDown,
+  Monitor,
+} from 'lucide-react';
+import { AutoSaveTimestamp } from '../ui/AutoSaveTimestamp';
+import { useUIStore } from '@/stores';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { useTranslation } from '@/i18n';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { DIALOGUE_COMPOSER_THEMES } from '@/config/dialogueComposerThemes';
+import type { DialogueComposerTheme } from '@/config/dialogueComposerThemes';
 
 export interface TopBarValidation {
-  hasIssues: boolean
-  totalErrors: number
-  totalWarnings: number
+  hasIssues: boolean;
+  totalErrors: number;
+  totalWarnings: number;
 }
 
 export interface TopBarProps {
-  onBack?: (() => void) | null
-  undo: () => void
-  redo: () => void
-  canUndo: boolean
-  canRedo: boolean
-  validation?: TopBarValidation
-  isSaving: boolean
-  lastSaved: string | null
+  onBack?: (() => void) | null;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  validation?: TopBarValidation;
+  isSaving: boolean;
+  lastSaved: string | null;
 }
 
 /**
@@ -38,20 +57,35 @@ export default function TopBar({
   canRedo,
   validation,
   isSaving,
-  lastSaved
+  lastSaved,
 }: TopBarProps) {
-  const showProblemsPanel   = useUIStore(s => s.showProblemsPanel);
-  const setShowProblemsPanel = useUIStore(s => s.setShowProblemsPanel);
-  const editorMode  = useUIStore(s => s.editorMode);
-  const setEditorMode = useUIStore(s => s.setEditorMode);
+  const showProblemsPanel = useUIStore((s) => s.showProblemsPanel);
+  const setShowProblemsPanel = useUIStore((s) => s.setShowProblemsPanel);
+  const editorMode = useUIStore((s) => s.editorMode);
+  const setEditorMode = useUIStore((s) => s.setEditorMode);
   const { kidMode: km } = useTranslation();
+  const dialogueComposerTheme = useSettingsStore((s) => s.dialogueComposerTheme);
+  const setDialogueComposerTheme = useSettingsStore((s) => s.setDialogueComposerTheme);
+
+  // ── Dropdown thème ────────────────────────────────────────────────────────
+  const [themeOpen, setThemeOpen] = useState(false);
+  const themeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!themeOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!themeRef.current?.contains(e.target as Node)) setThemeOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [themeOpen]);
 
   const handleOpenCharacters = () => useUIStore.getState().setActiveModal('characters');
-  const handleOpenAssets     = () => useUIStore.getState().setActiveModal('assets');
-  const handleOpenProject    = () => useUIStore.getState().setActiveModal('project');
-  const handleOpenExport     = () => useUIStore.getState().setActiveModal('export');
-  const handleOpenPreview    = () => useUIStore.getState().setActiveModal('preview');
-  const handleOpenGraph      = () => {
+  const handleOpenAssets = () => useUIStore.getState().setActiveModal('assets');
+  const handleOpenProject = () => useUIStore.getState().setActiveModal('project');
+  const handleOpenExport = () => useUIStore.getState().setActiveModal('export');
+  const handleOpenPreview = () => useUIStore.getState().setActiveModal('preview');
+  const handleOpenEffects = () => useUIStore.getState().setActiveModal('visual-filters');
+  const handleOpenGraph = () => {
     const store = useUIStore.getState();
     if (store.selectedSceneForEdit) {
       store.setDialogueGraphSelectedScene(store.selectedSceneForEdit);
@@ -60,11 +94,7 @@ export default function TopBar({
   };
 
   return (
-    <header
-      className="topbar"
-      role="banner"
-      aria-label="Application header"
-    >
+    <header className="topbar" role="banner" aria-label="Application header">
       {/* ── GAUCHE : Logo + Undo/Redo ── */}
       <div className="topbar-brand">
         {onBack && (
@@ -86,7 +116,11 @@ export default function TopBar({
         </span>
         <div className="topbar-sep" aria-hidden="true" />
         {/* Undo / Redo — proches du titre */}
-        <div role="group" aria-label="Historique" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <div
+          role="group"
+          aria-label="Historique"
+          style={{ display: 'flex', alignItems: 'center', gap: 2 }}
+        >
           <button
             className="topbar-icon"
             onClick={undo}
@@ -112,7 +146,6 @@ export default function TopBar({
 
       {/* ── CENTRE : Navigation ── */}
       <nav className="topbar-center" aria-label="Actions principales">
-
         {/* Réglages — pro only, en premier */}
         {editorMode === 'pro' && (
           <>
@@ -151,7 +184,7 @@ export default function TopBar({
           {editorMode === 'kid' ? km.resources : 'Ressources'}
         </button>
 
-        {/* Graphe — pro only */}
+        {/* Graphe + Effets — pro only */}
         {editorMode === 'pro' && (
           <>
             <div className="topbar-divider" aria-hidden="true" />
@@ -163,6 +196,15 @@ export default function TopBar({
             >
               <Network size={14} aria-hidden="true" />
               Graphe
+            </button>
+            <button
+              className="topbar-nav"
+              onClick={handleOpenEffects}
+              title="Filtres visuels — CRT, scanlines, grain, dithering"
+              aria-label="Filtres visuels"
+            >
+              <Monitor size={14} aria-hidden="true" />
+              Effets
             </button>
           </>
         )}
@@ -178,11 +220,164 @@ export default function TopBar({
           <Play size={14} aria-hidden="true" />
           {editorMode === 'kid' ? km.preview : 'Aperçu'}
         </button>
-
       </nav>
 
       {/* ── DROITE : Toggle Mode + Validation + Save + Export ── */}
       <div className="topbar-right">
+        {/* ── Sélecteur de thème — dropdown ── */}
+        <div ref={themeRef} style={{ position: 'relative' }}>
+          {/* Trigger */}
+          <button
+            type="button"
+            title="Changer le thème de l'éditeur"
+            aria-haspopup="listbox"
+            aria-expanded={themeOpen}
+            onClick={() => setThemeOpen((o) => !o)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              height: 28,
+              padding: '0 8px',
+              borderRadius: 7,
+              border: `1.5px solid ${themeOpen ? DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme].dotColor : 'rgba(255,255,255,0.15)'}`,
+              background: themeOpen
+                ? `${DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme].dotColor}22`
+                : 'rgba(255,255,255,0.06)',
+              cursor: 'pointer',
+              color: 'var(--color-text-primary)',
+              fontSize: 12,
+              fontWeight: 500,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {/* Dot couleur active */}
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme].dotColor,
+                boxShadow: `0 0 5px ${DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme].dotColor}`,
+              }}
+            />
+            <span style={{ opacity: 0.85 }}>
+              {DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme].emoji}{' '}
+              {DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme].label}
+            </span>
+            <ChevronDown
+              size={10}
+              style={{
+                opacity: 0.55,
+                transform: themeOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.15s ease',
+              }}
+              aria-hidden="true"
+            />
+          </button>
+
+          {/* Dropdown panel */}
+          {themeOpen && (
+            <div
+              role="listbox"
+              aria-label="Thème de l'éditeur"
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 'calc(100% + 5px)',
+                background: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border-base)',
+                borderRadius: 10,
+                padding: 4,
+                zIndex: 'var(--z-dropdown)',
+                minWidth: 160,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              }}
+            >
+              {(Object.keys(DIALOGUE_COMPOSER_THEMES) as DialogueComposerTheme[]).map((themeId) => {
+                const def = DIALOGUE_COMPOSER_THEMES[themeId];
+                const isActive = dialogueComposerTheme === themeId;
+                return (
+                  <button
+                    key={themeId}
+                    role="option"
+                    aria-selected={isActive}
+                    type="button"
+                    onClick={() => {
+                      setDialogueComposerTheme(themeId);
+                      setThemeOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      padding: '6px 8px',
+                      borderRadius: 7,
+                      border: 'none',
+                      background: isActive ? `${def.dotColor}20` : 'transparent',
+                      cursor: 'pointer',
+                      color: 'var(--color-text-primary)',
+                      fontSize: 12,
+                      fontWeight: isActive ? 600 : 400,
+                      textAlign: 'left',
+                      transition: 'background 0.1s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive)
+                        (e.currentTarget as HTMLButtonElement).style.background =
+                          'rgba(255,255,255,0.06)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive)
+                        (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                    }}
+                  >
+                    {/* Dot couleur */}
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        background: def.dotColor,
+                        boxShadow: isActive ? `0 0 6px ${def.dotColor}` : 'none',
+                      }}
+                    />
+                    <span>
+                      {def.emoji} {def.label}
+                    </span>
+                    {/* Badge "Clair" pour les thèmes light */}
+                    {def.isLight && (
+                      <span
+                        style={{
+                          marginLeft: 'auto',
+                          fontSize: 9,
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                          background: 'rgba(255,255,255,0.15)',
+                          color: 'var(--color-text-muted)',
+                          fontWeight: 600,
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        CLAIR
+                      </span>
+                    )}
+                    {isActive && !def.isLight && (
+                      <Check
+                        size={10}
+                        style={{ marginLeft: 'auto', color: def.dotColor }}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Toggle Mode Élève — label + piste avec curseur glissant */}
         <button
@@ -208,17 +403,14 @@ export default function TopBar({
                 aria-expanded={showProblemsPanel}
               >
                 <AlertTriangle size={13} aria-hidden="true" />
-                {validation.totalErrors > 0 && (
-                  <span>{validation.totalErrors} err.</span>
-                )}
-                {validation.totalWarnings > 0 && (
-                  <span>{validation.totalWarnings} avert.</span>
-                )}
+                {validation.totalErrors > 0 && <span>{validation.totalErrors} err.</span>}
+                {validation.totalWarnings > 0 && <span>{validation.totalWarnings} avert.</span>}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p style={{ fontWeight: 600 }}>
-                {validation.totalErrors} erreur{validation.totalErrors > 1 ? 's' : ''} · {validation.totalWarnings} avertissement{validation.totalWarnings > 1 ? 's' : ''}
+                {validation.totalErrors} erreur{validation.totalErrors > 1 ? 's' : ''} ·{' '}
+                {validation.totalWarnings} avertissement{validation.totalWarnings > 1 ? 's' : ''}
               </p>
               <p style={{ opacity: 0.7, marginTop: 2 }}>Cliquer pour voir les détails</p>
             </TooltipContent>
@@ -226,21 +418,23 @@ export default function TopBar({
         )}
 
         {/* Indicateur sauvegarde */}
-        <div
-          className="topbar-unsaved"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
+        <div className="topbar-unsaved" role="status" aria-live="polite" aria-atomic="true">
           {isSaving ? (
             <>
-              <Loader2 size={12} className="topbar-dot" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
+              <Loader2
+                size={12}
+                className="topbar-dot"
+                style={{ animation: 'spin 1s linear infinite' }}
+                aria-hidden="true"
+              />
               <span>Sauvegarde…</span>
             </>
           ) : lastSaved ? (
             <>
               <Check size={12} style={{ color: 'var(--color-success)' }} aria-hidden="true" />
-              <span>Sauvegardé <AutoSaveTimestamp /></span>
+              <span>
+                Sauvegardé <AutoSaveTimestamp />
+              </span>
             </>
           ) : (
             <span>Non sauvegardé</span>
@@ -261,5 +455,5 @@ export default function TopBar({
         )}
       </div>
     </header>
-  )
+  );
 }

@@ -45,6 +45,8 @@ import { GAME_STATS } from '@/i18n';
 import { DialogueBox } from '@/components/ui/DialogueBox';
 import { CompactStatHUD } from '@/components/ui/compact-stat-hud';
 import { DiceOverlay } from './DiceOverlay';
+import { MinigameOverlay } from './MinigameOverlay';
+import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
 
 /** Aspect ratio 16:9 */
 const ASPECT_RATIO = 16 / 9;
@@ -143,6 +145,7 @@ export default function PreviewPlayer({
   const {
     currentScene,
     currentDialogue,
+    visibleChoices,
     stats,
     isPaused: _isPaused,
     chooseOption,
@@ -153,6 +156,10 @@ export default function PreviewPlayer({
     diceState,
     pendingDiceDifficulty,
     confirmDiceNavigation,
+    minigameState,
+    triggerMinigame,
+    pendingScreenEffect,
+    clearScreenEffect,
   } = useGameState({
     scenes,
     initialSceneId: initialSceneId || (scenes && scenes[0]?.id),
@@ -218,7 +225,7 @@ export default function PreviewPlayer({
   );
 
   // ── Speaker layout (hook partagé avec DialoguePreviewOverlay) ────────────
-  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor } =
+  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor, isNarrator } =
     useSpeakerLayout({
       speakerNameOrId: currentDialogue?.speaker,
       sceneCharacters: currentScene?.characters ?? [],
@@ -226,6 +233,9 @@ export default function PreviewPlayer({
       config: dialogueBoxConfig,
       moodOverrides,
     });
+
+  // En mode narrateur, le typewriter ne s'affiche pas — le clic avance directement
+  const effectiveTypewriterDone = isNarrator || typewriterDone;
 
   // ── Mood overrides ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -235,6 +245,53 @@ export default function PreviewPlayer({
     if (!currentDialogue?.characterMoods) return;
     setMoodOverrides((prev) => ({ ...prev, ...currentDialogue.characterMoods }));
   }, [currentDialogue]);
+
+  // ── Screen shake ─────────────────────────────────────────────────────────
+  const [shakeKey, setShakeKey] = useState(0);
+  const [shakeParams, setShakeParams] = useState({ intensity: 5, duration: 400 });
+  // ── Color filter ─────────────────────────────────────────────────────────
+  const [colorFilter, setColorFilter] = useState<string | null>(null);
+
+  const CSS_COLOR_BLIND_FILTERS: Record<string, string | null> = {
+    deuteranopia: 'saturate(0.4) hue-rotate(30deg)',
+    protanopia: 'saturate(0.3) hue-rotate(15deg)',
+    tritanopia: 'saturate(0.6) hue-rotate(180deg)',
+    none: null,
+  };
+
+  useEffect(() => {
+    if (!pendingScreenEffect) return;
+    if (pendingScreenEffect.operation === 'screenShake') {
+      setShakeKey((k) => k + 1);
+      setShakeParams({
+        intensity: pendingScreenEffect.intensity,
+        duration: pendingScreenEffect.duration,
+      });
+    } else if (pendingScreenEffect.operation === 'colorFilter') {
+      setColorFilter(CSS_COLOR_BLIND_FILTERS[pendingScreenEffect.filterType] ?? null);
+    }
+    clearScreenEffect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- CSS_COLOR_BLIND_FILTERS est une constante inline
+  }, [pendingScreenEffect, clearScreenEffect]);
+
+  // ── Sauvegarde persistante du dernier résultat de dé (avant que confirmDiceNavigation le réinitialise) ──
+  const lastDiceRollRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (diceState.lastRoll !== null) lastDiceRollRef.current = diceState.lastRoll;
+  }, [diceState.lastRoll]);
+
+  // ── Démarrage mini-jeu automatique sur les dialogues minigame ────────────
+  useEffect(() => {
+    if (currentDialogue?.minigame) {
+      const cfg = currentDialogue.minigame;
+      // Injecter le résultat du dé si le mode Braille l'utilise
+      const enriched =
+        cfg.type === 'braille' && cfg.brailleUseDice && lastDiceRollRef.current !== null
+          ? { ...cfg, brailleDiceResult: lastDiceRollRef.current }
+          : cfg;
+      triggerMinigame(enriched);
+    }
+  }, [currentDialogue?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- triggerMinigame stable (useCallback)
 
   // ── Personnage qui parle (pour l'animation isSpeaking) ──────────────────
   const speakingSceneCharId = useMemo<string | null>(() => {
@@ -248,10 +305,8 @@ export default function PreviewPlayer({
   }, [currentDialogue, currentScene?.characters, characterLibrary]);
 
   // ── hasChoices (useMemo avant la garde — utilisé dans les useEffects UI sounds) ──
-  const hasChoices = useMemo(
-    () => !!(currentDialogue?.choices && currentDialogue.choices.length > 0),
-    [currentDialogue]
-  );
+  // Utilise visibleChoices (filtré par conditions) — si tous masqués, le joueur peut avancer normalement.
+  const hasChoices = useMemo(() => visibleChoices.length > 0, [visibleChoices]);
 
   // ── Audio ─────────────────────────────────────────────────────────────────
   const initializeAudio = useCallback(async () => {
@@ -511,221 +566,288 @@ export default function PreviewPlayer({
           />
         )}
         {canvasSize.width > 0 && currentScene.sceneType !== 'cinematic' && (
-          <div
-            className="relative overflow-hidden flex-shrink-0"
-            style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
+          <VisualFilterLayer
+            style={{
+              width: `${canvasSize.width}px`,
+              height: `${canvasSize.height}px`,
+              flexShrink: 0,
+            }}
           >
-            {/* ── Fond ── */}
             <div
-              className="absolute inset-0"
+              className="relative overflow-hidden"
               style={{
-                backgroundImage: currentScene.backgroundUrl
-                  ? `url(${currentScene.backgroundUrl})`
-                  : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundColor: '#1a1a2e',
-                filter:
-                  [
-                    buildFilterCSS(currentScene.backgroundFilter),
-                    currentScene.sceneEffect?.type &&
-                    currentScene.sceneEffect.type !== 'none' &&
-                    currentScene.sceneEffect.cssFilter
-                      ? EFFECT_CSS_FILTERS[currentScene.sceneEffect.type]
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' ') || undefined,
+                width: '100%',
+                height: '100%',
+                filter: colorFilter ?? undefined,
+                animation:
+                  shakeKey > 0
+                    ? `shakePlayer${shakeKey} ${shakeParams.duration}ms ease-in-out`
+                    : undefined,
               }}
-            />
-
-            {/* ── Sprites personnages ── */}
-            {/* AnimatePresence : nécessaire pour jouer les animations de sortie (exit variants) */}
-            <AnimatePresence>
-              {currentScene.characters.map((sc) => {
-                const char = characterLibrary.find((c) => c.id === sc.characterId);
-                const mood = moodOverrides[sc.id] ?? sc.mood ?? 'neutral';
-                const spriteUrl =
-                  char?.sprites?.[mood] ??
-                  char?.sprites?.['neutral'] ??
-                  (char?.sprites ? Object.values(char.sprites)[0] : undefined);
-                const widthPct = ((128 * (sc.scale ?? 1)) / 960) * 100;
-                const heightPct = ((128 * (sc.scale ?? 1)) / 540) * 100;
-
-                // Lecture de l'animation d'entrée définie sur le personnage de la scène
-                const entranceKey = (sc.entranceAnimation ||
-                  'none') as CharacterAnimationVariantName;
-                const animVariant = (CHARACTER_ANIMATION_VARIANTS[entranceKey] ??
-                  CHARACTER_ANIMATION_VARIANTS.none) as unknown as Variants;
-
-                // ⚠️ Framer Motion écrase style.transform quand il applique ses variants (x, y, opacity).
-                // On ne peut PAS utiliser transform:'translate(-50%,-50%)' pour le centrage — il serait perdu.
-                // Solution : pré-calculer left/top au coin supérieur-gauche (centre - demi-taille).
-                const leftPct = sc.position.x - widthPct / 2;
-                const topPct = sc.position.y - heightPct / 2;
-
-                return (
-                  // key inclut currentScene.id → remontage sur changement de scène
-                  // → animation d'entrée rejouée à chaque transition de scène
-                  // AnimatedCharacterSprite reçoit un nouveau montage → crossfade reset (correct)
-                  <motion.div
-                    key={`${currentScene.id}-${sc.id}`}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    variants={animVariant}
-                    style={{
-                      position: 'absolute',
-                      left: `${leftPct}%`,
-                      top: `${topPct}%`,
-                      width: `${widthPct}%`,
-                      height: `${heightPct}%`,
-                      zIndex: (sc.zIndex ?? 1) + 1,
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                    }}
-                  >
-                    <AnimatedCharacterSprite
-                      spriteUrl={spriteUrl}
-                      alt={char?.name ?? ''}
-                      isSpeaking={speakingSceneCharId === sc.id}
-                      flipped={sc.flipped}
-                      fxConfig={characterFx}
-                      className="drop-shadow-lg"
-                    />
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-
-            {/* ── Effet atmosphérique (au-dessus des sprites, sous le dégradé UI) ── */}
-            <SceneEffectCanvas
-              effect={currentScene.sceneEffect}
-              characterHitboxes={characterHitboxes}
-            />
-
-            {/* ── Dégradé adaptatif (selon position de la boîte) ── */}
-            {dialogueBoxConfig.position !== 'center' && (
+            >
+              {/* ── Screen shake keyframe (injecté dynamiquement) ── */}
+              {shakeKey > 0 && (
+                <style>{`@keyframes shakePlayer${shakeKey}{0%,100%{transform:translate(0)}25%{transform:translate(-${shakeParams.intensity <= 3 ? 4 : shakeParams.intensity <= 7 ? 8 : 14}px,${shakeParams.intensity <= 3 ? 2 : shakeParams.intensity <= 7 ? 4 : 7}px)}75%{transform:translate(${shakeParams.intensity <= 3 ? 4 : shakeParams.intensity <= 7 ? 8 : 14}px,-${shakeParams.intensity <= 3 ? 2 : shakeParams.intensity <= 7 ? 4 : 7}px)}}`}</style>
+              )}
+              {/* ── Fond ── */}
               <div
-                className="absolute left-0 right-0 pointer-events-none"
+                className="absolute inset-0"
                 style={{
-                  ...(dialogueBoxConfig.position === 'top'
-                    ? {
-                        top: 0,
-                        height: '45%',
-                        background:
-                          'linear-gradient(to bottom, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.72) 28%, rgba(3,7,18,0.22) 60%, transparent 100%)',
-                      }
-                    : {
-                        bottom: 0,
-                        height: '55%',
-                        background:
-                          'linear-gradient(to top, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.72) 28%, rgba(3,7,18,0.22) 60%, transparent 100%)',
-                      }),
-                  zIndex: 9,
+                  backgroundImage: currentScene.backgroundUrl
+                    ? `url(${currentScene.backgroundUrl})`
+                    : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: '#1a1a2e',
+                  filter:
+                    [
+                      buildFilterCSS(currentScene.backgroundFilter),
+                      currentScene.sceneEffect?.type &&
+                      currentScene.sceneEffect.type !== 'none' &&
+                      currentScene.sceneEffect.cssFilter
+                        ? EFFECT_CSS_FILTERS[currentScene.sceneEffect.type]
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || undefined,
                 }}
               />
-            )}
 
-            {/* ── Boîte de dialogue (composant partagé) ── */}
-            <div
-              className={`absolute inset-0 flex flex-col pointer-events-none ${
-                dialogueBoxConfig.position === 'top'
-                  ? 'justify-start'
-                  : dialogueBoxConfig.position === 'center'
-                    ? 'justify-center'
-                    : 'justify-end'
-              }`}
-              style={{ zIndex: 10 }}
-            >
-              {/* AnimatePresence : keyed sur currentDialogue.id → rejoue enter/exit à chaque dialogue */}
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={currentDialogue?.id ?? 'no-dialogue'}
-                  className={`pointer-events-auto px-4 mx-auto w-full ${
-                    dialogueBoxConfig.position === 'top'
-                      ? 'mt-4'
-                      : dialogueBoxConfig.position === 'center'
-                        ? 'my-2'
-                        : 'mb-4'
-                  }`}
-                  style={{ maxWidth: `${dialogueBoxMaxWidth}px` }}
-                  {...(dialogueBoxConfig.dialogueTransition === 'fondu'
-                    ? {
-                        initial: { opacity: 0 },
-                        animate: { opacity: 1 },
-                        exit: { opacity: 0 },
-                        transition: { duration: 0.12, ease: 'easeOut' },
-                      }
-                    : dialogueBoxConfig.dialogueTransition === 'glisse'
+              {/* ── Sprites personnages ── */}
+              {/* AnimatePresence : nécessaire pour jouer les animations de sortie (exit variants) */}
+              <AnimatePresence>
+                {currentScene.characters.map((sc) => {
+                  const char = characterLibrary.find((c) => c.id === sc.characterId);
+                  const mood = moodOverrides[sc.id] ?? sc.mood ?? 'neutral';
+                  const spriteUrl =
+                    char?.sprites?.[mood] ??
+                    char?.sprites?.['neutral'] ??
+                    (char?.sprites ? Object.values(char.sprites)[0] : undefined);
+                  const widthPct = ((128 * (sc.scale ?? 1)) / 960) * 100;
+                  const heightPct = ((128 * (sc.scale ?? 1)) / 540) * 100;
+
+                  // Lecture de l'animation d'entrée définie sur le personnage de la scène
+                  const entranceKey = (sc.entranceAnimation ||
+                    'none') as CharacterAnimationVariantName;
+                  const animVariant = (CHARACTER_ANIMATION_VARIANTS[entranceKey] ??
+                    CHARACTER_ANIMATION_VARIANTS.none) as unknown as Variants;
+
+                  // ⚠️ Framer Motion écrase style.transform quand il applique ses variants (x, y, opacity).
+                  // On ne peut PAS utiliser transform:'translate(-50%,-50%)' pour le centrage — il serait perdu.
+                  // Solution : pré-calculer left/top au coin supérieur-gauche (centre - demi-taille).
+                  const leftPct = sc.position.x - widthPct / 2;
+                  const topPct = sc.position.y - heightPct / 2;
+
+                  return (
+                    // key inclut currentScene.id → remontage sur changement de scène
+                    // → animation d'entrée rejouée à chaque transition de scène
+                    // AnimatedCharacterSprite reçoit un nouveau montage → crossfade reset (correct)
+                    <motion.div
+                      key={`${currentScene.id}-${sc.id}`}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      variants={animVariant}
+                      style={{
+                        position: 'absolute',
+                        left: `${leftPct}%`,
+                        top: `${topPct}%`,
+                        width: `${widthPct}%`,
+                        height: `${heightPct}%`,
+                        zIndex: (sc.zIndex ?? 1) + 1,
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <AnimatedCharacterSprite
+                        spriteUrl={spriteUrl}
+                        alt={char?.name ?? ''}
+                        isSpeaking={speakingSceneCharId === sc.id}
+                        flipped={sc.flipped}
+                        fxConfig={characterFx}
+                        className="drop-shadow-lg"
+                      />
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+
+              {/* ── Effet atmosphérique (au-dessus des sprites, sous le dégradé UI) ── */}
+              <SceneEffectCanvas
+                effect={currentScene.sceneEffect}
+                characterHitboxes={characterHitboxes}
+              />
+
+              {/* ── Overlay narrateur — assombrissement 45% (style Octopath Traveler) ── */}
+              <AnimatePresence>
+                {isNarrator && (
+                  <motion.div
+                    key="narrator-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      zIndex: 8,
+                      background: 'rgba(0, 0, 0, 0.45)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* ── Vignette appel téléphonique ── */}
+              {currentDialogue?.dialogueSubtype === 'phonecall' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 8,
+                    background:
+                      'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.78) 100%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+              )}
+
+              {/* ── Dégradé adaptatif (selon position de la boîte) — masqué en mode narrateur ── */}
+              {!isNarrator && dialogueBoxConfig.position !== 'center' && (
+                <div
+                  className="absolute left-0 right-0 pointer-events-none"
+                  style={{
+                    ...(dialogueBoxConfig.position === 'top'
                       ? {
-                          initial: { opacity: 0, y: 7 },
-                          animate: { opacity: 1, y: 0 },
-                          exit: { opacity: 0, y: -5 },
-                          transition: { duration: 0.16, ease: 'easeOut' },
+                          top: 0,
+                          height: '45%',
+                          background:
+                            'linear-gradient(to bottom, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.72) 28%, rgba(3,7,18,0.22) 60%, transparent 100%)',
                         }
                       : {
-                          // 'aucune' — pas d'animation, AnimatePresence gère juste le remontage
-                          initial: false,
-                          animate: {},
-                          exit: {},
-                          transition: { duration: 0 },
-                        })}
-                  onClick={handleAdvance}
-                  role="button"
-                  aria-label="Cliquez pour avancer le dialogue"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === ' ' || e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAdvance();
-                    }
+                          bottom: 0,
+                          height: '55%',
+                          background:
+                            'linear-gradient(to top, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.72) 28%, rgba(3,7,18,0.22) 60%, transparent 100%)',
+                        }),
+                    zIndex: 9,
                   }}
-                >
-                  <DialogueBox
-                    speaker={speakerDisplayName || undefined}
-                    displayText={displayText}
-                    choices={currentDialogue?.choices}
-                    isTypewriterDone={typewriterDone}
-                    hasChoices={hasChoices}
-                    isAtLastDialogue={isAtLastDialogue}
-                    config={dialogueBoxConfig}
-                    scaleFactor={dialogueScaleFactor}
-                    speakerPortraitUrl={speakerPortraitUrl}
-                    speakerIsOnRight={speakerIsOnRight}
-                    speakerColor={speakerColor}
-                    isRolling={diceState.lastRoll !== null}
-                    onChoose={handleChoose}
-                    onRestart={() => goToScene(currentScene.id, null)}
-                    onClose={onClose}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* ── Stats HUD — tous modes (Pro + Élève) ── */}
-            {/* z-[60] > DiceOverlay (z-50) → HUD visible même pendant le lancer de dé */}
-            {enableStatsHUD && (
-              <div className="absolute top-3 left-3 z-[60]">
-                <CompactStatHUD
-                  physique={stats[GAME_STATS.PHYSIQUE] ?? 100}
-                  mentale={stats[GAME_STATS.MENTALE] ?? 100}
-                  scaleFactor={dialogueScaleFactor}
                 />
-              </div>
-            )}
+              )}
 
-            {/* ── Overlay spectaculaire lancer de dé ──
+              {/* ── Boîte de dialogue (composant partagé) ── */}
+              {/* En mode narrateur : toujours centré verticalement */}
+              <div
+                className={`absolute inset-0 flex flex-col pointer-events-none ${
+                  isNarrator
+                    ? 'justify-center'
+                    : dialogueBoxConfig.position === 'top'
+                      ? 'justify-start'
+                      : dialogueBoxConfig.position === 'center'
+                        ? 'justify-center'
+                        : 'justify-end'
+                }`}
+                style={{ zIndex: 10 }}
+              >
+                {/* AnimatePresence : keyed sur currentDialogue.id → rejoue enter/exit à chaque dialogue */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={currentDialogue?.id ?? 'no-dialogue'}
+                    className={`pointer-events-auto px-4 mx-auto w-full ${
+                      dialogueBoxConfig.position === 'top'
+                        ? 'mt-4'
+                        : dialogueBoxConfig.position === 'center'
+                          ? 'my-2'
+                          : 'mb-4'
+                    }`}
+                    style={{ maxWidth: `${dialogueBoxMaxWidth}px` }}
+                    {...(dialogueBoxConfig.dialogueTransition === 'fondu'
+                      ? {
+                          initial: { opacity: 0 },
+                          animate: { opacity: 1 },
+                          exit: { opacity: 0 },
+                          transition: { duration: 0.12, ease: 'easeOut' },
+                        }
+                      : dialogueBoxConfig.dialogueTransition === 'glisse'
+                        ? {
+                            initial: { opacity: 0, y: 7 },
+                            animate: { opacity: 1, y: 0 },
+                            exit: { opacity: 0, y: -5 },
+                            transition: { duration: 0.16, ease: 'easeOut' },
+                          }
+                        : {
+                            // 'aucune' — pas d'animation, AnimatePresence gère juste le remontage
+                            initial: false,
+                            animate: {},
+                            exit: {},
+                            transition: { duration: 0 },
+                          })}
+                    onClick={handleAdvance}
+                    role="button"
+                    aria-label="Cliquez pour avancer le dialogue"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAdvance();
+                      }
+                    }}
+                  >
+                    <DialogueBox
+                      speaker={isNarrator ? undefined : speakerDisplayName || undefined}
+                      isNarrator={isNarrator}
+                      // En mode narrateur : texte complet immédiatement (pas de typewriter)
+                      displayText={isNarrator ? (currentDialogue?.text ?? '') : displayText}
+                      richText={isNarrator ? undefined : currentDialogue?.richText}
+                      choices={visibleChoices.length > 0 ? visibleChoices : undefined}
+                      isTypewriterDone={effectiveTypewriterDone}
+                      hasChoices={hasChoices}
+                      isAtLastDialogue={isAtLastDialogue}
+                      config={dialogueBoxConfig}
+                      scaleFactor={dialogueScaleFactor}
+                      speakerPortraitUrl={isNarrator ? null : speakerPortraitUrl}
+                      speakerIsOnRight={speakerIsOnRight}
+                      speakerColor={speakerColor}
+                      isRolling={diceState.lastRoll !== null}
+                      onChoose={handleChoose}
+                      onRestart={() => goToScene(currentScene.id, null)}
+                      onClose={onClose}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* ── Stats HUD — tous modes (Pro + Élève) ── */}
+              {/* z-[60] > DiceOverlay (z-50) → HUD visible même pendant le lancer de dé */}
+              {enableStatsHUD && (
+                <div className="absolute top-3 left-3 z-[60]">
+                  <CompactStatHUD
+                    physique={stats[GAME_STATS.PHYSIQUE] ?? 100}
+                    mentale={stats[GAME_STATS.MENTALE] ?? 100}
+                    scaleFactor={dialogueScaleFactor}
+                  />
+                </div>
+              )}
+
+              {/* ── Overlay spectaculaire lancer de dé ──
                  Le résultat (roll/success/difficulty) est connu SYNCHRONEMENT avant l'ouverture.
                  L'animation DiceOverlay fournit elle-même la suspense visuelle (1750ms). */}
-            <DiceOverlay
-              isOpen={diceState.lastRoll !== null}
-              roll={diceState.lastRoll ?? 0}
-              difficulty={pendingDiceDifficulty ?? 0}
-              success={diceState.lastResult === 'success'}
-              onClose={confirmDiceNavigation}
-            />
-          </div>
+              <DiceOverlay
+                isOpen={diceState.lastRoll !== null}
+                roll={diceState.lastRoll ?? 0}
+                difficulty={pendingDiceDifficulty ?? 0}
+                success={diceState.lastResult === 'success'}
+                onClose={confirmDiceNavigation}
+              />
+
+              {/* ── Overlay mini-jeu ── */}
+              <MinigameOverlay
+                isOpen={minigameState.isOpen}
+                config={minigameState.config}
+                onResult={minigameState.onResult}
+              />
+            </div>
+          </VisualFilterLayer>
         )}
       </div>
     </div>

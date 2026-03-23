@@ -9,6 +9,9 @@ import type { DialogueBoxStyle } from '@/types/scenes';
 import type { AssetCollection } from '@/types/collections';
 import type { TilesetConfig } from '@/types/tileset';
 import type { SpriteSheetConfig } from '@/types/sprite';
+import type { DialogueComposerTheme } from '@/config/dialogueComposerThemes';
+import type { VisualFilterConfig } from '@/types/visualFilter';
+import { DEFAULT_VISUAL_FILTER } from '@/config/visualFilters';
 
 // ── Character FX ──────────────────────────────────────────────────────────────
 
@@ -78,6 +81,8 @@ interface ProjectSettings {
     /** Global dialogue box visual defaults. Per-dialogue boxStyle overrides these. */
     dialogueBoxDefaults?: DialogueBoxStyle;
   };
+  /** Filtres visuels post-processing (CRT, scanlines, grain, dithering). Persisté. */
+  visualFilter: VisualFilterConfig;
 }
 
 interface GameVariables {
@@ -137,6 +142,11 @@ interface SettingsState {
   hiddenAssetPaths: string[];
   hideAsset: (path: string) => void;
   unhideAsset: (path: string) => void;
+  /** Thème couleur de la modale DialogueComposer — 'dark' | 'aurora' | 'candy'. Default: 'dark'. */
+  dialogueComposerTheme: DialogueComposerTheme;
+  setDialogueComposerTheme: (theme: DialogueComposerTheme) => void;
+  /** Met à jour les filtres visuels (patch partiel profond sur projectSettings.visualFilter). */
+  updateVisualFilter: (patch: Partial<VisualFilterConfig>) => void;
 }
 
 // ============================================================================
@@ -179,6 +189,7 @@ const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
       },
     },
   },
+  visualFilter: DEFAULT_VISUAL_FILTER,
 };
 
 const DEFAULT_VARIABLES: GameVariables = {
@@ -209,6 +220,7 @@ export const useSettingsStore = create<SettingsState>()(
         tilesetConfigs: {},
         spriteSheetConfigs: {},
         hiddenAssetPaths: [],
+        dialogueComposerTheme: 'dark' as DialogueComposerTheme,
 
         updateProjectData: (updates) => {
           set(
@@ -426,6 +438,26 @@ export const useSettingsStore = create<SettingsState>()(
           );
         },
 
+        setDialogueComposerTheme: (theme) => {
+          set({ dialogueComposerTheme: theme }, false, 'settings/setDialogueComposerTheme');
+        },
+
+        updateVisualFilter: (patch) => {
+          set(
+            (state) => ({
+              projectSettings: {
+                ...state.projectSettings,
+                visualFilter: {
+                  ...state.projectSettings.visualFilter,
+                  ...patch,
+                },
+              },
+            }),
+            false,
+            'settings/updateVisualFilter'
+          );
+        },
+
         // Actions: Dialogue Box Defaults
         updateDialogueBoxDefaults: (style) => {
           set(
@@ -484,6 +516,7 @@ export const useSettingsStore = create<SettingsState>()(
           tilesetConfigs: state.tilesetConfigs,
           spriteSheetConfigs: state.spriteSheetConfigs,
           hiddenAssetPaths: state.hiddenAssetPaths,
+          dialogueComposerTheme: state.dialogueComposerTheme,
         }),
       }
     ),

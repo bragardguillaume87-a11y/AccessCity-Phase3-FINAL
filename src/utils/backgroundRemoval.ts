@@ -207,6 +207,19 @@ function floodFillErase(
 }
 
 /**
+ * Charge une image depuis une URL ou dataURL et retourne un Blob.
+ * Utilisé en mode pinceau manuel (pas de Phase 1 IA).
+ */
+export async function imageUrlToBlob(url: string): Promise<Blob> {
+  if (url.startsWith('data:')) {
+    return dataURLtoBlob(url);
+  }
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Impossible de charger l'image : ${url}`);
+  return resp.blob();
+}
+
+/**
  * Convertit un Blob en dataURL (pour prévisualisation immédiate).
  */
 export function blobToDataURL(blob: Blob): Promise<string> {

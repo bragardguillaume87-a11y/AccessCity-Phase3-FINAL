@@ -22,6 +22,7 @@ import {
   removeBackgroundAI,
   removeBackgroundChromaKey,
   blobToDataURL,
+  imageUrlToBlob,
   type AiProgressCallback,
 } from '@/utils/backgroundRemoval';
 import { BrushMaskCanvas } from '@/components/ui/BrushMaskCanvas';
@@ -29,7 +30,7 @@ import type { BrushMaskCanvasHandle } from '@/components/ui/BrushMaskCanvas';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Mode = 'ai' | 'chroma';
+type Mode = 'ai' | 'chroma' | 'manual';
 
 export interface BgRemovalDialogProps {
   /** URL de l'image à traiter */
@@ -165,10 +166,40 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
     [mode, imageUrl, tolerance, processing]
   );
 
-  // Changer de mode réinitialise le résultat
+  // Changer de mode : reset systématique + chargement immédiat en mode manuel
   useEffect(() => {
-    resetToPhase1();
-  }, [mode, resetToPhase1]);
+    setResultBlob(null);
+    setResultDataUrl(null);
+    setError(null);
+    setCorrectionPhase(false);
+    setAiProgress(null);
+
+    if (mode !== 'manual') return;
+
+    // Mode manuel : charger l'original comme point de départ de Phase 2
+    let cancelled = false;
+    setProcessing(true);
+
+    (async () => {
+      try {
+        const blob = await imageUrlToBlob(imageUrl);
+        if (cancelled) return;
+        const dataUrl = await blobToDataURL(blob);
+        if (cancelled) return;
+        setResultBlob(blob);
+        setResultDataUrl(dataUrl);
+        setCorrectionPhase(true);
+      } catch {
+        if (!cancelled) setError("Impossible de charger l'image originale");
+      } finally {
+        if (!cancelled) setProcessing(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, imageUrl]);
 
   // ── Handler phase 2 : Enregistrer ─────────────────────────────────────
 
@@ -313,6 +344,7 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
                   [
                     { id: 'ai' as Mode, label: 'IA', icon: <Cpu size={12} /> },
                     { id: 'chroma' as Mode, label: 'Baguette ✨', icon: <Wand2 size={12} /> },
+                    { id: 'manual' as Mode, label: 'Manuel ✏️', icon: <Pencil size={12} /> },
                   ] as const
                 ).map((m) => (
                   <button
@@ -416,7 +448,7 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
                         illustrations. Le modèle (~80 MB) est téléchargé une seule fois et mis en
                         cache.
                       </>
-                    ) : (
+                    ) : mode === 'chroma' ? (
                       <>
                         <strong style={{ color: 'var(--color-text-secondary)' }}>
                           Baguette magique
@@ -428,7 +460,7 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
                           Après ça, vous pourrez corriger au pinceau.
                         </strong>
                       </>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Tolérance (chroma) */}
@@ -733,16 +765,16 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
               flexShrink: 0,
             }}
           >
-            {/* Phase 2 : bouton "Recommencer" */}
+            {/* Phase 2 : bouton "Recommencer" / "Changer de mode" */}
             {isCorrection && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={resetToPhase1}
+                onClick={mode === 'manual' ? () => setMode('ai') : resetToPhase1}
                 style={{ marginRight: 'auto' }}
               >
                 <ArrowLeft size={13} style={{ marginRight: 4 }} />
-                Recommencer
+                {mode === 'manual' ? 'Changer de mode' : 'Recommencer'}
               </Button>
             )}
 

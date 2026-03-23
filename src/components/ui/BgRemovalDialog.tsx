@@ -60,9 +60,10 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
   // ── State phase 2 ──────────────────────────────────────────────────────
   const brushRef = useRef<BrushMaskCanvasHandle>(null);
   const [saving, setSaving] = useState(false);
+  // Phase 2 uniquement si l'utilisateur clique "Corrections…" explicitement
+  const [correctionPhase, setCorrectionPhase] = useState(false);
 
-  // En phase 2 dès qu'un résultat initial est disponible
-  const isCorrection = resultBlob !== null && !processing;
+  const isCorrection = correctionPhase && resultBlob !== null && !processing;
 
   // ── Handlers phase 1 ───────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
     setResultBlob(null);
     setResultDataUrl(null);
     setError(null);
+    setCorrectionPhase(false);
   }, []);
 
   const handleRunAI = useCallback(async () => {
@@ -690,18 +692,15 @@ export function BgRemovalDialog({ imageUrl, imageName, onSave, onClose }: BgRemo
               Annuler
             </Button>
 
-            {/* Phase 1 → passer en corrections */}
+            {/* Phase 1 → passer en corrections (actif dès qu'un résultat est dispo) */}
             {!isCorrection && resultDataUrl && !processing && (
               <Button
                 size="sm"
-                onClick={() => {
-                  /* resultBlob déjà set, isCorrection devient true automatiquement */
-                }}
+                onClick={() => setCorrectionPhase(true)}
                 style={{ background: 'var(--color-primary)', color: '#fff' }}
-                disabled
               >
                 <Pencil size={13} style={{ marginRight: 4 }} />
-                Corrections…
+                Corrections ✏️
               </Button>
             )}
 

@@ -97,6 +97,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
     const [brushSize, setBrushSize] = useState(20); // en pixels image naturels
     const [canUndo, setCanUndo] = useState(false);
     const [isReady, setIsReady] = useState(false);
+    const isReadyRef = useRef(false); // accès stable dans l'imperative handle
 
     // Masques courants (ref pour accès stable dans les handlers pointer)
     const masksRef = useRef<BrushMasks | null>(null);
@@ -121,6 +122,8 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
 
     useEffect(() => {
       let cancelled = false;
+      isReadyRef.current = false;
+      setIsReady(false);
 
       async function init() {
         const [imgOrig, imgResult] = await Promise.all([
@@ -165,6 +168,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
 
         // Affichage initial (résultat sans correction)
         repaintResult();
+        isReadyRef.current = true;
         setIsReady(true);
       }
 
@@ -330,6 +334,7 @@ export const BrushMaskCanvas = forwardRef<BrushMaskCanvasHandle, BrushMaskCanvas
 
     useImperativeHandle(ref, () => ({
       getCorrectedBlob: () => {
+        if (!isReadyRef.current) return Promise.reject(new Error('Canvas non prêt'));
         const canvas = resultCanvasRef.current;
         if (!canvas) return Promise.reject(new Error('Canvas non initialisé'));
         return canvasToBlob(canvas);

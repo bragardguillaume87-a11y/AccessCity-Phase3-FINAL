@@ -147,7 +147,12 @@ export interface DialogueBoxProps {
   // ── Contenu ──
   speaker?: string;
   displayText: string;
+  /** HTML enrichi (gras, couleurs) — affiché à la place de displayText quand le typewriter est terminé. */
+  richText?: string;
   choices?: DialogueChoice[];
+
+  /** Vrai si le speaker est un narrateur — rendu cinématique sans boîte (style Octopath Traveler). */
+  isNarrator?: boolean;
 
   // ── État ──
   isTypewriterDone: boolean;
@@ -204,7 +209,9 @@ export interface DialogueBoxProps {
 export function DialogueBox({
   speaker,
   displayText,
+  richText,
   choices,
+  isNarrator = false,
   isTypewriterDone,
   hasChoices,
   isAtLastDialogue = false,
@@ -284,16 +291,28 @@ export function DialogueBox({
           paddingBottom: vPadBot,
         }}
       >
-        <p
-          className="leading-relaxed"
-          style={{
-            fontSize: effectiveFontSize,
-            minHeight: textMinHeightPx || undefined,
-            color: config.textColor,
-          }}
-        >
-          {displayText || '…'}
-        </p>
+        {isTypewriterDone && richText ? (
+          <p
+            className="leading-relaxed"
+            style={{
+              fontSize: effectiveFontSize,
+              minHeight: textMinHeightPx || undefined,
+              color: config.textColor,
+            }}
+            dangerouslySetInnerHTML={{ __html: richText }}
+          />
+        ) : (
+          <p
+            className="leading-relaxed"
+            style={{
+              fontSize: effectiveFontSize,
+              minHeight: textMinHeightPx || undefined,
+              color: config.textColor,
+            }}
+          >
+            {displayText || '…'}
+          </p>
+        )}
         <AnimatePresence>
           {isTypewriterDone && !hasChoices && !isAtLastDialogue && (
             <motion.div
@@ -435,7 +454,10 @@ export function DialogueBox({
                 {choice.effects && choice.effects.length > 0 && (
                   <span className="flex flex-wrap gap-1 mt-0.5">
                     {choice.effects
-                      .filter((e) => e.operation === 'add')
+                      .filter(
+                        (e): e is import('@/types').StatEffect =>
+                          'variable' in e && e.operation === 'add'
+                      )
                       .map((eff, i) => (
                         <span
                           key={i}
@@ -549,6 +571,246 @@ export function DialogueBox({
     );
   }
 
+  // ── Layout NARRATEUR — style Octopath Traveler ─────────────────────────────
+  // Boîte navy semi-transparente, bordure dorée, coins ornementaux, texte Crimson Pro italique crème.
+  // Pas de nameplate — l'absence du nom signale la narration (convention VN universelle).
+  if (isNarrator) {
+    const GOLD = '#c9a84c';
+    const CREAM = '#ede8d5';
+    const BOX_BG = 'rgba(7, 10, 26, 0.93)';
+
+    const padX = Math.round(30 * sf);
+    const padY = Math.round(18 * sf);
+    const sepMt = Math.round(11 * sf);
+    const ornSize = Math.round(9 * sf);
+
+    const narratorTextStyle: React.CSSProperties = {
+      fontSize: effectiveFontSize,
+      fontFamily: "'Crimson Pro', Georgia, 'Palatino Linotype', serif",
+      fontStyle: 'italic',
+      fontWeight: 400,
+      color: CREAM,
+      lineHeight: 1.88,
+      letterSpacing: '0.022em',
+      textAlign: 'center',
+      minHeight: textMinHeightPx || undefined,
+    };
+
+    const words = displayText.split(' ').filter(Boolean);
+
+    return (
+      <div style={{ position: 'relative', paddingTop: navigationSlot ? Math.round(36 * sf) : 0 }}>
+        {/* Slot de navigation éditeur */}
+        {navigationSlot && (
+          <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>{navigationSlot}</div>
+        )}
+
+        {/* ── Boîte principale ── */}
+        <div
+          className="backdrop-blur-md"
+          style={{
+            position: 'relative',
+            background: BOX_BG,
+            border: `1.5px solid ${GOLD}`,
+            borderRadius: Math.round(4 * sf),
+            boxShadow: [
+              `0 0 0 1px rgba(201,168,76,0.09)`,
+              `inset 0 0 50px rgba(0,0,0,0.38)`,
+              `0 12px 40px rgba(0,0,0,0.7)`,
+            ].join(', '),
+            padding: `${padY}px ${padX}px`,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Coins décoratifs dorés */}
+          <CornerDecorations color={GOLD} sf={sf} />
+
+          {/* Lueur de coin — ambiance parchemin */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: [
+                'radial-gradient(ellipse 60% 40% at top left, rgba(201,168,76,0.06) 0%, transparent 70%)',
+                'radial-gradient(ellipse 60% 40% at bottom right, rgba(201,168,76,0.06) 0%, transparent 70%)',
+              ].join(', '),
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* ── Ornement supérieur ── */}
+          <motion.div
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+            style={{
+              transformOrigin: 'center',
+              marginBottom: sepMt,
+              display: 'flex',
+              alignItems: 'center',
+              gap: Math.round(7 * sf),
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to right, transparent, ${GOLD}55)`,
+              }}
+            />
+            <span
+              aria-hidden="true"
+              style={{ color: GOLD, fontSize: ornSize, opacity: 0.9, lineHeight: 1, flexShrink: 0 }}
+            >
+              ✦
+            </span>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to left, transparent, ${GOLD}55)`,
+              }}
+            />
+          </motion.div>
+
+          {/* ── Texte ── */}
+          <div
+            onClick={onAdvance}
+            role={onAdvance ? 'button' : undefined}
+            style={{ cursor: onAdvance ? 'pointer' : undefined }}
+          >
+            {isTypewriterDone && richText ? (
+              <p style={narratorTextStyle} dangerouslySetInnerHTML={{ __html: richText }} />
+            ) : (
+              <p style={narratorTextStyle}>
+                {words.map((word, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.038, duration: 0.3, ease: 'easeOut' }}
+                  >
+                    {word}{' '}
+                  </motion.span>
+                ))}
+              </p>
+            )}
+          </div>
+
+          {/* ── Ornement inférieur ── */}
+          <motion.div
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ duration: 0.45, delay: 0.2, ease: 'easeOut' }}
+            style={{
+              transformOrigin: 'center',
+              marginTop: sepMt,
+              display: 'flex',
+              alignItems: 'center',
+              gap: Math.round(7 * sf),
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to right, transparent, ${GOLD}55)`,
+              }}
+            />
+            <span
+              aria-hidden="true"
+              style={{ color: GOLD, fontSize: ornSize, opacity: 0.9, lineHeight: 1, flexShrink: 0 }}
+            >
+              ✦
+            </span>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to left, transparent, ${GOLD}55)`,
+              }}
+            />
+          </motion.div>
+
+          {/* ── Indicateur continuer — chevron doré ── */}
+          <AnimatePresence>
+            {isTypewriterDone && !hasChoices && !isAtLastDialogue && (
+              <motion.div
+                key="narrator-continue"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{ display: 'flex', justifyContent: 'center', marginTop: Math.round(6 * sf) }}
+              >
+                <motion.span
+                  animate={{ opacity: [0.38, 0.85, 0.38], y: [0, Math.round(4 * sf), 0] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ color: GOLD, fontSize: Math.round(12 * sf), lineHeight: 1 }}
+                  aria-hidden="true"
+                >
+                  ▼
+                </motion.span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Fin de scène ── */}
+          {isTypewriterDone && !hasChoices && isAtLastDialogue && (onRestart || onClose) && (
+            <div
+              style={{
+                marginTop: Math.round(16 * sf),
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <p
+                style={{
+                  color: `${GOLD}70`,
+                  fontSize: Math.round(9 * sf),
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  fontFamily: "'Cinzel', serif",
+                }}
+              >
+                — Fin de la scène —
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {onRestart && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestart();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ border: `1px solid ${GOLD}40`, color: `${GOLD}90` }}
+                  >
+                    <RotateCcw className="w-3 h-3" aria-hidden="true" /> Recommencer
+                  </button>
+                )}
+                {onClose && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                    }}
+                    variant="gaming-primary"
+                    size="sm"
+                    className="min-w-[120px] text-xs"
+                  >
+                    Fermer
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ── Layout CLASSIQUE (défaut) ───────────────────────────────────────────────
   return (
     <div
@@ -622,16 +884,28 @@ export function DialogueBox({
         role={onAdvance ? 'button' : undefined}
         style={{ cursor: onAdvance ? 'pointer' : undefined }}
       >
-        <p
-          className="leading-relaxed"
-          style={{
-            fontSize: effectiveFontSize,
-            minHeight: textMinHeightPx || undefined,
-            color: config.textColor,
-          }}
-        >
-          {displayText || '…'}
-        </p>
+        {isTypewriterDone && richText ? (
+          <p
+            className="leading-relaxed"
+            style={{
+              fontSize: effectiveFontSize,
+              minHeight: textMinHeightPx || undefined,
+              color: config.textColor,
+            }}
+            dangerouslySetInnerHTML={{ __html: richText }}
+          />
+        ) : (
+          <p
+            className="leading-relaxed"
+            style={{
+              fontSize: effectiveFontSize,
+              minHeight: textMinHeightPx || undefined,
+              color: config.textColor,
+            }}
+          >
+            {displayText || '…'}
+          </p>
+        )}
 
         {/* ── Indicateur "continuer" — pill animée, visible ── */}
         <AnimatePresence>
@@ -790,7 +1064,10 @@ export function DialogueBox({
                 {choice.effects && choice.effects.length > 0 && (
                   <span className="flex flex-wrap gap-1 mt-0.5">
                     {choice.effects
-                      .filter((e) => e.operation === 'add')
+                      .filter(
+                        (e): e is import('@/types').StatEffect =>
+                          'variable' in e && e.operation === 'add'
+                      )
                       .map((eff, i) => (
                         <span
                           key={i}

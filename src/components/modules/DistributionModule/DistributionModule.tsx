@@ -230,8 +230,8 @@ export function DistributionModule() {
       {TabBar}
 
       <PanelGroup orientation="horizontal" style={{ flex: 1, overflow: 'hidden' }}>
-        {/* Roster toujours visible */}
-        <Panel defaultSize={18} minSize={15} maxSize={28} style={ROSTER_PANEL_STYLE}>
+        {/* Roster toujours visible — valeurs en string "N%" car numerics = pixels en v4 */}
+        <Panel defaultSize="18%" minSize="15%" maxSize="28%" style={ROSTER_PANEL_STYLE}>
           <CharacterRoster
             selectedCharacterId={selectedCharId}
             onSelect={(id) => {
@@ -243,8 +243,8 @@ export function DistributionModule() {
 
         <Separator style={SEP_STYLE} />
 
-        {/* Vue centrale */}
-        <Panel style={{ display: 'flex', overflow: 'hidden' }}>
+        {/* Vue centrale — defaultSize explicite pour éviter que le panel prenne 100% */}
+        <Panel defaultSize="60%" style={{ display: 'flex', overflow: 'hidden' }}>
           {activeView === 'bone-editor' && !selectedCharId && InlineCharacterPicker}
 
           {activeView === 'bone-editor' && selectedCharId && (
@@ -273,8 +273,8 @@ export function DistributionModule() {
 
         <Separator style={SEP_STYLE} />
 
-        {/* Panneau droit — toujours présent pour stabiliser le layout */}
-        <Panel defaultSize={22} minSize={18} maxSize={32} style={RIGHT_PANEL_STYLE}>
+        {/* Panneau droit — valeurs en string "N%" (numerics = pixels en v4) */}
+        <Panel defaultSize="22%" minSize="18%" maxSize="32%" style={RIGHT_PANEL_STYLE}>
           {activeView === 'bone-editor' && (
             <BoneEditorRightPanel
               characterId={selectedCharId ?? ''}

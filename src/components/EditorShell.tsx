@@ -34,6 +34,7 @@ import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas';
 import { CinematicInlinePlayer } from './panels/CinematicInlinePlayer';
+import { VisualFilterLayer } from './ui/VisualFilterLayer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '../utils/logger';
 import { isFirstLaunch, loadDefaultProject } from '../utils/loadDefaultProject';
@@ -588,17 +589,19 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
               {/* GUARD : scènes cinématiques → placeholder dédié, MainCanvas ne monte pas.
                   Évite que les hooks de MainCanvas (useDialogueSync, useCanvasKeyboard, etc.)
                   s'exécutent pour un type de scène qu'ils ne gèrent pas. */}
-              {isCinematicScene(selectedScene) ? (
-                <CinematicInlinePlayer scene={selectedScene!} characters={characters} />
-              ) : (
-                <ErrorBoundary name="MainCanvas">
-                  <MainCanvas
-                    selectedScene={selectedScene}
-                    selectedElement={selectedElementLegacy}
-                    onSelectDialogue={editorLogic.handleDialogueSelect}
-                  />
-                </ErrorBoundary>
-              )}
+              <VisualFilterLayer style={{ width: '100%', height: '100%' }}>
+                {isCinematicScene(selectedScene) ? (
+                  <CinematicInlinePlayer scene={selectedScene!} characters={characters} />
+                ) : (
+                  <ErrorBoundary name="MainCanvas">
+                    <MainCanvas
+                      selectedScene={selectedScene}
+                      selectedElement={selectedElementLegacy}
+                      onSelectDialogue={editorLogic.handleDialogueSelect}
+                    />
+                  </ErrorBoundary>
+                )}
+              </VisualFilterLayer>
             </Panel>
           </Group>
 

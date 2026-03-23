@@ -480,25 +480,34 @@ export const useSettingsStore = create<SettingsState>()(
       })),
       {
         name: 'accesscity-settings',
-        version: 1,
-        migrate: (persisted: Record<string, unknown>) => {
+        version: 2,
+        migrate: (persisted: Record<string, unknown>, version: number) => {
           // v1 — AnimationRange: {startFrame, endFrame} → {frames: number[]}
-          const configs =
-            (persisted?.spriteSheetConfigs as Record<string, Record<string, unknown>>) ?? {};
-          for (const key of Object.keys(configs)) {
-            const cfg = configs[key] as Record<string, Record<string, unknown>> | undefined;
-            if (!cfg?.animations) continue;
-            for (const tag of Object.keys(cfg.animations)) {
-              const anim = cfg.animations[tag] as Record<string, unknown> | undefined;
-              if (anim && !Array.isArray(anim.frames) && anim.startFrame !== undefined) {
-                const sf = anim.startFrame as number;
-                const ef = (anim.endFrame as number | undefined) ?? sf;
-                const lo = Math.min(sf, ef);
-                const hi = Math.max(sf, ef);
-                anim.frames = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
-                delete anim.startFrame;
-                delete anim.endFrame;
+          if (version < 2) {
+            const configs =
+              (persisted?.spriteSheetConfigs as Record<string, Record<string, unknown>>) ?? {};
+            for (const key of Object.keys(configs)) {
+              const cfg = configs[key] as Record<string, Record<string, unknown>> | undefined;
+              if (!cfg?.animations) continue;
+              for (const tag of Object.keys(cfg.animations)) {
+                const anim = cfg.animations[tag] as Record<string, unknown> | undefined;
+                if (anim && !Array.isArray(anim.frames) && anim.startFrame !== undefined) {
+                  const sf = anim.startFrame as number;
+                  const ef = (anim.endFrame as number | undefined) ?? sf;
+                  const lo = Math.min(sf, ef);
+                  const hi = Math.max(sf, ef);
+                  anim.frames = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+                  delete anim.startFrame;
+                  delete anim.endFrame;
+                }
               }
+            }
+          }
+          // v2 — Ajout de visualFilter dans projectSettings
+          {
+            const ps = persisted?.projectSettings as Record<string, unknown> | undefined;
+            if (ps && !ps.visualFilter) {
+              ps.visualFilter = DEFAULT_VISUAL_FILTER;
             }
           }
           return persisted;

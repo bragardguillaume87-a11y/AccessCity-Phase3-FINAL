@@ -243,22 +243,6 @@ export default function VisualFiltersModal({ isOpen, onClose }: VisualFiltersMod
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={onClose}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 'var(--z-modal-backdrop)' as never,
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(4px)',
-            }}
-          />
-
           {/* Panel */}
           <motion.aside
             initial={{ x: 320, opacity: 0 }}

@@ -75,6 +75,19 @@ Sources : Unity Manual PrefabInstanceOverrides, Articy:draft docs.
 
 ---
 
+## Seuil d'escalade — si TextSection dépasse 6 PanelSection
+
+État actuel : **6 sections** (APERÇU, TEXTE, APPARENCE, PORTRAIT, NOM DU PERSONNAGE, NARRATEUR).
+
+W3C WAI + NNGroup : seuil recommandé = 5–6. Au-delà, introduire des **onglets** (pas plus de sous-accordéons).
+Pattern de référence : Unity Inspector (Transform/Rendering/Physics en tabs), VS Code (Editor/Workbench/Extensions), Figma (Design/Prototype/Inspect).
+
+Prochaine étape si besoin : tab bar `PRÉSENTATION | APPARENCE | NARRATEUR` avec accordéons à l'intérieur de chaque onglet.
+
+Sources : W3C WAI ARIA APG, NNGroup accordions-on-desktop, Smashing Magazine accordion checklist.
+
+---
+
 ## ALIGNEMENT DU NOM — section correcte (`TextSection.tsx`)
 
 Appartient à **NOM DU PERSONNAGE**, PAS à PORTRAIT.

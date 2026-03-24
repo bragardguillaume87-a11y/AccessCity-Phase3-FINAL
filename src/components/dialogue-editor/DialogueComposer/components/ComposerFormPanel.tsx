@@ -406,6 +406,7 @@ export function ComposerFormPanel({
                         fontSize: 12,
                         color: 'rgba(255,255,255,0.85)',
                         height: 'auto',
+                        width: 'auto',
                         minWidth: 0,
                       }}
                     >

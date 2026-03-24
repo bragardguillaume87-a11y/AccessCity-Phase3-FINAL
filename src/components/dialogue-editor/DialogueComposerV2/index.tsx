@@ -512,6 +512,7 @@ export function DialogueComposerV2({
             padding: '12px 16px 16px',
             display: 'flex',
             gap: 7,
+            justifyContent: 'center',
             borderBottom: `1.5px solid ${T.border}`,
             background: 'rgba(0,0,0,0.10)',
             flexShrink: 0,
@@ -528,7 +529,8 @@ export function DialogueComposerV2({
                 aria-selected={isActive}
                 onClick={() => handleTypeChange(tab.id)}
                 style={{
-                  flex: 1,
+                  flex: '1 1 0',
+                  maxWidth: 160,
                   borderRadius: 13,
                   padding: '8px 6px',
                   display: 'flex',
@@ -542,7 +544,7 @@ export function DialogueComposerV2({
                   boxShadow: isActive ? '0 8px 20px rgba(0,0,0,0.28)' : 'none',
                   transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
                   cursor: 'pointer',
-                  minWidth: 0,
+                  minWidth: 80,
                 }}
               >
                 {/* Pip "actif" */}
@@ -1425,6 +1427,97 @@ export function DialogueComposerV2({
                       ⚠ Long
                     </span>
                   )}
+                </div>
+                {/* Choices preview — pour les types avec choix (Will Wright §4.1 simulation visible) */}
+                {!isMinigame &&
+                  formData.complexityLevel !== 'linear' &&
+                  formData.choices.length > 0 && (
+                    <div style={{ padding: '0 12px 10px' }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: T.t3,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          marginBottom: 6,
+                        }}
+                      >
+                        CHOIX
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {formData.choices.slice(0, 4).map((choice, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              background: T.card,
+                              border: `1px solid ${T.border}`,
+                              borderRadius: 8,
+                              padding: '6px 10px',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: T.t2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 900,
+                                color: T.teal,
+                                width: 14,
+                                textAlign: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {String.fromCharCode(65 + i)}
+                            </span>
+                            <span
+                              style={{
+                                flex: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                color: choice.text?.trim() ? T.t1 : T.t3,
+                                fontStyle: choice.text?.trim() ? 'normal' : 'italic',
+                              }}
+                            >
+                              {choice.text?.trim() || 'Texte du choix…'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                {/* Scène info — contexte narratif en bas du panneau */}
+                <div
+                  style={{
+                    margin: '0 12px 12px',
+                    padding: '7px 10px',
+                    background: 'rgba(0,0,0,0.22)',
+                    borderRadius: 8,
+                    border: `1px solid ${T.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 12, flexShrink: 0 }}>📍</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: T.t3,
+                      fontWeight: 700,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {currentScene?.title ?? `Scène ${sceneId.slice(-4)}`}
+                  </span>
                 </div>
                 {/* Badge minijeu */}
                 {isMinigame && (

@@ -43,6 +43,7 @@ import {
   MAP_CANVAS_COLORS,
   MAP_DIM_FACTOR,
 } from '@/config/mapEditorConfig';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ============================================================================
 // PROPS
@@ -2472,7 +2473,7 @@ export default function MapCanvas({
               position: 'fixed',
               top: tileContextMenu.y,
               left: tileContextMenu.x,
-              zIndex: 9999,
+              zIndex: Z_INDEX.TOPDOWN_DIALOG,
               background: 'var(--color-bg-overlay, #1e1e2e)',
               border: '1px solid var(--color-border-base, rgba(255,255,255,0.12))',
               borderRadius: 8,

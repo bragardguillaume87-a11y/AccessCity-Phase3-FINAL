@@ -15,6 +15,7 @@ import type { SceneEffectConfig, SceneEffectType } from '@/types/sceneEffect';
 import { MAP_CONSTRAINTS, MAP_WARNING_COLORS } from '@/config/mapEditorConfig';
 import { SOUND_BRICKS } from '@/config/soundBricks';
 import { SCENE_EFFECT_TYPES, makeDefaultEffect } from '@/config/sceneEffects';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // Presets courants (largeur × hauteur tuiles, taille px)
 const PRESETS = [
@@ -140,7 +141,7 @@ export default function MapSettingsDialog({ map, onClose }: MapSettingsDialogPro
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: Z_INDEX.TOPDOWN_DIALOG,
         background: 'rgba(0,0,0,0.65)',
         display: 'flex',
         alignItems: 'center',

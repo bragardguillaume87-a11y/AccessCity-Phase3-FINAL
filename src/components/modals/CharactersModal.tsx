@@ -1,5 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Settings } from 'lucide-react';
@@ -10,7 +16,12 @@ import { useScenesStore } from '@/stores/scenesStore';
 import { useValidation } from '@/hooks/useValidation';
 import { logger } from '@/utils/logger';
 import { useCharacterStats } from './CharactersModal/hooks/useCharacterStats';
-import { useCharacterFiltering, type CompletenessFilter, type UsageFilter, type CharacterSortBy } from './CharactersModal/hooks/useCharacterFiltering';
+import {
+  useCharacterFiltering,
+  type CompletenessFilter,
+  type UsageFilter,
+  type CharacterSortBy,
+} from './CharactersModal/hooks/useCharacterFiltering';
 import { useCharacterUsage } from './CharactersModal/hooks/useCharacterUsage';
 import { useCharacterSelection } from './CharactersModal/hooks/useCharacterSelection';
 import { useCharacterFavorites } from './CharactersModal/hooks/useCharacterFavorites';
@@ -31,11 +42,7 @@ export interface CharactersModalProps {
   initialCharacterId?: string;
 }
 
-export function CharactersModal({
-  isOpen,
-  onClose,
-  initialCharacterId,
-}: CharactersModalProps) {
+export function CharactersModal({ isOpen, onClose, initialCharacterId }: CharactersModalProps) {
   const characters = useCharactersStore((state) => state.characters);
   const addCharacter = useCharactersStore((state) => state.addCharacter);
   const updateCharacter = useCharactersStore((state) => state.updateCharacter);
@@ -82,9 +89,7 @@ export function CharactersModal({
     if (!searchQueryManagement.trim()) return characters;
     const query = searchQueryManagement.toLowerCase();
     return characters.filter(
-      (c) =>
-        c.name.toLowerCase().includes(query) ||
-        c.description?.toLowerCase().includes(query)
+      (c) => c.name.toLowerCase().includes(query) || c.description?.toLowerCase().includes(query)
     );
   }, [characters, searchQueryManagement]);
 
@@ -181,15 +186,24 @@ export function CharactersModal({
     setEditingCharacter(null);
   }, []);
 
-  const handleEditorSave = useCallback((character: Character) => {
-    updateCharacter(character);
-    setEditingCharacter(null);
-  }, [updateCharacter]);
+  const handleEditorSave = useCallback(
+    (character: Character) => {
+      updateCharacter(character);
+      setEditingCharacter(null);
+    },
+    [updateCharacter]
+  );
 
   const validationErrors = useMemo(() => {
-    const errors: Record<string, Array<{ field: string; message: string; severity: 'error' | 'warning' }>> = {};
+    const errors: Record<
+      string,
+      Array<{ field: string; message: string; severity: 'error' | 'warning' }>
+    > = {};
     type ErrEntry = { field: string; message: string; severity: string };
-    const charErrors = (validation.errors?.characters ?? {}) as unknown as Record<string, ErrEntry[]>;
+    const charErrors = (validation.errors?.characters ?? {}) as unknown as Record<
+      string,
+      ErrEntry[]
+    >;
     Object.entries(charErrors).forEach(([charId, charErrorList]: [string, ErrEntry[]]) => {
       errors[charId] = charErrorList.map((err) => ({
         field: err.field || 'unknown',
@@ -206,19 +220,18 @@ export function CharactersModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
-        <DialogContent className="max-w-[min(1200px,95vw)] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-slate-700/50 bg-slate-900">
+        <DialogContent className="max-w-[min(1200px,95vw)] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col bg-background border-border shadow-2xl">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-border bg-background">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-primary/10 text-primary">
                   <Users className="h-4 w-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base">
-                    Gestion des personnages
-                  </DialogTitle>
+                  <DialogTitle className="text-base">Gestion des personnages</DialogTitle>
                   <DialogDescription className="text-xs">
-                    {characters.length} personnage{characters.length > 1 ? 's' : ''} • {totalStats.complete} complet{totalStats.complete > 1 ? 's' : ''}
+                    {characters.length} personnage{characters.length > 1 ? 's' : ''} •{' '}
+                    {totalStats.complete} complet{totalStats.complete > 1 ? 's' : ''}
                   </DialogDescription>
                 </div>
               </div>

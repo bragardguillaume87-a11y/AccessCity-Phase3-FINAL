@@ -168,7 +168,7 @@ export function CollapsibleSection({
         )}
 
         {/* Title */}
-        <span className="flex-1 text-sm font-semibold text-white">{title}</span>
+        <span className="flex-1 text-sm font-semibold text-foreground">{title}</span>
 
         {/* Badge */}
         {badge && <span className="flex-shrink-0 text-xs text-muted-foreground">{badge}</span>}
@@ -239,7 +239,7 @@ export function CollapsibleGroup({
         <div className="flex justify-end">
           <button
             onClick={() => setExpandAll(!expandAll)}
-            className="px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
           >
             {expandAll ? '⏶ Collapse All' : '⏷ Expand All'}
           </button>

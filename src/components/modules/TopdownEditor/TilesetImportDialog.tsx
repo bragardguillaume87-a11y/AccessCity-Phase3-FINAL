@@ -14,6 +14,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Grid3X3, ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { TILESET_CATEGORIES } from '@/types/tileset';
 import type { TilesetConfig, HitboxDef } from '@/types/tileset';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -234,7 +235,7 @@ export default function TilesetImportDialog({
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 9998,
+            zIndex: Z_INDEX.TOPDOWN_BACKDROP,
             background: 'rgba(0,0,0,0.65)',
             backdropFilter: 'blur(3px)',
           }}
@@ -247,7 +248,7 @@ export default function TilesetImportDialog({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 9999,
+            zIndex: Z_INDEX.TOPDOWN_DIALOG,
             background: 'var(--color-surface-elevated, #1e1e2e)',
             border: '1px solid var(--color-border-base, rgba(255,255,255,0.12))',
             borderRadius: 14,

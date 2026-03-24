@@ -34,9 +34,7 @@ export class DialogueEngine {
   private showCurrentDialogue(): void {
     if (!this.currentScene) return;
 
-    const dialogues = Array.isArray(this.currentScene.dialogues)
-      ? this.currentScene.dialogues
-      : [];
+    const dialogues = Array.isArray(this.currentScene.dialogues) ? this.currentScene.dialogues : [];
 
     while (this.idx < dialogues.length) {
       const dialogue = dialogues[this.idx];
@@ -46,7 +44,7 @@ export class DialogueEngine {
         this.eventBus.emit('dialogue:show', {
           speaker: dialogue.speaker,
           text: dialogue.text,
-          choices: dialogue.choices || []
+          choices: dialogue.choices || [],
         });
         return;
       }
@@ -65,28 +63,35 @@ export class DialogueEngine {
 
     const deltas: Array<{ variable: string; delta: number }> = [];
 
-    choice.effects.forEach(effect => {
+    choice.effects.forEach((effect) => {
+      // Effets écran — délégués au PreviewPlayer via le bus d'événements
+      if (effect.operation === 'screenShake' || effect.operation === 'colorFilter') {
+        this.eventBus.emit('effect:screen', effect);
+        return;
+      }
+
+      // StatEffect — modification de variable numérique
       const before = this.vm.get(effect.variable);
 
       if (effect.operation === 'set') {
         this.vm.set(effect.variable, effect.value);
         deltas.push({
           variable: effect.variable,
-          delta: effect.value - before
+          delta: effect.value - before,
         });
       } else if (effect.operation === 'multiply') {
         const newValue = Math.round(before * effect.value);
         this.vm.set(effect.variable, newValue);
         deltas.push({
           variable: effect.variable,
-          delta: newValue - before
+          delta: newValue - before,
         });
       } else {
         // Default: 'add'
         this.vm.modify(effect.variable, effect.value);
         deltas.push({
           variable: effect.variable,
-          delta: effect.value
+          delta: effect.value,
         });
       }
     });

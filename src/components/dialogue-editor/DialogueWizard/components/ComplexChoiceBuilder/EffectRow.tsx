@@ -1,4 +1,3 @@
-
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,18 +7,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { GAME_STATS } from '@/i18n';
-import type { Effect } from '@/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { STAT_VARIABLES } from '@/i18n';
+import type { StatEffect } from '@/types';
 
 interface EffectRowProps {
-  effect: Effect;
-  onUpdate: (updates: Partial<Effect>) => void;
+  effect: StatEffect;
+  onUpdate: (updates: Partial<StatEffect>) => void;
   onRemove: () => void;
 }
 
@@ -28,14 +22,9 @@ const OPERATIONS: Array<{
   symbol: string;
   tooltip: string;
 }> = [
-  { value: 'add',      symbol: '+',  tooltip: 'Ajouter (ex : Corps + 10)' },
-  { value: 'set',      symbol: '=',  tooltip: 'Fixer (ex : Corps = 50)' },
-  { value: 'multiply', symbol: '×',  tooltip: 'Multiplier (ex : Corps × 0.5)' },
-];
-
-const VARIABLES = [
-  { value: GAME_STATS.PHYSIQUE, label: '💪 Corps' },
-  { value: GAME_STATS.MENTALE,  label: "🧠 Esprit" },
+  { value: 'add', symbol: '+', tooltip: 'Ajouter (ex : Physique + 10)' },
+  { value: 'set', symbol: '=', tooltip: 'Fixer (ex : Physique = 50)' },
+  { value: 'multiply', symbol: '×', tooltip: 'Multiplier (ex : Physique × 0.5)' },
 ];
 
 function getValueColor(op: string, value: number): string {
@@ -44,9 +33,10 @@ function getValueColor(op: string, value: number): string {
   return value >= 0 ? 'var(--color-success)' : 'var(--color-danger)';
 }
 
-function getPreviewLabel(effect: Effect): string {
-  const varLabel = VARIABLES.find(v => v.value === effect.variable)?.label ?? effect.variable;
-  const sym = OPERATIONS.find(o => o.value === effect.operation)?.symbol ?? effect.operation;
+function getPreviewLabel(effect: StatEffect): string {
+  const varLabel =
+    STAT_VARIABLES.find((v) => v.value === effect.variable)?.label ?? effect.variable;
+  const sym = OPERATIONS.find((o) => o.value === effect.operation)?.symbol ?? effect.operation;
   return `${varLabel} ${sym} ${effect.value}`;
 }
 
@@ -61,18 +51,16 @@ export function EffectRow({ effect, onUpdate, onRemove }: EffectRowProps) {
       >
         {/* Ligne principale */}
         <div className="flex items-center gap-1.5">
-
           {/* Variable */}
-          <Select
-            value={effect.variable}
-            onValueChange={(value) => onUpdate({ variable: value })}
-          >
+          <Select value={effect.variable} onValueChange={(value) => onUpdate({ variable: value })}>
             <SelectTrigger className="flex-1 min-w-0 text-xs h-8">
               <SelectValue placeholder="Stat…" />
             </SelectTrigger>
             <SelectContent>
-              {VARIABLES.map((v) => (
-                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+              {STAT_VARIABLES.map((v) => (
+                <SelectItem key={v.value} value={v.value}>
+                  {v.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -93,8 +81,12 @@ export function EffectRow({ effect, onUpdate, onRemove }: EffectRowProps) {
                       justifyContent: 'center',
                       borderRadius: 'var(--radius-sm)',
                       border: `1px solid ${effect.operation === op.value ? 'var(--accent-purple)' : 'var(--color-border-base)'}`,
-                      background: effect.operation === op.value ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                      color: effect.operation === op.value ? 'var(--accent-purple)' : 'var(--color-text-muted)',
+                      background:
+                        effect.operation === op.value ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                      color:
+                        effect.operation === op.value
+                          ? 'var(--accent-purple)'
+                          : 'var(--color-text-muted)',
                       fontSize: '0.8125rem',
                       fontWeight: 600,
                       cursor: 'pointer',

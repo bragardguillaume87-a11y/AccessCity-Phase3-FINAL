@@ -1,17 +1,26 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { DialoguePicker } from '@/components/ui/DialoguePicker';
 import { cn } from '@/lib/utils';
 import { useCharactersStore } from '@/stores';
 import { DEFAULTS } from '@/config/constants';
 import { SELECT_NONE_VALUE } from '@/utils/constants';
-import type { DialogueChoice, Scene } from '@/types';
+import type { DialogueChoice, Scene, Condition } from '@/types';
 import type { ResponseData } from '../../DialogueWizard/hooks/useDialogueForm';
+import { ConditionRow } from '../../DialogueWizard/components/ComplexChoiceBuilder/ConditionRow';
+
+const DEFAULT_CONDITION: Condition = { variable: 'MENTALE', operator: '>=', value: 0 };
 
 // ── Visual config per slot (A / B) ───────────────────────────────────────────
 const SLOT_CONFIG = [
@@ -20,16 +29,16 @@ const SLOT_CONFIG = [
     label: 'Premier chemin',
     placeholder: 'Accepter, Aider, Explorer…',
     validBorder: 'border-emerald-500/40 focus:border-emerald-500',
-    barColor:    'bg-emerald-500',
-    cardBorder:  'border-emerald-500/30',
+    barColor: 'bg-emerald-500',
+    cardBorder: 'border-emerald-500/30',
   },
   {
     emoji: '👎',
     label: 'Deuxième chemin',
     placeholder: 'Refuser, Ignorer, Fuir…',
     validBorder: 'border-rose-500/40 focus:border-rose-500',
-    barColor:    'bg-rose-500',
-    cardBorder:  'border-rose-500/30',
+    barColor: 'bg-rose-500',
+    cardBorder: 'border-rose-500/30',
   },
 ] as const;
 
@@ -66,19 +75,36 @@ export function BinaryChoiceField({
   onUpdateChoice,
   onUpdateResponse,
 }: BinaryChoiceFieldProps) {
-  const characters  = useCharactersStore(state => state.characters);
-  const cfg         = SLOT_CONFIG[choiceIndex];
-  const charCount   = choice.text?.length ?? 0;
-  const isValid     = charCount >= 5;
-  const otherScenes = useMemo(() => scenes.filter(s => s.id !== currentSceneId), [scenes, currentSceneId]);
-  const speakerVal  = response?.speaker || defaultSpeaker || DEFAULTS.DIALOGUE_SPEAKER;
+  const characters = useCharactersStore((state) => state.characters);
+  const cfg = SLOT_CONFIG[choiceIndex];
+  const charCount = choice.text?.length ?? 0;
+  const isValid = charCount >= 5;
+  const otherScenes = useMemo(
+    () => scenes.filter((s) => s.id !== currentSceneId),
+    [scenes, currentSceneId]
+  );
+  const speakerVal = response?.speaker || defaultSpeaker || DEFAULTS.DIALOGUE_SPEAKER;
+
+  const [conditionsOpen, setConditionsOpen] = useState(false);
+  const conditions = choice.conditions ?? [];
+
+  const handleAddCondition = () => {
+    onUpdateChoice({ conditions: [...conditions, { ...DEFAULT_CONDITION }] });
+    setConditionsOpen(true);
+  };
+  const handleUpdateCondition = (idx: number, updates: Partial<Condition>) => {
+    onUpdateChoice({
+      conditions: conditions.map((c, i) => (i === idx ? { ...c, ...updates } : c)),
+    });
+  };
+  const handleRemoveCondition = (idx: number) => {
+    onUpdateChoice({ conditions: conditions.filter((_, i) => i !== idx) });
+  };
 
   return (
     <div className="space-y-3">
-
       {/* ── Choice text row ─────────────────────────────────────────────── */}
       <div className="space-y-1.5">
-
         {/* Slot header — minimal, no heavy gradient */}
         <div className="flex items-center gap-1.5">
           <span className="text-base">{cfg.emoji}</span>
@@ -104,10 +130,7 @@ export function BinaryChoiceField({
             onChange={(e) => onUpdateChoice({ text: e.target.value })}
             placeholder={cfg.placeholder}
             maxLength={50}
-            className={cn(
-              'h-9 text-sm flex-1 transition-colors',
-              isValid && cfg.validBorder,
-            )}
+            className={cn('h-9 text-sm flex-1 transition-colors', isValid && cfg.validBorder)}
             aria-label={cfg.label}
           />
           {/* Dialogue picker — only shown when there are dialogues to link to */}
@@ -147,8 +170,10 @@ export function BinaryChoiceField({
                 <SelectValue placeholder="Cette scène" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={SELECT_NONE_VALUE} className="text-xs">Cette scène</SelectItem>
-                {otherScenes.map(scene => (
+                <SelectItem value={SELECT_NONE_VALUE} className="text-xs">
+                  Cette scène
+                </SelectItem>
+                {otherScenes.map((scene) => (
                   <SelectItem key={scene.id} value={scene.id} className="text-xs">
                     {scene.title || 'Sans titre'}
                   </SelectItem>
@@ -156,6 +181,67 @@ export function BinaryChoiceField({
               </SelectContent>
             </Select>
           </div>
+        )}
+      </div>
+
+      {/* ── Conditions de visibilité ─────────────────────────────────────── */}
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={() => setConditionsOpen((o) => !o)}
+          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {conditionsOpen ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
+          <span className="font-semibold uppercase tracking-wide">Conditions</span>
+          {conditions.length > 0 && (
+            <span className="ml-1 px-1 py-0.5 rounded-full bg-violet-500/20 text-violet-400 text-[10px] font-bold">
+              {conditions.length}
+            </span>
+          )}
+        </button>
+        <AnimatePresence>
+          {conditionsOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.15 }}
+              className="overflow-hidden space-y-1"
+            >
+              {conditions.map((cond, idx) => (
+                <ConditionRow
+                  key={idx}
+                  condition={cond}
+                  onUpdate={(updates) => handleUpdateCondition(idx, updates)}
+                  onRemove={() => handleRemoveCondition(idx)}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs gap-1 w-full border border-dashed border-border/60"
+                onClick={handleAddCondition}
+              >
+                <Plus className="w-3 h-3" /> Ajouter
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {!conditionsOpen && conditions.length === 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 text-[10px] gap-1 text-muted-foreground border border-dashed border-border/30"
+            onClick={handleAddCondition}
+          >
+            <Plus className="w-3 h-3" /> Condition
+          </Button>
         )}
       </div>
 
@@ -170,7 +256,6 @@ export function BinaryChoiceField({
             className="overflow-hidden"
           >
             <div className={cn('rounded-xl border p-3 space-y-2 bg-card/40 mt-1', cfg.cardBorder)}>
-
               {/* Inline header — no gradient block */}
               <div className="flex items-center gap-1.5">
                 <span className="text-xs">↩</span>
@@ -187,10 +272,17 @@ export function BinaryChoiceField({
                   {characters.map((char) => (
                     <SelectItem key={char.id} value={char.id} className="text-xs py-1.5">
                       <div className="flex items-center gap-2">
-                        {char.sprites?.neutral
-                          ? <img src={char.sprites.neutral} alt={char.name} className="w-5 h-5 rounded object-contain bg-muted" />
-                          : <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center"><span className="text-[10px]">👤</span></div>
-                        }
+                        {char.sprites?.neutral ? (
+                          <img
+                            src={char.sprites.neutral}
+                            alt={char.name}
+                            className="w-5 h-5 rounded object-contain bg-muted"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
+                            <span className="text-[10px]">👤</span>
+                          </div>
+                        )}
                         <span>{char.name}</span>
                       </div>
                     </SelectItem>

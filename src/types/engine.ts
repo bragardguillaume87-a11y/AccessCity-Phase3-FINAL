@@ -1,4 +1,4 @@
-import type { GameStats } from './game';
+import type { GameStats, ScreenShakeEffect, ColorFilterEffect } from './game';
 import type { DialogueChoice, Scene } from './scenes';
 
 export interface EventBusEvents {
@@ -15,6 +15,8 @@ export interface EventBusEvents {
     variable: string;
     delta: number;
   }>;
+  /** Effet écran déclenché par un choix (tremblement ou filtre daltonisme). */
+  'effect:screen': ScreenShakeEffect | ColorFilterEffect;
 }
 
 export type EventCallback<T = unknown> = (data: T) => void;

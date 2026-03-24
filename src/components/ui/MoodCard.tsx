@@ -1,6 +1,15 @@
 import { motion } from 'framer-motion';
 import { convertFileSrcIfNeeded } from '@/utils/tauri';
 
+/** Teinte HSL déterministe depuis le nom du mood (Quilez §14.1) */
+function getMoodHue(mood: string): number {
+  let hash = 0;
+  for (let i = 0; i < mood.length; i++) {
+    hash = mood.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
+}
+
 export interface MoodCardProps {
   mood: string;
   emoji: string;
@@ -41,6 +50,7 @@ export function MoodCard({
   const labelFontSize = Math.max(6, Math.round(size * 0.175));
   const emojiFontSize = Math.round(size * 0.38);
   const gradientPadTop = Math.round(size * 0.2);
+  const moodHue = getMoodHue(mood);
 
   return (
     <motion.button
@@ -60,7 +70,7 @@ export function MoodCard({
         width: size,
         aspectRatio: '3 / 4',
         borderRadius: Math.round(size * 0.2),
-        border: `2px solid ${isActive ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+        border: `2px solid ${isActive ? 'var(--color-primary)' : sprite ? 'var(--color-border-base)' : `hsla(${moodHue}, 55%, 55%, 0.45)`}`,
         background: isActive ? 'var(--color-primary-subtle)' : 'var(--color-bg-base)',
         overflow: 'hidden',
         cursor: 'pointer',
@@ -94,8 +104,8 @@ export function MoodCard({
             justifyContent: 'center',
             fontSize: emojiFontSize,
             background: isActive
-              ? 'linear-gradient(135deg, var(--color-primary-20), var(--color-primary-05))'
-              : 'linear-gradient(135deg, rgba(255,255,255,0.04), transparent)',
+              ? `linear-gradient(135deg, hsl(${moodHue}, 60%, 30%), hsl(${moodHue}, 50%, 18%))`
+              : `linear-gradient(135deg, hsl(${moodHue}, 45%, 20%), hsl(${moodHue}, 35%, 13%))`,
           }}
         >
           {emoji}

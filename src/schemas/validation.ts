@@ -179,6 +179,8 @@ export const DialogueSchema = z.object({
   speakerMood: z.string().optional(),
   nextDialogueId: OptionalString,
   isResponse: z.boolean().optional(),
+  minigame: z.any().optional(),
+  dialogueSubtype: z.enum(['normal', 'phonecall']).optional(),
 });
 
 /**

@@ -218,10 +218,13 @@ function SubSection({
   title,
   children,
   defaultOpen = true,
+  badge,
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  /** Résumé de l'état courant, affiché quand la section est fermée */
+  badge?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -233,6 +236,14 @@ function SubSection({
         className="w-full flex items-center justify-between mb-1.5 py-1 text-[10.5px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide hover:text-[var(--color-text-secondary)] transition-colors border-b border-[var(--color-border-base)]/40 pb-1"
       >
         <span>{title}</span>
+        {!open && badge && (
+          <span
+            className="ml-2 text-[9px] font-normal normal-case tracking-normal text-[var(--color-text-muted)] opacity-70 truncate max-w-[90px]"
+            aria-label={`Réglage actuel : ${badge}`}
+          >
+            {badge}
+          </span>
+        )}
         <svg
           aria-hidden="true"
           style={{
@@ -285,39 +296,77 @@ export function TextSection() {
 
   return (
     <div>
-      {/* ── Aperçu ── */}
-      <PanelSection title="APERÇU" id="dlgbox-apercu" defaultOpen={true}>
-        <div
-          className="p-3 rounded border backdrop-blur-sm"
-          aria-hidden="true"
-          style={{
-            background: `${cfg.bgColor}${Math.round(cfg.boxOpacity * 255)
-              .toString(16)
-              .padStart(2, '0')}`,
-            borderColor:
-              cfg.borderStyle === 'none'
-                ? 'transparent'
-                : cfg.borderColor + (cfg.borderStyle === 'prominent' ? '73' : '2e'),
-            borderRadius: { none: '0px', sm: '6px', md: '12px', lg: '16px', xl: '20px' }[
-              cfg.borderRadius
-            ],
-          }}
-        >
+      {/* ── Aperçu — sticky (Bret Victor §7 : connexion immédiate créateur/création) ──
+           position:sticky dans le container flex-1 overflow-y-auto de SectionContentPanel.
+           boxShadow : signal visuel "du contenu défile en dessous" (pattern Chrome DevTools). */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 2,
+          background: 'var(--color-bg-elevated)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.28)',
+        }}
+      >
+        <PanelSection title="APERÇU" id="dlgbox-apercu" defaultOpen={true}>
           <div
+            className="p-3 rounded border backdrop-blur-sm"
+            aria-hidden="true"
             style={{
-              color: 'var(--color-primary)',
-              fontWeight: 700,
-              fontSize: 11,
-              letterSpacing: '0.04em',
-              marginBottom: 4,
+              background: `${cfg.bgColor}${Math.round(cfg.boxOpacity * 255)
+                .toString(16)
+                .padStart(2, '0')}`,
+              borderColor:
+                cfg.borderStyle === 'none'
+                  ? 'transparent'
+                  : cfg.borderColor + (cfg.borderStyle === 'prominent' ? '73' : '2e'),
+              borderRadius: { none: '0px', sm: '6px', md: '12px', lg: '16px', xl: '20px' }[
+                cfg.borderRadius
+              ],
             }}
           >
-            — BONJOUR ! JE SUIS LÉA, TON GUIDE.
+            <div
+              style={{
+                color: 'var(--color-primary)',
+                fontWeight: 700,
+                fontSize: 11,
+                letterSpacing: '0.04em',
+                marginBottom: 4,
+              }}
+            >
+              — BONJOUR ! JE SUIS LÉA, TON GUIDE.
+            </div>
+            <span style={{ fontSize: cfg.fontSize, color: cfg.textColor }}>
+              Bonjour ! Je suis Léa, ton guide.
+            </span>
           </div>
-          <span style={{ fontSize: cfg.fontSize, color: cfg.textColor }}>
-            Bonjour ! Je suis Léa, ton guide.
-          </span>
+        </PanelSection>
+      </div>
+      {/* /sticky-apercu */}
+
+      {/* ── Thèmes — promu au premier niveau (usage primaire : choisir un preset avant de personnaliser) ──
+           Extrait de la SubSection APPARENCE pour réduire le scroll initial.
+           Source : Fitts's Law — l'action la plus fréquente doit être la plus accessible. */}
+      <PanelSection title="THÈMES" id="dlgbox-themes" defaultOpen={true}>
+        <div className="grid grid-cols-5 gap-1 mb-2">
+          {THEMES.map((theme) => (
+            <button
+              key={theme.label}
+              onClick={() => update(theme.patch)}
+              title={theme.label}
+              aria-label={`Appliquer le thème ${theme.label}`}
+              className="flex flex-col items-center gap-0.5 py-1.5 px-0.5 rounded-md border border-[var(--color-border-base)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] transition-all text-center"
+            >
+              <span className="text-base leading-none">{theme.icon}</span>
+              <span className="text-[9px] text-[var(--color-text-muted)] leading-none">
+                {theme.label}
+              </span>
+            </button>
+          ))}
         </div>
+        <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
+          Applique couleurs, bordure et arrondi — personnalisable dans APPARENCE ci-dessous.
+        </p>
       </PanelSection>
 
       {/* ── Texte — vitesse + taille ── */}
@@ -344,10 +393,16 @@ export function TextSection() {
         />
       </PanelSection>
 
-      {/* ── Apparence — 5 sous-accordéons (mise en page, transitions, thèmes, couleurs, style) ── */}
+      {/* ── Apparence — 4 sous-accordéons (mise en page, transitions, couleurs, style) ──
+           THÈMES déplacé au premier niveau ci-dessus.
+           SubSections fermées par défaut : réduisent le scroll, badges montrent l'état courant. */}
       <PanelSection title="APPARENCE" id="dlgbox-style" defaultOpen={true}>
-        {/* Mise en page — intégré depuis PanelSection de premier niveau */}
-        <SubSection title="MISE EN PAGE" defaultOpen={true}>
+        {/* Mise en page */}
+        <SubSection
+          title="MISE EN PAGE"
+          defaultOpen={false}
+          badge={cfg.layout === 'classique' ? 'Classique' : 'Visual'}
+        >
           <div className="grid grid-cols-2 gap-2 mb-1">
             {(
               [
@@ -374,8 +429,12 @@ export function TextSection() {
           </div>
         </SubSection>
 
-        {/* Transitions — intégré depuis PanelSection de premier niveau */}
-        <SubSection title="TRANSITIONS" defaultOpen={true}>
+        {/* Transitions */}
+        <SubSection
+          title="TRANSITIONS"
+          defaultOpen={false}
+          badge={{ aucune: 'Instantané', fondu: 'Fondu', glisse: 'Glisse' }[cfg.dialogueTransition]}
+        >
           <div className="grid grid-cols-3 gap-2 mb-1">
             {[
               { value: 'aucune' as const, icon: '⚡', label: 'Instantané', desc: 'Swap direct' },
@@ -409,28 +468,12 @@ export function TextSection() {
           </p>
         </SubSection>
 
-        {/* Thèmes */}
-        <SubSection title="THÈMES" defaultOpen={true}>
-          <div className="grid grid-cols-5 gap-1 mb-2">
-            {THEMES.map((theme) => (
-              <button
-                key={theme.label}
-                onClick={() => update(theme.patch)}
-                title={theme.label}
-                aria-label={`Thème ${theme.label}`}
-                className="flex flex-col items-center gap-0.5 py-1.5 px-0.5 rounded-md border border-[var(--color-border-base)] hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] transition-all text-center"
-              >
-                <span className="text-base leading-none">{theme.icon}</span>
-                <span className="text-[9px] text-[var(--color-text-muted)] leading-none">
-                  {theme.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </SubSection>
-
         {/* Couleurs & Opacité */}
-        <SubSection title="COULEURS & OPACITÉ" defaultOpen={true}>
+        <SubSection
+          title="COULEURS & OPACITÉ"
+          defaultOpen={false}
+          badge={`Opacité ${Math.round(cfg.boxOpacity * 100)}%`}
+        >
           <ColorRow label="Fond" value={cfg.bgColor} onChange={(v) => update({ bgColor: v })} />
           <ColorRow
             label="Texte"
@@ -455,7 +498,11 @@ export function TextSection() {
         </SubSection>
 
         {/* Style */}
-        <SubSection title="STYLE" defaultOpen={true}>
+        <SubSection
+          title="STYLE"
+          defaultOpen={false}
+          badge={`${cfg.borderStyle === 'none' ? 'Sans bordure' : cfg.borderStyle === 'subtle' ? 'Subtile' : 'Marquée'} · ${cfg.borderRadius.toUpperCase()}`}
+        >
           <ToggleGroup
             label="BORDURE"
             value={cfg.borderStyle}

@@ -1,11 +1,5 @@
-
 import PreviewPlayer from '../panels/PreviewPlayer';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Props for PreviewModal component
@@ -37,11 +31,16 @@ export interface PreviewModalProps {
  * />
  * ```
  */
-export default function PreviewModal({ isOpen, onClose, initialSceneId, initialDialogueId }: PreviewModalProps) {
+export default function PreviewModal({
+  isOpen,
+  onClose,
+  initialSceneId,
+  initialDialogueId,
+}: PreviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 dark bg-background border-border overflow-hidden"
+        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 bg-background border-border overflow-hidden"
         onEscapeKeyDown={onClose}
       >
         <DialogHeader className="sr-only">

@@ -40,6 +40,7 @@ const EMPTY_ELEMENTS_BY_SCENE: Record<
 // Re-export all selectors from sceneSelectors and characterSelectors
 export * from './sceneSelectors';
 export * from './characterSelectors';
+export * from './rigSelectors';
 
 // ============================================================================
 // COMPOSED SELECTORS

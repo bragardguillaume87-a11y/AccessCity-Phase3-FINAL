@@ -3,7 +3,13 @@ import type { DialogueChoice, SceneMetadata, Dialogue } from '@/types';
 import type { DiceCheck, DiceCheckBranch } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Trash2, Info } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { GAME_STATS } from '@/i18n';
@@ -28,7 +34,13 @@ interface BranchEditorProps {
   getDialoguePreview: (d: Dialogue, idx: number) => string;
 }
 
-function BranchEditor({ branch, onChange, scenes, currentSceneDialogues, getDialoguePreview }: BranchEditorProps) {
+function BranchEditor({
+  branch,
+  onChange,
+  scenes,
+  currentSceneDialogues,
+  getDialoguePreview,
+}: BranchEditorProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
       {/* Scène cible */}
@@ -40,7 +52,7 @@ function BranchEditor({ branch, onChange, scenes, currentSceneDialogues, getDial
           <SelectValue placeholder="🎬 Scène (optionnel)" />
         </SelectTrigger>
         <SelectContent>
-          {scenes.map(scene => (
+          {scenes.map((scene) => (
             <SelectItem key={scene.id} value={scene.id}>
               🎬 {scene.title || `Scène ${scene.id}`}
             </SelectItem>
@@ -81,8 +93,8 @@ function BranchEditor({ branch, onChange, scenes, currentSceneDialogues, getDial
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={GAME_STATS.PHYSIQUE}>🏃 Corps</SelectItem>
-            <SelectItem value={GAME_STATS.MENTALE}>🧠 Esprit</SelectItem>
+            <SelectItem value={GAME_STATS.PHYSIQUE}>💪 Physique</SelectItem>
+            <SelectItem value={GAME_STATS.MENTALE}>🧠 Mentale</SelectItem>
           </SelectContent>
         </Select>
         <input
@@ -116,7 +128,14 @@ function BranchEditor({ branch, onChange, scenes, currentSceneDialogues, getDial
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, currentSceneId }: ChoiceEditorProps) {
+export function ChoiceEditor({
+  choice,
+  choiceIndex,
+  onUpdate,
+  onDelete,
+  scenes,
+  currentSceneId,
+}: ChoiceEditorProps) {
   const updateChoice = (updates: Partial<DialogueChoice>) => {
     onUpdate(choiceIndex, { ...choice, ...updates });
   };
@@ -125,9 +144,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
 
   const getDialoguePreview = React.useCallback((dialogue: Dialogue, index: number) => {
     if (!dialogue.text || dialogue.text.trim() === '') return `Dialogue ${index + 1} (vide)`;
-    return dialogue.text.length > 50
-      ? `${dialogue.text.substring(0, 50)}…`
-      : dialogue.text;
+    return dialogue.text.length > 50 ? `${dialogue.text.substring(0, 50)}…` : dialogue.text;
   }, []);
 
   const diceEnabled = !!choice.diceCheck;
@@ -163,22 +180,26 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
   };
 
   return (
-    <div style={{
-      padding: 'var(--space-3)',
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-border-base)',
-      borderRadius: 'var(--radius-lg)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-3)',
-    }}>
+    <div
+      style={{
+        padding: 'var(--space-3)',
+        background: 'var(--color-bg-elevated)',
+        border: '1px solid var(--color-border-base)',
+        borderRadius: 'var(--radius-lg)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-3)',
+      }}
+    >
       {/* En-tête : Choix N + corbeille */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{
-          fontSize: 'var(--font-size-xs)',
-          fontWeight: 'var(--font-weight-semibold)',
-          color: 'var(--accent-blue)',
-        }}>
+        <span
+          style={{
+            fontSize: 'var(--font-size-xs)',
+            fontWeight: 'var(--font-weight-semibold)',
+            color: 'var(--accent-blue)',
+          }}
+        >
           Choix {choiceIndex + 1}
         </span>
         <Tooltip>
@@ -192,7 +213,9 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
               <Trash2 className="h-3 w-3" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" portal={false}>Supprimer ce choix</TooltipContent>
+          <TooltipContent side="left" portal={false}>
+            Supprimer ce choix
+          </TooltipContent>
         </Tooltip>
       </div>
 
@@ -200,7 +223,9 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
       <input
         type="text"
         value={choice.text || ''}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateChoice({ text: e.target.value })}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          updateChoice({ text: e.target.value })
+        }
         style={{
           width: '100%',
           padding: 'var(--space-2) var(--space-3)',
@@ -218,10 +243,16 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
 
       {/* Scène suivante */}
       <div>
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
-          fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)',
-        }}>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-1)',
+            fontSize: 'var(--font-size-xs)',
+            color: 'var(--color-text-muted)',
+            marginBottom: 'var(--space-1)',
+          }}
+        >
           🎬 Scène suivante
           <Tooltip>
             <TooltipTrigger asChild>
@@ -240,7 +271,7 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
             <SelectValue placeholder="— Rester dans cette scène —" />
           </SelectTrigger>
           <SelectContent>
-            {scenes.map(scene => (
+            {scenes.map((scene) => (
               <SelectItem key={scene.id} value={scene.id}>
                 🎬 {scene.title || `Scène ${scene.id}`}
               </SelectItem>
@@ -251,17 +282,24 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
 
       {/* Dialogue suivant */}
       <div>
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
-          fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)',
-        }}>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-1)',
+            fontSize: 'var(--font-size-xs)',
+            color: 'var(--color-text-muted)',
+            marginBottom: 'var(--space-1)',
+          }}
+        >
           💬 Dialogue suivant
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="h-3 w-3" style={{ cursor: 'help', flexShrink: 0 }} />
             </TooltipTrigger>
             <TooltipContent side="right" portal={false}>
-              Sauter à un dialogue spécifique dans cette scène. Laisser vide pour avancer normalement.
+              Sauter à un dialogue spécifique dans cette scène. Laisser vide pour avancer
+              normalement.
             </TooltipContent>
           </Tooltip>
         </label>
@@ -274,7 +312,9 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
           </SelectTrigger>
           <SelectContent>
             {currentSceneDialogues.length === 0 ? (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground">⚠ Aucun dialogue dans cette scène</div>
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                ⚠ Aucun dialogue dans cette scène
+              </div>
             ) : (
               currentSceneDialogues.map((dialogue, idx) => (
                 <SelectItem key={dialogue.id} value={dialogue.id}>
@@ -287,7 +327,9 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
       </div>
 
       {/* Toggle jet de dé */}
-      <div style={{ paddingTop: 'var(--space-1)', borderTop: '1px solid var(--color-border-base)' }}>
+      <div
+        style={{ paddingTop: 'var(--space-1)', borderTop: '1px solid var(--color-border-base)' }}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -313,30 +355,40 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" portal={false}>
-            {diceEnabled ? 'Désactiver le jet de dé' : 'Ajouter un jet de dé (Corps ou Esprit, difficulté 1-20)'}
+            {diceEnabled
+              ? 'Désactiver le jet de dé'
+              : 'Ajouter un jet de dé (Physique ou Mentale, difficulté 1-20)'}
           </TooltipContent>
         </Tooltip>
       </div>
 
       {/* Configuration du jet de dé */}
       {diceEnabled && choice.diceCheck && (
-        <div style={{
-          padding: 'var(--space-3)',
-          border: '1px solid rgba(139, 92, 246, 0.3)',
-          borderRadius: 'var(--radius-md)',
-          background: 'rgba(139, 92, 246, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-3)',
-        }}>
+        <div
+          style={{
+            padding: 'var(--space-3)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(139, 92, 246, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+          }}
+        >
           {/* Stat */}
           <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+            <span
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--color-text-muted)',
+                whiteSpace: 'nowrap',
+              }}
+            >
               Stat :
             </span>
             {[
-              { value: GAME_STATS.PHYSIQUE, label: '🏃 Corps' },
-              { value: GAME_STATS.MENTALE, label: '🧠 Esprit' },
+              { value: GAME_STATS.PHYSIQUE, label: '💪 Physique' },
+              { value: GAME_STATS.MENTALE, label: '🧠 Mentale' },
             ].map(({ value, label }) => (
               <button
                 key={value}
@@ -346,8 +398,12 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
                   padding: 'var(--space-1) var(--space-2)',
                   borderRadius: 'var(--radius-sm)',
                   border: `1px solid ${choice.diceCheck!.stat === value ? 'var(--accent-purple)' : 'var(--color-border-base)'}`,
-                  background: choice.diceCheck!.stat === value ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                  color: choice.diceCheck!.stat === value ? 'var(--accent-purple)' : 'var(--color-text-muted)',
+                  background:
+                    choice.diceCheck!.stat === value ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                  color:
+                    choice.diceCheck!.stat === value
+                      ? 'var(--accent-purple)'
+                      : 'var(--color-text-muted)',
                   fontSize: 'var(--font-size-xs)',
                   cursor: 'pointer',
                   transition: 'var(--transition-fast)',
@@ -360,7 +416,13 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
 
           {/* Difficulté */}
           <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+            <span
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--color-text-muted)',
+                whiteSpace: 'nowrap',
+              }}
+            >
               Difficulté :
             </span>
             <input
@@ -374,30 +436,36 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
               style={{ flex: 1 }}
               aria-label="Difficulté du jet de dé"
             />
-            <span style={{
-              fontSize: 'var(--font-size-xs)',
-              fontWeight: 'var(--font-weight-semibold)',
-              color: 'var(--accent-purple)',
-              minWidth: '2ch',
-              textAlign: 'right',
-            }}>
+            <span
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--accent-purple)',
+                minWidth: '2ch',
+                textAlign: 'right',
+              }}
+            >
               {choice.diceCheck.difficulty || 12}
             </span>
           </div>
 
           {/* Branche Succès */}
-          <div style={{
-            padding: 'var(--space-2)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(16, 185, 129, 0.05)',
-          }}>
-            <div style={{
-              fontSize: 'var(--font-size-xs)',
-              fontWeight: 'var(--font-weight-semibold)',
-              color: 'var(--color-success)',
-              marginBottom: 'var(--space-2)',
-            }}>
+          <div
+            style={{
+              padding: 'var(--space-2)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(16, 185, 129, 0.05)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--color-success)',
+                marginBottom: 'var(--space-2)',
+              }}
+            >
               ✅ Si ça réussit
             </div>
             <BranchEditor
@@ -410,18 +478,22 @@ export function ChoiceEditor({ choice, choiceIndex, onUpdate, onDelete, scenes, 
           </div>
 
           {/* Branche Échec */}
-          <div style={{
-            padding: 'var(--space-2)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(239, 68, 68, 0.05)',
-          }}>
-            <div style={{
-              fontSize: 'var(--font-size-xs)',
-              fontWeight: 'var(--font-weight-semibold)',
-              color: 'var(--color-danger)',
-              marginBottom: 'var(--space-2)',
-            }}>
+          <div
+            style={{
+              padding: 'var(--space-2)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(239, 68, 68, 0.05)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--color-danger)',
+                marginBottom: 'var(--space-2)',
+              }}
+            >
               ❌ Si ça rate
             </div>
             <BranchEditor

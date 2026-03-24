@@ -23,12 +23,8 @@ import { useMemo } from 'react';
 import { useSettingsStore } from '../stores';
 import { fr } from './locales/fr';
 import { en } from './locales/en';
-import type {
-  Translations,
-  SupportedLocale,
-  GameStatKey,
-  TranslationPath,
-} from './types';
+import { GAME_STATS } from './types';
+import type { Translations, SupportedLocale, GameStatKey, TranslationPath } from './types';
 
 // Re-export types and constants
 export { GAME_STATS, SUPPORTED_LOCALES, DEFAULT_LOCALE } from './types';
@@ -68,10 +64,7 @@ export function getTranslations(locale: SupportedLocale = 'fr'): Translations {
  * @param path - Dot-notation path like 'gameStats.empathy'
  * @param locale - Target locale
  */
-export function translate(
-  path: TranslationPath,
-  locale: SupportedLocale = 'fr'
-): string {
+export function translate(path: TranslationPath, locale: SupportedLocale = 'fr'): string {
   const t = getTranslations(locale);
   const [section, key] = path.split('.') as [keyof Translations, string];
 
@@ -126,9 +119,7 @@ interface UseTranslationReturn {
  */
 export function useTranslation(): UseTranslationReturn {
   // Get locale from settings store (default to 'fr')
-  const locale = useSettingsStore(
-    (state) => (state.language as SupportedLocale) || 'fr'
-  );
+  const locale = useSettingsStore((state) => (state.language as SupportedLocale) || 'fr');
 
   return useMemo(() => {
     const t = getTranslations(locale);
@@ -146,6 +137,19 @@ export function useTranslation(): UseTranslationReturn {
 }
 
 // ============================================================================
+// STAT VARIABLES — source de vérité unique pour tous les sélecteurs éditeur
+// ============================================================================
+
+/**
+ * STAT_VARIABLES — À importer dans EffectRow, ConditionRow, ChoiceEditor, MinigameChoiceBuilder…
+ * Évite la duplication des labels et garantit la cohérence partout.
+ */
+export const STAT_VARIABLES = [
+  { value: GAME_STATS.PHYSIQUE, label: '💪 Physique', emoji: '💪' },
+  { value: GAME_STATS.MENTALE, label: '🧠 Mentale', emoji: '🧠' },
+] as const;
+
+// ============================================================================
 // GAME STATS HELPERS
 // ============================================================================
 
@@ -153,10 +157,7 @@ export function useTranslation(): UseTranslationReturn {
  * Get game stat display name by key
  * Useful for dynamic stat lookups
  */
-export function getGameStatName(
-  statKey: GameStatKey,
-  locale: SupportedLocale = 'fr'
-): string {
+export function getGameStatName(statKey: GameStatKey, locale: SupportedLocale = 'fr'): string {
   const t = getTranslations(locale);
   return t.gameStats[statKey] ?? statKey;
 }
@@ -174,4 +175,3 @@ export function getDefaultGameStats(
     mentale: { name: t.gameStats.mentale, value: 100 },
   };
 }
-

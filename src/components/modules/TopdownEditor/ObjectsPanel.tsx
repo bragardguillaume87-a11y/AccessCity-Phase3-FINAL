@@ -41,6 +41,7 @@ import type {
   SpriteComponent,
 } from '@/types/sprite';
 import { OBJECT_PRESETS } from '@/config/objectPresets';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ── Stable fallback ─────────────────────────────────────────────────────────
 const EMPTY_OBJECT_INSTANCES: { definitionId: string }[] = [];
@@ -755,7 +756,7 @@ export default function ObjectsPanel({
               <DropdownMenu.Content
                 style={{
                   width: 160,
-                  zIndex: 9999,
+                  zIndex: Z_INDEX.TOPDOWN_DIALOG,
                   padding: 4,
                   background: 'var(--color-bg-elevated, #1e1e35)',
                   border: '1px solid rgba(255,255,255,0.1)',
@@ -1443,7 +1444,7 @@ export default function ObjectsPanel({
             <>
               {/* Overlay */}
               <div
-                style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                style={{ position: 'fixed', inset: 0, zIndex: Z_INDEX.TOPDOWN_BACKDROP }}
                 onMouseDown={() => setContextMenu(null)}
               />
               {/* Menu */}
@@ -1452,7 +1453,7 @@ export default function ObjectsPanel({
                   position: 'fixed',
                   left: contextMenu.x,
                   top: contextMenu.y,
-                  zIndex: 9999,
+                  zIndex: Z_INDEX.TOPDOWN_DIALOG,
                   minWidth: 210,
                   background: 'var(--color-bg-elevated, #1a1a2e)',
                   border: '1px solid rgba(255,255,255,0.12)',
@@ -1654,7 +1655,7 @@ function SpritePicker({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9995,
+        zIndex: Z_INDEX.TOPDOWN_OVERLAY,
         background: 'rgba(0,0,0,0.6)',
         display: 'flex',
         alignItems: 'center',

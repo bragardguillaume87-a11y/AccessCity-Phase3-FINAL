@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { Plus, User, MessageSquare, Volume2 } from 'lucide-react';
+import { Plus, User, MessageSquare, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -13,15 +12,128 @@ import {
 import { cn } from '@/lib/utils';
 import { useCharactersStore } from '@/stores';
 import { DEFAULTS } from '@/config/constants';
-import type { DialogueChoice, Scene } from '@/types';
+import type { DialogueChoice, Scene, MinigameConfig } from '@/types';
 import type { ComplexityLevel } from '@/types';
 import type { ResponseData } from '../../DialogueWizard/hooks/useDialogueForm';
 import { BinaryChoiceField } from './BinaryChoiceField';
 import { DiceChoiceCard } from '../../DialogueWizard/components/DiceChoiceBuilder/DiceChoiceCard';
 import { ComplexChoiceCard } from '../../DialogueWizard/components/ComplexChoiceBuilder/ComplexChoiceCard';
-import { VoicePresetPicker, VoicePresetBadge } from './VoicePresetPicker';
+import { MinigameChoiceBuilder } from '../../DialogueWizard/components/MinigameChoiceBuilder';
+import { VoicePresetPicker } from './VoicePresetPicker';
 import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
-import { MoodCard } from '@/components/ui/MoodCard';
+
+// ── Couleurs par mood — design brief §mood-pips ──────────────────────────────
+const MOOD_COLORS: Record<string, { border: string; bg: string; text: string; glow: string }> = {
+  neutral: {
+    border: 'rgba(192,132,252,0.85)',
+    bg: 'rgba(139,92,246,0.22)',
+    text: '#c4b5fd',
+    glow: '0 0 0 3px rgba(139,92,246,0.30), 0 0 16px rgba(139,92,246,0.35)',
+  },
+  happy: {
+    border: 'rgba(74,222,128,0.85)',
+    bg: 'rgba(74,222,128,0.22)',
+    text: '#86efac',
+    glow: '0 0 0 3px rgba(74,222,128,0.30), 0 0 16px rgba(74,222,128,0.35)',
+  },
+  sad: {
+    border: 'rgba(96,165,250,0.85)',
+    bg: 'rgba(96,165,250,0.22)',
+    text: '#93c5fd',
+    glow: '0 0 0 3px rgba(96,165,250,0.30), 0 0 16px rgba(96,165,250,0.35)',
+  },
+  angry: {
+    border: 'rgba(248,113,113,0.85)',
+    bg: 'rgba(248,113,113,0.22)',
+    text: '#fca5a5',
+    glow: '0 0 0 3px rgba(239,68,68,0.30), 0 0 16px rgba(239,68,68,0.35)',
+  },
+  surprised: {
+    border: 'rgba(251,191,36,0.85)',
+    bg: 'rgba(251,191,36,0.22)',
+    text: '#fde68a',
+    glow: '0 0 0 3px rgba(251,191,36,0.30), 0 0 16px rgba(251,191,36,0.35)',
+  },
+  confused: {
+    border: 'rgba(253,164,208,0.85)',
+    bg: 'rgba(236,72,153,0.18)',
+    text: '#fda4d0',
+    glow: '0 0 0 3px rgba(236,72,153,0.30), 0 0 16px rgba(236,72,153,0.35)',
+  },
+  scared: {
+    border: 'rgba(249,115,22,0.85)',
+    bg: 'rgba(249,115,22,0.18)',
+    text: '#fdba74',
+    glow: '0 0 0 3px rgba(249,115,22,0.30), 0 0 16px rgba(249,115,22,0.35)',
+  },
+  excited: {
+    border: 'rgba(250,204,21,0.85)',
+    bg: 'rgba(250,204,21,0.18)',
+    text: '#fef08a',
+    glow: '0 0 0 3px rgba(250,204,21,0.30), 0 0 16px rgba(250,204,21,0.35)',
+  },
+  professional: {
+    border: 'rgba(96,165,250,0.85)',
+    bg: 'rgba(59,130,246,0.18)',
+    text: '#bfdbfe',
+    glow: '0 0 0 3px rgba(59,130,246,0.30), 0 0 16px rgba(59,130,246,0.35)',
+  },
+  helpful: {
+    border: 'rgba(45,212,191,0.85)',
+    bg: 'rgba(45,212,191,0.18)',
+    text: '#99f6e4',
+    glow: '0 0 0 3px rgba(45,212,191,0.30), 0 0 16px rgba(45,212,191,0.35)',
+  },
+  tired: {
+    border: 'rgba(148,163,184,0.85)',
+    bg: 'rgba(148,163,184,0.18)',
+    text: '#cbd5e1',
+    glow: '0 0 0 3px rgba(148,163,184,0.30), 0 0 16px rgba(148,163,184,0.35)',
+  },
+  thoughtful: {
+    border: 'rgba(167,139,250,0.85)',
+    bg: 'rgba(167,139,250,0.18)',
+    text: '#ddd6fe',
+    glow: '0 0 0 3px rgba(167,139,250,0.30), 0 0 16px rgba(167,139,250,0.35)',
+  },
+};
+// Quilez §14.1 — fallback déterministe pour les moods custom
+function getMoodActiveColor(id: string): {
+  border: string;
+  bg: string;
+  text: string;
+  glow: string;
+} {
+  if (MOOD_COLORS[id]) return MOOD_COLORS[id];
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
+  const hue = Math.abs(h) % 360;
+  return {
+    border: `hsla(${hue},70%,70%,0.85)`,
+    bg: `hsla(${hue},70%,70%,0.20)`,
+    text: `hsl(${hue},90%,85%)`,
+    glow: `0 0 0 3px hsla(${hue},70%,55%,0.30), 0 0 16px hsla(${hue},70%,55%,0.35)`,
+  };
+}
+
+// ── Section header helper — barre colorée + label Syne (design brief §6) ────
+const SectionBar = ({ label, color }: { label: string; color: string }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+    <div style={{ width: 3, height: 13, borderRadius: 2, background: color, flexShrink: 0 }} />
+    <span
+      style={{
+        fontSize: 9.5,
+        fontWeight: 800,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase' as const,
+        color,
+        fontFamily: "'Syne', var(--font-family-display, sans-serif)",
+      }}
+    >
+      {label}
+    </span>
+  </div>
+);
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ComposerFormPanelProps {
@@ -34,6 +146,10 @@ interface ComposerFormPanelProps {
   responses: ResponseData[];
   scenes: Scene[];
   currentSceneId: string;
+  minigame?: MinigameConfig;
+  dialogueSubtype?: 'normal' | 'phonecall';
+  /** Couleur d'accent du thème actif — pour l'onglet actif des choix */
+  accentColor?: string;
   onSpeakerChange: (speaker: string) => void;
   onTextChange: (text: string) => void;
   onVoicePresetChange: (presetId: string | undefined) => void;
@@ -42,6 +158,8 @@ interface ComposerFormPanelProps {
   onUpdateResponse: (index: number, updates: Partial<ResponseData>) => void;
   onAddChoice: () => void;
   onRemoveChoice: (index: number) => void;
+  onUpdateMinigame: (config: MinigameConfig) => void;
+  onUpdateSubtype: (subtype: 'normal' | 'phonecall') => void;
 }
 
 /**
@@ -64,6 +182,9 @@ export function ComposerFormPanel({
   responses,
   scenes,
   currentSceneId,
+  minigame,
+  dialogueSubtype,
+  accentColor = '#8b5cf6',
   onSpeakerChange,
   onTextChange,
   onVoicePresetChange,
@@ -72,6 +193,8 @@ export function ComposerFormPanel({
   onUpdateResponse,
   onAddChoice,
   onRemoveChoice,
+  onUpdateMinigame,
+  onUpdateSubtype,
 }: ComposerFormPanelProps) {
   const characters = useCharactersStore((state) => state.characters);
   const [activeTab, setActiveTab] = useState(0);
@@ -83,6 +206,10 @@ export function ComposerFormPanel({
     [scenes, currentSceneId]
   );
   const textLen = text.trim().length;
+  const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  const readTimeSec = Math.round(wordCount / 2.5); // ~150 mots/min à voix haute
+  const isWordWarning = wordCount > 64; // >80% du seuil de 80 mots
+  const isWordOver = wordCount > 80;
   const safeTab = Math.min(activeTab, Math.max(choices.length - 1, 0));
 
   const handleAddChoice = useCallback(() => {
@@ -133,276 +260,638 @@ export function ComposerFormPanel({
     (complexityLevel === 'dice' && choices.length < 2) ||
     (complexityLevel === 'expert' && choices.length < 4);
 
+  // Personnage sélectionné — hissé au niveau composant pour avatar card + mood picker
+  const speakerChar = useMemo(
+    () => characters.find((c) => c.id === speaker),
+    [characters, speaker]
+  );
+  // Teinte HSL déterministe depuis le nom (Quilez §14.1)
+  const speakerHue = useMemo(() => {
+    if (!speakerChar) return 200;
+    let h = 0;
+    for (let i = 0; i < speakerChar.name.length; i++)
+      h = speakerChar.name.charCodeAt(i) + ((h << 5) - h);
+    return Math.abs(h) % 360;
+  }, [speakerChar]);
+  // URL du sprite par défaut pour l'avatar card
+  const speakerSpriteUrl = useMemo(
+    () => speakerChar?.sprites?.neutral || speakerChar?.sprites?.default,
+    [speakerChar]
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ── Speaker ──────────────────────────────────────────────────────── */}
-      <div className="space-y-2">
-        {/* Label row — "Qui parle ?" + icône voix */}
-        <div className="flex items-center justify-between">
-          <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5" aria-hidden="true" /> Qui parle ?
-          </Label>
-          {/* Voice preset badge + bouton */}
-          <div className="flex items-center gap-1.5">
-            {voicePreset && <VoicePresetBadge presetId={voicePreset} />}
-            <div style={{ position: 'relative' }}>
-              <button
-                ref={voiceBtnRef}
-                type="button"
-                onClick={() => setVoicePickerOpen((v) => !v)}
-                title={voicePreset ? 'Changer la voix' : 'Ajouter une voix'}
-                aria-expanded={voicePickerOpen}
-                aria-haspopup="true"
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <SectionBar label="Personnage" color="#fda4d0" />
+
+        {/* Carte speaker — layout .char-block (mockup) */}
+        <AnimatePresence mode="wait">
+          {speakerChar ? (
+            <motion.div
+              key={speakerChar.id}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              style={{
+                borderRadius: 16,
+                border: '1.5px solid rgba(255,255,255,0.18)',
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                padding: 14,
+                display: 'flex',
+                gap: 13,
+                alignItems: 'flex-start',
+              }}
+            >
+              {/* Portrait — 60×72px (mockup .char-portrait) */}
+              <div
                 style={{
+                  flexShrink: 0,
+                  width: 60,
+                  height: 72,
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  background: speakerSpriteUrl
+                    ? 'rgba(255,255,255,0.04)'
+                    : `hsl(${speakerHue}, 55%, 32%)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 26,
-                  height: 26,
-                  borderRadius: 'var(--radius-sm)',
-                  border: `1.5px solid ${voicePreset ? 'var(--color-primary-glow)' : 'var(--color-border-base)'}`,
-                  background: voicePreset ? 'var(--color-primary-subtle)' : 'transparent',
-                  color: voicePreset ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.15s, background 0.15s',
-                  flexShrink: 0,
                 }}
               >
-                <Volume2 size={13} aria-hidden="true" />
-              </button>
-              {/* Picker — portal dans document.body pour passer au premier plan */}
-              <AnimatePresence>
-                {voicePickerOpen && (
-                  <VoicePresetPicker
-                    anchorRef={voiceBtnRef}
-                    value={voicePreset}
-                    onChange={onVoicePresetChange}
-                    onClose={() => setVoicePickerOpen(false)}
+                {speakerSpriteUrl ? (
+                  <img
+                    src={speakerSpriteUrl}
+                    alt={speakerChar.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
+                ) : (
+                  <span style={{ fontSize: 28, fontWeight: 900, color: 'white' }}>
+                    {speakerChar.name.charAt(0).toUpperCase()}
+                  </span>
                 )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-
-        <Select value={speaker || DEFAULTS.DIALOGUE_SPEAKER} onValueChange={onSpeakerChange}>
-          <SelectTrigger className="h-9 text-sm">
-            <SelectValue placeholder="Choisir un personnage…" />
-          </SelectTrigger>
-          <SelectContent>
-            {characters.map((char) => (
-              <SelectItem key={char.id} value={char.id} className="text-sm py-2">
-                <div className="flex items-center gap-2">
-                  {char.sprites?.neutral ? (
-                    <img
-                      src={char.sprites.neutral}
-                      alt={char.name}
-                      className="w-5 h-5 rounded object-contain bg-muted flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[10px]">👤</span>
-                    </div>
-                  )}
-                  <span className="font-medium truncate">{char.name}</span>
-                </div>
-              </SelectItem>
-            ))}
-            {characters.length === 0 && (
-              <div className="px-4 py-4 text-center text-muted-foreground text-xs">
-                Aucun personnage disponible
               </div>
-            )}
-          </SelectContent>
-        </Select>
 
-        {/* ── Mood picker — Nintendo card style, inline sous le select ─── */}
-        {(() => {
-          const char = characters.find((c) => c.id === speaker);
-          if (!char) return null;
-          const moods = char.moods && char.moods.length > 0 ? char.moods : ['neutral'];
-          const activeMood = speakerMood || moods[0];
-          return (
-            <div style={{ marginTop: 8 }}>
-              <p
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  color: 'var(--color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  marginBottom: 6,
-                }}
+              {/* Colonne droite */}
+              <div
+                style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 9 }}
               >
-                Humeur
-              </p>
-              {/* Scroll horizontal si +5 humeurs */}
+                {/* Rangée nom + changer + téléphone (mockup .char-name-row) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 900,
+                      color: 'var(--color-text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    {speakerChar.name}
+                  </p>
+                  {/* Phone toggle */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateSubtype(dialogueSubtype === 'phonecall' ? 'normal' : 'phonecall')
+                    }
+                    title={
+                      dialogueSubtype === 'phonecall'
+                        ? 'Mode appel (désactiver)'
+                        : 'Activer mode appel'
+                    }
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 26,
+                      height: 26,
+                      borderRadius: 7,
+                      flexShrink: 0,
+                      border: `1.5px solid ${dialogueSubtype === 'phonecall' ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.18)'}`,
+                      background:
+                        dialogueSubtype === 'phonecall'
+                          ? 'rgba(34,197,94,0.15)'
+                          : 'rgba(255,255,255,0.08)',
+                      color:
+                        dialogueSubtype === 'phonecall'
+                          ? 'var(--color-success)'
+                          : 'rgba(255,255,255,0.40)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <Phone size={11} aria-hidden="true" />
+                  </button>
+                  {/* Bouton changer — Select stylé (mockup .char-chevron) */}
+                  <Select
+                    value={speaker || DEFAULTS.DIALOGUE_SPEAKER}
+                    onValueChange={onSpeakerChange}
+                  >
+                    <SelectTrigger
+                      className="h-auto text-xs"
+                      style={{
+                        padding: '5px 10px',
+                        flexShrink: 0,
+                        background: 'rgba(255,255,255,0.10)',
+                        border: '1.5px solid rgba(255,255,255,0.20)',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        color: 'rgba(255,255,255,0.85)',
+                        height: 'auto',
+                        minWidth: 0,
+                      }}
+                    >
+                      <span>changer</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {characters.map((char) => (
+                        <SelectItem key={char.id} value={char.id} className="text-sm py-2">
+                          <div className="flex items-center gap-2">
+                            {char.sprites?.neutral ? (
+                              <img
+                                src={char.sprites.neutral}
+                                alt={char.name}
+                                className="w-5 h-5 rounded object-contain bg-muted flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center flex-shrink-0">
+                                <span className="text-[10px]">👤</span>
+                              </div>
+                            )}
+                            <span className="font-medium truncate">{char.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {characters.length === 0 && (
+                        <div className="px-4 py-4 text-center text-muted-foreground text-xs">
+                          Aucun personnage disponible
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Humeurs — pips emoji + label (mockup .mood-pip) */}
+                {(() => {
+                  const moods =
+                    speakerChar.moods && speakerChar.moods.length > 0
+                      ? speakerChar.moods
+                      : ['neutral'];
+                  const activeMood = speakerMood || moods[0];
+                  return (
+                    <div
+                      role="radiogroup"
+                      aria-label="Humeur du personnage"
+                      style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+                    >
+                      {moods.map((mood) => {
+                        const label = getMoodLabel(mood);
+                        const shortLabel = label.length > 7 ? label.substring(0, 6) + '.' : label;
+                        const isActive = activeMood === mood;
+                        const mc = getMoodActiveColor(mood);
+                        return (
+                          <button
+                            key={mood}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            title={label}
+                            onClick={() => onSpeakerMoodChange(isActive ? undefined : mood)}
+                            style={{
+                              position: 'relative',
+                              width: 52,
+                              borderRadius: 13,
+                              border: `2px solid ${isActive ? mc.border : 'rgba(255,255,255,0.16)'}`,
+                              background: isActive ? mc.bg : 'rgba(255,255,255,0.08)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 3,
+                              padding: '8px 4px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s cubic-bezier(.34,1.56,.64,1)',
+                              transform: isActive ? 'scale(1.10)' : 'scale(1)',
+                              boxShadow: isActive ? mc.glow : 'none',
+                            }}
+                          >
+                            <span style={{ fontSize: 22, lineHeight: 1 }}>
+                              {getMoodEmoji(mood)}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 8.5,
+                                fontWeight: 700,
+                                lineHeight: 1,
+                                color: isActive ? mc.text : 'rgba(255,255,255,0.50)',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {shortLabel}
+                            </span>
+                            {isActive && (
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  top: -6,
+                                  right: -6,
+                                  width: 16,
+                                  height: 16,
+                                  borderRadius: '50%',
+                                  background: 'var(--color-primary)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 9,
+                                  color: 'white',
+                                  fontWeight: 900,
+                                }}
+                              >
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* Boutons audio — 🔊 Voix + 👤 Profil vocal (mockup .char-audio) */}
+                <div style={{ display: 'flex', gap: 7 }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <button
+                      ref={voiceBtnRef}
+                      type="button"
+                      onClick={() => setVoicePickerOpen((v) => !v)}
+                      title={voicePreset ? 'Changer la voix' : 'Ajouter une voix'}
+                      aria-expanded={voicePickerOpen}
+                      aria-haspopup="true"
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 5,
+                        padding: '7px 13px',
+                        borderRadius: 9,
+                        border: '1.5px solid rgba(100,170,255,0.35)',
+                        background: 'rgba(60,120,240,0.18)',
+                        color: 'rgba(150,200,255,0.9)',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      🔊 Voix
+                    </button>
+                    <AnimatePresence>
+                      {voicePickerOpen && (
+                        <VoicePresetPicker
+                          anchorRef={voiceBtnRef}
+                          value={voicePreset}
+                          onChange={onVoicePresetChange}
+                          onClose={() => setVoicePickerOpen(false)}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <button
+                    type="button"
+                    title={voicePreset ? `Voix : ${voicePreset}` : 'Aucun profil vocal'}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 5,
+                      padding: '7px 13px',
+                      borderRadius: 9,
+                      border: '1.5px solid rgba(100,170,255,0.35)',
+                      background: 'rgba(60,120,240,0.18)',
+                      color: voicePreset ? 'rgba(150,200,255,0.9)' : 'rgba(150,200,255,0.40)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      cursor: 'default',
+                    }}
+                  >
+                    👤 {voicePreset ? voicePreset.split('_')[0] : 'Profil vocal'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                borderRadius: 16,
+                border: '1.5px solid var(--color-border-base)',
+                background: 'rgba(255,255,255,0.015)',
+                padding: '10px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
               <div
                 style={{
                   display: 'flex',
-                  gap: 6,
-                  overflowX: 'auto',
-                  paddingBottom: 4,
-                  scrollbarWidth: 'none',
+                  alignItems: 'center',
+                  gap: 7,
+                  color: 'var(--color-text-muted)',
                 }}
               >
-                {moods.map((mood, idx) => (
-                  <MoodCard
-                    key={mood}
-                    mood={mood}
-                    emoji={getMoodEmoji(mood)}
-                    label={getMoodLabel(mood)}
-                    sprite={char.sprites?.[mood]}
-                    isActive={activeMood === mood}
-                    onClick={() => onSpeakerMoodChange(activeMood === mood ? undefined : mood)}
-                    size={44}
-                    entryDelay={idx * 0.04}
-                  />
-                ))}
+                <User size={15} strokeWidth={1.5} />
+                <span style={{ fontSize: 11 }}>Aucun personnage sélectionné</span>
               </div>
-            </div>
-          );
-        })()}
+              <Select value={speaker || DEFAULTS.DIALOGUE_SPEAKER} onValueChange={onSpeakerChange}>
+                <SelectTrigger className="h-[32px] text-[11px]">
+                  <SelectValue placeholder="Choisir un personnage…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {characters.map((char) => (
+                    <SelectItem key={char.id} value={char.id} className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        {char.sprites?.neutral ? (
+                          <img
+                            src={char.sprites.neutral}
+                            alt={char.name}
+                            className="w-5 h-5 rounded object-contain bg-muted flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[10px]">👤</span>
+                          </div>
+                        )}
+                        <span className="font-medium truncate">{char.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {characters.length === 0 && (
+                    <div className="px-4 py-4 text-center text-muted-foreground text-xs">
+                      Aucun personnage disponible
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Dialogue text ────────────────────────────────────────────────── */}
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-          <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" /> Que dit-il ?
-        </Label>
-        <div className="relative">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <SectionBar label="Dialogue" color="#93c5fd" />
+
+        {/* Carte dialogue — header + textarea (mockup §dialogue-card) */}
+        <div
+          style={{
+            borderRadius: 10,
+            border: '1.5px solid rgba(255,255,255,0.14)',
+            overflow: 'hidden',
+            background: 'rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+          }}
+        >
+          {/* Header — label + compteur de mots (Hennig §11.3) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '7px 12px',
+              borderBottom: '1px solid var(--color-border-base)',
+              background: 'rgba(255,255,255,0.025)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--color-text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <MessageSquare size={12} aria-hidden="true" /> Que dit-il ?
+            </span>
+            {wordCount > 0 && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: isWordOver
+                    ? 'var(--color-danger)'
+                    : isWordWarning
+                      ? 'var(--color-warning)'
+                      : 'var(--color-text-muted)',
+                  transition: 'color 150ms ease',
+                }}
+              >
+                {wordCount} mot{wordCount > 1 ? 's' : ''} · ~{readTimeSec}s
+                {isWordOver && <span style={{ marginLeft: 5, fontSize: 9 }}>⚠ trop long</span>}
+              </span>
+            )}
+          </div>
+
+          {/* Textarea — fond transparent (mockup) */}
           <Textarea
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
             placeholder="Écris le dialogue ici…"
             className={cn(
-              'min-h-[130px] text-sm resize-none focus:ring-2 focus:ring-primary/20 pr-16',
-              textLen > 0 && textLen < 10 && 'border-yellow-500/50',
-              textLen >= 10 && 'border-green-500/50 focus:border-green-500'
+              'min-h-[100px] resize-none focus:ring-1 focus:ring-primary/20',
+              'border-0 rounded-none bg-transparent shadow-none'
             )}
+            style={{ padding: '13px 14px', fontSize: 15, fontWeight: 600 }}
             maxLength={550}
           />
+          {/* Footer — "500 max" + compteur pill (mockup .dialogue-foot) */}
           <div
-            className={cn(
-              'absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-xs font-medium',
-              'bg-background/90 backdrop-blur-sm border',
-              textLen < 10
-                ? 'text-yellow-500'
-                : textLen > 450
-                  ? 'text-orange-500'
-                  : 'text-green-500'
-            )}
+            style={{
+              padding: '8px 14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'rgba(255,255,255,0.025)',
+              borderTop: '1px solid var(--color-border-base)',
+            }}
           >
-            {textLen}/500
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>500 max</span>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color:
+                  textLen > 450
+                    ? 'var(--color-danger)'
+                    : textLen > 300
+                      ? 'var(--color-warning)'
+                      : 'var(--color-success)',
+                background:
+                  textLen > 450
+                    ? 'rgba(239,68,68,0.14)'
+                    : textLen > 300
+                      ? 'rgba(245,158,11,0.14)'
+                      : 'rgba(34,197,94,0.14)',
+                border: `1.5px solid ${textLen > 450 ? 'rgba(239,68,68,0.35)' : textLen > 300 ? 'rgba(245,158,11,0.35)' : 'rgba(34,197,94,0.35)'}`,
+                padding: '3px 10px',
+                borderRadius: 7,
+              }}
+            >
+              {textLen} / 500
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ── Choices section ──────────────────────────────────────────────── */}
-      {complexityLevel && complexityLevel !== 'linear' && choices.length > 0 && (
+      {/* ── Minigame section ─────────────────────────────────────────────── */}
+      {complexityLevel === 'minigame' && (
         <div className="space-y-3">
           <div className="h-px bg-border" />
-
-          {/* Tab strip */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {tabLabels.map((label, i) => {
-              const valid = isChoiceValid(i);
-              const active = safeTab === i;
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActiveTab(i)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold',
-                    'transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                    'max-w-[120px] truncate',
-                    active
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                  title={label}
-                >
-                  {/* Validity dot */}
-                  <span
-                    className={cn(
-                      'w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors',
-                      valid
-                        ? active
-                          ? 'bg-green-300'
-                          : 'bg-green-500'
-                        : active
-                          ? 'bg-white/40'
-                          : 'bg-muted-foreground/30'
-                    )}
-                  />
-                  <span className="truncate">{label}</span>
-                </button>
-              );
-            })}
-            {canAddChoice && (
-              <button
-                type="button"
-                onClick={handleAddChoice}
-                title="Ajouter un choix"
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
-          {/* Active tab content — AnimatePresence for smooth swap */}
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={safeTab}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.12 }}
-            >
-              {/* ── Binary ── */}
-              {complexityLevel === 'binary' && choices[safeTab] && (
-                <BinaryChoiceField
-                  choiceIndex={safeTab as 0 | 1}
-                  choice={choices[safeTab]}
-                  response={responses[safeTab]}
-                  defaultSpeaker={speaker}
-                  scenes={scenes}
-                  currentScene={currentScene}
-                  currentSceneId={currentSceneId}
-                  onUpdateChoice={(updates) => onUpdateChoice(safeTab, updates)}
-                  onUpdateResponse={(updates) => onUpdateResponse(safeTab, updates)}
-                />
-              )}
-
-              {/* ── Dice ── */}
-              {complexityLevel === 'dice' && choices[safeTab] && (
-                <DiceChoiceCard
-                  choice={choices[safeTab]}
-                  title={choices.length === 1 ? 'Dé' : `Dé ${String.fromCharCode(65 + safeTab)}`}
-                  onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
-                  onRemove={() => handleRemoveChoice(safeTab)}
-                  canRemove={choices.length > 1}
-                  currentSceneId={currentSceneId}
-                />
-              )}
-
-              {/* ── Expert ── */}
-              {complexityLevel === 'expert' && choices[safeTab] && (
-                <ComplexChoiceCard
-                  choice={choices[safeTab]}
-                  index={safeTab}
-                  title={`Choix ${String.fromCharCode(65 + safeTab)}`}
-                  onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
-                  onRemove={() => handleRemoveChoice(safeTab)}
-                  canRemove={choices.length > 2}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <SectionBar label="Type de mini-jeu" color="#fde68a" />
+          <MinigameChoiceBuilder
+            config={minigame}
+            onUpdate={onUpdateMinigame}
+            currentSceneId={currentSceneId}
+          />
         </div>
       )}
+
+      {/* ── Choices section ──────────────────────────────────────────────── */}
+      {complexityLevel &&
+        complexityLevel !== 'linear' &&
+        complexityLevel !== 'minigame' &&
+        choices.length > 0 && (
+          <div className="space-y-3">
+            <div className="h-px bg-border" />
+
+            {/* Tab strip */}
+            <div className="flex items-center gap-1 flex-wrap">
+              {tabLabels.map((label, i) => {
+                const valid = isChoiceValid(i);
+                const active = safeTab === i;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setActiveTab(i)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold',
+                      'transition-all focus:outline-none focus-visible:ring-2',
+                      'max-w-[120px] truncate',
+                      active
+                        ? 'shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                    style={
+                      active
+                        ? {
+                            background: accentColor,
+                            color: '#fff',
+                            transition: 'background 0.25s ease',
+                          }
+                        : undefined
+                    }
+                    title={label}
+                  >
+                    {/* Validity dot */}
+                    <span
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors',
+                        valid
+                          ? active
+                            ? 'bg-green-300'
+                            : 'bg-green-500'
+                          : active
+                            ? 'bg-white/40'
+                            : 'bg-muted-foreground/30'
+                      )}
+                    />
+                    <span className="truncate">{label}</span>
+                  </button>
+                );
+              })}
+              {canAddChoice && (
+                <button
+                  type="button"
+                  onClick={handleAddChoice}
+                  title="Ajouter un choix"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            {/* Active tab content — AnimatePresence for smooth swap */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={safeTab}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.12 }}
+              >
+                {/* ── Binary ── */}
+                {complexityLevel === 'binary' && choices[safeTab] && (
+                  <BinaryChoiceField
+                    choiceIndex={safeTab as 0 | 1}
+                    choice={choices[safeTab]}
+                    response={responses[safeTab]}
+                    defaultSpeaker={speaker}
+                    scenes={scenes}
+                    currentScene={currentScene}
+                    currentSceneId={currentSceneId}
+                    onUpdateChoice={(updates) => onUpdateChoice(safeTab, updates)}
+                    onUpdateResponse={(updates) => onUpdateResponse(safeTab, updates)}
+                  />
+                )}
+
+                {/* ── Dice ── */}
+                {complexityLevel === 'dice' && choices[safeTab] && (
+                  <DiceChoiceCard
+                    choice={choices[safeTab]}
+                    title={choices.length === 1 ? 'Dé' : `Dé ${String.fromCharCode(65 + safeTab)}`}
+                    onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
+                    onRemove={() => handleRemoveChoice(safeTab)}
+                    canRemove={choices.length > 1}
+                    currentSceneId={currentSceneId}
+                  />
+                )}
+
+                {/* ── Expert ── */}
+                {complexityLevel === 'expert' && choices[safeTab] && (
+                  <ComplexChoiceCard
+                    choice={choices[safeTab]}
+                    index={safeTab}
+                    title={`Choix ${String.fromCharCode(65 + safeTab)}`}
+                    onUpdate={(updates) => onUpdateChoice(safeTab, updates)}
+                    onRemove={() => handleRemoveChoice(safeTab)}
+                    canRemove={choices.length > 2}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
     </div>
   );
 }

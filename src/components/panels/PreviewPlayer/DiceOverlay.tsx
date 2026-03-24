@@ -13,6 +13,7 @@ import { Confetti } from '@/components/ui/confetti';
 import { uiSounds } from '@/utils/uiSounds';
 import type { Phase } from './DiceCubeCSS';
 import { DiceCubeWrapper } from './DiceCubeWrapper';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 export interface DiceOverlayProps {
   isOpen: boolean;
@@ -153,7 +154,7 @@ export function DiceOverlay({
       style={{
         position: 'absolute',
         inset: 0,
-        zIndex: 50,
+        zIndex: Z_INDEX.PREVIEW_OVERLAY,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

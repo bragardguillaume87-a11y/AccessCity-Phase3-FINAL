@@ -20,6 +20,8 @@ interface CharacterFormData {
   isProtagonist?: boolean;
   /** Initial game stats (physique/mentale 0–100) — used when isProtagonist=true */
   initialStats?: { physique?: number; mentale?: number };
+  /** Narrator role — hides portrait in DialogueBox, full-width text */
+  role?: 'speaker' | 'narrator';
 }
 
 /**
@@ -107,7 +109,7 @@ export function useCharacterForm(
   const [formData, setFormData] = useState<CharacterFormData>({
     ...initialCharacter,
     moods: initialCharacter.moods || ['neutral'],
-    sprites: initialCharacter.sprites || {}
+    sprites: initialCharacter.sprites || {},
   });
 
   const [activeTab, setActiveTab] = useState<string>('identity');
@@ -122,140 +124,155 @@ export function useCharacterForm(
     setFormData({
       ...initialCharacter,
       moods: initialCharacter.moods || ['neutral'],
-      sprites: initialCharacter.sprites || {}
+      sprites: initialCharacter.sprites || {},
     });
     setErrors({});
     setWarnings({});
     setHasChanges(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- initialCharacter complet intentionnellement omis : reset uniquement si l'ID change
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialCharacter complet intentionnellement omis : reset uniquement si l'ID change
   }, [initialCharacter.id]);
 
   /**
    * Update a form field
    */
-  const updateField = useCallback((field: keyof CharacterFormData, value: CharacterFormFieldValue): void => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
+  const updateField = useCallback(
+    (field: keyof CharacterFormData, value: CharacterFormFieldValue): void => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      setHasChanges(true);
 
-    // Clear error for this field if it exists
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  }, [errors]);
+      // Clear error for this field if it exists
+      if (errors[field]) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
 
   /**
    * Add a new mood
    */
-  const addMood = useCallback((moodId: string): boolean => {
-    if (!moodId || !moodId.trim()) return false;
+  const addMood = useCallback(
+    (moodId: string): boolean => {
+      if (!moodId || !moodId.trim()) return false;
 
-    const trimmedMood = moodId.trim().toLowerCase();
+      const trimmedMood = moodId.trim().toLowerCase();
 
-    // Check if mood already exists
-    if (formData.moods.includes(trimmedMood)) {
-      setErrors(prev => ({ ...prev, moods: [`Mood "${trimmedMood}" already exists`] }));
-      return false;
-    }
+      // Check if mood already exists
+      if (formData.moods.includes(trimmedMood)) {
+        setErrors((prev) => ({ ...prev, moods: [`Mood "${trimmedMood}" already exists`] }));
+        return false;
+      }
 
-    setFormData(prev => ({
-      ...prev,
-      moods: [...prev.moods, trimmedMood],
-      sprites: { ...prev.sprites, [trimmedMood]: '' }
-    }));
-    setHasChanges(true);
-    return true;
-  }, [formData.moods]);
+      setFormData((prev) => ({
+        ...prev,
+        moods: [...prev.moods, trimmedMood],
+        sprites: { ...prev.sprites, [trimmedMood]: '' },
+      }));
+      setHasChanges(true);
+      return true;
+    },
+    [formData.moods]
+  );
 
   /**
    * Remove a mood
    */
-  const removeMood = useCallback((moodId: string): boolean => {
-    // Prevent removing the last mood
-    if (formData.moods.length === 1) {
-      setErrors(prev => ({ ...prev, moods: ['Character must have at least one mood'] }));
-      return false;
-    }
+  const removeMood = useCallback(
+    (moodId: string): boolean => {
+      // Prevent removing the last mood
+      if (formData.moods.length === 1) {
+        setErrors((prev) => ({ ...prev, moods: ['Character must have at least one mood'] }));
+        return false;
+      }
 
-    setFormData(prev => {
-      const newMoods = prev.moods.filter(m => m !== moodId);
-      const newSprites = { ...prev.sprites };
-      delete newSprites[moodId];
+      setFormData((prev) => {
+        const newMoods = prev.moods.filter((m) => m !== moodId);
+        const newSprites = { ...prev.sprites };
+        delete newSprites[moodId];
 
-      return {
-        ...prev,
-        moods: newMoods,
-        sprites: newSprites
-      };
-    });
-    setHasChanges(true);
-    return true;
-  }, [formData.moods]);
+        return {
+          ...prev,
+          moods: newMoods,
+          sprites: newSprites,
+        };
+      });
+      setHasChanges(true);
+      return true;
+    },
+    [formData.moods]
+  );
 
   /**
    * Update sprite for a mood
    */
-  const updateSprite = useCallback((mood: string, spritePath: string): void => {
-    setFormData(prev => ({
-      ...prev,
-      sprites: { ...prev.sprites, [mood]: spritePath }
-    }));
-    setHasChanges(true);
+  const updateSprite = useCallback(
+    (mood: string, spritePath: string): void => {
+      setFormData((prev) => ({
+        ...prev,
+        sprites: { ...prev.sprites, [mood]: spritePath },
+      }));
+      setHasChanges(true);
 
-    // Clear sprite warnings if we just assigned a sprite
-    if (spritePath && warnings.sprites) {
-      setWarnings(prev => {
-        const newWarnings = { ...prev };
-        delete newWarnings.sprites;
-        return newWarnings;
-      });
-    }
-  }, [warnings.sprites]);
+      // Clear sprite warnings if we just assigned a sprite
+      if (spritePath && warnings.sprites) {
+        setWarnings((prev) => {
+          const newWarnings = { ...prev };
+          delete newWarnings.sprites;
+          return newWarnings;
+        });
+      }
+    },
+    [warnings.sprites]
+  );
 
   /**
    * Rename a mood
    */
-  const renameMood = useCallback((oldMoodId: string, newMoodId: string): boolean => {
-    if (!newMoodId || !newMoodId.trim()) return false;
+  const renameMood = useCallback(
+    (oldMoodId: string, newMoodId: string): boolean => {
+      if (!newMoodId || !newMoodId.trim()) return false;
 
-    const trimmedNewMood = newMoodId.trim().toLowerCase();
+      const trimmedNewMood = newMoodId.trim().toLowerCase();
 
-    // Check if new name already exists (and is not the same mood)
-    if (trimmedNewMood !== oldMoodId && formData.moods.includes(trimmedNewMood)) {
-      setErrors(prev => ({ ...prev, moods: [`Mood "${trimmedNewMood}" already exists`] }));
-      return false;
-    }
-
-    setFormData(prev => {
-      const newMoods = prev.moods.map(m => m === oldMoodId ? trimmedNewMood : m);
-      const newSprites = { ...prev.sprites };
-
-      // Transfer sprite from old mood to new mood
-      if (newSprites[oldMoodId] !== undefined) {
-        newSprites[trimmedNewMood] = newSprites[oldMoodId];
-        delete newSprites[oldMoodId];
+      // Check if new name already exists (and is not the same mood)
+      if (trimmedNewMood !== oldMoodId && formData.moods.includes(trimmedNewMood)) {
+        setErrors((prev) => ({ ...prev, moods: [`Mood "${trimmedNewMood}" already exists`] }));
+        return false;
       }
 
-      return {
-        ...prev,
-        moods: newMoods,
-        sprites: newSprites
-      };
-    });
-    setHasChanges(true);
-    return true;
-  }, [formData.moods]);
+      setFormData((prev) => {
+        const newMoods = prev.moods.map((m) => (m === oldMoodId ? trimmedNewMood : m));
+        const newSprites = { ...prev.sprites };
+
+        // Transfer sprite from old mood to new mood
+        if (newSprites[oldMoodId] !== undefined) {
+          newSprites[trimmedNewMood] = newSprites[oldMoodId];
+          delete newSprites[oldMoodId];
+        }
+
+        return {
+          ...prev,
+          moods: newMoods,
+          sprites: newSprites,
+        };
+      });
+      setHasChanges(true);
+      return true;
+    },
+    [formData.moods]
+  );
 
   const setIsProtagonist = useCallback((value: boolean): void => {
-    setFormData(prev => ({ ...prev, isProtagonist: value }));
+    setFormData((prev) => ({ ...prev, isProtagonist: value }));
     setHasChanges(true);
   }, []);
 
   const setInitialStat = useCallback((stat: 'physique' | 'mentale', value: number): void => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       initialStats: { ...(prev.initialStats ?? {}), [stat]: value },
     }));
@@ -289,7 +306,7 @@ export function useCharacterForm(
     setFormData({
       ...initialCharacter,
       moods: initialCharacter.moods || ['neutral'],
-      sprites: initialCharacter.sprites || {}
+      sprites: initialCharacter.sprites || {},
     });
     setErrors({});
     setWarnings({});
@@ -311,6 +328,6 @@ export function useCharacterForm(
     setIsProtagonist,
     setInitialStat,
     handleSave,
-    resetForm
+    resetForm,
   };
 }

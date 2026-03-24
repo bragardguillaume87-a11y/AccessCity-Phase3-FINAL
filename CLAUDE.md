@@ -59,46 +59,39 @@ src/
 
 ## 3. Invariants Critiques
 
-> Ces pièges causent des bugs silencieux difficiles à détecter. Toujours vérifier.
+> Règles non-déductibles depuis le code — causes des bugs silencieux les plus fréquents sur ce projet.
 
-### Store Split — sélecteur selon le contexte
+### Store Split — utiliser les selectors complets
 
-`scenesStore.scenes` retourne des scènes avec `dialogues = []` **toujours vide** (architecture Phase 3).
+`scenesStore.scenes[n].dialogues` est **toujours `[]`** (architecture Phase 3). Utiliser exclusivement :
 
 ```typescript
-// ❌ MAUVAIS : dialogues vides
-const scene = useScenesStore(s => s.scenes.find(sc => sc.id === id));
-
-// ✅ UNE scène complète (composants éditeur)
+// UNE scène complète avec dialogues réels (composants éditeur)
 import { useSceneWithElements } from '@/stores/selectors';
 const scene = useSceneWithElements(sceneId);
 
-// ✅ TOUTES les scènes (PreviewPlayer, useValidation)
+// TOUTES les scènes complètes (PreviewPlayer, useValidation)
 import { useAllScenesWithElements } from '@/stores/selectors';
 const scenes = useAllScenesWithElements(); // ⚠️ Coûteux : abonne aux 3 stores
 ```
 
-### getState() — render vs handlers
+### getState() — dans les handlers uniquement
+
+Appeler `getState()` exclusivement à l'intérieur des handlers et callbacks :
 
 ```typescript
-// ❌ MAUVAIS : getState() pendant le render → données stale
-const chars = useSceneElementsStore.getState().getCharactersForScene(id);
-
-// ✅ BON : getState() dans un handler/callback uniquement
 const handleDuplicate = useCallback(() => {
   const chars = useSceneElementsStore.getState().getCharactersForScene(id);
 }, [id]);
 ```
 
-### Pattern EMPTY_* — références stables
+### EMPTY_* — constantes module-level pour les fallbacks
+
+Déclarer les fallbacks comme constantes module-level et utiliser `??` :
 
 ```typescript
-// ❌ MAUVAIS : || [] inline → nouvelle référence → boucle infinie React 18/19
-const scenes = state?.scenes || [];
-
-// ✅ BON : constante module-level
-const EMPTY_SCENES: SceneMetadata[] = [];
-const scenes = state?.scenes ?? EMPTY_SCENES;
+const EMPTY_SCENES: SceneMetadata[] = [];        // module-level, référence stable
+const scenes = state?.scenes ?? EMPTY_SCENES;    // ?? pas ||
 ```
 
 ---
@@ -144,6 +137,38 @@ Via CharactersModal → Éditer personnage → Moods, ou via `useCharactersStore
 
 ## 6. Protocole Code
 
+### Déclencheur — "utilise le protocole claude"
+
+Quand l'utilisateur dit **"protocole claude"** ou **"utilise le protocole claude"**, effectuer dans cet ordre **avant toute autre action** :
+
+- Lire `memory/hallucination_patterns.md` — pièges connus sur ce projet
+- Lire `memory/validated_patterns.md` — patterns confirmés corrects
+- Lire le fichier `.claude/rules/` correspondant à la tâche :
+
+| Si la tâche touche… | → Lire |
+| --- | --- |
+| MapCanvas, Konva, éditeur 2D | `konva-patterns.md` |
+| Assets, upload, chemins fichiers | `tauri-patterns.md` |
+| UI, composants, animations, feedback | `nintendo-ux.md` |
+| Nouvelle feature, dépendances | `dependencies.md` |
+| Stores, selectors, React hooks | `store-patterns.md` |
+| Graphe @xyflow, layout Dagre | `graph-patterns.md` |
+| Couleurs, typo, espacements | `ui-tokens.md` |
+
+- Puis enchaîner les étapes du protocole ci-dessous (WebSearch → Audit → Contre-vérification → Plan)
+
+### 0. Spec mini-format (avant toute nouvelle feature)
+
+Écrire 3 lignes avant de commencer — réduit les hallucinations et aligne le travail sur le "pourquoi" :
+
+```text
+Objectif    : [une phrase — ce que ça fait]
+Critères    : [2-3 vérifiables — comment savoir que c'est réussi]
+Non-objectif: [ce que ça NE fait PAS — évite le scope creep]
+```
+
+> Exemple : "Objectif : Permettre la sélection de couleur dans la textbox. Critères : popover s'ouvre/ferme, couleur appliquée au texte sélectionné, accessible clavier. Non-objectif : pas de palette custom par projet."
+
 ### Avant chaque chantier
 
 1. **WebSearch** : vérifier best practices actuelles. **Obligatoire.**
@@ -160,7 +185,26 @@ Via CharactersModal → Éditer personnage → Moods, ou via `useCharactersStore
 
 2. **Audit ciblé** : Grep + Read sur les fichiers concernés
 3. **Contre-vérification** : les agents sous-tâches ont ~50-75% faux positifs sur pattern-matching — toujours vérifier par grep avant de corriger
-4. **Plan d'action** : lister les modifications confirmées avant de commencer
+4. **Plan d'action** : lister les modifications confirmées avant de commencer, au format `fichier → zone → changement → raison`. Exemple : `DialogueBox.tsx → wrapper div → touchAction:none → support tablette (konva-patterns §8)`
+
+### Git — branche dédiée par chantier
+
+Toujours travailler sur une branche dédiée. C'est la mesure de sécurité la plus importante avec Claude Code — permet d'annuler un chantier entier sans perte.
+
+```bash
+git checkout -b feat/nom-du-chantier   # avant de commencer
+git checkout -b fix/nom-du-bug         # pour un correctif
+```
+
+### Agents disponibles (sous-tâches parallèles)
+
+| Agent | Quand l'utiliser |
+| --- | --- |
+| `Explore` | Exploration codebase, recherche de patterns, questions sur l'architecture |
+| `Plan` | Concevoir un plan d'implémentation avant de coder |
+| `general-purpose` | Recherches web, tâches multi-étapes complexes |
+
+> ⚠️ Les agents ont ~50-75% de faux positifs sur le pattern-matching — **toujours contre-vérifier par grep** avant de corriger.
 
 ### Pendant les modifications
 
@@ -194,13 +238,46 @@ Quand l'utilisateur demande "qualité maximale" ou "protocole code" :
 
 ## 7. Règles détaillées → `.claude/rules/`
 
-`store-patterns.md` | `react-patterns.md` | `graph-patterns.md` | `tauri-patterns.md` | `ai-adaptation.md` | `nintendo-ux.md` | `dependencies.md` | `konva-patterns.md`
+`store-patterns.md` | `react-patterns.md` | `graph-patterns.md` | `tauri-patterns.md` | `ai-adaptation.md` | `nintendo-ux.md` | `ui-tokens.md` | `dependencies.md` | `konva-patterns.md`
 
 ⚠️ Lire `tauri-patterns.md` avant tout audit Tauri (asset.url vs asset.path).
-⚠️ Lire `nintendo-ux.md` avant tout travail UI/UX (composants, animations, feedback).
+⚠️ Lire `nintendo-ux.md` avant tout travail UI/UX — **boussole rapide en début de fichier** pour trouver le bon conseiller sans lire tout le fichier.
+⚠️ Lire `ui-tokens.md` pour les couleurs, typo, espacements, z-index du projet (résumé de `src/styles/tokens.css`).
 ⚠️ Lire `dependencies.md` avant toute nouvelle feature (checklist anti-hardcoding + libs disponibles).
 ⚠️ Lire `konva-patterns.md` avant tout travail sur MapCanvas ou react-konva (dragend bubbling, coordonnées, Transformer).
 
+## 8. Mémoire persistante → `memory/`
+
+Consultée en début de session via le déclencheur §6. Fichiers clés :
+
+- `hallucination_patterns.md` — ⚠️ anti-patterns connus sur CE projet (stores, Tauri, Konva, z-index, build)
+- `validated_patterns.md` — ✅ patterns confirmés corrects — ne pas remettre en question sans grep
+- `feedback_*.md` — préférences et corrections de l'utilisateur
+
+### Quand mettre à jour ces fichiers
+
+| Événement | Action |
+| --- | --- |
+| Nouvelle erreur découverte (bug causé par un mauvais pattern) | Ajouter dans `hallucination_patterns.md` |
+| Pattern confirmé correct après grep + build réussi | Ajouter dans `validated_patterns.md` |
+| L'utilisateur corrige une approche ("non, fais plutôt…") | Créer ou mettre à jour un `feedback_*.md` |
+| Un pattern existant est devenu obsolète (refacto, migration) | Supprimer ou barrer l'entrée concernée |
+
+## 9. Hooks Claude Code → `.claude/settings.json`
+
+Des hooks shell s'exécutent automatiquement sur certains événements (post-Edit, post-Stop, etc.).
+Le projet utilise `tools/ux-audit-hook.cjs`. Ne pas dupliquer la logique des hooks dans le code.
+
 ---
 
-**Dernière mise à jour** : 2026-03-08 par Claude Sonnet 4.6
+## ⚠️ RAPPEL CRITIQUE — Duplication intentionnelle
+
+> Les 2 invariants les plus fréquemment violés, répétés ici pour renforcer la compliance en fin de session.
+> Technique : primacy/recency bias — source : HackerNews + dev.to community research, 2026.
+
+- **Store Split** : utiliser `useSceneWithElements(id)` — `scenesStore.scenes[n].dialogues` est **toujours `[]`**
+- **getState()** : appeler uniquement dans les handlers/callbacks, jamais pendant le render
+
+---
+
+**Dernière mise à jour** : 2026-03-22 par Claude Sonnet 4.6

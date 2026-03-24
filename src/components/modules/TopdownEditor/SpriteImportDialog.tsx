@@ -49,6 +49,7 @@ import {
   SPRITE_PREVIEW_CANVAS_SIZE,
   SPRITE_MINI_CANVAS_SIZE,
 } from '@/config/mapEditorConfig';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 import {
   sectionLabel,
   textInputStyle,
@@ -1032,7 +1033,7 @@ export default function SpriteImportDialog({
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 9998,
+            zIndex: Z_INDEX.TOPDOWN_BACKDROP,
             background: 'rgba(0,0,0,0.75)',
             backdropFilter: 'blur(4px)',
           }}
@@ -1044,7 +1045,7 @@ export default function SpriteImportDialog({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 9999,
+            zIndex: Z_INDEX.TOPDOWN_DIALOG,
             width: 'min(1360px, 97vw)',
             height: '95vh',
             background: 'var(--color-surface-elevated, #1e1e2e)',

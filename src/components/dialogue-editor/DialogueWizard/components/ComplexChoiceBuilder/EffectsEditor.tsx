@@ -1,14 +1,9 @@
-
+import React from 'react';
 import { Plus, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GAME_STATS } from '@/i18n';
-import type { Effect } from '@/types';
+import type { Effect, StatEffect } from '@/types';
 import { EffectRow } from './EffectRow';
 
 interface EffectsEditorProps {
@@ -16,9 +11,13 @@ interface EffectsEditorProps {
   onChange: (effects: Effect[]) => void;
 }
 
+function isStatEffect(e: Effect): e is StatEffect {
+  return 'variable' in e;
+}
+
 export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
   const handleAddEffect = () => {
-    const newEffect: Effect = { variable: GAME_STATS.PHYSIQUE, operation: 'add', value: 5 };
+    const newEffect: StatEffect = { variable: GAME_STATS.PHYSIQUE, operation: 'add', value: 5 };
     onChange([...effects, newEffect]);
   };
 
@@ -26,8 +25,10 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
     onChange(effects.filter((_, i) => i !== index));
   };
 
-  const handleUpdateEffect = (index: number, updates: Partial<Effect>) => {
-    onChange(effects.map((effect, i) => i === index ? { ...effect, ...updates } : effect));
+  const handleUpdateEffect = (index: number, updates: Partial<StatEffect>) => {
+    onChange(
+      effects.map((effect, i) => (i === index ? ({ ...effect, ...updates } as StatEffect) : effect))
+    );
   };
 
   return (
@@ -42,7 +43,8 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
               </h5>
             </TooltipTrigger>
             <TooltipContent side="right" className="text-xs max-w-[200px]">
-              Modifie une variable du jeu quand le joueur choisit cette option (ex : +10 Corps, −5 Esprit).
+              Modifie une variable du jeu quand le joueur choisit cette option (ex : +10 Physique,
+              −5 Mentale).
             </TooltipContent>
           </Tooltip>
           <Button onClick={handleAddEffect} variant="ghost" size="sm" className="h-7 text-xs gap-1">
@@ -57,14 +59,18 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
           </p>
         ) : (
           <div className="space-y-2">
-            {effects.map((effect, index) => (
-              <EffectRow
-                key={index}
-                effect={effect}
-                onUpdate={(updates) => handleUpdateEffect(index, updates)}
-                onRemove={() => handleRemoveEffect(index)}
-              />
-            ))}
+            {effects.reduce<React.ReactNode[]>((acc, effect, originalIndex) => {
+              if (!isStatEffect(effect)) return acc;
+              acc.push(
+                <EffectRow
+                  key={originalIndex}
+                  effect={effect}
+                  onUpdate={(updates) => handleUpdateEffect(originalIndex, updates)}
+                  onRemove={() => handleRemoveEffect(originalIndex)}
+                />
+              );
+              return acc;
+            }, [])}
           </div>
         )}
       </div>

@@ -25,6 +25,7 @@ import { TILESET_CATEGORIES } from '@/types/tileset';
 import type { Asset } from '@/types/assets';
 import type { SelectedTile, TilesetConfig } from '@/types/tileset';
 import type { LayerType } from '@/types/map';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -843,7 +844,7 @@ export default function TilePalette({
                   align="end"
                   sideOffset={4}
                   style={{
-                    zIndex: 9999,
+                    zIndex: Z_INDEX.TOPDOWN_DIALOG,
                     minWidth: 190,
                     background: 'var(--color-surface-elevated, #1e1e2e)',
                     border: '1px solid var(--color-border-base)',

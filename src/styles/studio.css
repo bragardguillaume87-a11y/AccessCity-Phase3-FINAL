@@ -1557,3 +1557,146 @@
   background: var(--color-bg-hover);
   border-radius: 2px;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION BAR LABEL — label de section avec border-left accent
+   Utilisé dans DialogueComposer, MinigameChoiceBuilder
+   ══════════════════════════════════════════════════════════════ */
+
+.section-bar-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-secondary);
+  border-left: 2px solid var(--color-primary);
+  padding-left: 7px;
+  background: var(--color-primary-06);
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.7;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LIGHT THEME OVERRIDES — Catppuccin Latte
+   Applied when :root does NOT have class "dark" (isLight themes)
+   ══════════════════════════════════════════════════════════════ */
+
+:root:not(.dark) {
+  /* ── Section headers (sp-lbl) — border-left violet + bg tint ── */
+  .sp-lbl {
+    color: #5c5f77; /* Latte Subtext1 — réservé aux headers de panel */
+    background: rgba(136, 57, 239, 0.06);
+    border-left: 3px solid #8839ef;
+    padding-left: 8px;
+    border-radius: 3px;
+  }
+
+  .sp-lbl::after {
+    background: rgba(76, 79, 105, 0.2);
+  }
+
+  /* ── Dialogue preview box — light card ── */
+  .sp-dia-preview {
+    background: #ffffff;
+    color: #4c4f69;
+    border-color: rgba(76, 79, 105, 0.2);
+  }
+
+  /* ── Scene items — surface0 (#ccd0da) sur mantle (#e6e9ef) = profondeur ──
+     (éviter #ffffff — contraste trop fort sur fond Latte Mantle)
+  */
+  .scene-item {
+    background: #ccd0da; /* Latte Surface0 */
+    box-shadow:
+      0 1px 3px rgba(76, 79, 105, 0.12),
+      0 0 0 1px #bcc0cc;
+  }
+
+  .scene-item:hover {
+    border-color: rgba(136, 57, 239, 0.35);
+    box-shadow: 0 2px 8px rgba(76, 79, 105, 0.16);
+  }
+
+  .scene-item.active {
+    box-shadow:
+      0 0 0 1px rgba(136, 57, 239, 0.4),
+      0 4px 16px rgba(136, 57, 239, 0.2);
+  }
+
+  /* ── Scene thumbnails — filtre adapté au fond clair ── */
+  .scene-thumb {
+    filter: grayscale(0.5) brightness(0.88);
+  }
+
+  .scene-item:hover .scene-thumb {
+    filter: grayscale(0.15) brightness(0.97);
+  }
+
+  /* ── Sections separators — bordures plus visibles ── */
+  .sp-sec + .sp-sec {
+    border-top-color: rgba(76, 79, 105, 0.18);
+  }
+
+  /* ── Scrollbar — couleur adaptée au fond clair ── */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(76, 79, 105, 0.25);
+  }
+
+  /* ── Problems panel — shadow légère sur fond clair ── */
+  .problems-panel {
+    box-shadow: 0 4px 16px rgba(76, 79, 105, 0.12);
+  }
+
+  /* ── Jump HUD — cyan trop clair en light mode ── */
+  .jump-hud-label.scenes {
+    color: var(--color-primary); /* violet au lieu de cyan */
+    opacity: 1;
+  }
+
+  .jump-hud-trigger.scenes {
+    color: var(--color-primary);
+  }
+
+  .jump-hud-btn {
+    color: #5c5f77; /* Latte Subtext1 */
+    border-color: rgba(76, 79, 105, 0.2);
+  }
+
+  .jump-hud-btn:hover:not(:disabled) {
+    background: rgba(136, 57, 239, 0.08);
+    color: var(--color-primary);
+    border-color: rgba(136, 57, 239, 0.3);
+  }
+
+  .jump-hud-scene-name {
+    color: #4c4f69; /* Latte Text — noir/foncé lisible */
+  }
+
+  /* ── Right toolbar — texte blanc hardcodé invisible en light mode ── */
+  .toolbar-btn {
+    color: #5c5f77; /* Latte Subtext1 — lisible sur fond clair */
+  }
+
+  .toolbar-btn:hover {
+    color: var(--color-primary);
+    background: rgba(136, 57, 239, 0.1);
+    box-shadow: none;
+  }
+
+  .toolbar-btn.active {
+    color: #ffffff; /* garder blanc sur fond violet actif */
+  }
+
+  /* ── Tooltip — fond sombre hardcodé (#1c2236) ── */
+  .toolbar-tooltip {
+    background: #4c4f69; /* Latte Text — contraste fort, lisible */
+    border-color: rgba(76, 79, 105, 0.25);
+  }
+
+  .toolbar-tooltip-arrow {
+    fill: #4c4f69;
+  }
+}

@@ -253,16 +253,20 @@ export function renderMaskOverlay(ctx: CanvasRenderingContext2D, masks: BrushMas
 
   for (let i = 0; i < width * height; i++) {
     const o = i * 4;
-    if (keepMask[i] > 0) {
+    const kv = keepMask[i];
+    const rv = removeMask[i];
+    if (kv > 0) {
       d[o] = 0;
       d[o + 1] = 200;
       d[o + 2] = 80;
-      d[o + 3] = 140; // vert semi-transparent
-    } else if (removeMask[i] > 0) {
+      // Pixels peints manuellement (255) = opaque pour feedback clair
+      // Pixels auto-classifiés par smartRefine (128) = très faint → le canvas résultat reste visible
+      d[o + 3] = kv === 255 ? 140 : 45;
+    } else if (rv > 0) {
       d[o] = 220;
       d[o + 1] = 0;
       d[o + 2] = 0;
-      d[o + 3] = 140; // rouge semi-transparent
+      d[o + 3] = rv === 255 ? 140 : 45;
     }
   }
 

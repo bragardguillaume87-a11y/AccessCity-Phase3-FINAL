@@ -1,6 +1,12 @@
 import { useCallback } from 'react';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { DiceCheckBranch } from '@/types';
 import { GAME_STATS } from '@/i18n';
@@ -31,17 +37,47 @@ interface StatPreset {
 }
 
 const SUCCESS_PRESETS: StatPreset[] = [
-  { key: `${GAME_STATS.PHYSIQUE}_5`,  label: '+5 Corps 💪',  stat: GAME_STATS.PHYSIQUE, amount: 5  },
-  { key: `${GAME_STATS.PHYSIQUE}_10`, label: '+10 Corps 💪', stat: GAME_STATS.PHYSIQUE, amount: 10 },
-  { key: `${GAME_STATS.MENTALE}_5`,   label: '+5 Esprit 🧠',  stat: GAME_STATS.MENTALE, amount: 5  },
-  { key: `${GAME_STATS.MENTALE}_10`,  label: '+10 Esprit 🧠', stat: GAME_STATS.MENTALE, amount: 10 },
+  {
+    key: `${GAME_STATS.PHYSIQUE}_5`,
+    label: '+5 Physique 💪',
+    stat: GAME_STATS.PHYSIQUE,
+    amount: 5,
+  },
+  {
+    key: `${GAME_STATS.PHYSIQUE}_10`,
+    label: '+10 Physique 💪',
+    stat: GAME_STATS.PHYSIQUE,
+    amount: 10,
+  },
+  { key: `${GAME_STATS.MENTALE}_5`, label: '+5 Mentale 🧠', stat: GAME_STATS.MENTALE, amount: 5 },
+  {
+    key: `${GAME_STATS.MENTALE}_10`,
+    label: '+10 Mentale 🧠',
+    stat: GAME_STATS.MENTALE,
+    amount: 10,
+  },
 ];
 
 const FAILURE_PRESETS: StatPreset[] = [
-  { key: `${GAME_STATS.PHYSIQUE}_-5`,  label: '-5 Corps 💪',  stat: GAME_STATS.PHYSIQUE, amount: -5  },
-  { key: `${GAME_STATS.PHYSIQUE}_-10`, label: '-10 Corps 💪', stat: GAME_STATS.PHYSIQUE, amount: -10 },
-  { key: `${GAME_STATS.MENTALE}_-5`,   label: '-5 Esprit 🧠',  stat: GAME_STATS.MENTALE, amount: -5  },
-  { key: `${GAME_STATS.MENTALE}_-10`,  label: '-10 Esprit 🧠', stat: GAME_STATS.MENTALE, amount: -10 },
+  {
+    key: `${GAME_STATS.PHYSIQUE}_-5`,
+    label: '-5 Physique 💪',
+    stat: GAME_STATS.PHYSIQUE,
+    amount: -5,
+  },
+  {
+    key: `${GAME_STATS.PHYSIQUE}_-10`,
+    label: '-10 Physique 💪',
+    stat: GAME_STATS.PHYSIQUE,
+    amount: -10,
+  },
+  { key: `${GAME_STATS.MENTALE}_-5`, label: '-5 Mentale 🧠', stat: GAME_STATS.MENTALE, amount: -5 },
+  {
+    key: `${GAME_STATS.MENTALE}_-10`,
+    label: '-10 Mentale 🧠',
+    stat: GAME_STATS.MENTALE,
+    amount: -10,
+  },
 ];
 
 function effectToKey(statEffect: DiceCheckBranch['statEffect']): string {
@@ -51,7 +87,7 @@ function effectToKey(statEffect: DiceCheckBranch['statEffect']): string {
 
 function keyToEffect(key: string, presets: StatPreset[]): DiceCheckBranch['statEffect'] {
   if (key === SENTINEL_NONE) return undefined;
-  const preset = presets.find(p => p.key === key);
+  const preset = presets.find((p) => p.key === key);
   return preset ? { stat: preset.stat, amount: preset.amount } : undefined;
 }
 
@@ -60,7 +96,7 @@ export function OutcomeEditor({ type, branch, onChange, currentSceneId }: Outcom
 
   const config = isSuccess
     ? { emoji: '✅', label: 'Si ça réussit', border: 'border-green-500/30', bg: 'bg-green-500/5' }
-    : { emoji: '❌', label: 'Si ça rate',    border: 'border-red-500/30',   bg: 'bg-red-500/5'   };
+    : { emoji: '❌', label: 'Si ça rate', border: 'border-red-500/30', bg: 'bg-red-500/5' };
 
   const presets = isSuccess ? SUCCESS_PRESETS : FAILURE_PRESETS;
   const effectPlaceholder = isSuccess ? '— Rien de spécial —' : '— Aucune conséquence —';
@@ -102,17 +138,17 @@ export function OutcomeEditor({ type, branch, onChange, currentSceneId }: Outcom
       {/* Presets récompense / pénalité */}
       <Select
         value={effectToKey(branch.statEffect)}
-        onValueChange={(value) =>
-          onChange({ ...branch, statEffect: keyToEffect(value, presets) })
-        }
+        onValueChange={(value) => onChange({ ...branch, statEffect: keyToEffect(value, presets) })}
       >
         <SelectTrigger className="h-9 text-sm bg-background/60">
           <SelectValue placeholder={effectPlaceholder} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={SENTINEL_NONE}>{effectPlaceholder}</SelectItem>
-          {presets.map(p => (
-            <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>
+          {presets.map((p) => (
+            <SelectItem key={p.key} value={p.key}>
+              {p.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

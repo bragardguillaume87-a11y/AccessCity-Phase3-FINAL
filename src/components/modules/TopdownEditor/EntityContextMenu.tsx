@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Trash2, Copy, Crown, MapPin, X } from 'lucide-react';
 import type { EntityInstance } from '@/types/sprite';
 import type { SpriteSheetConfig } from '@/types/sprite';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ function EntityContextMenuInner({
         left: position.x,
         top: position.y,
         width: 240,
-        zIndex: 9999,
+        zIndex: Z_INDEX.TOPDOWN_DIALOG,
         background: 'var(--color-bg-elevated, #1e1e35)',
         border: '1px solid var(--color-border-base, rgba(255,255,255,0.1))',
         borderRadius: 12,

@@ -22,6 +22,7 @@ import { useMapsStore } from '@/stores/mapsStore';
 import SpriteImportDialog from './SpriteImportDialog';
 import { SPRITE_CATEGORIES, SPRITE_ANIM_GROUPS } from '@/types/sprite';
 import type { SpriteSheetConfig, EntityBehavior } from '@/types/sprite';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -722,7 +723,7 @@ export default function SpritesPanel({
                   align="end"
                   sideOffset={4}
                   style={{
-                    zIndex: 9999,
+                    zIndex: Z_INDEX.TOPDOWN_DIALOG,
                     minWidth: 180,
                     background: 'var(--color-surface-elevated, #1e1e2e)',
                     border: '1px solid var(--color-border-base)',

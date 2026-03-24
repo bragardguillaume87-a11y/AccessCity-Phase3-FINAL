@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Dialogue, DialogueChoice, DialogueAudio } from '@/types';
+import type { Dialogue, DialogueChoice, DialogueAudio, MinigameConfig } from '@/types';
 import type { ComplexityLevel } from '@/types';
 import type { SituationTemplate } from '@/config/dialogueTemplates';
 import { GAME_STATS } from '@/i18n';
@@ -26,26 +26,37 @@ export interface DialogueFormData {
   choices: DialogueChoice[];
   complexityLevel: ComplexityLevel | null;
   responses: ResponseData[];
+  /** Config mini-jeu — remplie quand complexityLevel === 'minigame'. */
+  minigame?: MinigameConfig;
+  /** Sous-type visuel du dialogue (appel téléphonique, etc.). */
+  dialogueSubtype?: 'normal' | 'phonecall';
 }
 
 /**
  * Actions for dialogue form
  */
 export interface DialogueFormActions {
-  updateField: (field: keyof DialogueFormData, value: DialogueFormData[keyof DialogueFormData]) => void;
+  updateField: (
+    field: keyof DialogueFormData,
+    value: DialogueFormData[keyof DialogueFormData]
+  ) => void;
   setComplexity: (level: ComplexityLevel) => void;
   updateChoice: (index: number, updates: Partial<DialogueChoice>) => void;
   updateResponse: (index: number, updates: Partial<ResponseData>) => void;
   addChoice: () => void;
   removeChoice: (index: number) => void;
   applyTemplate: (template: SituationTemplate) => void;
+  updateMinigame: (config: MinigameConfig) => void;
   reset: () => void;
 }
 
 /**
- * Infer complexity level from dialogue structure (PHASE 2.3: Updated for 4 levels)
+ * Infer complexity level from dialogue structure (Updated for 5 levels)
  */
 export function inferComplexity(dialogue: Dialogue): ComplexityLevel {
+  // Minigame: checked before choices.length (a minigame has 0 choices)
+  if (dialogue.minigame) return 'minigame';
+
   const choices = dialogue.choices || [];
 
   // Linear: no choices at all
@@ -54,15 +65,12 @@ export function inferComplexity(dialogue: Dialogue): ComplexityLevel {
   }
 
   // Binary: exactly 2 choices with no effects and no dice
-  if (
-    choices.length === 2 &&
-    choices.every(c => !c.effects?.length && !c.diceCheck)
-  ) {
+  if (choices.length === 2 && choices.every((c) => !c.effects?.length && !c.diceCheck)) {
     return 'binary';
   }
 
   // Dice: has dice check (1-2 tests)
-  if (choices.some(c => c.diceCheck)) {
+  if (choices.some((c) => c.diceCheck)) {
     return 'dice';
   }
 
@@ -86,13 +94,13 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
         {
           id: `choice-${Date.now()}-1`,
           text: '',
-          effects: []
+          effects: [],
         },
         {
           id: `choice-${Date.now()}-2`,
           text: '',
-          effects: []
-        }
+          effects: [],
+        },
       ];
 
     case 'dice':
@@ -106,9 +114,9 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
             stat: DEFAULT_DICE_STAT,
             difficulty: 12,
             success: {},
-            failure: {}
-          }
-        }
+            failure: {},
+          },
+        },
       ];
 
     case 'expert':
@@ -117,14 +125,18 @@ export function generateDefaultChoices(level: ComplexityLevel): DialogueChoice[]
         {
           id: `choice-${Date.now()}-1`,
           text: '',
-          effects: []
+          effects: [],
         },
         {
           id: `choice-${Date.now()}-2`,
           text: '',
-          effects: []
-        }
+          effects: [],
+        },
       ];
+
+    case 'minigame':
+      // Mini-jeu : pas de choix dans l'array (config dans dialogue.minigame)
+      return [];
   }
 }
 
@@ -158,7 +170,9 @@ export function useDialogueForm(
         speakerMood: initialDialogue.speakerMood,
         choices: initialDialogue.choices,
         complexityLevel: complexity,
-        responses: []
+        responses: [],
+        minigame: initialDialogue.minigame,
+        dialogueSubtype: initialDialogue.dialogueSubtype,
       };
     }
 
@@ -173,80 +187,80 @@ export function useDialogueForm(
       text: '',
       choices: [],
       complexityLevel: complexity,
-      responses: []
+      responses: [],
     };
   });
 
-  const updateField = useCallback((field: keyof DialogueFormData, value: DialogueFormData[keyof DialogueFormData]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const updateField = useCallback(
+    (field: keyof DialogueFormData, value: DialogueFormData[keyof DialogueFormData]) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const setComplexity = useCallback((level: ComplexityLevel) => {
     const newChoices = generateDefaultChoices(level);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       complexityLevel: level,
       choices: newChoices,
-      responses: newChoices.map(() => ({ speaker: '', text: '' }))
+      responses: newChoices.map(() => ({ speaker: '', text: '' })),
     }));
   }, []);
 
   const updateChoice = useCallback((index: number, updates: Partial<DialogueChoice>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      choices: prev.choices.map((c, i) =>
-        i === index ? { ...c, ...updates } : c
-      )
+      choices: prev.choices.map((c, i) => (i === index ? { ...c, ...updates } : c)),
     }));
   }, []);
 
   const addChoice = useCallback(() => {
-    setFormData(prev => {
+    setFormData((prev) => {
       // Generate choice appropriate for current complexity level
-      const newChoice: DialogueChoice = prev.complexityLevel === 'dice'
-        ? {
-            id: `choice-${Date.now()}`,
-            text: '',
-            effects: [],
-            diceCheck: {
-              stat: DEFAULT_DICE_STAT,
-              difficulty: 12,
-              success: {},
-              failure: {}
+      const newChoice: DialogueChoice =
+        prev.complexityLevel === 'dice'
+          ? {
+              id: `choice-${Date.now()}`,
+              text: '',
+              effects: [],
+              diceCheck: {
+                stat: DEFAULT_DICE_STAT,
+                difficulty: 12,
+                success: {},
+                failure: {},
+              },
             }
-          }
-        : {
-            id: `choice-${Date.now()}`,
-            text: '',
-            effects: []
-          };
+          : {
+              id: `choice-${Date.now()}`,
+              text: '',
+              effects: [],
+            };
 
       return {
         ...prev,
-        choices: [...prev.choices, newChoice]
+        choices: [...prev.choices, newChoice],
       };
     });
   }, []);
 
   const removeChoice = useCallback((index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       choices: prev.choices.filter((_, i) => i !== index),
-      responses: prev.responses.filter((_, i) => i !== index)
+      responses: prev.responses.filter((_, i) => i !== index),
     }));
   }, []);
 
   const updateResponse = useCallback((index: number, updates: Partial<ResponseData>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      responses: prev.responses.map((r, i) =>
-        i === index ? { ...r, ...updates } : r
-      )
+      responses: prev.responses.map((r, i) => (i === index ? { ...r, ...updates } : r)),
     }));
   }, []);
 
   const applyTemplate = useCallback((template: SituationTemplate) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       speaker: template.prefill.speaker ?? prev.speaker,
       text: template.prefill.text ?? prev.text,
@@ -271,13 +285,17 @@ export function useDialogueForm(
     }));
   }, []);
 
+  const updateMinigame = useCallback((config: MinigameConfig) => {
+    setFormData((prev) => ({ ...prev, minigame: config }));
+  }, []);
+
   const reset = useCallback(() => {
     setFormData({
       speaker: '',
       text: '',
       choices: [],
       complexityLevel: null,
-      responses: []
+      responses: [],
     });
   }, []);
 
@@ -289,7 +307,8 @@ export function useDialogueForm(
     addChoice,
     removeChoice,
     applyTemplate,
-    reset
+    updateMinigame,
+    reset,
   };
 
   return [formData, actions];

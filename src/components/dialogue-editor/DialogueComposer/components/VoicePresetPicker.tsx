@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { VOICE_PROFILES, playVoicePreview, getVoiceProfile } from '@/utils/voiceProfiles';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 
 interface VoicePresetPickerProps {
   /** Ref sur le bouton déclencheur — sert à positionner le picker en fixed */
@@ -89,7 +90,7 @@ export function VoicePresetPicker({ anchorRef, value, onChange, onClose }: Voice
         position: 'fixed',
         top: pos.top,
         right: pos.right,
-        zIndex: 9999,
+        zIndex: Z_INDEX.CONTEXT_MENU,
         background: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border-base)',
         borderRadius: 'var(--radius-lg)',

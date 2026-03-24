@@ -21,6 +21,12 @@ export interface Character {
     physique?: number;
     mentale?: number;
   };
+  /**
+   * Rôle du personnage — affecte le rendu de la textbox.
+   * - 'narrator' : textbox pleine largeur, pas de portrait, texte centré.
+   * - 'speaker'  : rendu standard (défaut).
+   */
+  role?: 'speaker' | 'narrator';
 }
 
 export interface MoodPreset {

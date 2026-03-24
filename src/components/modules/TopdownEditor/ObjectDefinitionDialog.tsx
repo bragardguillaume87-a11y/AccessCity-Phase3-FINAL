@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, ChevronDown, ChevronRight, Trash2, Settings } from 'lucide-react';
 import { useMapsStore } from '@/stores/mapsStore';
 import { SPRITE_CATEGORIES, OBJECT_COMPONENT_META } from '@/types/sprite';
+import { Z_INDEX } from '@/utils/zIndexLayers';
 import type {
   ObjectDefinition,
   ObjectComponent,
@@ -1038,7 +1039,7 @@ function ObjectDefinitionDialogInner({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9990,
+        zIndex: Z_INDEX.TOPDOWN_BASE,
         background: 'rgba(0,0,0,0.55)',
         display: 'flex',
         alignItems: 'center',

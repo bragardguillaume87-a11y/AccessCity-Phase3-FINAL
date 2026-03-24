@@ -92,7 +92,7 @@ function computeScenesValidation(scenes: Scene[]) {
 
     if (sceneErrors.length > 0) errors.scenes[scene.id] = sceneErrors;
 
-    const dialogueIds = new Set((scene.dialogues || []).map(d => d.id));
+    const dialogueIds = new Set((scene.dialogues || []).map((d) => d.id));
 
     (scene.dialogues || []).forEach((dialogue, dIdx) => {
       const dialogueErrors: ValidationError[] = [];
@@ -113,16 +113,28 @@ function computeScenesValidation(scenes: Scene[]) {
         const choiceKey = `${scene.id}-${dIdx}-${cIdx}`;
 
         if (!choice.text || choice.text.trim() === '') {
-          choiceErrors.push({ field: 'text', message: 'Texte du choix manquant', severity: 'error' });
+          choiceErrors.push({
+            field: 'text',
+            message: 'Texte du choix manquant',
+            severity: 'error',
+          });
           totalErrors++;
         }
 
         if (!choice.nextSceneId) {
           if (choice.nextDialogueId === '') {
-            choiceErrors.push({ field: 'nextDialogueId', message: 'Lien navigation vide (utilisera dialogue suivant)', severity: 'warning' });
+            choiceErrors.push({
+              field: 'nextDialogueId',
+              message: 'Lien navigation vide (utilisera dialogue suivant)',
+              severity: 'warning',
+            });
             totalWarnings++;
           } else if (choice.nextDialogueId && !dialogueIds.has(choice.nextDialogueId)) {
-            choiceErrors.push({ field: 'nextDialogueId', message: `Dialogue cible "${choice.nextDialogueId}" introuvable dans la scène`, severity: 'error' });
+            choiceErrors.push({
+              field: 'nextDialogueId',
+              message: `Dialogue cible "${choice.nextDialogueId}" introuvable dans la scène`,
+              severity: 'error',
+            });
             totalErrors++;
           }
         }
@@ -131,19 +143,35 @@ function computeScenesValidation(scenes: Scene[]) {
           const { success, failure } = choice.diceCheck;
           if (!success?.nextSceneId) {
             if (success?.nextDialogueId === '') {
-              choiceErrors.push({ field: 'diceCheck.success', message: 'Lien succès dé vide (utilisera dialogue suivant)', severity: 'warning' });
+              choiceErrors.push({
+                field: 'diceCheck.success',
+                message: 'Lien succès dé vide (utilisera dialogue suivant)',
+                severity: 'warning',
+              });
               totalWarnings++;
             } else if (success?.nextDialogueId && !dialogueIds.has(success.nextDialogueId)) {
-              choiceErrors.push({ field: 'diceCheck.success', message: `Dialogue cible succès "${success.nextDialogueId}" introuvable`, severity: 'error' });
+              choiceErrors.push({
+                field: 'diceCheck.success',
+                message: `Dialogue cible succès "${success.nextDialogueId}" introuvable`,
+                severity: 'error',
+              });
               totalErrors++;
             }
           }
           if (!failure?.nextSceneId) {
             if (failure?.nextDialogueId === '') {
-              choiceErrors.push({ field: 'diceCheck.failure', message: 'Lien échec dé vide (utilisera dialogue suivant)', severity: 'warning' });
+              choiceErrors.push({
+                field: 'diceCheck.failure',
+                message: 'Lien échec dé vide (utilisera dialogue suivant)',
+                severity: 'warning',
+              });
               totalWarnings++;
             } else if (failure?.nextDialogueId && !dialogueIds.has(failure.nextDialogueId)) {
-              choiceErrors.push({ field: 'diceCheck.failure', message: `Dialogue cible échec "${failure.nextDialogueId}" introuvable`, severity: 'error' });
+              choiceErrors.push({
+                field: 'diceCheck.failure',
+                message: `Dialogue cible échec "${failure.nextDialogueId}" introuvable`,
+                severity: 'error',
+              });
               totalErrors++;
             }
           }
@@ -187,7 +215,11 @@ function computeVariablesValidation(variables: Record<string, unknown>) {
   Object.entries(variables).forEach(([name, value]) => {
     const varErrors: ValidationError[] = [];
     if (typeof value === 'number' && (value < 0 || value > 100)) {
-      varErrors.push({ field: 'value', message: 'Valeur hors limites (0-100)', severity: 'warning' });
+      varErrors.push({
+        field: 'value',
+        message: 'Valeur hors limites (0-100)',
+        severity: 'warning',
+      });
       totalWarnings++;
     }
     if (varErrors.length > 0) errors[name] = varErrors;
@@ -199,12 +231,12 @@ function computeVariablesValidation(variables: Record<string, unknown>) {
 function computeCrossDomainValidation(
   scenes: Scene[],
   characters: Character[],
-  variables: Record<string, unknown>,
+  variables: Record<string, unknown>
 ) {
   const errors: Record<string, ValidationError[]> = {};
   const totalErrors = 0;
   let totalWarnings = 0;
-  const characterIdSet = new Set(characters.map(c => c.id));
+  const characterIdSet = new Set(characters.map((c) => c.id));
 
   scenes.forEach((scene) => {
     (scene.dialogues || []).forEach((dialogue, dIdx) => {
@@ -212,17 +244,27 @@ function computeCrossDomainValidation(
         if (!characterIdSet.has(dialogue.speaker)) {
           const key = `${scene.id}-${dIdx}`;
           if (!errors[key]) errors[key] = [];
-          errors[key].push({ field: 'speaker', message: 'Personnage inexistant', severity: 'warning' });
+          errors[key].push({
+            field: 'speaker',
+            message: 'Personnage inexistant',
+            severity: 'warning',
+          });
           totalWarnings++;
         }
       }
 
       (dialogue.choices || []).forEach((choice, cIdx) => {
         (choice.effects || []).forEach((effect) => {
+          // Guard : seuls les StatEffect ont un champ 'variable' (union discriminée)
+          if (!('variable' in effect)) return;
           if (!(effect.variable in (variables ?? {}))) {
             const key = `${scene.id}-${dIdx}-${cIdx}`;
             if (!errors[key]) errors[key] = [];
-            errors[key].push({ field: 'effects', message: `Variable "${effect.variable}" inexistante`, severity: 'warning' });
+            errors[key].push({
+              field: 'effects',
+              message: `Variable "${effect.variable}" inexistante`,
+              severity: 'warning',
+            });
             totalWarnings++;
           }
         });
@@ -237,7 +279,7 @@ function mergeValidation(
   scenesV: ReturnType<typeof computeScenesValidation>,
   charactersV: ReturnType<typeof computeCharactersValidation>,
   variablesV: ReturnType<typeof computeVariablesValidation>,
-  crossV: ReturnType<typeof computeCrossDomainValidation>,
+  crossV: ReturnType<typeof computeCrossDomainValidation>
 ): ValidationResult {
   const mergedDialogues = { ...scenesV.errors.dialogues };
   Object.entries(crossV.errors).forEach(([key, errs]: [string, ValidationError[]]) => {
@@ -253,8 +295,13 @@ function mergeValidation(
     }
   });
 
-  const totalErrors = scenesV.totalErrors + charactersV.totalErrors + variablesV.totalErrors + crossV.totalErrors;
-  const totalWarnings = scenesV.totalWarnings + charactersV.totalWarnings + variablesV.totalWarnings + crossV.totalWarnings;
+  const totalErrors =
+    scenesV.totalErrors + charactersV.totalErrors + variablesV.totalErrors + crossV.totalErrors;
+  const totalWarnings =
+    scenesV.totalWarnings +
+    charactersV.totalWarnings +
+    variablesV.totalWarnings +
+    crossV.totalWarnings;
 
   return {
     errors: {
@@ -277,13 +324,13 @@ function mergeValidation(
 // ============================================================================
 
 export function useValidation(): ValidationResult {
-  const scenes     = useAllScenesWithElements();
-  const characters = useCharactersStore(state => state.characters);
-  const variables  = useSettingsStore(state => state.variables);
+  const scenes = useAllScenesWithElements();
+  const characters = useCharactersStore((state) => state.characters);
+  const variables = useSettingsStore((state) => state.variables);
 
   const [result, setResult] = useState<ValidationResult>(INITIAL_RESULT);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const idleRef     = useRef<number | null>(null);
+  const idleRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Cancel any pending work
@@ -295,10 +342,10 @@ export function useValidation(): ValidationResult {
     // Wait 500ms after the last change (user pauses typing)
     debounceRef.current = setTimeout(() => {
       const runValidation = () => {
-        const scenesV     = computeScenesValidation(scenes);
+        const scenesV = computeScenesValidation(scenes);
         const charactersV = computeCharactersValidation(characters);
-        const variablesV  = computeVariablesValidation(variables);
-        const crossV      = computeCrossDomainValidation(scenes, characters, variables);
+        const variablesV = computeVariablesValidation(variables);
+        const crossV = computeCrossDomainValidation(scenes, characters, variables);
         setResult(mergeValidation(scenesV, charactersV, variablesV, crossV));
       };
 

@@ -7,6 +7,7 @@
 
 - [feedback_dual_caller_pattern.md](feedback_dual_caller_pattern.md) — DialogueBox doit être passée dans PreviewPlayer ET DialoguePreviewOverlay
 - [feedback_protocol_compliance.md](feedback_protocol_compliance.md) — Protocole Claude : WebSearch obligatoire + branche git avant de coder
+- [feedback_visual_review_protocol.md](feedback_visual_review_protocol.md) — Puppeteer autonome sur localhost:5173 = workflow principal pour révisions visuelles (3 niveaux)
 
 ## Patterns validés
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Save, Network } from 'lucide-react';
@@ -6,13 +6,14 @@ import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
 import { DEFAULTS } from '@/config/constants';
 import type { Dialogue } from '@/types';
-import { useUIStore, useCharactersStore } from '@/stores';
+import { useUIStore, useCharactersStore, useSettingsStore } from '@/stores';
 import { useAllScenesWithElements } from '@/stores/selectors';
 import { useDialogueForm } from '../DialogueWizard/hooks/useDialogueForm';
 import type { ComplexityLevel } from '@/types';
 import { TypePillSelector } from './components/TypePillSelector';
 import { ComposerFormPanel } from './components/ComposerFormPanel';
 import { ComposerPreviewPanel } from './components/ComposerPreviewPanel';
+import { DIALOGUE_COMPOSER_THEMES } from '@/config/dialogueComposerThemes';
 
 interface DialogueComposerProps {
   sceneId: string;
@@ -26,12 +27,12 @@ interface DialogueComposerProps {
 /**
  * DialogueComposer — Single-screen dialogue creator.
  *
- * Replaces the multi-step DialogueWizard with a split layout:
- *   Left (55%)  — TypePillSelector + form (speaker, text, choices with tabs)
- *   Right (45%) — Live VN preview that updates as you type + Save button
+ * Phase 1 (value === null) : grille de 5 grandes cartes de type → progressive disclosure
+ * Phase 2 (value !== null) : split 40/60 (form | game-window preview)
  *
- * No wizard steps, no navigation, no scroll.
- * Dice / Expert choices use Unity Inspector-style tabs to avoid overflow.
+ * Layout 720p : modal max-w-6xl (1152px) × 90vh (648px)
+ *   Left 40%  = 461px — formulaire compact
+ *   Right 60% = 691px — fenêtre de jeu sombre
  */
 export function DialogueComposer({
   sceneId,
@@ -42,82 +43,120 @@ export function DialogueComposer({
   onOpenGraph,
 }: DialogueComposerProps) {
   // ── Store integration ────────────────────────────────────────────────────
-  const initialComplexity  = useUIStore((state) => state.dialogueWizardInitialComplexity);
-  const clearInitialCompl  = useUIStore((state) => state.clearDialogueWizardInitialComplexity);
-  const characters         = useCharactersStore((state) => state.characters);
-  // Subscription ici (et non dans LeftPanel) → active seulement quand la modale est ouverte
-  const scenes             = useAllScenesWithElements();
+  const initialComplexity = useUIStore((state) => state.dialogueWizardInitialComplexity);
+  const clearInitialCompl = useUIStore((state) => state.clearDialogueWizardInitialComplexity);
+  const characters = useCharactersStore((state) => state.characters);
+  const scenes = useAllScenesWithElements();
+  // Granular selector — Carmack §12.1 : évite re-render global si autre setting change
+  const dialogueComposerTheme = useSettingsStore((s) => s.dialogueComposerTheme);
 
-  // ── Form state (reuses exact same hook as DialogueWizard) ────────────────
+  // ── Form state ───────────────────────────────────────────────────────────
   const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [isSaved, setIsSaved] = useState(false);
+  // typeChosen : true dès qu'un type a été confirmé (soit via grande carte, soit déjà défini)
+  // Pour un nouveau dialogue → démarre false (grandes cartes visibles)
+  // Pour un dialogue édité → démarre true (type déjà connu, on va direct au split)
+  const [typeChosen, setTypeChosen] = useState(() => formData.complexityLevel !== null);
 
   // Cleanup initial complexity on unmount
   useEffect(() => {
     return () => clearInitialCompl();
   }, [clearInitialCompl]);
 
-  // ── Animated height via ResizeObserver ────────────────────────────────────
-  // On mesure la hauteur réelle du contenu et on anime vers la valeur en pixels.
-  // Pas de transform scale → zéro distorsion du contenu pendant la transition.
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState<number | 'auto'>('auto');
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const h = entries[0]?.contentRect.height;
-      if (h) setContentHeight(h);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  // ── Scene background URL (pour le watermark preview) ────────────────────
+  const sceneBackgroundUrl = useMemo(() => {
+    const scene = scenes.find((s) => s.id === sceneId);
+    return scene?.backgroundUrl ?? '';
+  }, [scenes, sceneId]);
 
   // ── Speaker name resolution (ID → display name) ──────────────────────────
   const speakerName = useMemo(() => {
     if (!formData.speaker) return 'Narrateur';
-    const char = characters.find(c => c.id === formData.speaker);
+    const char = characters.find((c) => c.id === formData.speaker);
     return char?.name || formData.speaker;
   }, [formData.speaker, characters]);
 
+  // ── Speaker portrait URL (sprite du mood actif ou premier sprite dispo) ──
+  const speakerPortraitUrl = useMemo(() => {
+    if (!formData.speaker) return '';
+    const char = characters.find((c) => c.id === formData.speaker);
+    if (!char) return '';
+    const mood = formData.speakerMood;
+    return (
+      (mood && char.sprites[mood]) ||
+      char.sprites['default'] ||
+      Object.values(char.sprites)[0] ||
+      ''
+    );
+  }, [formData.speaker, formData.speakerMood, characters]);
+
+  // ── Theme colors — Pokémon type-color system (Quilez §14.1, Muratori §13.3) ─
+  // Granular memo : ne recalcule que si theme ou type de dialogue change.
+  const themeColors = useMemo(() => {
+    const themeDef = DIALOGUE_COMPOSER_THEMES[dialogueComposerTheme];
+    return themeDef.getColors(formData.complexityLevel);
+  }, [dialogueComposerTheme, formData.complexityLevel]);
+
   // ── Validation ───────────────────────────────────────────────────────────
-  const textValid    = formData.text.trim().length >= 10;
-  const choicesValid = formData.complexityLevel === 'linear' || (
-    formData.choices.length > 0 &&
-    formData.choices.every(c => c.text?.trim().length >= 5)
-  );
+  const textValid = formData.text.trim().length >= 10;
+  const choicesValid =
+    formData.complexityLevel === 'linear' ||
+    formData.complexityLevel === 'minigame' ||
+    (formData.choices.length > 0 && formData.choices.every((c) => c.text?.trim().length >= 5));
   const canSave = formData.complexityLevel !== null && textValid && choicesValid && !isSaved;
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleComplexityChange = useCallback((level: ComplexityLevel) => {
-    formActions.setComplexity(level);
-  }, [formActions]);
+  const handleComplexityChange = useCallback(
+    (level: ComplexityLevel) => {
+      formActions.setComplexity(level);
+      setTypeChosen(true);
+    },
+    [formActions]
+  );
 
-  const handleSpeakerChange = useCallback((speaker: string) => {
-    formActions.updateField('speaker', speaker === DEFAULTS.DIALOGUE_SPEAKER ? '' : speaker);
-  }, [formActions]);
+  const handleSpeakerChange = useCallback(
+    (speaker: string) => {
+      formActions.updateField('speaker', speaker === DEFAULTS.DIALOGUE_SPEAKER ? '' : speaker);
+    },
+    [formActions]
+  );
 
-  const handleTextChange = useCallback((text: string) => {
-    formActions.updateField('text', text);
-  }, [formActions]);
+  const handleTextChange = useCallback(
+    (text: string) => {
+      formActions.updateField('text', text);
+    },
+    [formActions]
+  );
 
-  const handleVoicePresetChange = useCallback((presetId: string | undefined) => {
-    formActions.updateField('voicePreset', presetId);
-  }, [formActions]);
+  const handleVoicePresetChange = useCallback(
+    (presetId: string | undefined) => {
+      formActions.updateField('voicePreset', presetId);
+    },
+    [formActions]
+  );
 
-  const handleSpeakerMoodChange = useCallback((mood: string | undefined) => {
-    formActions.updateField('speakerMood', mood);
-  }, [formActions]);
+  const handleSpeakerMoodChange = useCallback(
+    (mood: string | undefined) => {
+      formActions.updateField('speakerMood', mood);
+    },
+    [formActions]
+  );
 
-  // ── Save logic (identical to DialogueWizard.handleWizardSave) ────────────
+  const handleUpdateSubtype = useCallback(
+    (subtype: 'normal' | 'phonecall') => {
+      formActions.updateField('dialogueSubtype', subtype);
+    },
+    [formActions]
+  );
+
+  // ── Save logic ────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
     if (!canSave) return;
     try {
       const normalizedSpeaker = formData.speaker || DEFAULTS.DIALOGUE_SPEAKER;
-      const hasResponses = formData.responses.some(r => r.text.trim().length > 0);
+      const hasResponses = formData.responses.some((r) => r.text.trim().length > 0);
 
       if (hasResponses) {
         const responseAId = `dialogue-${Date.now()}-resp-a`;
@@ -136,6 +175,8 @@ export function DialogueComposer({
           sfx: formData.sfx,
           voicePreset: formData.voicePreset,
           speakerMood: formData.speakerMood,
+          minigame: formData.minigame,
+          dialogueSubtype: formData.dialogueSubtype,
         });
 
         const dialogues: Dialogue[] = [mainDialogue];
@@ -161,6 +202,8 @@ export function DialogueComposer({
           sfx: formData.sfx,
           voicePreset: formData.voicePreset,
           speakerMood: formData.speakerMood,
+          minigame: formData.minigame,
+          dialogueSubtype: formData.dialogueSubtype,
         });
         onSave([newDialogue]);
       }
@@ -176,104 +219,248 @@ export function DialogueComposer({
   }, [canSave, formData, dialogue, onSave, onClose, clearInitialCompl]);
 
   // ── Render ───────────────────────────────────────────────────────────────
+  const isTypePicked = typeChosen && formData.complexityLevel !== null;
+  const isMinigame = formData.complexityLevel === 'minigame';
+
   return (
-    // animate height vers la valeur mesurée → redimensionnement fluide sans distorsion.
-    // overflow-hidden clip le contenu pendant la transition (comportement attendu).
-    <motion.div
-      animate={{ height: contentHeight }}
-      transition={{ duration: 0.48, ease: [0.4, 0, 0.2, 1] }}
-      className="overflow-hidden"
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '90vh',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
     >
-      {/* contentRef : div mesuré par ResizeObserver — pas de h-full ni overflow ici */}
-      <div ref={contentRef} className="flex flex-col">
-
-      {/* Type pills — full width, always visible */}
-      <TypePillSelector
-        value={formData.complexityLevel}
-        onChange={handleComplexityChange}
-      />
-
-      {/* Body — split left/right, hauteur pilotée par le contenu */}
-      <div className="flex">
-
-        {/* Left pane — form (55%), scroll uniquement si dépassement viewport.
-            max-h évite de dépasser max-h-[90vh] du Dialog parent (5rem ≈ pill row). */}
-        <div className="flex-[55] border-r overflow-y-auto max-h-[calc(90vh-5rem)]">
-          <div className="p-6">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={formData.complexityLevel ?? '__empty__'}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.32, ease: 'easeInOut' }}
-              >
-                {formData.complexityLevel ? (
-                  <ComposerFormPanel
-                    speaker={formData.speaker || ''}
-                    text={formData.text}
-                    voicePreset={formData.voicePreset}
-                    speakerMood={formData.speakerMood}
-                    complexityLevel={formData.complexityLevel}
-                    choices={formData.choices}
-                    responses={formData.responses}
-                    scenes={scenes}
-                    currentSceneId={sceneId}
-                    onSpeakerChange={handleSpeakerChange}
-                    onTextChange={handleTextChange}
-                    onVoicePresetChange={handleVoicePresetChange}
-                    onSpeakerMoodChange={handleSpeakerMoodChange}
-                    onUpdateChoice={formActions.updateChoice}
-                    onUpdateResponse={formActions.updateResponse}
-                    onAddChoice={formActions.addChoice}
-                    onRemoveChoice={formActions.removeChoice}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-36 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      ← Choisis un type de dialogue pour commencer
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Right pane — live preview (haut) + save button (bas) (45%) */}
-        <div className="flex-[45] flex flex-col justify-between p-6 gap-5">
-          <ComposerPreviewPanel
-            speakerName={speakerName}
-            text={formData.text}
-            choices={formData.choices}
-            complexityLevel={formData.complexityLevel}
-            isSaved={isSaved}
-          />
-          <Button
-            onClick={handleSave}
-            disabled={!canSave}
-            className="h-10 gap-2 flex-shrink-0"
-          >
-            <Save className="w-4 h-4" aria-hidden="true" />
-            Sauvegarder
-          </Button>
-          {onOpenGraph && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onOpenGraph}
-              className="w-full gap-2 text-muted-foreground hover:text-foreground flex-shrink-0"
-            >
-              <Network className="w-3.5 h-3.5" aria-hidden="true" />
-              Vue Graphe (éditeur nodal)
-            </Button>
-          )}
-        </div>
-
+      {/* ── Background blobs — profondeur glassmorphism (design brief §2) ── */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+          zIndex: 0,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: '-20%',
+            left: '-10%',
+            width: '55%',
+            height: '70%',
+            borderRadius: '50%',
+            background:
+              'radial-gradient(ellipse at center, rgba(139,92,246,0.18) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-15%',
+            right: '5%',
+            width: '50%',
+            height: '65%',
+            borderRadius: '50%',
+            background:
+              'radial-gradient(ellipse at center, rgba(59,130,246,0.15) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: '25%',
+            right: '-5%',
+            width: '40%',
+            height: '55%',
+            borderRadius: '50%',
+            background:
+              'radial-gradient(ellipse at center, rgba(236,72,153,0.12) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
       </div>
 
-      </div>{/* /contentRef */}
-    </motion.div>
+      {/* ── Content — au-dessus des blobs ──────────────────────────────────── */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          overflow: 'hidden',
+          minHeight: 0,
+        }}
+      >
+        {/* ── Pills (visible uniquement après sélection du type) ─────────────── */}
+        {isTypePicked && (
+          <TypePillSelector value={formData.complexityLevel} onChange={handleComplexityChange} />
+        )}
+
+        {/* ── Body ──────────────────────────────────────────────────────────── */}
+        <AnimatePresence mode="wait" initial={false}>
+          {/* Phase 1 — Sélection de type (plein écran, fond sombre) */}
+          {!isTypePicked && (
+            <motion.div
+              key="type-select"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'rgba(0,0,0,0.92)',
+              }}
+            >
+              <div style={{ textAlign: 'center', paddingTop: 28 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: 'rgba(255,255,255,0.42)',
+                    fontWeight: 600,
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  Quel type de dialogue veux-tu créer ?
+                </p>
+              </div>
+              <TypePillSelector value={null} onChange={handleComplexityChange} />
+            </motion.div>
+          )}
+
+          {/* Phase 2 — Split 40/60 (form | game window) */}
+          {isTypePicked && (
+            <motion.div
+              key="split"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}
+            >
+              {/* Left pane — form (48%, ou 55% pour mini-jeu) */}
+              <div
+                style={{
+                  flex: isMinigame ? '0 0 55%' : '0 0 48%',
+                  borderRight: '1px solid var(--color-border-base)',
+                  overflowY: 'auto',
+                }}
+              >
+                <div style={{ padding: '20px' }}>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={formData.complexityLevel ?? '__empty__'}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.22, ease: 'easeInOut' }}
+                    >
+                      <ComposerFormPanel
+                        speaker={formData.speaker || ''}
+                        text={formData.text}
+                        voicePreset={formData.voicePreset}
+                        speakerMood={formData.speakerMood}
+                        complexityLevel={formData.complexityLevel}
+                        choices={formData.choices}
+                        responses={formData.responses}
+                        scenes={scenes}
+                        currentSceneId={sceneId}
+                        minigame={formData.minigame}
+                        dialogueSubtype={formData.dialogueSubtype}
+                        accentColor={themeColors.accent}
+                        onSpeakerChange={handleSpeakerChange}
+                        onTextChange={handleTextChange}
+                        onVoicePresetChange={handleVoicePresetChange}
+                        onSpeakerMoodChange={handleSpeakerMoodChange}
+                        onUpdateChoice={formActions.updateChoice}
+                        onUpdateResponse={formActions.updateResponse}
+                        onAddChoice={formActions.addChoice}
+                        onRemoveChoice={formActions.removeChoice}
+                        onUpdateMinigame={formActions.updateMinigame}
+                        onUpdateSubtype={handleUpdateSubtype}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Right pane — game window (52%, ou 45% pour mini-jeu) */}
+              <div
+                style={{
+                  flex: isMinigame ? '0 0 45%' : '0 0 52%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'rgba(0,0,0,0.95)',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Preview fills available height */}
+                <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                  <ComposerPreviewPanel
+                    speakerName={speakerName}
+                    text={formData.text}
+                    choices={formData.choices}
+                    complexityLevel={formData.complexityLevel}
+                    isSaved={isSaved}
+                    minigame={formData.minigame}
+                    speakerPortraitUrl={speakerPortraitUrl}
+                    sceneBackgroundUrl={sceneBackgroundUrl}
+                    accentColor={themeColors.accent}
+                    previewAccentColor={themeColors.previewAccent}
+                  />
+                </div>
+
+                {/* Footer — Theme switcher + Save + Graph */}
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  <Button
+                    onClick={handleSave}
+                    disabled={!canSave}
+                    className="h-9 gap-2 w-full composer-save-btn"
+                    style={{
+                      background: themeColors.accent,
+                      borderColor: themeColors.accent,
+                      transition: 'background 0.25s ease, border-color 0.25s ease',
+                    }}
+                  >
+                    <Save className="w-4 h-4" aria-hidden="true" />
+                    Sauvegarder
+                  </Button>
+                  {onOpenGraph && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onOpenGraph}
+                      className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                      style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}
+                    >
+                      <Network className="w-3.5 h-3.5" aria-hidden="true" />
+                      Vue Graphe (éditeur nodal)
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      {/* end content wrapper */}
+    </div>
   );
 }
 

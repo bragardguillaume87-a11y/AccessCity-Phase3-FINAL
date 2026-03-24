@@ -224,6 +224,7 @@ export function DialogueComposerV2({
 
   const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);
   const [isSaved, setIsSaved] = useState(false);
+  const [testMode, setTestMode] = useState(false);
 
   useEffect(() => () => clearInitialCompl(), [clearInitialCompl]);
 
@@ -238,6 +239,18 @@ export function DialogueComposerV2({
     () => (speakerChar ? Object.keys(speakerChar.sprites) : []),
     [speakerChar]
   );
+
+  // Portrait URL — même pattern que DialogueComposer V1 (sprites[mood] || default || first)
+  const speakerPortraitUrl = useMemo(() => {
+    if (!speakerChar) return '';
+    const mood = formData.speakerMood;
+    return (
+      (mood && speakerChar.sprites[mood]) ||
+      speakerChar.sprites['default'] ||
+      Object.values(speakerChar.sprites)[0] ||
+      ''
+    );
+  }, [speakerChar, formData.speakerMood]);
 
   // Couleur accent du thème pour ComposerFormPanel
   const themeColors = useMemo(() => {
@@ -335,6 +348,12 @@ export function DialogueComposerV2({
     },
     [formActions, formData.minigame]
   );
+
+  const handleTestMinigame = useCallback(() => {
+    uiSounds.diceRollStart();
+    setTestMode(true);
+    setTimeout(() => setTestMode(false), 2500);
+  }, []);
 
   // ── Save (identique à V1) ─────────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -693,7 +712,13 @@ export function DialogueComposerV2({
                           <div
                             role="radiogroup"
                             aria-label="Humeur du personnage"
-                            style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'row',
+                              gap: 8,
+                              flexWrap: 'wrap',
+                              minWidth: 0,
+                            }}
                           >
                             {speakerMoods.map((mood) => {
                               const isActive = formData.speakerMood === mood;
@@ -1216,12 +1241,13 @@ export function DialogueComposerV2({
                   flex: 1,
                 }}
               >
-                {/* Gradient bg */}
+                {/* Gradient bg — fond réel si disponible */}
                 <div
                   style={{
                     height: 140,
-                    background:
-                      'linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(30,58,138,0.90) 50%, rgba(6,78,59,0.75) 100%)',
+                    background: currentScene?.backgroundUrl
+                      ? `url(${currentScene.backgroundUrl}) center / cover, rgba(22,16,58,0.92)`
+                      : 'linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(30,58,138,0.90) 50%, rgba(6,78,59,0.75) 100%)',
                     position: 'relative',
                     borderBottom: `1.5px solid ${T.border}`,
                     display: 'flex',
@@ -1229,10 +1255,14 @@ export function DialogueComposerV2({
                     justifyContent: 'center',
                   }}
                 >
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.42)' }}>
-                    {currentScene?.backgroundUrl ? '🖼 Fond chargé' : 'Aperçu de scène'}
-                  </span>
-                  {/* Avatar en bas-gauche */}
+                  {!currentScene?.backgroundUrl && (
+                    <span
+                      style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.42)' }}
+                    >
+                      Aperçu de scène
+                    </span>
+                  )}
+                  {/* Avatar en bas-gauche — sprite réel si disponible */}
                   <div
                     style={{
                       position: 'absolute',
@@ -1250,9 +1280,20 @@ export function DialogueComposerV2({
                       fontSize: 20,
                       fontWeight: 800,
                       color: T.t1,
+                      overflow: 'hidden',
                     }}
                   >
-                    {speakerChar ? speakerChar.name.charAt(0).toUpperCase() : '✦'}
+                    {speakerPortraitUrl ? (
+                      <img
+                        src={speakerPortraitUrl}
+                        alt={speakerName}
+                        style={{ width: 50, height: 50, objectFit: 'contain' }}
+                      />
+                    ) : speakerChar ? (
+                      speakerChar.name.charAt(0).toUpperCase()
+                    ) : (
+                      '✦'
+                    )}
                   </div>
                 </div>
                 {/* Bulle dialogue */}
@@ -1302,9 +1343,92 @@ export function DialogueComposerV2({
                     {formData.text || 'Aucun texte…'}
                   </p>
                 </div>
+                {/* Stats row — remplit l'espace vide avec des infos utiles (Will Wright §4.2) */}
+                <div
+                  style={{
+                    padding: '8px 12px 4px',
+                    display: 'flex',
+                    gap: 6,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: '3px 8px',
+                      borderRadius: 5,
+                      fontWeight: 700,
+                      background: T.blueBg,
+                      color: T.blue,
+                      border: `1px solid ${T.blueBd}`,
+                    }}
+                  >
+                    {wordCount} mot{wordCount !== 1 ? 's' : ''}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: '3px 8px',
+                      borderRadius: 5,
+                      fontWeight: 700,
+                      background: T.tealBg,
+                      color: T.teal,
+                      border: `1px solid ${T.tealBd}`,
+                    }}
+                  >
+                    ~{Math.max(1, Math.ceil(wordCount / 3))}s
+                  </span>
+                  {formData.speakerMood && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '3px 8px',
+                        borderRadius: 5,
+                        fontWeight: 700,
+                        background: T.purpleBg,
+                        color: T.purple,
+                        border: `1px solid ${T.purpleBd}`,
+                      }}
+                    >
+                      {getMoodEmoji(formData.speakerMood)} {getMoodLabel(formData.speakerMood)}
+                    </span>
+                  )}
+                  {formData.complexityLevel !== 'linear' &&
+                    formData.complexityLevel !== 'minigame' &&
+                    formData.choices.length > 0 && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 8px',
+                          borderRadius: 5,
+                          fontWeight: 700,
+                          background: T.amberBg,
+                          color: T.amber,
+                          border: `1px solid ${T.amberBd}`,
+                        }}
+                      >
+                        {formData.choices.length} choix
+                      </span>
+                    )}
+                  {wordCount > 80 && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '3px 8px',
+                        borderRadius: 5,
+                        fontWeight: 700,
+                        background: T.roseBg,
+                        color: T.rose,
+                        border: `1px solid ${T.roseBd}`,
+                      }}
+                    >
+                      ⚠ Long
+                    </span>
+                  )}
+                </div>
                 {/* Badge minijeu */}
                 {isMinigame && (
-                  <div style={{ padding: '10px 12px 12px' }}>
+                  <div style={{ padding: '6px 12px 12px' }}>
                     <div
                       style={{
                         fontSize: 12,
@@ -1319,24 +1443,39 @@ export function DialogueComposerV2({
                       {MINIGAME_CARDS.find((m) => m.type === mgType)?.label?.toUpperCase()}
                     </div>
                     <button
+                      onClick={handleTestMinigame}
                       style={{
                         width: '100%',
-                        background: T.greenBg,
-                        border: `1.5px solid ${T.greenBd}`,
+                        background: testMode ? T.amberBg : T.greenBg,
+                        border: `1.5px solid ${testMode ? T.amberBd : T.greenBd}`,
                         borderRadius: 11,
                         padding: 11,
                         fontSize: 13,
                         fontWeight: 900,
-                        color: T.green,
+                        color: testMode ? T.amber : T.green,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 8,
                         cursor: 'pointer',
+                        transition: 'all 0.2s',
                       }}
                     >
-                      ▶ Tester le mini-jeu
+                      {testMode ? '⏳ Disponible en lecture' : '▶ Tester le mini-jeu'}
                     </button>
+                    {testMode && (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontSize: 11,
+                          color: T.t3,
+                          textAlign: 'center',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        Le test s'exécute dans le lecteur de scénario.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

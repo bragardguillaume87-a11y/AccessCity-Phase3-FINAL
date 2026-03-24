@@ -511,7 +511,7 @@ export function DialogueComposerV2({
                 style={{
                   flex: 1,
                   borderRadius: 13,
-                  padding: '10px 6px',
+                  padding: '8px 6px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -550,9 +550,9 @@ export function DialogueComposerV2({
                 {/* Icône */}
                 <div
                   style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 9,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
                     background: isActive ? tab.bg : 'rgba(255,255,255,0.07)',
                     border: `1px solid ${isActive ? tab.bd : 'transparent'}`,
                     display: 'flex',
@@ -563,14 +563,14 @@ export function DialogueComposerV2({
                   <svg
                     viewBox="0 0 20 20"
                     fill="none"
-                    width={19}
-                    height={19}
+                    width={13}
+                    height={13}
                     dangerouslySetInnerHTML={{ __html: tab.svgPath }}
                   />
                 </div>
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 800,
                     color: isActive ? tab.c : T.t2,
                     textAlign: 'center',
@@ -578,19 +578,6 @@ export function DialogueComposerV2({
                 >
                   {tab.label}
                 </div>
-                {isActive && (
-                  <div
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 600,
-                      color: tab.c,
-                      textAlign: 'center',
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {tab.desc}
-                  </div>
-                )}
                 {/* Ligne bas */}
                 <div
                   style={{
@@ -631,14 +618,14 @@ export function DialogueComposerV2({
                   <SectionLabel label="Personnage" color={T.rose} />
                   <GlassCard>
                     <div
-                      style={{ padding: 14, display: 'flex', gap: 13, alignItems: 'flex-start' }}
+                      style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-start' }}
                     >
                       {/* Avatar */}
                       <div
                         style={{
-                          width: 62,
-                          height: 74,
-                          borderRadius: 14,
+                          width: 56,
+                          height: 56,
+                          borderRadius: 12,
                           background: T.purpleBg,
                           border: `2px solid ${T.purpleBd}`,
                           display: 'flex',
@@ -686,7 +673,7 @@ export function DialogueComposerV2({
                               fontWeight: 700,
                               color: T.t2,
                               background: 'rgba(255,255,255,0.11)',
-                              padding: '5px 10px',
+                              padding: '9px 12px',
                               borderRadius: 8,
                               border: `1px solid ${T.border}`,
                               cursor: 'pointer',
@@ -769,7 +756,7 @@ export function DialogueComposerV2({
                                   </div>
                                   <span
                                     style={{
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: 700,
                                       color: isActive ? T.purple : T.t3,
                                     }}
@@ -914,7 +901,7 @@ export function DialogueComposerV2({
                           </div>
                           <div
                             style={{
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: 600,
                               color: T.t3,
                               textAlign: 'center',
@@ -1039,7 +1026,7 @@ export function DialogueComposerV2({
                                   background: isActive ? chip.bg : T.card,
                                   border: `1.5px solid ${isActive ? chip.color : T.border}`,
                                   borderRadius: 9,
-                                  padding: '8px 4px',
+                                  padding: '6px 10px',
                                   fontSize: 12,
                                   fontWeight: 800,
                                   color: isActive ? chip.color : T.t2,
@@ -1271,7 +1258,7 @@ export function DialogueComposerV2({
                 {/* Bulle dialogue */}
                 <div
                   style={{
-                    margin: '30px 12px 0',
+                    margin: '14px 12px 0',
                     background: 'rgba(255,255,255,0.15)',
                     border: `1.5px solid ${T.borderHi}`,
                     borderRadius: '0 14px 14px 14px',
@@ -1320,7 +1307,7 @@ export function DialogueComposerV2({
                   <div style={{ padding: '10px 12px 12px' }}>
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 800,
                         color: T.t3,
                         textTransform: 'uppercase',

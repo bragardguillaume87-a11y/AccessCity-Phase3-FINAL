@@ -8,7 +8,7 @@ import { useScenesStore, useUIStore } from '../../stores/index';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneWithElements } from '@/stores/selectors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { DialogueComposer } from '../dialogue-editor/DialogueComposer';
+import { DialogueComposerV2 as DialogueComposer } from '../dialogue-editor/DialogueComposerV2';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import type { Dialogue } from '@/types';

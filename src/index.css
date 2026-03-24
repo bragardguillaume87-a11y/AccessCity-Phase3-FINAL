@@ -515,6 +515,78 @@ textarea {
   }
 }
 
+/* ── Access City DialogueEditor V2 — classes glass / blobs ─────────────────── */
+
+.ac-modal-bg {
+  background: var(--ac-bg);
+  position: relative;
+  overflow: hidden;
+}
+.ac-modal-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 55% 45% at 15% 8%, rgba(110, 50, 210, 0.7) 0%, transparent 60%),
+    radial-gradient(ellipse 45% 38% at 85% 85%, rgba(30, 70, 190, 0.6) 0%, transparent 60%),
+    radial-gradient(ellipse 38% 55% at 72% 8%, rgba(170, 30, 110, 0.28) 0%, transparent 50%);
+}
+.ac-modal-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ac-glass {
+  background: rgba(255, 255, 255, 0.13);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+}
+
+/* Shimmer animation pour le bouton Sauvegarder */
+@keyframes ac-shim {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+.ac-save-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+  transform: skewX(-20deg);
+  animation: ac-shim 2.8s infinite;
+}
+
+/* Bounce mood button */
+@keyframes ac-mood-bounce {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.28);
+  }
+  65% {
+    transform: scale(0.93);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
 /* Shadcn/ui base layer - commented out to preserve custom theme
 @layer base {
   * {

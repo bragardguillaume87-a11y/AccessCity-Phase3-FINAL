@@ -384,6 +384,42 @@
   image-rendering: crisp-edges;
 }
 
+/* ========== ACCESS CITY DIALOGUE EDITOR V2 TOKENS ==========
+   Tokens pour le DialogueComposerV2 (design glassmorphism violet).
+   Source de vérité : access_city_mockup_final.html
+*/
+:root {
+  --ac-bg: #16103a;
+  --ac-card: rgba(255, 255, 255, 0.13);
+  --ac-card-hi: rgba(255, 255, 255, 0.2);
+  --ac-border: rgba(255, 255, 255, 0.22);
+  --ac-border-hi: rgba(255, 255, 255, 0.38);
+  --ac-t1: #ffffff;
+  --ac-t2: rgba(255, 255, 255, 0.92);
+  --ac-t3: rgba(255, 255, 255, 0.68);
+  --ac-purple: #c084fc;
+  --ac-purple-bg: rgba(192, 132, 252, 0.2);
+  --ac-purple-bd: rgba(192, 132, 252, 0.55);
+  --ac-teal: #5eead4;
+  --ac-teal-bg: rgba(94, 234, 212, 0.18);
+  --ac-teal-bd: rgba(94, 234, 212, 0.5);
+  --ac-amber: #fde68a;
+  --ac-amber-bg: rgba(253, 230, 138, 0.18);
+  --ac-amber-bd: rgba(253, 230, 138, 0.5);
+  --ac-rose: #fda4d0;
+  --ac-rose-bg: rgba(253, 164, 208, 0.18);
+  --ac-rose-bd: rgba(253, 164, 208, 0.5);
+  --ac-green: #6ee7b7;
+  --ac-green-bg: rgba(110, 231, 183, 0.18);
+  --ac-green-bd: rgba(110, 231, 183, 0.5);
+  --ac-blue: #93c5fd;
+  --ac-blue-bg: rgba(147, 197, 253, 0.18);
+  --ac-blue-bd: rgba(147, 197, 253, 0.5);
+  --ac-orange: #fdba74;
+  --ac-orange-bg: rgba(253, 186, 116, 0.18);
+  --ac-orange-bd: rgba(253, 186, 116, 0.5);
+}
+
 /* ========== WCAG 2.2 AA COMPLIANCE NOTES ========== */
 /*
   Contrast Ratios (Dark Theme):

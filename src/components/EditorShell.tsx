@@ -59,6 +59,13 @@ const SettingsModal = React.lazy(() => import('./modals/SettingsModal'));
 const PreviewModal = React.lazy(() => import('./modals/PreviewModal'));
 const ExportModal = React.lazy(() => import('./modals/ExportModal'));
 const VisualFiltersModal = React.lazy(() => import('./modals/VisualFiltersModal'));
+// Dev Dashboard — lazy import conditionnel : exclu du bundle prod par Vite tree-shaking
+const DevDashboardModal =
+  import.meta.env.DEV || import.meta.env.VITE_DEV_DASHBOARD === 'true'
+    ? React.lazy(() =>
+        import('./modals/DevDashboardModal').then((m) => ({ default: m.DevDashboardModal }))
+      )
+    : null;
 const CinematicEditorModal = React.lazy(() =>
   import('./modals/CinematicEditor').then((m) => ({ default: m.CinematicEditor }))
 );
@@ -330,6 +337,19 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
     onPreview: () => setActiveModal('preview'),
     onCommandPalette: () => setCommandPaletteOpen(true),
   });
+
+  // === DEV DASHBOARD — raccourci clavier Ctrl+Shift+D (dev uniquement) ===
+  useEffect(() => {
+    if (!import.meta.env.DEV && import.meta.env.VITE_DEV_DASHBOARD !== 'true') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        useUIStore.getState().setActiveModal('dev-dashboard');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // === FULLSCREEN — collapse/expand panneaux latéraux ===
   // En plein écran : Panel 1 collapse, Panel 3 se ferme via useMemo (max canvas).
@@ -706,6 +726,14 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             <CinematicEditorModal />
           </ErrorBoundary>
         )}
+        {/* Dev Dashboard — visible uniquement en mode dev */}
+        {(import.meta.env.DEV || import.meta.env.VITE_DEV_DASHBOARD === 'true') &&
+          activeModal === 'dev-dashboard' &&
+          DevDashboardModal && (
+            <ErrorBoundary name="DevDashboardModal">
+              <DevDashboardModal isOpen={true} onClose={() => setActiveModal(null)} />
+            </ErrorBoundary>
+          )}
       </React.Suspense>
     </div>
   );

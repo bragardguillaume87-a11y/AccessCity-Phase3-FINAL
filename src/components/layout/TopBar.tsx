@@ -15,6 +15,7 @@ import {
   Sparkles,
   ChevronDown,
   Monitor,
+  LayoutDashboard,
 } from 'lucide-react';
 import { AutoSaveTimestamp } from '../ui/AutoSaveTimestamp';
 import { useUIStore } from '@/stores';
@@ -85,6 +86,7 @@ export default function TopBar({
   const handleOpenExport = () => useUIStore.getState().setActiveModal('export');
   const handleOpenPreview = () => useUIStore.getState().setActiveModal('preview');
   const handleOpenEffects = () => useUIStore.getState().setActiveModal('visual-filters');
+  const handleOpenDevDashboard = () => useUIStore.getState().setActiveModal('dev-dashboard');
   const handleOpenGraph = () => {
     const store = useUIStore.getState();
     if (store.selectedSceneForEdit) {
@@ -205,6 +207,22 @@ export default function TopBar({
             >
               <Monitor size={14} aria-hidden="true" />
               Effets
+            </button>
+          </>
+        )}
+
+        {/* Dev Dashboard — dev mode uniquement, invisible en prod */}
+        {(import.meta.env.DEV || import.meta.env.VITE_DEV_DASHBOARD === 'true') && (
+          <>
+            <div className="topbar-divider" aria-hidden="true" />
+            <button
+              className="topbar-nav"
+              onClick={handleOpenDevDashboard}
+              title="Dev Dashboard — roadmap &amp; feature flags (Ctrl+Shift+D)"
+              aria-label="Ouvrir le Dev Dashboard"
+            >
+              <LayoutDashboard size={14} aria-hidden="true" />
+              Dev
             </button>
           </>
         )}

@@ -60,6 +60,12 @@ export function DialogueComposerV2({
     [speakerChar]
   );
 
+  // isNarrator — même logique que useSpeakerLayout (role narrator + ID system)
+  const isNarrator = useMemo(
+    () => !formData.speaker || formData.speaker === 'narrator' || speakerChar?.role === 'narrator',
+    [formData.speaker, speakerChar]
+  );
+
   // Portrait URL — sprites[mood] || default || premier disponible
   const speakerPortraitUrl = useMemo(() => {
     if (!speakerChar) return '';
@@ -415,6 +421,7 @@ export function DialogueComposerV2({
               currentScene={currentScene}
               speakerName={speakerName}
               speakerPortraitUrl={speakerPortraitUrl}
+              isNarrator={isNarrator}
               wordCount={wordCount}
               testMode={overlayOpen}
               isSaved={isSaved}

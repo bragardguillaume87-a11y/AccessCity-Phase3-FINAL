@@ -11,6 +11,7 @@ interface PreviewPanelProps {
   currentScene: Scene | undefined;
   speakerName: string;
   speakerPortraitUrl: string;
+  isNarrator: boolean;
   wordCount: number;
   testMode: boolean;
   isSaved: boolean;
@@ -25,6 +26,7 @@ export function PreviewPanel({
   currentScene,
   speakerName,
   speakerPortraitUrl,
+  isNarrator,
   wordCount,
   testMode,
   isSaved,
@@ -37,7 +39,7 @@ export function PreviewPanel({
   const mgType = formData.minigame?.type ?? 'braille';
   const activeTab = TYPE_TABS.find((t) => t.id === formData.complexityLevel);
   const dialogueBoxConfig = useDialogueBoxConfig(undefined);
-  const isNarrator = !formData.speaker;
+  // isNarrator vient du parent (même logique que useSpeakerLayout : role + ID système)
   const position = isNarrator ? 'center' : dialogueBoxConfig.position;
   const previewChoices =
     !isMinigame && formData.complexityLevel !== 'linear' && formData.choices.length > 0
@@ -159,8 +161,8 @@ export function PreviewPanel({
               )}
             </div>
 
-            {/* Sprite personnage — centré dans la scène, object-fit:contain */}
-            {speakerPortraitUrl && (
+            {/* Sprite personnage — masqué pour le narrateur (pas de présence visuelle) */}
+            {speakerPortraitUrl && !isNarrator && (
               <img
                 key={speakerPortraitUrl}
                 src={speakerPortraitUrl}

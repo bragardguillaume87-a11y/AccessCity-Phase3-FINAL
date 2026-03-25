@@ -159,6 +159,28 @@ export function PreviewPanel({
               )}
             </div>
 
+            {/* Sprite personnage — centré dans la scène, object-fit:contain */}
+            {speakerPortraitUrl && (
+              <img
+                key={speakerPortraitUrl}
+                src={speakerPortraitUrl}
+                alt={speakerName}
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  height: '82%',
+                  maxWidth: '40%',
+                  objectFit: 'contain',
+                  objectPosition: 'bottom',
+                  zIndex: 1,
+                  pointerEvents: 'none',
+                  filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.55))',
+                }}
+              />
+            )}
+
             {/* DialogueBox réelle — même composant que PreviewPlayer */}
             <div
               style={{

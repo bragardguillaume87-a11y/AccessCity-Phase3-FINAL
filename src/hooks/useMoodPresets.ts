@@ -17,18 +17,61 @@ import type { MoodPreset } from '@/types';
 
 // Mood presets constant (used by both hook and utility functions)
 const MOOD_PRESETS: readonly MoodPreset[] = [
-  { id: 'neutral',      label: 'Neutre',        emoji: '😐', description: 'Expression calme, par défaut' },
-  { id: 'happy',        label: 'Joyeux',         emoji: '😊', description: 'Humeur positive et joyeuse' },
-  { id: 'sad',          label: 'Triste',         emoji: '😢', description: 'Expression abattue, mélancolique' },
-  { id: 'angry',        label: 'En colère',      emoji: '😠', description: 'Humeur frustrée, irritée' },
-  { id: 'surprised',    label: 'Surpris',        emoji: '😲', description: 'Expression choquée, étonnée' },
-  { id: 'confused',     label: 'Confus',         emoji: '😕', description: 'Humeur perplexe, incertaine' },
-  { id: 'scared',       label: 'Effrayé',        emoji: '😨', description: 'Expression apeurée, craintive' },
-  { id: 'excited',      label: 'Enthousiaste',   emoji: '🤩', description: 'Humeur dynamique, pleine d\'énergie' },
-  { id: 'professional', label: 'Professionnel',  emoji: '👔', description: 'Attitude formelle et sérieuse' },
-  { id: 'helpful',      label: 'Serviable',      emoji: '🤝', description: 'Attitude amicale et coopérative' },
-  { id: 'tired',        label: 'Fatigué',        emoji: '😴', description: 'Expression épuisée, lasse' },
-  { id: 'thoughtful',   label: 'Pensif',         emoji: '🤔', description: 'Humeur contemplative, réfléchie' },
+  // ── Preset de base ─────────────────────────────────────────────────────────
+  { id: 'neutral', label: 'Neutre', emoji: '😐', description: 'Expression calme, par défaut' },
+  { id: 'default', label: 'Par défaut', emoji: '😐', description: 'Mood par défaut du personnage' },
+  { id: 'happy', label: 'Joyeux', emoji: '😊', description: 'Humeur positive et joyeuse' },
+  { id: 'sad', label: 'Triste', emoji: '😢', description: 'Expression abattue, mélancolique' },
+  { id: 'angry', label: 'En colère', emoji: '😠', description: 'Humeur frustrée, irritée' },
+  { id: 'surprised', label: 'Surpris', emoji: '😲', description: 'Expression choquée, étonnée' },
+  { id: 'confused', label: 'Confus', emoji: '😕', description: 'Humeur perplexe, incertaine' },
+  { id: 'scared', label: 'Effrayé', emoji: '😨', description: 'Expression apeurée, craintive' },
+  {
+    id: 'excited',
+    label: 'Enthousiaste',
+    emoji: '🤩',
+    description: "Humeur dynamique, pleine d'énergie",
+  },
+  {
+    id: 'professional',
+    label: 'Professionnel',
+    emoji: '👔',
+    description: 'Attitude formelle et sérieuse',
+  },
+  {
+    id: 'helpful',
+    label: 'Serviable',
+    emoji: '🤝',
+    description: 'Attitude amicale et coopérative',
+  },
+  { id: 'tired', label: 'Fatigué', emoji: '😴', description: 'Expression épuisée, lasse' },
+  {
+    id: 'thoughtful',
+    label: 'Pensif',
+    emoji: '🤔',
+    description: 'Humeur contemplative, réfléchie',
+  },
+  // ── Moods étendus ──────────────────────────────────────────────────────────
+  { id: 'amused', label: 'Amusé', emoji: '😄', description: 'Amusement, légèreté' },
+  { id: 'concerned', label: 'Préoccupé', emoji: '😟', description: 'Inquiet, soucieux' },
+  { id: 'ironic', label: 'Ironique', emoji: '😏', description: 'Ton sarcastique ou moqueur' },
+  { id: 'nervous', label: 'Nerveux', emoji: '😰', description: 'Anxieux, tendu' },
+  { id: 'proud', label: 'Fier', emoji: '😤', description: 'Confiant, satisfait de soi' },
+  { id: 'embarrassed', label: 'Gêné', emoji: '😳', description: "Mal à l'aise, honteux" },
+  { id: 'disgusted', label: 'Dégoûté', emoji: '🤢', description: 'Répulsion, aversion' },
+  { id: 'flirty', label: 'Flirteur', emoji: '😘', description: 'Charmeur, enjoleur' },
+  { id: 'determined', label: 'Déterminé', emoji: '😤', description: 'Résolu, volontaire' },
+  { id: 'mysterious', label: 'Mystérieux', emoji: '🤫', description: 'Énigmatique, secret' },
+  {
+    id: 'melancholic',
+    label: 'Mélancolique',
+    emoji: '😔',
+    description: 'Nostalgie, tristesse douce',
+  },
+  { id: 'playful', label: 'Espiègle', emoji: '😜', description: 'Joueur, taquin' },
+  { id: 'serious', label: 'Sérieux', emoji: '😶', description: 'Grave, sans humour' },
+  { id: 'hopeful', label: "Plein d'espoir", emoji: '🥺', description: 'Optimiste, rêveur' },
+  { id: 'grateful', label: 'Reconnaissant', emoji: '🙏', description: 'Gratitude, sincère' },
 ] as const;
 
 export function useMoodPresets(): readonly MoodPreset[] {

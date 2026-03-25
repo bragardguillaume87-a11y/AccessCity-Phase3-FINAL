@@ -381,21 +381,8 @@ export function PreviewPanel({
                     transition: 'all 0.2s',
                   }}
                 >
-                  {testMode ? '⏳ Disponible en lecture' : '▶ Tester le mini-jeu'}
+                  {testMode ? '⏳ En cours…' : '▶ Tester le mini-jeu'}
                 </button>
-                {testMode && (
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 11,
-                      color: T.t3,
-                      textAlign: 'center',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    Le test s'exécute dans le lecteur de scénario.
-                  </div>
-                )}
               </div>
             )}
           </div>

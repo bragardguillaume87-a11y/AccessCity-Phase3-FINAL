@@ -6,6 +6,7 @@ import { DEFAULTS } from '@/config/constants';
 import type { Dialogue } from '@/types';
 import type { MinigameType } from '@/types/game';
 import { useUIStore, useCharactersStore, useSettingsStore } from '@/stores';
+import { MinigameOverlay } from '@/components/panels/PreviewPlayer/MinigameOverlay';
 import { useAllScenesWithElements } from '@/stores/selectors';
 import { useDialogueForm } from '../DialogueWizard/hooks/useDialogueForm';
 import type { ComplexityLevel } from '@/types';
@@ -43,7 +44,7 @@ export function DialogueComposerV2({
 
   const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);
   const [isSaved, setIsSaved] = useState(false);
-  const [testMode, setTestMode] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
 
   useEffect(() => () => clearInitialCompl(), [clearInitialCompl]);
 
@@ -161,8 +162,11 @@ export function DialogueComposerV2({
 
   const handleTestMinigame = useCallback(() => {
     uiSounds.diceRollStart();
-    setTestMode(true);
-    setTimeout(() => setTestMode(false), 2500);
+    setOverlayOpen(true);
+  }, []);
+
+  const handleOverlayResult = useCallback(() => {
+    setOverlayOpen(false);
   }, []);
 
   const handleSave = useCallback(() => {
@@ -410,7 +414,7 @@ export function DialogueComposerV2({
               speakerName={speakerName}
               speakerPortraitUrl={speakerPortraitUrl}
               wordCount={wordCount}
-              testMode={testMode}
+              testMode={overlayOpen}
               isSaved={isSaved}
               canSave={canSave}
               onTestMinigame={handleTestMinigame}
@@ -420,6 +424,13 @@ export function DialogueComposerV2({
           </Panel>
         </PanelGroup>
       </div>
+
+      {/* Mini-jeu overlay — déclenché par "Tester le mini-jeu" */}
+      <MinigameOverlay
+        isOpen={overlayOpen}
+        config={formData.minigame ?? null}
+        onResult={handleOverlayResult}
+      />
     </div>
   );
 }

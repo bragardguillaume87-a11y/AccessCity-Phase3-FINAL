@@ -1179,6 +1179,7 @@ export function DialogueComposerV2({
               minWidth: 0,
               display: 'flex',
               flexDirection: 'column',
+              overflowY: 'auto',
               borderLeft: '2px solid rgba(255,255,255,0.14)',
             }}
           >

@@ -45,6 +45,9 @@ const T = {
   orangeBd: 'rgba(253,186,116,0.50)',
 };
 
+// PREVIEW_WIDTH : largeur du panneau droit — ajuster ici si besoin
+const PREVIEW_WIDTH = 400;
+
 const TYPE_TABS: {
   id: ComplexityLevel;
   label: string;
@@ -52,6 +55,8 @@ const TYPE_TABS: {
   c: string;
   bg: string;
   bd: string;
+  /** Couleur du texte sur fond actif (fill coloré) */
+  tc: string;
   svgPath: string;
 }[] = [
   {
@@ -61,6 +66,7 @@ const TYPE_TABS: {
     c: T.blue,
     bg: T.blueBg,
     bd: T.blueBd,
+    tc: '#0f172a',
     svgPath:
       '<rect x="3" y="5" width="14" height="10" rx="2" fill="rgba(147,197,253,0.28)" stroke="rgba(191,219,254,0.90)" stroke-width="1.5"/><path d="M6 9h8M6 12h5" stroke="rgba(191,219,254,0.90)" stroke-width="1.5" stroke-linecap="round"/>',
   },
@@ -71,6 +77,7 @@ const TYPE_TABS: {
     c: T.teal,
     bg: T.tealBg,
     bd: T.tealBd,
+    tc: '#0f2a26',
     svgPath:
       '<path d="M3 6h6M3 10h6M11 6h6M11 10h6" stroke="rgba(153,246,228,0.90)" stroke-width="1.5" stroke-linecap="round"/><path d="M6 14l2-2-2-2M14 14l2-2-2-2" stroke="rgba(153,246,228,0.90)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
   },
@@ -81,6 +88,7 @@ const TYPE_TABS: {
     c: T.rose,
     bg: T.roseBg,
     bd: T.roseBd,
+    tc: '#2a0f1a',
     svgPath:
       '<rect x="3" y="3" width="6" height="6" rx="1.5" fill="rgba(253,164,208,0.28)" stroke="rgba(251,207,232,0.90)" stroke-width="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5" fill="rgba(253,164,208,0.28)" stroke="rgba(251,207,232,0.90)" stroke-width="1.5"/><circle cx="6" cy="15" r="1.4" fill="rgba(251,207,232,0.92)"/><circle cx="10" cy="15" r="1.4" fill="rgba(251,207,232,0.92)"/><circle cx="14" cy="15" r="1.4" fill="rgba(251,207,232,0.92)"/>',
   },
@@ -91,6 +99,7 @@ const TYPE_TABS: {
     c: T.amber,
     bg: T.amberBg,
     bd: T.amberBd,
+    tc: '#1a1200',
     svgPath:
       '<path d="M10 3l1.5 4h4l-3 2.5 1 4L10 11l-3.5 2.5 1-4L4 7h4z" fill="rgba(253,230,138,0.32)" stroke="rgba(254,240,138,0.92)" stroke-width="1.5" stroke-linejoin="round"/>',
   },
@@ -101,6 +110,7 @@ const TYPE_TABS: {
     c: T.purple,
     bg: T.purpleBg,
     bd: T.purpleBd,
+    tc: '#ffffff',
     svgPath:
       '<rect x="2" y="6" width="16" height="10" rx="2" fill="rgba(192,132,252,0.28)" stroke="rgba(216,180,255,0.90)" stroke-width="1.5"/><path d="M10 6V4M7 4h6" stroke="rgba(216,180,255,0.90)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 11h4M10 9v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
   },
@@ -113,6 +123,7 @@ const MINIGAME_CARDS: {
   c: string;
   bg: string;
   bd: string;
+  tc: string; // text color on active fill
 }[] = [
   {
     type: 'falc',
@@ -121,6 +132,7 @@ const MINIGAME_CARDS: {
     c: T.amber,
     bg: T.amberBg,
     bd: T.amberBd,
+    tc: '#1a1200',
   },
   {
     type: 'qte',
@@ -129,6 +141,7 @@ const MINIGAME_CARDS: {
     c: T.blue,
     bg: T.blueBg,
     bd: T.blueBd,
+    tc: '#ffffff',
   },
   {
     type: 'braille',
@@ -137,6 +150,7 @@ const MINIGAME_CARDS: {
     c: T.purple,
     bg: T.purpleBg,
     bd: T.purpleBd,
+    tc: '#ffffff',
   },
 ];
 
@@ -512,7 +526,6 @@ export function DialogueComposerV2({
             padding: '12px 16px 16px',
             display: 'flex',
             gap: 7,
-            justifyContent: 'center',
             borderBottom: `1.5px solid ${T.border}`,
             background: 'rgba(0,0,0,0.10)',
             flexShrink: 0,
@@ -538,16 +551,17 @@ export function DialogueComposerV2({
                   alignItems: 'center',
                   gap: 5,
                   position: 'relative',
-                  background: isActive ? tab.bg : T.card,
-                  border: `1.5px solid ${isActive ? tab.bd : T.border}`,
+                  /* Style "inversé" : fond plein coloré quand actif */
+                  background: isActive ? `${tab.c}c0` : T.card,
+                  border: `1.5px solid ${isActive ? tab.c : T.border}`,
                   transform: isActive ? 'translateY(-4px)' : 'none',
-                  boxShadow: isActive ? '0 8px 20px rgba(0,0,0,0.28)' : 'none',
+                  boxShadow: isActive ? `0 8px 24px ${tab.c}55` : 'none',
                   transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
                   cursor: 'pointer',
                   minWidth: 80,
                 }}
               >
-                {/* Pip "actif" */}
+                {/* Pip "actif" — fond blanc, texte coloré pour contraster sur le fill */}
                 {isActive && (
                   <div
                     style={{
@@ -555,27 +569,26 @@ export function DialogueComposerV2({
                       top: -9,
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      background: tab.c,
-                      color: '#16103a',
+                      background: 'rgba(255,255,255,0.92)',
+                      color: tab.c,
                       fontSize: 8,
                       fontWeight: 900,
                       padding: '2px 7px',
                       borderRadius: 5,
-                      border: `1.5px solid rgba(255,255,255,0.22)`,
                       whiteSpace: 'nowrap',
                     }}
                   >
                     actif
                   </div>
                 )}
-                {/* Icône */}
+                {/* Icône — fond sombre sur fill coloré */}
                 <div
                   style={{
                     width: 22,
                     height: 22,
                     borderRadius: 6,
-                    background: isActive ? tab.bg : 'rgba(255,255,255,0.07)',
-                    border: `1px solid ${isActive ? tab.bd : 'transparent'}`,
+                    background: isActive ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.07)',
+                    border: `1px solid ${isActive ? 'rgba(0,0,0,0.12)' : 'transparent'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -593,7 +606,8 @@ export function DialogueComposerV2({
                   style={{
                     fontSize: 12,
                     fontWeight: 800,
-                    color: isActive ? tab.c : T.t2,
+                    /* Texte adapté : sombre sur fond pastel, blanc sur fond sombre */
+                    color: isActive ? tab.tc : T.t2,
                     textAlign: 'center',
                   }}
                 >
@@ -894,10 +908,10 @@ export function DialogueComposerV2({
                             flexDirection: 'column',
                             alignItems: 'center',
                             gap: 7,
-                            background: isActive ? card.bg : T.card,
-                            border: `1.5px solid ${isActive ? card.bd : T.border}`,
+                            background: isActive ? `${card.c}c0` : T.card,
+                            border: `1.5px solid ${isActive ? card.c : T.border}`,
                             transform: isActive ? 'translateY(-3px)' : 'none',
-                            boxShadow: isActive ? '0 6px 18px rgba(0,0,0,0.28)' : 'none',
+                            boxShadow: isActive ? `0 6px 18px ${card.c}55` : 'none',
                             transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
                             cursor: 'pointer',
                           }}
@@ -921,7 +935,7 @@ export function DialogueComposerV2({
                             style={{
                               fontSize: 13,
                               fontWeight: 900,
-                              color: isActive ? card.c : T.t1,
+                              color: isActive ? card.tc : T.t1,
                             }}
                           >
                             {card.label}
@@ -978,7 +992,7 @@ export function DialogueComposerV2({
                           </span>
                           <span
                             style={{
-                              fontSize: 11,
+                              fontSize: 12,
                               padding: '3px 10px',
                               borderRadius: 6,
                               fontWeight: 800,
@@ -1164,11 +1178,11 @@ export function DialogueComposerV2({
           {/* ── PANNEAU DROIT ───────────────────────────────────────────────── */}
           <div
             style={{
-              width: 340,
+              width: PREVIEW_WIDTH,
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
-              borderLeft: `1.5px solid ${T.border}`,
+              borderLeft: '2px solid rgba(255,255,255,0.14)',
             }}
           >
             {/* Header preview */}
@@ -1214,7 +1228,7 @@ export function DialogueComposerV2({
               {activeTab && (
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     padding: '3px 12px',
                     borderRadius: 7,
                     fontWeight: 800,
@@ -1231,7 +1245,9 @@ export function DialogueComposerV2({
             </div>
 
             {/* Scene preview card */}
-            <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{ flex: 1, padding: '0 12px 12px', display: 'flex', flexDirection: 'column' }}
+            >
               <div
                 style={{
                   borderRadius: 15,
@@ -1356,7 +1372,7 @@ export function DialogueComposerV2({
                 >
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       padding: '3px 8px',
                       borderRadius: 5,
                       fontWeight: 700,
@@ -1369,7 +1385,7 @@ export function DialogueComposerV2({
                   </span>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       padding: '3px 8px',
                       borderRadius: 5,
                       fontWeight: 700,
@@ -1508,7 +1524,7 @@ export function DialogueComposerV2({
                   <span style={{ fontSize: 12, flexShrink: 0 }}>📍</span>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: T.t3,
                       fontWeight: 700,
                       overflow: 'hidden',

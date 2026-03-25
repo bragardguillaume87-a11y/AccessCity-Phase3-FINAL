@@ -45,9 +45,6 @@ const T = {
   orangeBd: 'rgba(253,186,116,0.50)',
 };
 
-// PREVIEW_WIDTH : largeur du panneau droit — ajuster ici si besoin
-const PREVIEW_WIDTH = 400;
-
 const TYPE_TABS: {
   id: ComplexityLevel;
   label: string;
@@ -634,15 +631,15 @@ export function DialogueComposerV2({
 
         {/* ── BODY ────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          {/* ── PANNEAU GAUCHE ─────────────────────────────────────────────── */}
+          {/* ── PANNEAU GAUCHE — 40% ──────────────────────────────────────── */}
           <div
             style={{
-              flex: 1,
+              flex: '0 0 40%',
+              minWidth: 0,
               padding: 16,
               display: 'flex',
               flexDirection: 'column',
               gap: 14,
-              borderRight: `1.5px solid ${T.border}`,
               overflowY: 'auto',
             }}
           >
@@ -1178,8 +1175,8 @@ export function DialogueComposerV2({
           {/* ── PANNEAU DROIT ───────────────────────────────────────────────── */}
           <div
             style={{
-              width: PREVIEW_WIDTH,
-              flexShrink: 0,
+              flex: '0 0 60%',
+              minWidth: 0,
               display: 'flex',
               flexDirection: 'column',
               borderLeft: '2px solid rgba(255,255,255,0.14)',

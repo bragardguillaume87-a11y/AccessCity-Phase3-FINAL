@@ -187,7 +187,11 @@ export default function LeftPanel({
           if (!open) setEditDialogueIndex(undefined);
         }}
       >
-        <DialogContent className="max-w-[90vw] p-0 gap-0 max-h-[90vh]">
+        <DialogContent
+          className="max-w-[90vw] p-0 gap-0 max-h-[90vh]"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>
               {editDialogueIndex !== undefined

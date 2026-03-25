@@ -12,7 +12,7 @@ import type { ComplexityLevel } from '@/types';
 import { ComposerFormPanel } from '../DialogueComposer/components/ComposerFormPanel';
 import { DIALOGUE_COMPOSER_THEMES } from '@/config/dialogueComposerThemes';
 import { uiSounds } from '@/utils/uiSounds';
-import { T } from './constants';
+import { T, FONTS } from './constants';
 import { TypeTabBar } from './components/TypeTabBar';
 import { MinigameFormPanel } from './components/MinigameFormPanel';
 import { PreviewPanel } from './components/PreviewPanel';
@@ -282,9 +282,7 @@ export function DialogueComposerV2({
             </svg>
           </div>
           <div style={{ flex: 1 }}>
-            <div
-              style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 800, color: T.t1 }}
-            >
+            <div style={{ fontFamily: FONTS.display, fontSize: 15, fontWeight: 800, color: T.t1 }}>
               Éditeur de dialogue
             </div>
             <div style={{ fontSize: 12, color: T.t3, fontWeight: 600 }}>
@@ -382,8 +380,10 @@ export function DialogueComposerV2({
           {/* Handle redimensionnable */}
           <PanelResizeHandle
             style={{
-              width: 6,
-              background: 'rgba(255,255,255,0.08)',
+              width: 8,
+              background: 'rgba(255,255,255,0.04)',
+              borderLeft: '1px solid rgba(255,255,255,0.22)',
+              borderRight: '1px solid rgba(255,255,255,0.22)',
               cursor: 'col-resize',
               flexShrink: 0,
               display: 'flex',
@@ -394,10 +394,10 @@ export function DialogueComposerV2({
           >
             <div
               style={{
-                width: 2,
-                height: 40,
-                borderRadius: 2,
-                background: 'rgba(255,255,255,0.28)',
+                width: 3,
+                height: 48,
+                borderRadius: 3,
+                background: 'rgba(192,132,252,0.55)',
               }}
             />
           </PanelResizeHandle>
@@ -407,7 +407,6 @@ export function DialogueComposerV2({
             <PreviewPanel
               formData={formData}
               currentScene={currentScene}
-              speakerChar={speakerChar}
               speakerName={speakerName}
               speakerPortraitUrl={speakerPortraitUrl}
               wordCount={wordCount}

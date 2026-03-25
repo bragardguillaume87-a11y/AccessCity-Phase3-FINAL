@@ -3,7 +3,14 @@ import type { DialogueFormData } from '../../DialogueWizard/hooks/useDialogueFor
 import type { MinigameType } from '@/types/game';
 import { DEFAULTS } from '@/config/constants';
 import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
-import { T, MINIGAME_CARDS, TIMER_CHIPS, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '../constants';
+import {
+  T,
+  FONTS,
+  MINIGAME_CARDS,
+  TIMER_CHIPS,
+  DIFFICULTY_LABELS,
+  DIFFICULTY_COLORS,
+} from '../constants';
 import { SectionLabel, GlassCard } from '../helpers';
 
 interface MinigameFormPanelProps {
@@ -64,7 +71,7 @@ export function MinigameFormPanel({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontFamily: 'Syne, sans-serif',
+                fontFamily: FONTS.display,
                 fontSize: 28,
                 fontWeight: 800,
                 color: T.t1,
@@ -84,7 +91,7 @@ export function MinigameFormPanel({
               >
                 <span
                   style={{
-                    fontFamily: 'Syne, sans-serif',
+                    fontFamily: FONTS.display,
                     fontSize: 18,
                     fontWeight: 800,
                     color: T.t1,

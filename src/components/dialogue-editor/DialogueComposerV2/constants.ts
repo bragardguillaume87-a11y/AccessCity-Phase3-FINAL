@@ -31,6 +31,11 @@ export const T = {
   orangeBd: 'rgba(253,186,116,0.50)',
 } as const;
 
+/** Police display du DialogueComposerV2 — modifier ici pour changer toutes les occurrences */
+export const FONTS = {
+  display: 'Nunito, DM Sans, sans-serif',
+} as const;
+
 import type { ComplexityLevel } from '@/types';
 import type { MinigameType } from '@/types/game';
 

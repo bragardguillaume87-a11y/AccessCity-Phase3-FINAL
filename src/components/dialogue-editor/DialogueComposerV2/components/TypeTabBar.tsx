@@ -1,5 +1,5 @@
 import type { ComplexityLevel } from '@/types';
-import { T, TYPE_TABS } from '../constants';
+import { T, FONTS, TYPE_TABS } from '../constants';
 
 interface TypeTabBarProps {
   activeType: ComplexityLevel | null;
@@ -10,9 +10,9 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
   return (
     <div
       style={{
-        padding: '12px 16px 16px',
+        padding: '14px 16px 20px',
         display: 'flex',
-        gap: 7,
+        gap: 8,
         borderBottom: `1.5px solid ${T.border}`,
         background: 'rgba(0,0,0,0.10)',
         flexShrink: 0,
@@ -32,11 +32,11 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
               flex: '1 1 0',
               maxWidth: 160,
               borderRadius: 13,
-              padding: '8px 6px',
+              padding: '12px 10px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 5,
+              gap: 8,
               position: 'relative',
               background: isActive ? `${tab.c}c0` : T.card,
               border: `1.5px solid ${isActive ? tab.c : T.border}`,
@@ -68,9 +68,9 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
             )}
             <div
               style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
+                width: 30,
+                height: 30,
+                borderRadius: 9,
                 background: isActive ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.07)',
                 border: `1px solid ${isActive ? 'rgba(0,0,0,0.12)' : 'transparent'}`,
                 display: 'flex',
@@ -81,18 +81,19 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
               <svg
                 viewBox="0 0 20 20"
                 fill="none"
-                width={13}
-                height={13}
+                width={16}
+                height={16}
                 dangerouslySetInnerHTML={{ __html: tab.svgPath }}
               />
             </div>
             <span
               style={{
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 800,
+                lineHeight: 1.4,
                 color: isActive ? tab.tc : T.t2,
                 whiteSpace: 'nowrap',
-                fontFamily: 'Syne, sans-serif',
+                fontFamily: FONTS.display,
               }}
             >
               {tab.label}

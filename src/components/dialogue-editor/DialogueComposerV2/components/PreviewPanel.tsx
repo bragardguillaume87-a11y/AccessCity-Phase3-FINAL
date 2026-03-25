@@ -1,14 +1,14 @@
 import { Save, Network } from 'lucide-react';
-import type { Character } from '@/types';
 import type { DialogueFormData } from '../../DialogueWizard/hooks/useDialogueForm';
 import type { Scene } from '@/types';
 import { getMoodEmoji, getMoodLabel } from '@/hooks/useMoodPresets';
-import { T, MINIGAME_CARDS, TYPE_TABS } from '../constants';
+import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
+import { DialogueBox, hashStringToColor } from '@/components/ui/DialogueBox';
+import { T, FONTS, MINIGAME_CARDS, TYPE_TABS } from '../constants';
 
 interface PreviewPanelProps {
   formData: DialogueFormData;
   currentScene: Scene | undefined;
-  speakerChar: Character | undefined;
   speakerName: string;
   speakerPortraitUrl: string;
   wordCount: number;
@@ -23,7 +23,6 @@ interface PreviewPanelProps {
 export function PreviewPanel({
   formData,
   currentScene,
-  speakerChar,
   speakerName,
   speakerPortraitUrl,
   wordCount,
@@ -37,6 +36,14 @@ export function PreviewPanel({
   const isMinigame = formData.complexityLevel === 'minigame';
   const mgType = formData.minigame?.type ?? 'braille';
   const activeTab = TYPE_TABS.find((t) => t.id === formData.complexityLevel);
+  const dialogueBoxConfig = useDialogueBoxConfig(undefined);
+  const isNarrator = !formData.speaker;
+  const position = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const previewChoices =
+    !isMinigame && formData.complexityLevel !== 'linear' && formData.choices.length > 0
+      ? formData.choices
+      : undefined;
+  const speakerColor = hashStringToColor(speakerName);
 
   return (
     <div
@@ -61,7 +68,7 @@ export function PreviewPanel({
       >
         <div
           style={{
-            fontFamily: 'Syne, sans-serif',
+            fontFamily: FONTS.display,
             fontSize: 13,
             fontWeight: 800,
             color: T.t1,
@@ -122,338 +129,276 @@ export function PreviewPanel({
             flex: 1,
           }}
         >
-          {/* Background scène */}
-          <div
-            style={{
-              height: 140,
-              background: currentScene?.backgroundUrl
-                ? `url(${currentScene.backgroundUrl}) center / cover, rgba(22,16,58,0.92)`
-                : 'linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(30,58,138,0.90) 50%, rgba(6,78,59,0.75) 100%)',
-              position: 'relative',
-              borderBottom: `1.5px solid ${T.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            {!currentScene?.backgroundUrl && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.42)' }}>
-                Aperçu de scène
-              </span>
-            )}
-            {/* Avatar speaker */}
+          {/* Zone scène — flex:1, fond + DialogueBox réelle en overlay */}
+          <div style={{ flex: 1, position: 'relative', minHeight: 200, overflow: 'hidden' }}>
+            {/* Fond de scène */}
             <div
               style={{
                 position: 'absolute',
-                bottom: -22,
-                left: 14,
-                width: 50,
-                height: 50,
-                borderRadius: 13,
-                background: T.purpleBg,
-                border: '3px solid rgba(255,255,255,0.30)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: 'Syne, sans-serif',
-                fontSize: 20,
-                fontWeight: 800,
-                color: T.t1,
-                overflow: 'hidden',
+                inset: 0,
+                background: currentScene?.backgroundUrl
+                  ? `url(${currentScene.backgroundUrl}) center / cover`
+                  : 'linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(30,58,138,0.90) 50%, rgba(6,78,59,0.75) 100%)',
               }}
             >
-              {speakerPortraitUrl ? (
-                <img
-                  src={speakerPortraitUrl}
-                  alt={speakerName}
-                  style={{ width: 50, height: 50, objectFit: 'contain' }}
-                />
-              ) : speakerChar ? (
-                speakerChar.name.charAt(0).toUpperCase()
-              ) : (
-                '✦'
+              {!currentScene?.backgroundUrl && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    left: 0,
+                    right: 0,
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.35)',
+                  }}
+                >
+                  Aperçu de scène
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Bulle dialogue */}
-          <div
-            style={{
-              margin: '14px 12px 0',
-              background: 'rgba(255,255,255,0.15)',
-              border: `1.5px solid ${T.borderHi}`,
-              borderRadius: '0 14px 14px 14px',
-              padding: '12px 14px',
-              backdropFilter: 'blur(8px)',
-              flexShrink: 0,
-            }}
-          >
+            {/* DialogueBox réelle — même composant que PreviewPlayer */}
             <div
               style={{
-                fontSize: 13,
-                fontWeight: 900,
-                color: T.purple,
-                marginBottom: 5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
+                position: 'absolute',
+                zIndex: 2,
+                ...(position === 'top'
+                  ? { top: 0, left: 0, right: 0 }
+                  : position === 'center'
+                    ? { inset: 0, display: 'flex', alignItems: 'center' }
+                    : { bottom: 0, left: 0, right: 0 }),
               }}
             >
+              {/* Gradient directionnel */}
+              {position !== 'center' && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    pointerEvents: 'none',
+                    ...(position === 'top'
+                      ? {
+                          top: 0,
+                          height: '55%',
+                          background:
+                            'linear-gradient(to bottom, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
+                        }
+                      : {
+                          bottom: 0,
+                          height: '55%',
+                          background:
+                            'linear-gradient(to top, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
+                        }),
+                  }}
+                />
+              )}
               <div
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: T.green,
-                  flexShrink: 0,
+                  position: 'relative',
+                  padding:
+                    position === 'top'
+                      ? '12px 12px 0'
+                      : position === 'center'
+                        ? '8px 12px'
+                        : '0 12px 10px',
+                  maxWidth: '92%',
+                  margin: '0 auto',
+                  width: '100%',
                 }}
-              />
-              {speakerName}
+              >
+                <DialogueBox
+                  speaker={isNarrator ? undefined : speakerName}
+                  displayText={formData.text || 'Aucun texte…'}
+                  isNarrator={isNarrator}
+                  isTypewriterDone={true}
+                  hasChoices={!!previewChoices?.length}
+                  choices={previewChoices}
+                  config={dialogueBoxConfig}
+                  scaleFactor={0.48}
+                  speakerPortraitUrl={speakerPortraitUrl || null}
+                  speakerColor={speakerColor}
+                />
+              </div>
             </div>
-            <p
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: T.t1,
-                lineHeight: 1.55,
-                fontStyle: 'italic',
-                margin: 0,
-                minHeight: 24,
-              }}
-            >
-              {formData.text || 'Aucun texte…'}
-            </p>
           </div>
 
-          {/* Stats row */}
+          {/* Zone métadonnées — stats + choix + scène + mini-jeu */}
           <div
             style={{
-              padding: '8px 12px 4px',
-              display: 'flex',
-              gap: 6,
-              flexWrap: 'wrap',
               flexShrink: 0,
+              overflowY: 'auto',
+              maxHeight: 220,
+              borderTop: `1.5px solid ${T.border}`,
             }}
           >
-            <span
+            {/* Stats row */}
+            <div
               style={{
-                fontSize: 12,
-                padding: '3px 8px',
-                borderRadius: 5,
-                fontWeight: 700,
-                background: T.blueBg,
-                color: T.blue,
-                border: `1px solid ${T.blueBd}`,
+                padding: '8px 12px 4px',
+                display: 'flex',
+                gap: 6,
+                flexWrap: 'wrap',
               }}
             >
-              {wordCount} mot{wordCount !== 1 ? 's' : ''}
-            </span>
-            <span
-              style={{
-                fontSize: 12,
-                padding: '3px 8px',
-                borderRadius: 5,
-                fontWeight: 700,
-                background: T.tealBg,
-                color: T.teal,
-                border: `1px solid ${T.tealBd}`,
-              }}
-            >
-              ~{Math.max(1, Math.ceil(wordCount / 3))}s
-            </span>
-            {formData.speakerMood && (
               <span
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   padding: '3px 8px',
                   borderRadius: 5,
                   fontWeight: 700,
-                  background: T.purpleBg,
-                  color: T.purple,
-                  border: `1px solid ${T.purpleBd}`,
+                  background: T.blueBg,
+                  color: T.blue,
+                  border: `1px solid ${T.blueBd}`,
                 }}
               >
-                {getMoodEmoji(formData.speakerMood)} {getMoodLabel(formData.speakerMood)}
+                {wordCount} mot{wordCount !== 1 ? 's' : ''}
               </span>
-            )}
-            {formData.complexityLevel !== 'linear' &&
-              formData.complexityLevel !== 'minigame' &&
-              formData.choices.length > 0 && (
+              <span
+                style={{
+                  fontSize: 12,
+                  padding: '3px 8px',
+                  borderRadius: 5,
+                  fontWeight: 700,
+                  background: T.tealBg,
+                  color: T.teal,
+                  border: `1px solid ${T.tealBd}`,
+                }}
+              >
+                ~{Math.max(1, Math.ceil(wordCount / 3))}s
+              </span>
+              {formData.speakerMood && (
                 <span
                   style={{
                     fontSize: 11,
                     padding: '3px 8px',
                     borderRadius: 5,
                     fontWeight: 700,
-                    background: T.amberBg,
-                    color: T.amber,
-                    border: `1px solid ${T.amberBd}`,
+                    background: T.purpleBg,
+                    color: T.purple,
+                    border: `1px solid ${T.purpleBd}`,
                   }}
                 >
-                  {formData.choices.length} choix
+                  {getMoodEmoji(formData.speakerMood)} {getMoodLabel(formData.speakerMood)}
                 </span>
               )}
-            {wordCount > 80 && (
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: '3px 8px',
-                  borderRadius: 5,
-                  fontWeight: 700,
-                  background: T.roseBg,
-                  color: T.rose,
-                  border: `1px solid ${T.roseBd}`,
-                }}
-              >
-                ⚠ Long
-              </span>
-            )}
-          </div>
-
-          {/* Choices preview */}
-          {!isMinigame && formData.complexityLevel !== 'linear' && formData.choices.length > 0 && (
-            <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  color: T.t3,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  marginBottom: 6,
-                }}
-              >
-                CHOIX
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {formData.choices.slice(0, 4).map((choice, i) => (
-                  <div
-                    key={i}
+              {formData.complexityLevel !== 'linear' &&
+                formData.complexityLevel !== 'minigame' &&
+                formData.choices.length > 0 && (
+                  <span
                     style={{
-                      background: T.card,
-                      border: `1px solid ${T.border}`,
-                      borderRadius: 8,
-                      padding: '6px 10px',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: T.t2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      overflow: 'hidden',
+                      fontSize: 11,
+                      padding: '3px 8px',
+                      borderRadius: 5,
+                      fontWeight: 700,
+                      background: T.amberBg,
+                      color: T.amber,
+                      border: `1px solid ${T.amberBd}`,
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 900,
-                        color: T.teal,
-                        width: 14,
-                        textAlign: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span
-                      style={{
-                        flex: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: choice.text?.trim() ? T.t1 : T.t3,
-                        fontStyle: choice.text?.trim() ? 'normal' : 'italic',
-                      }}
-                    >
-                      {choice.text?.trim() || 'Texte du choix…'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Scène info */}
-          <div
-            style={{
-              margin: '0 12px 12px',
-              padding: '7px 10px',
-              background: 'rgba(0,0,0,0.22)',
-              borderRadius: 8,
-              border: `1px solid ${T.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: 12, flexShrink: 0 }}>📍</span>
-            <span
-              style={{
-                fontSize: 12,
-                color: T.t3,
-                fontWeight: 700,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {currentScene?.title ?? 'Scène…'}
-            </span>
-          </div>
-
-          {/* Badge + bouton mini-jeu */}
-          {isMinigame && (
-            <div style={{ padding: '6px 12px 12px', flexShrink: 0 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: T.t3,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  marginBottom: 8,
-                }}
-              >
-                MINI-JEU · {MINIGAME_CARDS.find((m) => m.type === mgType)?.label?.toUpperCase()}
-              </div>
-              <button
-                onClick={onTestMinigame}
-                style={{
-                  width: '100%',
-                  background: testMode ? T.amberBg : T.greenBg,
-                  border: `1.5px solid ${testMode ? T.amberBd : T.greenBd}`,
-                  borderRadius: 11,
-                  padding: 11,
-                  fontSize: 13,
-                  fontWeight: 900,
-                  color: testMode ? T.amber : T.green,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {testMode ? '⏳ Disponible en lecture' : '▶ Tester le mini-jeu'}
-              </button>
-              {testMode && (
-                <div
+                    {formData.choices.length} choix
+                  </span>
+                )}
+              {wordCount > 80 && (
+                <span
                   style={{
-                    marginTop: 6,
                     fontSize: 11,
-                    color: T.t3,
-                    textAlign: 'center',
-                    lineHeight: 1.4,
+                    padding: '3px 8px',
+                    borderRadius: 5,
+                    fontWeight: 700,
+                    background: T.roseBg,
+                    color: T.rose,
+                    border: `1px solid ${T.roseBd}`,
                   }}
                 >
-                  Le test s'exécute dans le lecteur de scénario.
-                </div>
+                  ⚠ Long
+                </span>
               )}
             </div>
-          )}
+
+            {/* Scène info */}
+            <div
+              style={{
+                margin: '0 12px 12px',
+                padding: '6px 10px',
+                background: 'rgba(0,0,0,0.22)',
+                borderRadius: 8,
+                border: `1px solid ${T.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 12, flexShrink: 0 }}>📍</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: T.t3,
+                  fontWeight: 700,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentScene?.title ?? 'Scène…'}
+              </span>
+            </div>
+
+            {/* Badge + bouton mini-jeu */}
+            {isMinigame && (
+              <div style={{ padding: '6px 12px 12px' }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: T.t3,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: 8,
+                  }}
+                >
+                  MINI-JEU · {MINIGAME_CARDS.find((m) => m.type === mgType)?.label?.toUpperCase()}
+                </div>
+                <button
+                  onClick={onTestMinigame}
+                  style={{
+                    width: '100%',
+                    background: testMode ? T.amberBg : T.greenBg,
+                    border: `1.5px solid ${testMode ? T.amberBd : T.greenBd}`,
+                    borderRadius: 11,
+                    padding: 11,
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: testMode ? T.amber : T.green,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {testMode ? '⏳ Disponible en lecture' : '▶ Tester le mini-jeu'}
+                </button>
+                {testMode && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 11,
+                      color: T.t3,
+                      textAlign: 'center',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Le test s'exécute dans le lecteur de scénario.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -483,7 +428,7 @@ export function PreviewPanel({
                 ? 'rgba(139,92,246,0.80)'
                 : 'rgba(139,92,246,0.35)',
             color: isSaved ? T.green : '#fff',
-            fontFamily: 'Syne, sans-serif',
+            fontFamily: FONTS.display,
             fontSize: 15,
             fontWeight: 800,
             display: 'flex',

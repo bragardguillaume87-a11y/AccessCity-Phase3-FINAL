@@ -1,4 +1,4 @@
-import { T } from './constants';
+import { T, FONTS } from './constants';
 
 export function SectionLabel({ label, color }: { label: string; color: string }) {
   return (
@@ -6,7 +6,7 @@ export function SectionLabel({ label, color }: { label: string; color: string })
       <div style={{ width: 3, height: 14, borderRadius: 2, background: color, flexShrink: 0 }} />
       <span
         style={{
-          fontFamily: 'Syne, sans-serif',
+          fontFamily: FONTS.display,
           fontSize: 11,
           fontWeight: 800,
           letterSpacing: '0.09em',

@@ -13,7 +13,9 @@ import { cn } from '@/lib/utils';
 import { useCharactersStore } from '@/stores';
 import { DEFAULTS } from '@/config/constants';
 import type { DialogueChoice, Scene, MinigameConfig } from '@/types';
+import type { DialogueAudio } from '@/types/audio';
 import type { ComplexityLevel } from '@/types';
+import { useAssets } from '@/hooks/useAssets';
 import type { ResponseData } from '../../DialogueWizard/hooks/useDialogueForm';
 import { BinaryChoiceField } from './BinaryChoiceField';
 import { DiceChoiceCard } from '../../DialogueWizard/components/DiceChoiceBuilder/DiceChoiceCard';
@@ -158,6 +160,8 @@ interface ComposerFormPanelProps {
   onUpdateResponse: (index: number, updates: Partial<ResponseData>) => void;
   onAddChoice: () => void;
   onRemoveChoice: (index: number) => void;
+  sfx?: DialogueAudio;
+  onUpdateSfx: (sfx: DialogueAudio | undefined) => void;
   onUpdateMinigame: (config: MinigameConfig) => void;
   onUpdateSubtype: (subtype: 'normal' | 'phonecall') => void;
 }
@@ -193,10 +197,13 @@ export function ComposerFormPanel({
   onUpdateResponse,
   onAddChoice,
   onRemoveChoice,
+  sfx,
+  onUpdateSfx,
   onUpdateMinigame,
   onUpdateSubtype,
 }: ComposerFormPanelProps) {
   const characters = useCharactersStore((state) => state.characters);
+  const { assets: audioAssets } = useAssets({ category: 'music' });
   const [activeTab, setActiveTab] = useState(0);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const voiceBtnRef = useRef<HTMLButtonElement>(null);
@@ -762,6 +769,107 @@ export function ComposerFormPanel({
           </div>
         </div>
       </div>
+
+      {/* ── SFX section ──────────────────────────────────────────────────── */}
+      {audioAssets.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <SectionBar label="Effet sonore" color="#fdba74" />
+          <div
+            style={{
+              borderRadius: 10,
+              border: `1.5px solid ${sfx ? 'rgba(253,186,116,0.40)' : 'rgba(255,255,255,0.14)'}`,
+              background: sfx ? 'rgba(253,186,116,0.08)' : 'rgba(255,255,255,0.06)',
+              padding: '10px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              transition: 'border-color 0.2s, background 0.2s',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>🔊</span>
+              <select
+                value={sfx?.url ?? ''}
+                onChange={(e) => {
+                  const url = e.target.value;
+                  if (!url) {
+                    onUpdateSfx(undefined);
+                    return;
+                  }
+                  onUpdateSfx({ url, volume: sfx?.volume ?? 0.7 });
+                }}
+                style={{
+                  flex: 1,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1.5px solid rgba(255,255,255,0.18)',
+                  borderRadius: 7,
+                  padding: '5px 8px',
+                  fontSize: 12,
+                  color: sfx ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.45)',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">— Aucun son —</option>
+                {audioAssets.map((a) => (
+                  <option key={a.path} value={a.url ?? a.path}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              {sfx && (
+                <button
+                  type="button"
+                  onClick={() => onUpdateSfx(undefined)}
+                  title="Supprimer le son"
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: 'rgba(239,68,68,0.18)',
+                    border: '1.5px solid rgba(239,68,68,0.40)',
+                    color: '#fca5a5',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {sfx && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
+                  Vol.
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={sfx.volume ?? 0.7}
+                  onChange={(e) => onUpdateSfx({ ...sfx, volume: parseFloat(e.target.value) })}
+                  style={{ flex: 1, accentColor: '#fdba74', cursor: 'pointer' }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'rgba(253,186,116,0.9)',
+                    fontWeight: 700,
+                    minWidth: 28,
+                    textAlign: 'right',
+                  }}
+                >
+                  {Math.round((sfx.volume ?? 0.7) * 100)}%
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Minigame section ─────────────────────────────────────────────── */}
       {complexityLevel === 'minigame' && (

@@ -374,6 +374,8 @@ export function DialogueComposerV2({
                   onUpdateResponse={formActions.updateResponse}
                   onAddChoice={formActions.addChoice}
                   onRemoveChoice={formActions.removeChoice}
+                  sfx={formData.sfx}
+                  onUpdateSfx={(s) => formActions.updateField('sfx', s)}
                   onUpdateMinigame={formActions.updateMinigame}
                   onUpdateSubtype={(sub) => formActions.updateField('dialogueSubtype', sub)}
                 />

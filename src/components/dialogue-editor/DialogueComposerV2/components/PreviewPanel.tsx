@@ -3,6 +3,7 @@ import type { DialogueFormData } from '../../DialogueWizard/hooks/useDialogueFor
 import type { Scene } from '@/types';
 import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { DialogueBox, hashStringToColor } from '@/components/ui/DialogueBox';
+import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
 import { T, FONTS, MINIGAME_CARDS, TYPE_TABS } from '../constants';
 
 interface PreviewPanelProps {
@@ -76,7 +77,8 @@ export function PreviewPanel({
           }}
         >
           {/* Zone scène — flex:1, fond + DialogueBox réelle en overlay */}
-          <div style={{ flex: 1, position: 'relative', minHeight: 200, overflow: 'hidden' }}>
+          {/* VisualFilterLayer : applique les filtres graphiques du projet (grain, scanlines, CRT…) */}
+          <VisualFilterLayer style={{ flex: 1, minHeight: 200, overflow: 'hidden' }}>
             {/* Pill "Aperçu en direct" + badge type — overlay haut-gauche */}
             <div
               style={{
@@ -256,7 +258,7 @@ export function PreviewPanel({
                 />
               </div>
             </div>
-          </div>
+          </VisualFilterLayer>
 
           {/* Bouton mini-jeu — affiché uniquement pour le type minigame */}
           {isMinigame && (

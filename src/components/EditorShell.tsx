@@ -121,12 +121,17 @@ function ModuleLoadingFallback() {
 // STUDIO MODULE SWITCHER
 // ============================================================================
 
-const MODULE_TABS: Array<{ id: StudioModule; label: string; Icon: LucideIcon }> = [
+const MODULE_TABS: Array<{
+  id: StudioModule;
+  label: string;
+  Icon: LucideIcon;
+  disabled?: boolean;
+}> = [
   { id: 'vn-editor', label: 'Visual Novel', Icon: BookOpen },
   { id: 'topdown', label: 'Carte 2D', Icon: Map },
-  { id: 'behavior', label: 'Comportements', Icon: GitBranch },
-  { id: 'ui-builder', label: 'Interface', Icon: LayoutDashboard },
-  { id: 'distribution', label: 'Distribution', Icon: Users2 },
+  { id: 'behavior', label: 'Comportements', Icon: GitBranch, disabled: true },
+  { id: 'ui-builder', label: 'Interface', Icon: LayoutDashboard, disabled: true },
+  { id: 'distribution', label: 'Distribution', Icon: Users2, disabled: true },
   { id: 'preview', label: 'Prévisualiser', Icon: Play },
 ];
 
@@ -142,20 +147,31 @@ function StudioModuleSwitcher({
       className="flex-shrink-0 flex items-center gap-1 px-3 h-9 bg-card border-b border-border"
       aria-label="Modules du studio"
     >
-      {MODULE_TABS.map(({ id, label, Icon }) => {
+      {MODULE_TABS.map(({ id, label, Icon, disabled }) => {
         const isActive = activeModule === id;
         return (
           <button
             key={id}
-            onClick={() => onModuleChange(id)}
+            onClick={() => !disabled && onModuleChange(id)}
+            disabled={disabled}
             className="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold transition-colors"
             style={{
-              color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-              background: isActive ? 'var(--color-primary-subtle)' : 'transparent',
-              border: isActive ? '1px solid var(--color-primary-35)' : '1px solid transparent',
+              color: disabled
+                ? 'var(--color-text-disabled)'
+                : isActive
+                  ? 'var(--color-primary)'
+                  : 'var(--color-text-secondary)',
+              background: isActive && !disabled ? 'var(--color-primary-subtle)' : 'transparent',
+              border:
+                isActive && !disabled
+                  ? '1px solid var(--color-primary-35)'
+                  : '1px solid transparent',
+              opacity: disabled ? 0.45 : 1,
+              cursor: disabled ? 'not-allowed' : 'pointer',
             }}
             aria-pressed={isActive}
-            aria-label={label}
+            aria-label={disabled ? `${label} (bientôt disponible)` : label}
+            title={disabled ? 'Bientôt disponible' : undefined}
           >
             <Icon size={13} aria-hidden="true" />
             {label}

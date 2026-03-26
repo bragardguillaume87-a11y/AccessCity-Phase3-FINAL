@@ -1,7 +1,6 @@
 import React, { Suspense } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import { Film, MessageSquare } from 'lucide-react';
-import ScenesSidebar from './ScenesSidebar';
+import { Film } from 'lucide-react';
+import { motion } from 'framer-motion';
 import DialoguesPanel from './DialoguesPanel';
 import { LeftPanelJumpBar } from './LeftPanelJumpBar';
 import { useScenesStore, useUIStore } from '../../stores/index';
@@ -37,15 +36,11 @@ export interface LeftPanelProps {
   onSceneSelect?: (sceneId: string) => void;
 }
 
-export default function LeftPanel({
-  activeTab,
-  onTabChange,
-  onDialogueSelect,
-  onSceneSelect,
-}: LeftPanelProps) {
+export default function LeftPanel({ onDialogueSelect, onSceneSelect }: LeftPanelProps) {
   // Zustand stores
-  const scenes = useScenesStore((state) => state.scenes); // SceneMetadata[] (pour ScenesSidebar)
+  const scenes = useScenesStore((state) => state.scenes);
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
+  const setScenesBrowserOpen = useUIStore((state) => state.setScenesBrowserOpen);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
   const isCinematicSelected = isCinematicScene(selectedScene);
@@ -67,12 +62,6 @@ export default function LeftPanel({
   // PHASE 4: Cosmos theme effects for node creation celebration
   const isCosmosTheme = useIsCosmosTheme();
   const { celebrateNodeCreation } = useCosmosEffects();
-
-  // Gestionnaire de changement d'onglet
-  const handleTabChange = (newTab: string) => {
-    const tab = newTab as 'scenes' | 'dialogues';
-    onTabChange(tab);
-  };
 
   const handleWizardSave = (dialogues: Dialogue[]) => {
     // Guard: cinematic scenes do not store dialogues in dialoguesStore
@@ -108,72 +97,129 @@ export default function LeftPanel({
     setEditDialogueIndex(undefined);
   };
 
+  const sceneIndex = scenes.findIndex((s) => s.id === selectedSceneForEdit);
+
   return (
     <>
       <div className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]">
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="flex-1 min-h-0 flex flex-col"
+        {/* ── Compact scene header — replaces "Scènes" tab ──
+            Shows the active scene thumbnail + title + clapperboard button → ScenesBrowser.
+            ⚠️ min-h-0 obligatoire sur le wrapper flex pour que DialoguesPanel scroll correctement. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderBottom: '1px solid var(--color-border-base)',
+            flexShrink: 0,
+          }}
         >
-          {/* Tabs Header — compact vertical (icon + micro-label) pour tenir dans 160px */}
-          <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-[var(--color-border-base)] bg-transparent p-1 h-auto gap-1">
-            <TabsTrigger
-              value="scenes"
-              className="rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-white data-[state=active]:shadow-none transition-all duration-200 h-11 flex flex-col gap-1 px-2"
-            >
-              <Film className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-              <span className="text-xs leading-none font-semibold">Scènes</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="dialogues"
-              className="rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-white data-[state=active]:shadow-none transition-all duration-200 h-11 flex flex-col gap-1 px-2"
-            >
-              <MessageSquare className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-              <span className="text-xs leading-none font-semibold">Dialogues</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Tabs Content avec animations fade-in
-            ⚠️ min-h-0 obligatoire : sans lui, min-height:auto sur TabsContent permet au contenu
-            de dépasser la hauteur flex allouée → JumpBar clippé par overflow-hidden du Panel.
-            Pas de wrapper h-full overflow-y-auto : ScenesSidebar et DialoguesPanel gèrent
-            leur propre scroll en interne (filmstrip/list flex-1 overflow-y-auto). */}
-          <TabsContent
-            value="scenes"
-            className="flex-1 min-h-0 overflow-hidden m-0 animate-in fade-in duration-200"
+          {/* Scene thumbnail 16:9 — données réelles depuis le store (Will Wright §4.1) */}
+          <div
+            style={{
+              width: 44,
+              height: 28,
+              borderRadius: 4,
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
           >
-            <ScenesSidebar
-              scenes={scenes}
-              selectedSceneId={selectedSceneForEdit}
-              onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value="dialogues"
-            className="flex-1 min-h-0 overflow-hidden m-0 animate-in fade-in duration-200"
-          >
-            {isCinematicSelected ? (
-              <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
-                <Film className="w-8 h-8 text-violet-400 opacity-40" aria-hidden="true" />
-                <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  Scène cinématique
-                </p>
-                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                  Les dialogues ne sont pas disponibles pour ce type de scène. Utilisez
-                  l&apos;Éditeur Cinématique pour créer des événements.
-                </p>
-              </div>
+            {selectedScene?.backgroundUrl ? (
+              <img
+                src={selectedScene.backgroundUrl}
+                alt=""
+                aria-hidden="true"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             ) : (
-              <DialoguesPanel onDialogueSelect={onDialogueSelect} />
+              <div
+                aria-hidden="true"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                }}
+              />
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
 
-        {/* HUD Compact 110px — nav scènes/dialogues + info row, aligné avec la zone timeline */}
+          {/* Scene title + number */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--color-text-primary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.3,
+              }}
+            >
+              {selectedScene?.title ?? 'Aucune scène'}
+            </div>
+            {sceneIndex >= 0 && (
+              <div
+                style={{
+                  fontSize: 10,
+                  color: 'var(--color-text-muted)',
+                  fontFamily: 'var(--font-family-mono)',
+                }}
+              >
+                {String(sceneIndex + 1).padStart(2, '0')} / {String(scenes.length).padStart(2, '0')}
+              </div>
+            )}
+          </div>
+
+          {/* Clapperboard button → open ScenesBrowser (Norman §9.1 — affordance visible) */}
+          <motion.button
+            onClick={() => setScenesBrowserOpen(true)}
+            whileHover={{ scale: 1.1, y: -1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              flexShrink: 0,
+              background: 'rgba(139,92,246,0.12)',
+              border: '1.5px solid rgba(139,92,246,0.3)',
+              color: 'var(--color-primary)',
+              cursor: 'pointer',
+            }}
+            title="Toutes les scènes — Storyboard"
+            aria-label="Ouvrir le navigateur de scènes"
+          >
+            <Film size={13} />
+          </motion.button>
+        </div>
+
+        {/* ── Dialogues panel (always visible) ──
+            ⚠️ flex-1 min-h-0 : DialoguesPanel gère son propre scroll interne. */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {isCinematicSelected ? (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
+              <Film className="w-8 h-8 text-violet-400 opacity-40" aria-hidden="true" />
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Scène cinématique
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                Les dialogues ne sont pas disponibles pour ce type de scène. Utilisez l&apos;Éditeur
+                Cinématique pour créer des événements.
+              </p>
+            </div>
+          ) : (
+            <DialoguesPanel onDialogueSelect={onDialogueSelect} />
+          )}
+        </div>
+
+        {/* HUD Compact — nav scènes/dialogues + info row */}
         <LeftPanelJumpBar
-          activeTab={activeTab}
+          activeTab="dialogues"
           onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
           onDialogueSelect={onDialogueSelect}
         />

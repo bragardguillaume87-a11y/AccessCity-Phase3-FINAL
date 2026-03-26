@@ -33,6 +33,7 @@ import Sidebar from './layout/Sidebar';
 import Inspector from './layout/Inspector';
 import { AnnouncementRegion, AssertiveAnnouncementRegion } from './ui/AnnouncementRegion.tsx';
 import MainCanvas from './panels/MainCanvas';
+import { ScenesBrowser } from './panels/ScenesBrowser';
 import { CinematicInlinePlayer } from './panels/CinematicInlinePlayer';
 import { VisualFilterLayer } from './ui/VisualFilterLayer';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -726,6 +727,7 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
             <CinematicEditorModal />
           </ErrorBoundary>
         )}
+        <ScenesBrowser />
         {/* Dev Dashboard — visible uniquement en mode dev */}
         {(import.meta.env.DEV || import.meta.env.VITE_DEV_DASHBOARD === 'true') &&
           activeModal === 'dev-dashboard' &&

@@ -5,11 +5,12 @@
  * Design : cartes 16:9 (storyboard) · vignette gradient · badge monospace · strip couleur ·
  *          corner fold · stagger entry · drag-to-reorder (dnd-kit rectSortingStrategy) ·
  *          framer-motion layout spring pour la réorganisation.
+ *          Hover actions : duplicate · delete · color picker (Norman §9 affordances visibles)
  *
  * Conseillers : Will Wright §4.2 (taux utilisation) · Nijman §8 (game feel) ·
- *               Quilez §14 (badge monospace) · Norman §9 (affordances)
+ *               Quilez §14 (badge monospace) · Norman §9 (affordances) · Muratori §13 (no over-abstract)
  */
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
@@ -28,7 +29,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Copy, Trash2 } from 'lucide-react';
 import type { SceneMetadata } from '@/types';
 import { useScenesStore } from '@/stores/index';
 import { useUIStore } from '@/stores/uiStore';
@@ -43,6 +44,20 @@ const BG_GRADIENTS = [
   'linear-gradient(135deg, #0f2417 0%, #1a3a2a 50%, #0d4a2a 100%)',
 ] as const;
 
+// ── Palette couleurs — identique à ScenesSidebar ──────────────────────────────
+const COLOR_PALETTE = [
+  '#6b5ce7',
+  '#fa6d9a',
+  '#4ade80',
+  '#fbbf24',
+  '#f87171',
+  '#67e8f9',
+  '#a78bfa',
+  '#fb923c',
+  '#e879f9',
+  'rgba(255,255,255,0.3)',
+];
+
 // ── EMPTY_* module-level pour fallbacks stables (Acton §15.4) ─────────────────
 const EMPTY_CHARS: never[] = [];
 
@@ -55,6 +70,9 @@ interface BrowserSceneCardProps {
   dialogueCount: number;
   charactersCount: number;
   onSelect: () => void;
+  onDuplicate: (sceneId: string) => void;
+  onDelete: (sceneId: string) => void;
+  onUpdateColor: (sceneId: string, color: string) => void;
 }
 
 function BrowserSceneCard({
@@ -64,7 +82,13 @@ function BrowserSceneCard({
   dialogueCount,
   charactersCount,
   onSelect,
+  onDuplicate,
+  onDelete,
+  onUpdateColor,
 }: BrowserSceneCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: scene.id,
   });
@@ -80,6 +104,11 @@ function BrowserSceneCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setPickerOpen(false);
+      }}
     >
       {/* Inner motion.div — visual card (framer-motion layout + hover/tap) */}
       <motion.div
@@ -112,7 +141,6 @@ function BrowserSceneCard({
           borderRadius: 10,
           overflow: 'hidden',
           cursor: isDragging ? 'grabbing' : 'pointer',
-          // Left color strip — index card metaphor (Highland 2 style)
           borderLeft: `3px solid ${sceneColor}`,
           border: isSelected
             ? `2px solid var(--color-primary)`
@@ -214,6 +242,147 @@ function BrowserSceneCard({
               CIN
             </span>
           )}
+
+          {/* ── Hover actions overlay (Norman §9.1 — affordances visibles au survol) ── */}
+          <AnimatePresence>
+            {isHovered && !isDragging && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-end',
+                  padding: 8,
+                  gap: 6,
+                  background: 'rgba(0,0,0,0.18)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Color dot — visible seulement pour les scènes non-cinématiques */}
+                {!isCinematic && (
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPickerOpen((o) => !o);
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      aria-label="Changer la couleur de la scène"
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: sceneColor,
+                        border: '2px solid rgba(255,255,255,0.5)',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    />
+                    {/* Color picker palette */}
+                    {pickerOpen && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          top: 28,
+                          right: 0,
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(5, 1fr)',
+                          gap: 5,
+                          padding: 8,
+                          background: 'rgba(16,19,30,0.97)',
+                          borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
+                          zIndex: 10,
+                        }}
+                      >
+                        {COLOR_PALETTE.map((c) => (
+                          <button
+                            key={c}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateColor(scene.id, c);
+                              setPickerOpen(false);
+                            }}
+                            aria-label={`Couleur ${c}`}
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: 4,
+                              background: c,
+                              border:
+                                c === sceneColor
+                                  ? '2px solid white'
+                                  : '1px solid rgba(255,255,255,0.2)',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Duplicate button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicate(scene.id);
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  title="Dupliquer"
+                  aria-label="Dupliquer la scène"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'rgba(255,255,255,0.9)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Copy size={12} />
+                </button>
+
+                {/* Delete button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(scene.id);
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  title="Supprimer"
+                  aria-label="Supprimer la scène"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: 'rgba(239,68,68,0.18)',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    color: 'var(--color-danger)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* ── Paper footer ── */}
@@ -269,6 +438,8 @@ export function ScenesBrowser() {
   const setScenesBrowserOpen = useUIStore((s) => s.setScenesBrowserOpen);
   const scenes = useScenesStore((s) => s.scenes);
   const addScene = useScenesStore((s) => s.addScene);
+  const deleteScene = useScenesStore((s) => s.deleteScene);
+  const updateScene = useScenesStore((s) => s.updateScene);
   const reorderScenes = useScenesStore((s) => s.reorderScenes);
   const selectedSceneId = useUIStore((s) => s.selectedSceneForEdit);
   const setSelectedSceneForEdit = useUIStore((s) => s.setSelectedSceneForEdit);
@@ -307,6 +478,60 @@ export function ScenesBrowser() {
     if (id) setSelectedSceneForEdit(id);
     setScenesBrowserOpen(false);
   }, [addScene, setSelectedSceneForEdit, setScenesBrowserOpen]);
+
+  const handleUpdateColor = useCallback(
+    (sceneId: string, color: string) => {
+      updateScene(sceneId, { color });
+    },
+    [updateScene]
+  );
+
+  const handleDuplicate = useCallback(
+    (sceneId: string) => {
+      // getState() dans le callback — invariant Phase 3
+      const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
+      if (!scene) return;
+      const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
+      const elements = useSceneElementsStore.getState().getElementsForScene(sceneId);
+      const newId = addScene(scene.sceneType);
+
+      updateScene(newId, {
+        title: `${scene.title} (copie)`,
+        description: scene.description,
+        backgroundUrl: scene.backgroundUrl,
+        color: scene.color,
+        cinematicEvents: scene.cinematicEvents ? [...scene.cinematicEvents] : undefined,
+      });
+
+      if (dialogues.length > 0) {
+        useDialoguesStore.getState().addDialogues(newId, dialogues);
+      }
+
+      elements.characters.forEach((char) => {
+        useSceneElementsStore
+          .getState()
+          .addCharacterToScene(newId, char.characterId, char.mood, char.position);
+      });
+
+      setSelectedSceneForEdit(newId);
+    },
+    [addScene, updateScene, setSelectedSceneForEdit]
+  );
+
+  const handleDelete = useCallback(
+    (sceneId: string) => {
+      const currentScenes = useScenesStore.getState().scenes;
+      if (currentScenes.length === 1) return;
+      if (window.confirm('Supprimer cette scène ?')) {
+        deleteScene(sceneId);
+        if (selectedSceneId === sceneId) {
+          const next = currentScenes.find((s) => s.id !== sceneId);
+          if (next) setSelectedSceneForEdit(next.id);
+        }
+      }
+    },
+    [deleteScene, selectedSceneId, setSelectedSceneForEdit]
+  );
 
   // ESC pour fermer
   useEffect(() => {
@@ -372,7 +597,7 @@ export function ScenesBrowser() {
               </h2>
               <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '2px 0 0' }}>
                 {scenes.length} scène{scenes.length !== 1 ? 's' : ''} · Glisser pour réorganiser ·
-                Échap pour fermer
+                Survol pour actions · Échap pour fermer
               </p>
             </div>
 
@@ -448,6 +673,9 @@ export function ScenesBrowser() {
                         elementsByScene[scene.id]?.characters?.length ?? EMPTY_CHARS.length
                       }
                       onSelect={() => handleSceneClick(scene.id)}
+                      onDuplicate={handleDuplicate}
+                      onDelete={handleDelete}
+                      onUpdateColor={handleUpdateColor}
                     />
                   ))}
                 </div>

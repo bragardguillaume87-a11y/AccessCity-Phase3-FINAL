@@ -188,7 +188,7 @@ export default function LeftPanel({
         }}
       >
         <DialogContent
-          className="max-w-[90vw] p-0 gap-0 max-h-[90vh]"
+          className="max-w-[90vw] p-0 gap-0 max-h-[90vh] [&>button.absolute]:hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >

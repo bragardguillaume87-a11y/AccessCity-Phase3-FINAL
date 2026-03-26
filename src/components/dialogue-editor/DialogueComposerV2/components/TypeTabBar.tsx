@@ -10,9 +10,9 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
   return (
     <div
       style={{
-        padding: '14px 16px 20px',
+        padding: '12px 20px 16px',
         display: 'flex',
-        gap: 8,
+        gap: 10,
         borderBottom: `1.5px solid ${T.border}`,
         background: 'rgba(0,0,0,0.10)',
         flexShrink: 0,
@@ -31,12 +31,12 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
             style={{
               flex: '1 1 0',
               maxWidth: 160,
-              borderRadius: 13,
+              borderRadius: 11,
               padding: '12px 10px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 8,
+              gap: 5,
               position: 'relative',
               background: isActive ? `${tab.c}c0` : T.card,
               border: `1.5px solid ${isActive ? tab.c : T.border}`,
@@ -68,9 +68,9 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
             )}
             <div
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: 9,
+                width: 26,
+                height: 26,
+                borderRadius: 8,
                 background: isActive ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.07)',
                 border: `1px solid ${isActive ? 'rgba(0,0,0,0.12)' : 'transparent'}`,
                 display: 'flex',
@@ -81,8 +81,8 @@ export function TypeTabBar({ activeType, onTypeChange }: TypeTabBarProps) {
               <svg
                 viewBox="0 0 20 20"
                 fill="none"
-                width={16}
-                height={16}
+                width={14}
+                height={14}
                 dangerouslySetInnerHTML={{ __html: tab.svgPath }}
               />
             </div>

@@ -150,11 +150,9 @@ export const MINIGAME_CARDS: MinigameCardDef[] = [
 ];
 
 export const TIMER_CHIPS: { value: number; color: string; bg: string }[] = [
-  { value: 3, color: '#ff7070', bg: 'rgba(255,112,112,0.18)' },
   { value: 5, color: T.orange, bg: T.orangeBg },
   { value: 10, color: T.amber, bg: T.amberBg },
   { value: 15, color: T.green, bg: T.greenBg },
-  { value: 20, color: T.teal, bg: T.tealBg },
   { value: 30, color: T.blue, bg: T.blueBg },
 ];
 

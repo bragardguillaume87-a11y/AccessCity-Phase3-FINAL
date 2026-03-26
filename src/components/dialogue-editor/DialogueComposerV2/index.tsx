@@ -55,10 +55,6 @@ export function DialogueComposerV2({
     [characters, formData.speaker]
   );
   const speakerName = speakerChar?.name ?? 'Narrateur';
-  const speakerMoods = useMemo(
-    () => (speakerChar ? Object.keys(speakerChar.sprites) : []),
-    [speakerChar]
-  );
 
   // isNarrator — même logique que useSpeakerLayout (role narrator + ID system)
   const isNarrator = useMemo(
@@ -92,8 +88,6 @@ export function DialogueComposerV2({
     (formData.choices.length > 0 && formData.choices.every((c) => c.text?.trim().length >= 5));
   const canSave = formData.complexityLevel !== null && textValid && choicesValid && !isSaved;
 
-  const wordCount = formData.text.trim() ? formData.text.trim().split(/\s+/).length : 0;
-  const charCount = formData.text.length;
   const isMinigame = formData.complexityLevel === 'minigame';
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -131,16 +125,6 @@ export function DialogueComposerV2({
       formActions.updateMinigame({
         ...(formData.minigame ?? { type: 'braille' }),
         difficulty: val,
-      });
-    },
-    [formActions, formData.minigame]
-  );
-
-  const handleTimerToggle = useCallback(
-    (enabled: boolean) => {
-      formActions.updateMinigame({
-        ...(formData.minigame ?? { type: 'braille', difficulty: 3 }),
-        timeout: enabled ? 10000 : 0,
       });
     },
     [formActions, formData.minigame]
@@ -246,7 +230,7 @@ export function DialogueComposerV2({
         className="ac-modal-content"
         style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
       >
-        {/* ── TOPBAR ──────────────────────────────────────────────────────── */}
+        {/* ── TOPBAR — pleine largeur ──────────────────────────────────────── */}
         <div
           style={{
             padding: '12px 20px',
@@ -323,69 +307,66 @@ export function DialogueComposerV2({
           </button>
         </div>
 
-        {/* ── TYPE TAB BAR ────────────────────────────────────────────────── */}
-        <TypeTabBar activeType={formData.complexityLevel} onTypeChange={handleTypeChange} />
-
-        {/* ── BODY — split redimensionnable ───────────────────────────────── */}
+        {/* ── SPLIT — TypeTabBar gauche + preview pleine hauteur droite ────── */}
         <PanelGroup orientation="horizontal" style={{ flex: 1, minHeight: 0 }}>
-          {/* Panneau gauche — formulaire */}
+          {/* Panneau gauche — TypeTabBar + formulaire */}
           <Panel defaultSize={40} minSize={25} style={{ overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%',
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 14,
-                overflowY: 'auto',
-              }}
-            >
-              {isMinigame ? (
-                <MinigameFormPanel
-                  formData={formData}
-                  characters={characters}
-                  speakerChar={speakerChar}
-                  speakerName={speakerName}
-                  speakerMoods={speakerMoods}
-                  wordCount={wordCount}
-                  charCount={charCount}
-                  onSpeakerChange={handleSpeakerChange}
-                  onMoodChange={handleMoodChange}
-                  onTextChange={(t) => formActions.updateField('text', t)}
-                  onMinigameTypeChange={handleMinigameTypeChange}
-                  onDifficultyChange={handleDifficultyChange}
-                  onTimerToggle={handleTimerToggle}
-                  onTimerChip={handleTimerChip}
-                  onBrailleModeChange={handleBrailleModeChange}
-                />
-              ) : (
-                <ComposerFormPanel
-                  speaker={formData.speaker}
-                  text={formData.text}
-                  voicePreset={formData.voicePreset}
-                  speakerMood={formData.speakerMood}
-                  complexityLevel={formData.complexityLevel}
-                  choices={formData.choices}
-                  responses={formData.responses}
-                  scenes={scenes}
-                  currentSceneId={sceneId}
-                  minigame={formData.minigame}
-                  dialogueSubtype={formData.dialogueSubtype}
-                  accentColor={themeColors?.accent}
-                  onSpeakerChange={handleSpeakerChange}
-                  onTextChange={(t) => formActions.updateField('text', t)}
-                  onVoicePresetChange={(p) => formActions.updateField('voicePreset', p)}
-                  onSpeakerMoodChange={handleMoodChange}
-                  onUpdateChoice={formActions.updateChoice}
-                  onUpdateResponse={formActions.updateResponse}
-                  onAddChoice={formActions.addChoice}
-                  onRemoveChoice={formActions.removeChoice}
-                  sfx={formData.sfx}
-                  onUpdateSfx={(s) => formActions.updateField('sfx', s)}
-                  onUpdateMinigame={formActions.updateMinigame}
-                  onUpdateSubtype={(sub) => formActions.updateField('dialogueSubtype', sub)}
-                />
-              )}
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* ── TYPE TAB BAR ──────────────────────────────────────────── */}
+              <TypeTabBar activeType={formData.complexityLevel} onTypeChange={handleTypeChange} />
+
+              {/* ── FORMULAIRE — scrollable ────────────────────────────────── */}
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  padding: '10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  overflowY: 'auto',
+                }}
+              >
+                {isMinigame ? (
+                  <MinigameFormPanel
+                    formData={formData}
+                    onSpeakerChange={handleSpeakerChange}
+                    onMoodChange={handleMoodChange}
+                    onTextChange={(t) => formActions.updateField('text', t)}
+                    onMinigameTypeChange={handleMinigameTypeChange}
+                    onDifficultyChange={handleDifficultyChange}
+                    onTimerChip={handleTimerChip}
+                    onBrailleModeChange={handleBrailleModeChange}
+                    onVoicePresetChange={(p) => formActions.updateField('voicePreset', p)}
+                    onUpdateSubtype={(sub) => formActions.updateField('dialogueSubtype', sub)}
+                  />
+                ) : (
+                  <ComposerFormPanel
+                    speaker={formData.speaker}
+                    text={formData.text}
+                    voicePreset={formData.voicePreset}
+                    speakerMood={formData.speakerMood}
+                    complexityLevel={formData.complexityLevel}
+                    choices={formData.choices}
+                    responses={formData.responses}
+                    scenes={scenes}
+                    currentSceneId={sceneId}
+                    minigame={formData.minigame}
+                    dialogueSubtype={formData.dialogueSubtype}
+                    accentColor={themeColors?.accent}
+                    onSpeakerChange={handleSpeakerChange}
+                    onTextChange={(t) => formActions.updateField('text', t)}
+                    onVoicePresetChange={(p) => formActions.updateField('voicePreset', p)}
+                    onSpeakerMoodChange={handleMoodChange}
+                    onUpdateChoice={formActions.updateChoice}
+                    onUpdateResponse={formActions.updateResponse}
+                    onAddChoice={formActions.addChoice}
+                    onRemoveChoice={formActions.removeChoice}
+                    onUpdateMinigame={formActions.updateMinigame}
+                    onUpdateSubtype={(sub) => formActions.updateField('dialogueSubtype', sub)}
+                  />
+                )}
+              </div>
             </div>
           </Panel>
 
@@ -414,7 +395,7 @@ export function DialogueComposerV2({
             />
           </PanelResizeHandle>
 
-          {/* Panneau droit — preview */}
+          {/* Panneau droit — preview pleine hauteur */}
           <Panel defaultSize={60} minSize={30} style={{ overflow: 'hidden' }}>
             <PreviewPanel
               formData={formData}
@@ -422,7 +403,6 @@ export function DialogueComposerV2({
               speakerName={speakerName}
               speakerPortraitUrl={speakerPortraitUrl}
               isNarrator={isNarrator}
-              wordCount={wordCount}
               testMode={overlayOpen}
               isSaved={isSaved}
               canSave={canSave}

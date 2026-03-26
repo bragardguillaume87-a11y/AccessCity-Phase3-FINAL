@@ -1,5 +1,5 @@
-/* Poppins + Audiowide conservés pour compatibilité, DM Sans + Syne ajoutés pour le nouveau design */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Syne:wght@600;700;800&family=Poppins:wght@400;600;700&family=Audiowide&display=swap');
+/* Poppins + Audiowide conservés pour compatibilité, DM Sans + Syne + Nunito ajoutés pour le nouveau design */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Syne:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;600;700&family=Audiowide&display=swap');
 @import './styles/tokens.css';
 @import './styles/studio.css';
 
@@ -82,6 +82,12 @@ select:focus-visible {
 /* Improved contrast for placeholders - WCAG AA compliant */
 ::placeholder {
   color: #94a3b8; /* slate-400 - 4.5:1 contrast ratio on dark bg */
+  opacity: 1;
+}
+
+/* Dialogue box Octopath style — placeholder sur fond blanc */
+.ac-dialogue-field::placeholder {
+  color: rgba(26, 18, 51, 0.36);
   opacity: 1;
 }
 

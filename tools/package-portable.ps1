@@ -83,6 +83,44 @@ if ((Test-Path $AppDataAssets) -and (-not $BackupZip)) {
     Write-Host "  [OK] Assets AppData copies : $AssetCount fichier(s)" -ForegroundColor Cyan
 }
 
+# ── README.txt ───────────────────────────────────────────────────────────────
+$ReadmeContent = @"
+AccessCity Studio — Version Portable
+======================================
+
+PREREQUIS
+---------
+Windows 10 (21H2+) ou Windows 11 : WebView2 est deja installe par defaut.
+Windows 10 ancien : telecharger WebView2 Runtime sur https://developer.microsoft.com/microsoft-edge/webview2/
+
+LANCEMENT
+---------
+Double-cliquer sur AccessCity-Studio.exe
+Pas d'installation requise. Le dossier peut etre copie sur cle USB.
+
+DONNEES & SAUVEGARDE
+--------------------
+Les donnees sont stockees dans le sous-dossier "data\" a cote de l'exe :
+  data\webview\   — profil navigateur + localStorage (sauvegarde automatique)
+  data\assets\    — images, sons et fichiers uploades
+
+Pour sauvegarder ou transporter votre projet :
+  Ouvrir AccessCity Studio -> Parametres (icone engrenage) -> Exporter
+  Un fichier *-backup.zip est genere, contenant toutes les scenes et assets.
+
+Pour restaurer sur un autre PC :
+  Copier le *-backup.zip dans le dossier, renommer en "data\autoload.zip",
+  puis lancer l'exe (import automatique au premier lancement).
+
+SUPPORT
+-------
+Projet : AccessCity Visual Novel Editor
+"@
+
+$ReadmePath = Join-Path $OutDir "README.txt"
+Set-Content -Path $ReadmePath -Value $ReadmeContent -Encoding UTF8
+Write-Host "  [OK] README.txt cree" -ForegroundColor Cyan
+
 # ── ZIP final ────────────────────────────────────────────────────────────────
 if (Test-Path $ZipDest) { Remove-Item $ZipDest -Force }
 Compress-Archive -Path "$OutDir\*" -DestinationPath $ZipDest

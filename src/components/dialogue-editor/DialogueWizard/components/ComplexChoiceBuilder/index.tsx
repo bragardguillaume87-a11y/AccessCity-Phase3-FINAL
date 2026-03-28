@@ -3,6 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DialogueChoice } from '@/types';
+import {
+  CHOICE_MIN_TEXT_LENGTH,
+  CHOICE_MIN_COUNT,
+  CHOICE_MAX_COUNT,
+} from '@/config/dialogueValidation';
 import { ComplexChoiceCard } from './ComplexChoiceCard';
 
 interface ComplexChoiceBuilderProps {
@@ -12,9 +17,6 @@ interface ComplexChoiceBuilderProps {
   onRemoveChoice?: (index: number) => void;
   onValidChange: (isValid: boolean) => void;
 }
-
-const MIN_CHOICES = 2;
-const MAX_CHOICES = 4;
 
 /** "Choix A", "Choix B", "Choix C", "Choix D" */
 function getChoiceTitle(index: number): string {
@@ -28,15 +30,19 @@ export function ComplexChoiceBuilder({
   onRemoveChoice,
   onValidChange,
 }: ComplexChoiceBuilderProps) {
-  const canAddChoice    = choices.length < MAX_CHOICES;
-  const canRemoveChoice = choices.length > MIN_CHOICES;
+  const canAddChoice = choices.length < CHOICE_MAX_COUNT;
+  const canRemoveChoice = choices.length > CHOICE_MIN_COUNT;
 
-  const isValid = useMemo(() =>
-    choices.length >= MIN_CHOICES &&
-    choices.every(c => c.text && c.text.trim().length >= 5),
-  [choices]);
+  const isValid = useMemo(
+    () =>
+      choices.length >= CHOICE_MIN_COUNT &&
+      choices.every((c) => c.text && c.text.trim().length >= CHOICE_MIN_TEXT_LENGTH),
+    [choices]
+  );
 
-  useEffect(() => { onValidChange(isValid); }, [isValid, onValidChange]);
+  useEffect(() => {
+    onValidChange(isValid);
+  }, [isValid, onValidChange]);
 
   const nextLabel = `Ajouter Choix ${String.fromCharCode(65 + choices.length)}`;
 

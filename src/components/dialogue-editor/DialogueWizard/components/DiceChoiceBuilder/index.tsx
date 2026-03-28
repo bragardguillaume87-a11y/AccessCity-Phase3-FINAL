@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DialogueChoice } from '@/types';
+import { CHOICE_MIN_TEXT_LENGTH } from '@/config/dialogueValidation';
 import { DiceChoiceCard } from './DiceChoiceCard';
 
 interface DiceChoiceBuilderProps {
@@ -35,7 +36,7 @@ export function DiceChoiceBuilder({
   const validation = useMemo(() => {
     if (choices.length === 0) return { isValid: false };
     for (const choice of choices) {
-      const hasText = choice.text && choice.text.trim().length >= 5;
+      const hasText = choice.text && choice.text.trim().length >= CHOICE_MIN_TEXT_LENGTH;
       const hasDiceCheck = choice.diceCheck?.stat && choice.diceCheck.difficulty >= 1;
       if (!hasText || !hasDiceCheck) return { isValid: false };
     }

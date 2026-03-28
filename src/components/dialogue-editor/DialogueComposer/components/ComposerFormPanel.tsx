@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { DialogueTextareaCard } from '../../DialogueComposerV2/helpers';
 import type { DialogueChoice, Scene, MinigameConfig } from '@/types';
+import { CHOICE_MIN_TEXT_LENGTH } from '@/config/dialogueValidation';
 import type { ComplexityLevel } from '@/types';
 import type { ResponseData } from '../../DialogueWizard/hooks/useDialogueForm';
 import { BinaryChoiceField } from './BinaryChoiceField';
@@ -100,7 +101,7 @@ export function ComposerFormPanel({
     (i: number): boolean => {
       const c = choices[i];
       if (!c) return false;
-      const hasText = c.text?.trim().length >= 5;
+      const hasText = c.text?.trim().length >= CHOICE_MIN_TEXT_LENGTH;
       if (complexityLevel === 'dice') {
         return hasText && !!c.diceCheck?.stat && (c.diceCheck?.difficulty ?? 0) >= 1;
       }

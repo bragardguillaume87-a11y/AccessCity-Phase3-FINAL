@@ -3,6 +3,7 @@ import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'reac
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
 import { DEFAULTS } from '@/config/constants';
+import { DIALOGUE_MIN_TEXT_LENGTH, CHOICE_MIN_TEXT_LENGTH } from '@/config/dialogueValidation';
 import type { Dialogue } from '@/types';
 import type { MinigameType } from '@/types/game';
 import { useUIStore, useCharactersStore, useSettingsStore } from '@/stores';
@@ -76,11 +77,12 @@ export function DialogueComposerV2({
   }, [dialogueComposerTheme, formData.complexityLevel]);
 
   // Validation
-  const textValid = formData.text.trim().length >= 10;
+  const textValid = formData.text.trim().length >= DIALOGUE_MIN_TEXT_LENGTH;
   const choicesValid =
     formData.complexityLevel === 'linear' ||
     formData.complexityLevel === 'minigame' ||
-    (formData.choices.length > 0 && formData.choices.every((c) => c.text?.trim().length >= 5));
+    (formData.choices.length > 0 &&
+      formData.choices.every((c) => c.text?.trim().length >= CHOICE_MIN_TEXT_LENGTH));
   const canSave = formData.complexityLevel !== null && textValid && choicesValid && !isSaved;
 
   const isMinigame = formData.complexityLevel === 'minigame';

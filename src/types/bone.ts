@@ -46,12 +46,30 @@ export interface BonePose {
   boneStates: Record<string, BonePoseState>;
 }
 
+/**
+ * Une entrée de keyframe dans un clip d'animation.
+ * Remplace le simple poseId string — ajoute durée et easing.
+ */
+export interface KeyframeEntry {
+  poseId: string;
+  /** Durée en frames (défaut = 1 × fps pour 1 seconde) */
+  duration: number;
+  /** Courbe d'interpolation vers le keyframe suivant */
+  easing: import('@/utils/animationEasing').EasingType;
+}
+
 export interface AnimationClip {
   id: string;
   name: string;
   fps: number;
-  /** Séquence ordonnée d'IDs de BonePose */
+  /**
+   * @deprecated Conservé pour la rétrocompatibilité undo/redo Zustand.
+   * Utiliser `keyframes` comme source de vérité.
+   * Synchronisé automatiquement par rigStore.addClip / updateClip.
+   */
   poseIds: string[];
+  /** Séquence ordonnée de keyframes (durée + easing par étape). */
+  keyframes: KeyframeEntry[];
   loop: boolean;
 }
 

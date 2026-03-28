@@ -3,7 +3,19 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { shallow } from 'zustand/shallow';
 import { setupAutoSave } from '../utils/storeSubscribers';
-import type { CharacterRig, Bone, SpritePart, BonePose, AnimationClip } from '../types/bone';
+import type {
+  CharacterRig,
+  Bone,
+  SpritePart,
+  BonePose,
+  AnimationClip,
+  KeyframeEntry,
+} from '../types/bone';
+
+/** Génère un tableau de KeyframeEntry depuis un tableau de poseIds (migration / défaut). */
+function poseIdsToKeyframes(poseIds: string[]): KeyframeEntry[] {
+  return poseIds.map((poseId) => ({ poseId, duration: 1, easing: 'linear' as const }));
+}
 
 /**
  * Rig Store — Squelettes cut-out pour le module Distribution.
@@ -235,11 +247,15 @@ export const useRigStore = create<RigState>()(
           // ── AnimationClip ────────────────────────────────────────────────────
           addClip: (rigId, clip) => {
             const id = `clip-${Date.now()}`;
+            // Garantit que keyframes est toujours en phase avec poseIds
+            const keyframes = clip.keyframes?.length
+              ? clip.keyframes
+              : poseIdsToKeyframes(clip.poseIds ?? []);
             set(
               (state) => ({
                 rigs: state.rigs.map((r) =>
                   r.id === rigId
-                    ? { ...r, animationClips: [...r.animationClips, { id, ...clip }] }
+                    ? { ...r, animationClips: [...r.animationClips, { id, ...clip, keyframes }] }
                     : r
                 ),
               }),
@@ -250,6 +266,15 @@ export const useRigStore = create<RigState>()(
           },
 
           updateClip: (rigId, clipId, patch) => {
+            // Synchronise poseIds ↔ keyframes selon ce qui a été modifié
+            const syncedPatch = { ...patch };
+            if (patch.poseIds && !patch.keyframes) {
+              // poseIds mis à jour → regénérer keyframes (rétrocompat)
+              syncedPatch.keyframes = poseIdsToKeyframes(patch.poseIds);
+            } else if (patch.keyframes && !patch.poseIds) {
+              // keyframes mis à jour → synchroniser poseIds (deprecated mais conservé)
+              syncedPatch.poseIds = patch.keyframes.map((kf) => kf.poseId);
+            }
             set(
               (state) => ({
                 rigs: state.rigs.map((r) =>
@@ -257,7 +282,7 @@ export const useRigStore = create<RigState>()(
                     ? {
                         ...r,
                         animationClips: r.animationClips.map((c) =>
-                          c.id === clipId ? { ...c, ...patch } : c
+                          c.id === clipId ? { ...c, ...syncedPatch } : c
                         ),
                       }
                     : r

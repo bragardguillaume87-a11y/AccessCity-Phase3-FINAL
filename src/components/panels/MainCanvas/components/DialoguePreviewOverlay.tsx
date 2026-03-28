@@ -6,6 +6,11 @@ import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { useSpeakerLayout } from '@/hooks/useSpeakerLayout';
 import { Z_INDEX } from '@/utils/zIndexLayers';
 import { DialogueBox } from '@/components/ui/DialogueBox';
+import {
+  getDialogueBoxWrapperStyle,
+  getDialogueBoxGradientStyle,
+  getDialogueBoxInnerStyle,
+} from '@/utils/dialogueBoxPosition';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
@@ -150,50 +155,32 @@ export function DialoguePreviewOverlay({
     </div>
   );
 
-  // Les narrateurs s'affichent toujours au centre (style Octopath Traveler),
-  // même règle que dans PreviewPlayer.
+  // Les narrateurs s'affichent toujours au centre (style Octopath Traveler).
   const position = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const isLeft = position.endsWith('-left');
+  const isRight = position.endsWith('-right');
+  const gradientStyle = getDialogueBoxGradientStyle(position);
+  const innerStyle = getDialogueBoxInnerStyle(position, isLeft, isRight);
 
   return (
     <div
-      className={`absolute pointer-events-none ${
-        position === 'top'
-          ? 'top-0 left-0 right-0'
-          : position === 'center'
-            ? 'inset-0 flex items-center'
-            : 'bottom-0 left-0 right-0'
-      }`}
-      style={{ zIndex: Z_INDEX.CANVAS_DIALOGUE_OVERLAY }}
+      className="absolute pointer-events-none"
+      style={{
+        ...getDialogueBoxWrapperStyle(
+          position,
+          dialogueBoxConfig.positionX,
+          dialogueBoxConfig.positionY
+        ),
+        zIndex: Z_INDEX.CANVAS_DIALOGUE_OVERLAY,
+      }}
     >
-      {/* Gradient adaptatif — masque le décor selon la position */}
-      {position !== 'center' && (
-        <div
-          className="absolute left-0 right-0 pointer-events-none"
-          style={{
-            ...(position === 'top'
-              ? {
-                  top: 0,
-                  height: '50%',
-                  background:
-                    'linear-gradient(to bottom, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
-                }
-              : {
-                  bottom: 0,
-                  height: '55%',
-                  background:
-                    'linear-gradient(to top, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
-                }),
-          }}
-          aria-hidden="true"
-        />
+      {/* Gradient adaptatif selon position */}
+      {gradientStyle && (
+        <div className="absolute pointer-events-none" style={gradientStyle} aria-hidden="true" />
       )}
 
-      {/* Boîte de dialogue partagée — 76% de la largeur du canvas (identique à PreviewPlayer) */}
-      <div
-        className={`relative px-4 max-w-[76%] mx-auto w-full pointer-events-auto ${
-          position === 'top' ? 'pt-3' : position === 'center' ? 'py-2' : 'pb-3'
-        }`}
-      >
+      {/* Boîte de dialogue */}
+      <div className="pointer-events-auto" style={innerStyle}>
         <DialogueBox
           speaker={isNarrator ? undefined : speakerDisplayName || undefined}
           displayText={displayText}

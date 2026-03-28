@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Move } from 'lucide-react';
+import type { DialogueBoxPosition } from '@/utils/dialogueBoxPosition';
 import { useSettingsStore } from '@/stores';
 import { PanelSection } from '@/components/ui/CollapsibleSection';
 import type { DialogueBoxStyle } from '@/types/scenes';
@@ -20,6 +21,8 @@ const UI_DEFAULTS: Required<DialogueBoxStyle> = {
   fontSize: 15,
   boxOpacity: 0.75,
   position: 'bottom',
+  positionX: 50,
+  positionY: 75,
   showPortrait: true,
   speakerAlign: 'auto',
   borderStyle: 'subtle',
@@ -173,6 +176,243 @@ function ToggleGroup<T extends string>({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Grille 3×3 de position — style "align tool" (Figma / Affinity)
+const POSITION_GRID: Array<{
+  value: DialogueBoxPosition;
+  label: string;
+  row: number;
+  col: number;
+}> = [
+  { value: 'top-left', label: '↖', row: 0, col: 0 },
+  { value: 'top', label: '↑', row: 0, col: 1 },
+  { value: 'top-right', label: '↗', row: 0, col: 2 },
+  { value: 'center', label: '⬜', row: 1, col: 1 },
+  { value: 'bottom-left', label: '↙', row: 2, col: 0 },
+  { value: 'bottom', label: '↓', row: 2, col: 1 },
+  { value: 'bottom-right', label: '↘', row: 2, col: 2 },
+];
+
+function PositionGrid({
+  value,
+  positionX,
+  positionY,
+  onChange,
+  onChangeXY,
+}: {
+  value: DialogueBoxPosition;
+  positionX: number;
+  positionY: number;
+  onChange: (v: DialogueBoxPosition) => void;
+  onChangeXY: (x: number, y: number) => void;
+}) {
+  return (
+    <div className="mb-3">
+      <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
+        POSITION
+      </p>
+
+      {/* Grille 3×3 */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 28px)',
+          gridTemplateRows: 'repeat(3, 28px)',
+          gap: 3,
+          marginBottom: 8,
+        }}
+      >
+        {/* Ligne 0 */}
+        {POSITION_GRID.filter((p) => p.row === 0).map((p) => (
+          <button
+            key={p.value}
+            onClick={() => onChange(p.value)}
+            aria-label={`Position ${p.value}`}
+            aria-pressed={value === p.value}
+            style={{
+              gridRow: p.row + 1,
+              gridColumn: p.col + 1,
+              width: 28,
+              height: 28,
+              borderRadius: 5,
+              border:
+                value === p.value
+                  ? '2px solid var(--color-primary)'
+                  : '1px solid var(--color-border-base)',
+              background:
+                value === p.value ? 'var(--color-primary-subtle)' : 'rgba(255,255,255,0.04)',
+              color: value === p.value ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.12s',
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+        {/* Ligne 1 — cellules gauche/droite vides, centre seul */}
+        <div style={{ gridRow: 2, gridColumn: 1, width: 28, height: 28 }} />
+        {POSITION_GRID.filter((p) => p.row === 1).map((p) => (
+          <button
+            key={p.value}
+            onClick={() => onChange(p.value)}
+            aria-label={`Position ${p.value}`}
+            aria-pressed={value === p.value}
+            style={{
+              gridRow: p.row + 1,
+              gridColumn: p.col + 1,
+              width: 28,
+              height: 28,
+              borderRadius: 5,
+              border:
+                value === p.value
+                  ? '2px solid var(--color-primary)'
+                  : '1px solid var(--color-border-base)',
+              background:
+                value === p.value ? 'var(--color-primary-subtle)' : 'rgba(255,255,255,0.04)',
+              color: value === p.value ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.12s',
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+        <div style={{ gridRow: 2, gridColumn: 3, width: 28, height: 28 }} />
+        {/* Ligne 2 */}
+        {POSITION_GRID.filter((p) => p.row === 2).map((p) => (
+          <button
+            key={p.value}
+            onClick={() => onChange(p.value)}
+            aria-label={`Position ${p.value}`}
+            aria-pressed={value === p.value}
+            style={{
+              gridRow: p.row + 1,
+              gridColumn: p.col + 1,
+              width: 28,
+              height: 28,
+              borderRadius: 5,
+              border:
+                value === p.value
+                  ? '2px solid var(--color-primary)'
+                  : '1px solid var(--color-border-base)',
+              background:
+                value === p.value ? 'var(--color-primary-subtle)' : 'rgba(255,255,255,0.04)',
+              color: value === p.value ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.12s',
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Bouton mode libre */}
+      <button
+        onClick={() => onChange('custom')}
+        aria-pressed={value === 'custom'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '4px 10px',
+          borderRadius: 5,
+          border:
+            value === 'custom'
+              ? '2px solid var(--color-primary)'
+              : '1px solid var(--color-border-base)',
+          background: value === 'custom' ? 'var(--color-primary-subtle)' : 'rgba(255,255,255,0.04)',
+          color: value === 'custom' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          fontSize: 10,
+          fontWeight: 600,
+          cursor: 'pointer',
+          width: '100%',
+          justifyContent: 'center',
+          transition: 'all 0.12s',
+          marginBottom: 6,
+        }}
+      >
+        <Move size={10} /> Mode libre (glisser dans la preview)
+      </button>
+
+      {/* Champs X/Y — visibles uniquement en mode custom */}
+      {value === 'custom' && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span
+              style={{
+                fontSize: 9,
+                color: 'var(--color-text-disabled)',
+                fontFamily: 'var(--font-family-mono)',
+              }}
+            >
+              X %
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={positionX}
+              onChange={(e) => onChangeXY(Number(e.target.value), positionY)}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--color-border-base)',
+                borderRadius: 4,
+                padding: '3px 6px',
+                fontSize: 11,
+                color: 'var(--color-text-primary)',
+                fontFamily: 'var(--font-family-mono)',
+              }}
+              aria-label="Position X en pourcentage"
+            />
+          </label>
+          <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span
+              style={{
+                fontSize: 9,
+                color: 'var(--color-text-disabled)',
+                fontFamily: 'var(--font-family-mono)',
+              }}
+            >
+              Y %
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={positionY}
+              onChange={(e) => onChangeXY(positionX, Number(e.target.value))}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--color-border-base)',
+                borderRadius: 4,
+                padding: '3px 6px',
+                fontSize: 11,
+                color: 'var(--color-text-primary)',
+                fontFamily: 'var(--font-family-mono)',
+              }}
+              aria-label="Position Y en pourcentage"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }
@@ -525,15 +765,12 @@ export function TextSection() {
             ]}
             onChange={(v) => update({ borderRadius: v })}
           />
-          <ToggleGroup
-            label="POSITION"
+          <PositionGrid
             value={cfg.position}
-            options={[
-              { value: 'bottom', label: 'Bas' },
-              { value: 'center', label: 'Centre' },
-              { value: 'top', label: 'Haut' },
-            ]}
+            positionX={cfg.positionX}
+            positionY={cfg.positionY}
             onChange={(v) => update({ position: v })}
+            onChangeXY={(x, y) => update({ positionX: x, positionY: y })}
           />
         </SubSection>
       </PanelSection>

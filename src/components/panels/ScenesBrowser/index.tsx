@@ -1,14 +1,13 @@
 /**
- * ScenesBrowser — Overlay fullscreen "Storyboard" pour naviguer entre les scènes.
- * Remplace l'onglet Scènes dans le LeftPanel.
+ * ScenesBrowser — Film strip horizontal en bas de l'écran.
+ * Remplace l'overlay fullscreen par une bande style timeline vidéo.
  *
- * Design : cartes 16:9 (storyboard) · vignette gradient · badge monospace · strip couleur ·
- *          corner fold · stagger entry · drag-to-reorder (dnd-kit rectSortingStrategy) ·
- *          framer-motion layout spring pour la réorganisation.
- *          Hover actions : duplicate · delete · color picker (Norman §9 affordances visibles)
+ * Design : cartes 16:9 compactes (~110px large) · badge numéro · strip couleur ·
+ *          hover actions (couleur/copier/supprimer) · DnD horizontal · spring physics ·
+ *          slide depuis le bas (y: 0 → close)
  *
- * Conseillers : Will Wright §4.2 (taux utilisation) · Nijman §8 (game feel) ·
- *               Quilez §14 (badge monospace) · Norman §9 (affordances) · Muratori §13 (no over-abstract)
+ * Conseillers : Will Wright §4.2 (densité info) · Nijman §8 (game feel) ·
+ *               Norman §9.1 (affordances) · Muratori §13 (pas d'over-abstract)
  */
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,7 +24,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  rectSortingStrategy,
+  horizontalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -38,13 +37,15 @@ import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 
 // ── Gradients procéduraux pour les scènes sans background (Quilez §14.3) ─────
 const BG_GRADIENTS = [
-  'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a5f 100%)',
-  'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-  'linear-gradient(135deg, #0a0a0a 0%, #1a1a3e 50%, #2d1b69 100%)',
-  'linear-gradient(135deg, #0f2417 0%, #1a3a2a 50%, #0d4a2a 100%)',
+  'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+  'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
+  'linear-gradient(135deg, #0a0a0a 0%, #2d1b69 100%)',
+  'linear-gradient(135deg, #0f2417 0%, #0d4a2a 100%)',
+  'linear-gradient(135deg, #1a0a0a 0%, #4a1a1a 100%)',
+  'linear-gradient(135deg, #0a1a2a 0%, #1a4a6a 100%)',
 ] as const;
 
-// ── Palette couleurs — identique à ScenesSidebar ──────────────────────────────
+// ── Palette couleurs ──────────────────────────────────────────────────────────
 const COLOR_PALETTE = [
   '#6b5ce7',
   '#fa6d9a',
@@ -58,12 +59,16 @@ const COLOR_PALETTE = [
   'rgba(255,255,255,0.3)',
 ];
 
-// ── EMPTY_* module-level pour fallbacks stables (Acton §15.4) ─────────────────
+// Dimensions de la carte dans le filmstrip
+const CARD_W = 112;
+const THUMB_H = 63; // 16:9
+
+// ── EMPTY_* module-level (Acton §15.4) ───────────────────────────────────────
 const EMPTY_CHARS: never[] = [];
 
-// ── BrowserSceneCard ──────────────────────────────────────────────────────────
+// ── FilmCard ──────────────────────────────────────────────────────────────────
 
-interface BrowserSceneCardProps {
+interface FilmCardProps {
   scene: SceneMetadata;
   index: number;
   isSelected: boolean;
@@ -75,7 +80,7 @@ interface BrowserSceneCardProps {
   onUpdateColor: (sceneId: string, color: string) => void;
 }
 
-function BrowserSceneCard({
+function FilmCard({
   scene,
   index,
   isSelected,
@@ -85,7 +90,7 @@ function BrowserSceneCard({
   onDuplicate,
   onDelete,
   onUpdateColor,
-}: BrowserSceneCardProps) {
+}: FilmCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -98,10 +103,14 @@ function BrowserSceneCard({
   const isCinematic = scene.sceneType === 'cinematic';
 
   return (
-    // Outer div — dnd-kit positioning (transform + transition)
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        flexShrink: 0,
+        width: CARD_W,
+      }}
       {...attributes}
       {...listeners}
       onMouseEnter={() => setIsHovered(true)}
@@ -110,27 +119,26 @@ function BrowserSceneCard({
         setPickerOpen(false);
       }}
     >
-      {/* Inner motion.div — visual card (framer-motion layout + hover/tap) */}
       <motion.div
         layout
-        layoutId={`browser-scene-${scene.id}`}
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: isDragging ? 0.35 : 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.88 }}
+        animate={{ opacity: isDragging ? 0.35 : 1, scale: 1 }}
         transition={{
           layout: { type: 'spring', stiffness: 380, damping: 28 },
-          opacity: { duration: 0.22, delay: index * 0.04 },
-          y: { type: 'spring', stiffness: 300, damping: 28, delay: index * 0.04 },
+          opacity: { duration: 0.18, delay: index * 0.03 },
+          scale: { type: 'spring', stiffness: 300, damping: 28, delay: index * 0.03 },
         }}
         whileHover={
           isDragging
             ? {}
-            : { y: -6, scale: 1.02, transition: { type: 'spring', stiffness: 380, damping: 22 } }
+            : { y: -4, scale: 1.04, transition: { type: 'spring', stiffness: 400, damping: 22 } }
         }
-        whileTap={isDragging ? {} : { scale: 0.97, y: 0, transition: { duration: 0.1 } }}
+        whileTap={isDragging ? {} : { scale: 0.96, y: 0 }}
         onClick={onSelect}
         role="button"
-        tabIndex={-1}
+        tabIndex={0}
         aria-label={`Scène ${index + 1}: ${scene.title}${isSelected ? ' (active)' : ''}`}
+        aria-pressed={isSelected}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -138,23 +146,41 @@ function BrowserSceneCard({
           }
         }}
         style={{
-          borderRadius: 10,
-          overflow: 'hidden',
+          borderRadius: 7,
+          overflow: 'visible',
           cursor: isDragging ? 'grabbing' : 'pointer',
-          borderLeft: `3px solid ${sceneColor}`,
-          border: isSelected
-            ? `2px solid var(--color-primary)`
-            : `2px solid rgba(255,255,255,0.07)`,
-          borderLeftColor: sceneColor,
-          borderLeftWidth: 3,
-          boxShadow: isSelected
-            ? '0 0 0 1px var(--color-primary-40), 0 8px 24px rgba(139,92,246,0.25)'
-            : '0 4px 16px rgba(0,0,0,0.45)',
-          background: 'var(--color-bg-elevated)',
+          outline: 'none',
+          position: 'relative',
         }}
       >
-        {/* ── Thumbnail 16:9 ── */}
-        <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden' }}>
+        {/* ── Active glow ring ── */}
+        {isSelected && (
+          <motion.div
+            layoutId={`film-active-ring-${scene.id}`}
+            style={{
+              position: 'absolute',
+              inset: -2,
+              borderRadius: 9,
+              border: '2px solid var(--color-primary)',
+              boxShadow: '0 0 12px var(--color-primary-glow)',
+              pointerEvents: 'none',
+              zIndex: 2,
+            }}
+          />
+        )}
+
+        {/* ── Thumbnail ── */}
+        <div
+          style={{
+            position: 'relative',
+            width: CARD_W,
+            height: THUMB_H,
+            borderRadius: 7,
+            overflow: 'hidden',
+            borderLeft: `3px solid ${sceneColor}`,
+          }}
+        >
+          {/* Background */}
           {scene.backgroundUrl ? (
             <img
               src={scene.backgroundUrl}
@@ -175,52 +201,33 @@ function BrowserSceneCard({
             />
           )}
 
-          {/* Vignette — standard poster/still (Will Wright §4.4) */}
+          {/* Vignette */}
           <div
             aria-hidden="true"
             style={{
               position: 'absolute',
               inset: 0,
-              background:
-                'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.15) 50%, transparent 80%)',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%)',
             }}
           />
 
-          {/* Scene number — clapperboard badge (font monospace, Quilez §14) */}
+          {/* Scene number badge */}
           <span
             aria-hidden="true"
             style={{
               position: 'absolute',
-              top: 8,
-              left: 10,
+              top: 4,
+              left: 5,
               fontFamily: 'var(--font-family-mono)',
-              fontSize: 18,
+              fontSize: 11,
               fontWeight: 700,
               color: 'white',
-              textShadow: '0 1px 6px rgba(0,0,0,0.9)',
+              textShadow: '0 1px 4px rgba(0,0,0,0.9)',
               lineHeight: 1,
-              letterSpacing: '-0.02em',
             }}
           >
             {String(index + 1).padStart(2, '0')}
           </span>
-
-          {/* Active indicator */}
-          {isSelected && (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 10,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--color-primary)',
-                boxShadow: '0 0 8px var(--color-primary)',
-              }}
-            />
-          )}
 
           {/* Cinematic badge */}
           {isCinematic && (
@@ -228,42 +235,42 @@ function BrowserSceneCard({
               aria-hidden="true"
               style={{
                 position: 'absolute',
-                bottom: 8,
-                right: 8,
-                background: 'rgba(0,0,0,0.72)',
-                color: 'rgba(255,255,255,0.88)',
-                fontSize: 9,
+                bottom: 3,
+                right: 4,
+                background: 'rgba(0,0,0,0.75)',
+                color: 'rgba(255,255,255,0.85)',
+                fontSize: 7,
                 fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: 3,
-                letterSpacing: '0.06em',
+                padding: '1px 4px',
+                borderRadius: 2,
+                letterSpacing: '0.05em',
               }}
             >
               CIN
             </span>
           )}
 
-          {/* ── Hover actions overlay (Norman §9.1 — affordances visibles au survol) ── */}
+          {/* ── Hover actions overlay ── */}
           <AnimatePresence>
             {isHovered && !isDragging && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
+                transition={{ duration: 0.1 }}
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   position: 'absolute',
                   inset: 0,
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'flex-end',
-                  padding: 8,
-                  gap: 6,
-                  background: 'rgba(0,0,0,0.18)',
+                  padding: 4,
+                  gap: 3,
+                  background: 'rgba(0,0,0,0.32)',
                 }}
-                onClick={(e) => e.stopPropagation()}
               >
-                {/* Color dot — visible seulement pour les scènes non-cinématiques */}
+                {/* Color dot */}
                 {!isCinematic && (
                   <div style={{ position: 'relative' }}>
                     <button
@@ -272,34 +279,36 @@ function BrowserSceneCard({
                         setPickerOpen((o) => !o);
                       }}
                       onKeyDown={(e) => e.stopPropagation()}
-                      aria-label="Changer la couleur de la scène"
+                      aria-label="Couleur"
                       style={{
-                        width: 22,
-                        height: 22,
+                        width: 14,
+                        height: 14,
                         borderRadius: '50%',
                         background: sceneColor,
-                        border: '2px solid rgba(255,255,255,0.5)',
+                        border: '1.5px solid rgba(255,255,255,0.6)',
                         cursor: 'pointer',
                         flexShrink: 0,
+                        padding: 0,
                       }}
                     />
-                    {/* Color picker palette */}
+                    {/* Color palette — portée vers le haut */}
                     {pickerOpen && (
                       <div
+                        role="presentation"
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           position: 'absolute',
-                          top: 28,
+                          bottom: 20,
                           right: 0,
                           display: 'grid',
                           gridTemplateColumns: 'repeat(5, 1fr)',
-                          gap: 5,
-                          padding: 8,
-                          background: 'rgba(16,19,30,0.97)',
-                          borderRadius: 8,
+                          gap: 4,
+                          padding: 7,
+                          background: 'rgba(16,19,30,0.98)',
+                          borderRadius: 7,
                           border: '1px solid rgba(255,255,255,0.12)',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
-                          zIndex: 10,
+                          boxShadow: '0 -8px 24px rgba(0,0,0,0.7)',
+                          zIndex: 20,
                         }}
                       >
                         {COLOR_PALETTE.map((c) => (
@@ -312,15 +321,16 @@ function BrowserSceneCard({
                             }}
                             aria-label={`Couleur ${c}`}
                             style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: 4,
+                              width: 16,
+                              height: 16,
+                              borderRadius: 3,
                               background: c,
                               border:
                                 c === sceneColor
                                   ? '2px solid white'
                                   : '1px solid rgba(255,255,255,0.2)',
                               cursor: 'pointer',
+                              padding: 0,
                             }}
                           />
                         ))}
@@ -329,7 +339,7 @@ function BrowserSceneCard({
                   </div>
                 )}
 
-                {/* Duplicate button */}
+                {/* Copy */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -342,20 +352,21 @@ function BrowserSceneCard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 26,
-                    height: 26,
-                    borderRadius: 6,
-                    background: 'rgba(255,255,255,0.12)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.9)',
+                    width: 18,
+                    height: 18,
+                    borderRadius: 4,
+                    padding: 0,
+                    background: 'rgba(255,255,255,0.15)',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    color: 'white',
                     cursor: 'pointer',
                     flexShrink: 0,
                   }}
                 >
-                  <Copy size={12} />
+                  <Copy size={9} />
                 </button>
 
-                {/* Delete button */}
+                {/* Delete */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -368,70 +379,92 @@ function BrowserSceneCard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 26,
-                    height: 26,
-                    borderRadius: 6,
-                    background: 'rgba(239,68,68,0.18)',
-                    border: '1px solid rgba(239,68,68,0.4)',
+                    width: 18,
+                    height: 18,
+                    borderRadius: 4,
+                    padding: 0,
+                    background: 'rgba(239,68,68,0.2)',
+                    border: '1px solid rgba(239,68,68,0.45)',
                     color: 'var(--color-danger)',
                     cursor: 'pointer',
                     flexShrink: 0,
                   }}
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size={9} />
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* ── Paper footer ── */}
+        {/* ── Title row ── */}
         <div
           style={{
-            padding: '10px 12px 10px',
-            position: 'relative',
-            background: 'rgba(238,240,248,0.025)',
+            padding: '4px 4px 0',
+            width: CARD_W,
           }}
         >
           <div
             style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--color-text-primary)',
-              marginBottom: 3,
+              fontSize: 10,
+              fontWeight: isSelected ? 700 : 500,
+              color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              lineHeight: 1.3,
             }}
           >
             {scene.title}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', gap: 10 }}>
+          <div
+            style={{ fontSize: 9, color: 'var(--color-text-disabled)', display: 'flex', gap: 5 }}
+          >
             <span>💬 {dialogueCount}</span>
             {charactersCount > 0 && <span>👤 {charactersCount}</span>}
           </div>
-
-          {/* Corner fold — index card metaphor (CSS triangle) */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: 0,
-              height: 0,
-              borderStyle: 'solid',
-              borderWidth: '0 0 14px 14px',
-              borderColor: 'transparent transparent rgba(255,255,255,0.07) transparent',
-            }}
-          />
         </div>
       </motion.div>
     </div>
   );
 }
 
+// ── Add scene button ──────────────────────────────────────────────────────────
+
+function AddSceneButton({ onClick }: { onClick: () => void }) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileHover={{ scale: 1.08, y: -3 }}
+      whileTap={{ scale: 0.94 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+      aria-label="Ajouter une nouvelle scène"
+      style={{
+        flexShrink: 0,
+        width: 52,
+        height: THUMB_H,
+        borderRadius: 7,
+        border: '1.5px dashed var(--color-primary-40)',
+        background: '#8b5cf612',
+        color: 'var(--color-primary)',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 3,
+        alignSelf: 'flex-start',
+      }}
+    >
+      <Plus size={16} />
+      <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.04em' }}>SCÈNE</span>
+    </motion.button>
+  );
+}
+
 // ── ScenesBrowser ─────────────────────────────────────────────────────────────
+
+const STRIP_HEIGHT = 110;
 
 export function ScenesBrowser() {
   const scenesBrowserOpen = useUIStore((s) => s.scenesBrowserOpen);
@@ -451,7 +484,7 @@ export function ScenesBrowser() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // ── Handlers (getState() dans callbacks uniquement — invariant Phase 3) ────
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
@@ -480,21 +513,17 @@ export function ScenesBrowser() {
   }, [addScene, setSelectedSceneForEdit, setScenesBrowserOpen]);
 
   const handleUpdateColor = useCallback(
-    (sceneId: string, color: string) => {
-      updateScene(sceneId, { color });
-    },
+    (sceneId: string, color: string) => updateScene(sceneId, { color }),
     [updateScene]
   );
 
   const handleDuplicate = useCallback(
     (sceneId: string) => {
-      // getState() dans le callback — invariant Phase 3
       const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
       if (!scene) return;
       const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
       const elements = useSceneElementsStore.getState().getElementsForScene(sceneId);
       const newId = addScene(scene.sceneType);
-
       updateScene(newId, {
         title: `${scene.title} (copie)`,
         description: scene.description,
@@ -502,17 +531,12 @@ export function ScenesBrowser() {
         color: scene.color,
         cinematicEvents: scene.cinematicEvents ? [...scene.cinematicEvents] : undefined,
       });
-
-      if (dialogues.length > 0) {
-        useDialoguesStore.getState().addDialogues(newId, dialogues);
-      }
-
+      if (dialogues.length > 0) useDialoguesStore.getState().addDialogues(newId, dialogues);
       elements.characters.forEach((char) => {
         useSceneElementsStore
           .getState()
           .addCharacterToScene(newId, char.characterId, char.mood, char.position);
       });
-
       setSelectedSceneForEdit(newId);
     },
     [addScene, updateScene, setSelectedSceneForEdit]
@@ -547,81 +571,75 @@ export function ScenesBrowser() {
     <AnimatePresence>
       {scenesBrowserOpen && (
         <motion.div
-          key="scenes-browser"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
+          key="film-strip"
+          initial={{ y: STRIP_HEIGHT + 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: STRIP_HEIGHT + 20, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 32 }}
           style={{
             position: 'fixed',
-            inset: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             zIndex: 1400,
-            background: 'rgba(3, 7, 18, 0.97)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            background: 'rgba(8, 10, 20, 0.97)',
+            backdropFilter: 'blur(16px)',
+            borderTop: '1px solid var(--color-primary-40)',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
           }}
-          aria-modal="true"
-          role="dialog"
-          aria-label="Navigateur de scènes — Storyboard"
+          role="region"
+          aria-label="Film strip — navigation entre les scènes"
         >
-          {/* ── Header ── */}
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, delay: 0.06 }}
+          {/* ── Top bar ── */}
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              padding: '20px 28px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
-              gap: 14,
-              flexShrink: 0,
+              gap: 8,
+              padding: '6px 14px 4px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
             }}
           >
-            <div style={{ flex: 1 }}>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-family-display)',
-                  fontSize: 20,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  color: 'var(--color-text-primary)',
-                  margin: 0,
-                  textTransform: 'uppercase',
-                }}
-              >
-                📽 Storyboard
-              </h2>
-              <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '2px 0 0' }}>
-                {scenes.length} scène{scenes.length !== 1 ? 's' : ''} · Glisser pour réorganiser ·
-                Survol pour actions · Échap pour fermer
-              </p>
-            </div>
+            {/* Label */}
+            <span
+              style={{
+                fontFamily: 'var(--font-family-mono)',
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                color: 'var(--color-primary)',
+                textTransform: 'uppercase',
+              }}
+            >
+              STORYBOARD
+            </span>
+            <span style={{ fontSize: 9, color: 'var(--color-text-disabled)' }}>
+              {scenes.length} scène{scenes.length !== 1 ? 's' : ''} · Glisser pour réorganiser ·
+              Échap
+            </span>
+            <div style={{ flex: 1 }} />
 
             <motion.button
               onClick={handleAddScene}
-              whileHover={{ scale: 1.05, y: -1 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.06, y: -1 }}
+              whileTap={{ scale: 0.94 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                borderRadius: 8,
+                gap: 4,
+                padding: '3px 9px',
+                borderRadius: 5,
                 background: 'var(--color-primary)',
                 color: 'white',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 13,
+                fontSize: 10,
                 fontWeight: 600,
               }}
               aria-label="Ajouter une nouvelle scène"
             >
-              <Plus size={14} /> Nouvelle scène
+              <Plus size={10} /> Nouvelle scène
             </motion.button>
 
             <motion.button
@@ -633,37 +651,50 @@ export function ScenesBrowser() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: 'rgba(255,255,255,0.07)',
-                color: 'var(--color-text-muted)',
+                width: 22,
+                height: 22,
+                borderRadius: 5,
+                padding: 0,
+                background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--color-text-muted)',
                 cursor: 'pointer',
               }}
-              aria-label="Fermer le navigateur (Échap)"
+              aria-label="Fermer (Échap)"
             >
-              <X size={16} />
+              <X size={12} />
             </motion.button>
-          </motion.div>
+          </div>
 
-          {/* ── Grid 2 colonnes ── */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 32px' }}>
+          {/* ── Film strip scroll area ── */}
+          <div
+            style={{
+              overflowX: 'auto',
+              overflowY: 'visible',
+              padding: '8px 14px 10px',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(139,92,246,0.3) transparent',
+            }}
+          >
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext items={scenes.map((s) => s.id)} strategy={rectSortingStrategy}>
+              <SortableContext
+                items={scenes.map((s) => s.id)}
+                strategy={horizontalListSortingStrategy}
+              >
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: 20,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                    minWidth: 'max-content',
                   }}
                 >
                   {scenes.map((scene, index) => (
-                    <BrowserSceneCard
+                    <FilmCard
                       key={scene.id}
                       scene={scene}
                       index={index}
@@ -678,6 +709,20 @@ export function ScenesBrowser() {
                       onUpdateColor={handleUpdateColor}
                     />
                   ))}
+
+                  {/* Séparateur vertical */}
+                  <div
+                    style={{
+                      width: 1,
+                      height: THUMB_H,
+                      background: 'rgba(255,255,255,0.06)',
+                      flexShrink: 0,
+                      alignSelf: 'flex-start',
+                      marginTop: 0,
+                    }}
+                  />
+
+                  <AddSceneButton onClick={handleAddScene} />
                 </div>
               </SortableContext>
             </DndContext>

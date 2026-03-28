@@ -1,9 +1,16 @@
-import { Save, Network } from 'lucide-react';
+import { Save, Network, Move } from 'lucide-react';
+import { useRef, useCallback } from 'react';
 import type { DialogueFormData } from '../../DialogueWizard/hooks/useDialogueForm';
 import type { Scene } from '@/types';
 import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { DialogueBox, hashStringToColor } from '@/components/ui/DialogueBox';
 import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
+import {
+  getDialogueBoxWrapperStyle,
+  getDialogueBoxGradientStyle,
+  getDialogueBoxInnerStyle,
+} from '@/utils/dialogueBoxPosition';
 import { T, FONTS, MINIGAME_CARDS, TYPE_TABS } from '../constants';
 
 interface PreviewPanelProps {
@@ -37,8 +44,44 @@ export function PreviewPanel({
   const mgType = formData.minigame?.type ?? 'braille';
   const activeTab = TYPE_TABS.find((t) => t.id === formData.complexityLevel);
   const dialogueBoxConfig = useDialogueBoxConfig(undefined);
+  const updateDialogueBoxDefaults = useSettingsStore((s) => s.updateDialogueBoxDefaults);
+
+  // Drag ref pour le mode custom
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (dialogueBoxConfig.position !== 'custom') return;
+      e.preventDefault();
+      const container = previewRef.current;
+      if (!container) return;
+
+      const onMove = (me: MouseEvent) => {
+        const rect = container.getBoundingClientRect();
+        const x = Math.round(
+          Math.min(100, Math.max(0, ((me.clientX - rect.left) / rect.width) * 100))
+        );
+        const y = Math.round(
+          Math.min(100, Math.max(0, ((me.clientY - rect.top) / rect.height) * 100))
+        );
+        updateDialogueBoxDefaults({ positionX: x, positionY: y });
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [dialogueBoxConfig.position, updateDialogueBoxDefaults]
+  );
+
   // isNarrator vient du parent (même logique que useSpeakerLayout : role + ID système)
   const position = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const isLeft = position.endsWith('-left');
+  const isRight = position.endsWith('-right');
+  const gradientStyle = getDialogueBoxGradientStyle(position);
+  const innerStyle = getDialogueBoxInnerStyle(position, isLeft, isRight);
   const previewChoices =
     !isMinigame && formData.complexityLevel !== 'linear' && formData.choices.length > 0
       ? formData.choices
@@ -77,188 +120,183 @@ export function PreviewPanel({
           }}
         >
           {/* Zone scène — flex:1, fond + DialogueBox réelle en overlay */}
-          {/* VisualFilterLayer : applique les filtres graphiques du projet (grain, scanlines, CRT…) */}
-          <VisualFilterLayer style={{ flex: 1, minHeight: 200, overflow: 'hidden' }}>
-            {/* Pill "Aperçu en direct" + badge type — overlay haut-gauche */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                right: 8,
-                zIndex: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                pointerEvents: 'none',
-              }}
-            >
+          {/* wrapper ref pour drag custom — VisualFilterLayer n'est pas forwardRef */}
+          <div
+            ref={previewRef}
+            style={{ flex: 1, minHeight: 200, overflow: 'hidden', position: 'relative' }}
+          >
+            <VisualFilterLayer style={{ width: '100%', height: '100%', minHeight: 200 }}>
+              {/* Pill "Aperçu en direct" + badge type — overlay haut-gauche */}
               <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  background: 'rgba(14,10,36,0.75)',
-                  backdropFilter: 'blur(8px)',
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 7,
-                  padding: '4px 8px',
-                  fontFamily: FONTS.display,
-                  fontSize: 11,
-                  fontWeight: 800,
-                  color: T.t2,
-                }}
-              >
-                <svg viewBox="0 0 15 15" fill="none" width={11} height={11}>
-                  <circle
-                    cx="7.5"
-                    cy="7.5"
-                    r="6.5"
-                    stroke="rgba(255,255,255,0.6)"
-                    strokeWidth="1.3"
-                  />
-                  <path
-                    d="M5 7.5l2 2 3-3"
-                    stroke="rgba(255,255,255,0.6)"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Aperçu en direct
-              </div>
-              {isMinigame && activeTab && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    padding: '3px 9px',
-                    borderRadius: 6,
-                    fontWeight: 800,
-                    background: activeTab.bg,
-                    color: activeTab.c,
-                    border: `1.5px solid ${activeTab.bd}`,
-                  }}
-                >
-                  {MINIGAME_CARDS.find((m) => m.type === mgType)?.label ?? 'Mini-jeu'}
-                </span>
-              )}
-            </div>
-            {/* Fond de scène */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: currentScene?.backgroundUrl
-                  ? `url(${currentScene.backgroundUrl}) center / cover`
-                  : 'linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(30,58,138,0.90) 50%, rgba(6,78,59,0.75) 100%)',
-              }}
-            >
-              {!currentScene?.backgroundUrl && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 12,
-                    left: 0,
-                    right: 0,
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: 'rgba(255,255,255,0.35)',
-                  }}
-                >
-                  Aperçu de scène
-                </div>
-              )}
-            </div>
-
-            {/* Sprite personnage — masqué pour le narrateur (pas de présence visuelle) */}
-            {speakerPortraitUrl && !isNarrator && (
-              <img
-                key={speakerPortraitUrl}
-                src={speakerPortraitUrl}
-                alt={speakerName}
                 style={{
                   position: 'absolute',
-                  bottom: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  height: '82%',
-                  maxWidth: '40%',
-                  objectFit: 'contain',
-                  objectPosition: 'bottom',
-                  zIndex: 1,
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   pointerEvents: 'none',
-                  filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.55))',
                 }}
-              />
-            )}
-
-            {/* DialogueBox réelle — même composant que PreviewPlayer */}
-            <div
-              style={{
-                position: 'absolute',
-                zIndex: 2,
-                ...(position === 'top'
-                  ? { top: 0, left: 0, right: 0 }
-                  : position === 'center'
-                    ? { inset: 0, display: 'flex', alignItems: 'center' }
-                    : { bottom: 0, left: 0, right: 0 }),
-              }}
-            >
-              {/* Gradient directionnel */}
-              {position !== 'center' && (
+              >
                 <div
-                  aria-hidden="true"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    background: 'rgba(14,10,36,0.75)',
+                    backdropFilter: 'blur(8px)',
+                    border: `1px solid ${T.border}`,
+                    borderRadius: 7,
+                    padding: '4px 8px',
+                    fontFamily: FONTS.display,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: T.t2,
+                  }}
+                >
+                  <svg viewBox="0 0 15 15" fill="none" width={11} height={11}>
+                    <circle
+                      cx="7.5"
+                      cy="7.5"
+                      r="6.5"
+                      stroke="rgba(255,255,255,0.6)"
+                      strokeWidth="1.3"
+                    />
+                    <path
+                      d="M5 7.5l2 2 3-3"
+                      stroke="rgba(255,255,255,0.6)"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Aperçu en direct
+                </div>
+                {isMinigame && activeTab && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: '3px 9px',
+                      borderRadius: 6,
+                      fontWeight: 800,
+                      background: activeTab.bg,
+                      color: activeTab.c,
+                      border: `1.5px solid ${activeTab.bd}`,
+                    }}
+                  >
+                    {MINIGAME_CARDS.find((m) => m.type === mgType)?.label ?? 'Mini-jeu'}
+                  </span>
+                )}
+              </div>
+              {/* Fond de scène */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: currentScene?.backgroundUrl
+                    ? `url(${currentScene.backgroundUrl}) center / cover`
+                    : 'linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(30,58,138,0.90) 50%, rgba(6,78,59,0.75) 100%)',
+                }}
+              >
+                {!currentScene?.backgroundUrl && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      left: 0,
+                      right: 0,
+                      textAlign: 'center',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'rgba(255,255,255,0.35)',
+                    }}
+                  >
+                    Aperçu de scène
+                  </div>
+                )}
+              </div>
+
+              {/* Sprite personnage — masqué pour le narrateur (pas de présence visuelle) */}
+              {speakerPortraitUrl && !isNarrator && (
+                <img
+                  key={speakerPortraitUrl}
+                  src={speakerPortraitUrl}
+                  alt={speakerName}
                   style={{
                     position: 'absolute',
-                    left: 0,
-                    right: 0,
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    height: '82%',
+                    maxWidth: '40%',
+                    objectFit: 'contain',
+                    objectPosition: 'bottom',
+                    zIndex: 1,
                     pointerEvents: 'none',
-                    ...(position === 'top'
-                      ? {
-                          top: 0,
-                          height: '55%',
-                          background:
-                            'linear-gradient(to bottom, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
-                        }
-                      : {
-                          bottom: 0,
-                          height: '55%',
-                          background:
-                            'linear-gradient(to top, rgba(3,7,18,0.80) 0%, rgba(3,7,18,0.35) 50%, transparent 100%)',
-                        }),
+                    filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.55))',
                   }}
                 />
               )}
+
+              {/* DialogueBox — positionnée via utilitaire partagé */}
               <div
-                style={{
-                  position: 'relative',
-                  padding:
-                    position === 'top'
-                      ? '12px 12px 0'
-                      : position === 'center'
-                        ? '8px 12px'
-                        : '0 12px 10px',
-                  maxWidth: '92%',
-                  margin: '0 auto',
-                  width: '100%',
-                }}
+                style={getDialogueBoxWrapperStyle(
+                  position,
+                  dialogueBoxConfig.positionX,
+                  dialogueBoxConfig.positionY
+                )}
+                onMouseDown={position === 'custom' ? handleDragStart : undefined}
               >
-                <DialogueBox
-                  speaker={isNarrator ? undefined : speakerName}
-                  displayText={formData.text || 'Aucun texte…'}
-                  isNarrator={isNarrator}
-                  isTypewriterDone={true}
-                  hasChoices={!!previewChoices?.length}
-                  choices={previewChoices}
-                  config={dialogueBoxConfig}
-                  scaleFactor={0.48}
-                  speakerPortraitUrl={speakerPortraitUrl || null}
-                  speakerColor={speakerColor}
-                />
+                {/* Gradient directionnel */}
+                {gradientStyle && <div aria-hidden="true" style={gradientStyle} />}
+
+                {/* Drag handle visible en mode custom (Norman §9.1 affordance) */}
+                {position === 'custom' && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -20,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      background: '#8b5cf6bf',
+                      color: 'white',
+                      fontSize: 9,
+                      fontWeight: 700,
+                      cursor: 'move',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                    aria-hidden="true"
+                  >
+                    <Move size={9} /> Glisser pour repositionner
+                  </div>
+                )}
+
+                <div style={innerStyle}>
+                  <DialogueBox
+                    speaker={isNarrator ? undefined : speakerName}
+                    displayText={formData.text || 'Aucun texte…'}
+                    isNarrator={isNarrator}
+                    isTypewriterDone={true}
+                    hasChoices={!!previewChoices?.length}
+                    choices={previewChoices}
+                    config={dialogueBoxConfig}
+                    scaleFactor={0.48}
+                    speakerPortraitUrl={speakerPortraitUrl || null}
+                    speakerColor={speakerColor}
+                  />
+                </div>
               </div>
-            </div>
-          </VisualFilterLayer>
+            </VisualFilterLayer>
+          </div>
 
           {/* Bouton mini-jeu — affiché uniquement pour le type minigame */}
           {isMinigame && (
@@ -318,11 +356,7 @@ export function PreviewPanel({
             padding: '12px 48px',
             borderRadius: 13,
             border: `2px solid ${T.purpleBd}`,
-            background: isSaved
-              ? T.greenBg
-              : canSave
-                ? 'rgba(139,92,246,0.80)'
-                : 'rgba(139,92,246,0.35)',
+            background: isSaved ? T.greenBg : canSave ? '#8b5cf6cc' : '#8b5cf659',
             color: isSaved ? T.green : '#fff',
             fontFamily: FONTS.display,
             fontSize: 15,

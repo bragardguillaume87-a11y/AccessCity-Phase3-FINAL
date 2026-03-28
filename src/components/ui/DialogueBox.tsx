@@ -32,6 +32,8 @@ export const DIALOGUE_BOX_DEFAULTS: Required<DialogueBoxStyle> = {
   fontSize: 15,
   boxOpacity: 0.75,
   position: 'bottom',
+  positionX: 50,
+  positionY: 75,
   showPortrait: true,
   speakerAlign: 'auto',
   borderStyle: 'subtle',

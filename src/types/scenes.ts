@@ -93,8 +93,23 @@ export interface DialogueBoxStyle {
   fontSize?: number;
   /** Box background opacity 0–1 (default: 0.75) */
   boxOpacity?: number;
-  /** Box vertical position (default: 'bottom') */
-  position?: 'bottom' | 'top' | 'center';
+  /**
+   * Box position preset (default: 'bottom').
+   * 'custom' uses positionX / positionY (percentages 0–100).
+   */
+  position?:
+    | 'bottom'
+    | 'bottom-left'
+    | 'bottom-right'
+    | 'top'
+    | 'top-left'
+    | 'top-right'
+    | 'center'
+    | 'custom';
+  /** Custom horizontal position 0–100% (used only when position === 'custom'). Default: 50. */
+  positionX?: number;
+  /** Custom vertical position 0–100% (used only when position === 'custom'). Default: 75. */
+  positionY?: number;
   /** Show speaker portrait thumbnail 48×48px (default: true) */
   showPortrait?: boolean;
   /** Speaker name alignment: 'auto' = left/right based on sprite position (default: 'auto') */

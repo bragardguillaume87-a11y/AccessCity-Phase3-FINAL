@@ -3,6 +3,7 @@ import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zus
 import { temporal } from 'zundo';
 import { shallow } from 'zustand/shallow';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
+import { generateId } from '../utils/generateId';
 import type { SceneMetadata, SceneType, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
@@ -46,7 +47,10 @@ interface ScenesState {
 
   // Actions: CRUD
   addScene: (sceneType?: SceneType) => string;
-  updateScene: (sceneId: string, patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)) => void;
+  updateScene: (
+    sceneId: string,
+    patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)
+  ) => void;
   deleteScene: (sceneId: string) => void;
   reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
@@ -90,12 +94,7 @@ const SAMPLE_SCENES: SceneMetadata[] = [
 // HELPERS
 // ============================================================================
 
-/**
- * Génère un ID unique pour scène
- */
-function generateSceneId(): string {
-  return `scene-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+const generateSceneId = () => generateId('scene');
 
 /**
  * Crée une scène vide avec defaults (métadonnées uniquement)
@@ -339,17 +338,25 @@ export const useScenesStore = create<ScenesState>()(
           if (version < 3) {
             // Migration v2 → v3 : Extraire dialogues/characters/etc.
             // Les données seront dans les nouveaux stores
-            type LegacyScene = { id: string; title: string; description?: string; backgroundUrl?: string };
+            type LegacyScene = {
+              id: string;
+              title: string;
+              description?: string;
+              backgroundUrl?: string;
+            };
             const state = persistedState as { scenes?: LegacyScene[] };
             return {
               ...state,
-              scenes: state.scenes?.map((scene): SceneMetadata => ({
-                id: scene.id,
-                title: scene.title,
-                description: scene.description || '',
-                backgroundUrl: scene.backgroundUrl || '',
-                // Post-Phase 3 : plus d'arrays vides dans le store
-              })) || [],
+              scenes:
+                state.scenes?.map(
+                  (scene): SceneMetadata => ({
+                    id: scene.id,
+                    title: scene.title,
+                    description: scene.description || '',
+                    backgroundUrl: scene.backgroundUrl || '',
+                    // Post-Phase 3 : plus d'arrays vides dans le store
+                  })
+                ) || [],
             };
           }
           // v3 → v4 : Supprimer les arrays vestigiaux (dialogues[], characters[], etc.)

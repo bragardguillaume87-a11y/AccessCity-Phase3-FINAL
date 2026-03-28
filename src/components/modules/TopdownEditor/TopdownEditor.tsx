@@ -21,6 +21,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { MAP_ZOOM } from '@/config/mapEditorConfig';
 import { useAssets } from '@/hooks/useAssets';
 import { useMapEditor } from './hooks/useMapEditor';
+import { generateId } from '@/utils/generateId';
 import { useTileset } from './hooks/useTileset';
 import { useTopdownEditorResize } from './hooks/useTopdownEditorResize';
 import { useTopdownEditorKeyboard } from './hooks/useTopdownEditorKeyboard';
@@ -1529,7 +1530,7 @@ export default function TopdownEditor() {
               // Object placement mode (Phase 4)
               if (placingObjectDefId && editor.selectedMapId) {
                 addObjectInstance(editor.selectedMapId, {
-                  id: `obj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                  id: generateId('obj'),
                   definitionId: placingObjectDefId,
                   cx,
                   cy,
@@ -1626,7 +1627,7 @@ export default function TopdownEditor() {
                 }
               }
               addObjectInstance(editor.selectedMapId, {
-                id: `obj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                id: generateId('obj'),
                 definitionId: defId,
                 cx,
                 cy,
@@ -1914,11 +1915,9 @@ export default function TopdownEditor() {
                     })}
                     <button
                       onClick={() =>
-                        useMapsStore
-                          .getState()
-                          .updateObjectInstance(mapId, inst.id, {
-                            overrides: { ...inst.overrides, scaleX: 1, scaleY: 1 },
-                          })
+                        useMapsStore.getState().updateObjectInstance(mapId, inst.id, {
+                          overrides: { ...inst.overrides, scaleX: 1, scaleY: 1 },
+                        })
                       }
                       style={{
                         fontSize: 10,

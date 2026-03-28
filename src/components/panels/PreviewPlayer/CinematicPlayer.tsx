@@ -15,6 +15,7 @@ import { DialogueBox } from '@/components/ui/DialogueBox';
 import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { useSpeakerLayout } from '@/hooks/useSpeakerLayout';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import { REFERENCE_CANVAS_WIDTH } from '@/config/canvas';
 import { resolveCharacterSprite } from '@/utils/characterSprite';
 import type { CinematicEvent, TintPreset } from '@/types';
 import type { CinematicTracks } from '@/types/cinematic';
@@ -563,7 +564,7 @@ export function CinematicPlayer({
           speakerIsOnRight={speakerIsOnRight}
           speakerColor={speakerColor}
           config={dialogueBoxConfig}
-          scaleFactor={canvasWidth / 960}
+          scaleFactor={canvasWidth / REFERENCE_CANVAS_WIDTH}
           onAdvance={handleClick}
         />
       )}

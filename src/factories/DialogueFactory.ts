@@ -29,6 +29,7 @@
  */
 
 import type { Dialogue, DialogueChoice, DialogueAudio, MinigameConfig } from '@/types';
+import { generateId } from '@/utils/generateId';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { DialogueSchema, validate } from '@/schemas/validation';
@@ -72,7 +73,7 @@ export class DialogueFactory {
    * @returns Unique dialogue ID
    */
   private static generateId(): string {
-    return `dialogue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    return generateId('dialogue');
   }
 
   /**

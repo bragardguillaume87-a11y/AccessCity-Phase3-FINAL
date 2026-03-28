@@ -37,6 +37,7 @@ import { SceneFactory } from '@/factories/SceneFactory';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
+import { generateId } from '@/utils/generateId';
 
 /**
  * Scene Builder
@@ -116,7 +117,7 @@ export class SceneBuilder {
     }
   ): this {
     const sceneCharacter: SceneCharacter = {
-      id: `sc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: generateId('sc'),
       characterId,
       position,
       size,
@@ -167,11 +168,7 @@ export class SceneBuilder {
    * @param choices - Array of choice options
    * @returns this (for chaining)
    */
-  addDialogueWithChoices(
-    speaker: string,
-    text: string,
-    choices: DialogueChoice[]
-  ): this {
+  addDialogueWithChoices(speaker: string, text: string, choices: DialogueChoice[]): this {
     const dialogue = DialogueFactory.createWithChoices(speaker, text, choices);
 
     this.scene.dialogues.push(dialogue);
@@ -192,14 +189,9 @@ export class SceneBuilder {
    * @param rotation - Optional rotation in degrees (defaults to 0)
    * @returns this (for chaining)
    */
-  addProp(
-    assetUrl: string,
-    position: Position,
-    size: Size,
-    rotation: number = 0
-  ): this {
+  addProp(assetUrl: string, position: Position, size: Size, rotation: number = 0): this {
     const prop: Prop = {
-      id: `prop-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: generateId('prop'),
       assetUrl,
       position,
       size,
@@ -227,14 +219,9 @@ export class SceneBuilder {
    * @param style - Optional style object
    * @returns this (for chaining)
    */
-  addTextBox(
-    content: string,
-    position: Position,
-    size: Size,
-    style?: React.CSSProperties
-  ): this {
+  addTextBox(content: string, position: Position, size: Size, style?: React.CSSProperties): this {
     const textBox: TextBox = {
-      id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: generateId('text'),
       content,
       position,
       size,

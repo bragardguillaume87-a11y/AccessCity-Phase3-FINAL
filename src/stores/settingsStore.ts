@@ -12,6 +12,7 @@ import type { SpriteSheetConfig } from '@/types/sprite';
 import type { DialogueComposerTheme } from '@/config/dialogueComposerThemes';
 import type { VisualFilterConfig } from '@/types/visualFilter';
 import { DEFAULT_VISUAL_FILTER } from '@/config/visualFilters';
+import { generateId } from '../utils/generateId';
 
 // ── Character FX ──────────────────────────────────────────────────────────────
 
@@ -306,7 +307,7 @@ export const useSettingsStore = create<SettingsState>()(
 
         // Actions: Asset Collections
         addAssetCollection: (name) => {
-          const id = `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const id = generateId('col');
           set(
             (state) => ({
               assetCollections: [...state.assetCollections, { id, name, assetIds: [] }],

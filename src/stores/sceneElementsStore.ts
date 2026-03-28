@@ -3,6 +3,7 @@ import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zus
 import { temporal } from 'zundo';
 import { shallow } from 'zustand/shallow';
 import type { SceneCharacter, TextBox, Prop } from '../types';
+import { generateId } from '../utils/generateId';
 
 /** Scene Elements Store — Repository pattern for visual elements per scene */
 
@@ -54,10 +55,6 @@ interface SceneElementsState {
   importElementsByScene: (data: Record<string, SceneElements>) => void;
 }
 
-function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
 function createEmptyElements(): SceneElements {
   return {
     characters: [],
@@ -69,19 +66,43 @@ function createEmptyElements(): SceneElements {
 const SAMPLE_ELEMENTS: Record<string, SceneElements> = {
   scenetest01: {
     characters: [
-      { id: 'scene-char-player-01', characterId: 'player', mood: 'neutral', position: { x: 20, y: 50 }, size: { width: 200, height: 300 }, entranceAnimation: 'fadeIn', exitAnimation: 'none' },
-      { id: 'scene-char-counsellor-01', characterId: 'counsellor', mood: 'neutral', position: { x: 80, y: 50 }, size: { width: 200, height: 300 }, entranceAnimation: 'slideInRight', exitAnimation: 'none' }
+      {
+        id: 'scene-char-player-01',
+        characterId: 'player',
+        mood: 'neutral',
+        position: { x: 20, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'fadeIn',
+        exitAnimation: 'none',
+      },
+      {
+        id: 'scene-char-counsellor-01',
+        characterId: 'counsellor',
+        mood: 'neutral',
+        position: { x: 80, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'slideInRight',
+        exitAnimation: 'none',
+      },
     ],
     textBoxes: [],
-    props: []
+    props: [],
   },
   scenetest02: {
     characters: [
-      { id: 'scene-char-player-02', characterId: 'player', mood: 'neutral', position: { x: 20, y: 50 }, size: { width: 200, height: 300 }, entranceAnimation: 'fadeIn', exitAnimation: 'none' }
+      {
+        id: 'scene-char-player-02',
+        characterId: 'player',
+        mood: 'neutral',
+        position: { x: 20, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'fadeIn',
+        exitAnimation: 'none',
+      },
     ],
     textBoxes: [],
-    props: []
-  }
+    props: [],
+  },
 };
 
 export const useSceneElementsStore = create<SceneElementsState>()(
@@ -357,7 +378,9 @@ export const useSceneElementsStore = create<SceneElementsState>()(
                     ...state.elementsByScene,
                     [sceneId]: {
                       ...elements,
-                      props: elements.props.map((p) => (p.id === propId ? { ...p, ...updates } : p)),
+                      props: elements.props.map((p) =>
+                        p.id === propId ? { ...p, ...updates } : p
+                      ),
                     },
                   },
                 };

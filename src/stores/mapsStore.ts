@@ -14,6 +14,7 @@ import type {
   DialogueComponent,
   PatrolComponent,
 } from '@/types/sprite';
+import { generateId } from '../utils/generateId';
 
 /**
  * Maps Store
@@ -445,7 +446,7 @@ export const useMapsStore = create<MapsState>()(
           // ── ObjectDefinition CRUD ────────────────────────────────────────────
 
           addObjectDefinition: (def) => {
-            const id = `objdef-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            const id = generateId('objdef');
             const newDef: ObjectDefinition = { ...def, id };
             set(
               (state) => ({ objectDefinitions: [...state.objectDefinitions, newDef] }),
@@ -599,7 +600,7 @@ export const useMapsStore = create<MapsState>()(
                       : 'Objet sans sprite');
 
                   const newDef: ObjectDefinition = {
-                    id: `objdef-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                    id: generateId('objdef'),
                     displayName: defName,
                     components,
                     category:

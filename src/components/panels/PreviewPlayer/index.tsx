@@ -47,11 +47,7 @@ import { CompactStatHUD } from '@/components/ui/compact-stat-hud';
 import { DiceOverlay } from './DiceOverlay';
 import { MinigameOverlay } from './MinigameOverlay';
 import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
-import {
-  getDialogueBoxWrapperStyle,
-  getDialogueBoxGradientStyle,
-  getDialogueBoxInnerStyle,
-} from '@/utils/dialogueBoxPosition';
+import { DialogueBoxPositioned } from '@/components/ui/DialogueBoxPositioned';
 
 /** Aspect ratio 16:9 */
 const ASPECT_RATIO = 16 / 9;
@@ -238,8 +234,6 @@ export default function PreviewPlayer({
   // ── Position boîte de dialogue ─────────────────────────────────────────────
   // Narrateur → toujours centré (style Octopath Traveler), sinon config projet
   const dlgPosition = isNarrator ? 'center' : dialogueBoxConfig.position;
-  const dlgIsLeft = dlgPosition.endsWith('-left');
-  const dlgIsRight = dlgPosition.endsWith('-right');
 
   // ── Mood overrides ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -716,35 +710,19 @@ export default function PreviewPlayer({
                 />
               )}
 
-              {/* ── Dégradé adaptatif — via utilitaire partagé avec DialoguePreviewOverlay ── */}
-              {(() => {
-                const gradStyle = getDialogueBoxGradientStyle(dlgPosition);
-                return gradStyle ? (
-                  <div
-                    className="absolute pointer-events-none"
-                    style={{ ...gradStyle, zIndex: 9 }}
-                  />
-                ) : null;
-              })()}
-
-              {/* ── Boîte de dialogue — position via utilitaire partagé ── */}
-              <div
-                className="pointer-events-none"
-                style={{
-                  ...getDialogueBoxWrapperStyle(
-                    dlgPosition,
-                    dialogueBoxConfig.positionX,
-                    dialogueBoxConfig.positionY
-                  ),
-                  zIndex: 10,
-                }}
+              {/* ── Boîte de dialogue — position + gradient via composant partagé ── */}
+              <DialogueBoxPositioned
+                position={dlgPosition}
+                positionX={dialogueBoxConfig.positionX}
+                positionY={dialogueBoxConfig.positionY}
+                zIndex={10}
+                outerClassName="pointer-events-none"
               >
                 {/* AnimatePresence : keyed sur currentDialogue.id → rejoue enter/exit à chaque dialogue */}
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={currentDialogue?.id ?? 'no-dialogue'}
                     className="pointer-events-auto"
-                    style={getDialogueBoxInnerStyle(dlgPosition, dlgIsLeft, dlgIsRight)}
                     {...(dialogueBoxConfig.dialogueTransition === 'fondu'
                       ? {
                           initial: { opacity: 0 },
@@ -799,7 +777,7 @@ export default function PreviewPlayer({
                     />
                   </motion.div>
                 </AnimatePresence>
-              </div>
+              </DialogueBoxPositioned>
 
               {/* ── Stats HUD — tous modes (Pro + Élève) ── */}
               {/* z-[60] > DiceOverlay (z-50) → HUD visible même pendant le lancer de dé */}

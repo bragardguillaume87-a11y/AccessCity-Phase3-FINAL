@@ -86,11 +86,9 @@ export function getDialogueBoxGradientStyle(position: DialogueBoxPosition): CSSP
  * Retourne le padding interne du conteneur de la DialogueBox selon la position.
  * Pour les modes left/right, réduit le max-width pour ne pas déborder.
  */
-export function getDialogueBoxInnerStyle(
-  position: DialogueBoxPosition,
-  isLeft: boolean,
-  isRight: boolean
-): CSSProperties {
+export function getDialogueBoxInnerStyle(position: DialogueBoxPosition): CSSProperties {
+  const isLeft = position.endsWith('-left');
+  const isRight = position.endsWith('-right');
   const isTop = position.startsWith('top');
   const isCenter = position === 'center';
 

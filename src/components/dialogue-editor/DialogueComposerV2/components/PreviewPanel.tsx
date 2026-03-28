@@ -6,11 +6,7 @@ import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { DialogueBox, hashStringToColor } from '@/components/ui/DialogueBox';
 import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
-import {
-  getDialogueBoxWrapperStyle,
-  getDialogueBoxGradientStyle,
-  getDialogueBoxInnerStyle,
-} from '@/utils/dialogueBoxPosition';
+import { DialogueBoxPositioned } from '@/components/ui/DialogueBoxPositioned';
 import { T, FONTS, MINIGAME_CARDS, TYPE_TABS } from '../constants';
 
 interface PreviewPanelProps {
@@ -78,10 +74,6 @@ export function PreviewPanel({
 
   // isNarrator vient du parent (même logique que useSpeakerLayout : role + ID système)
   const position = isNarrator ? 'center' : dialogueBoxConfig.position;
-  const isLeft = position.endsWith('-left');
-  const isRight = position.endsWith('-right');
-  const gradientStyle = getDialogueBoxGradientStyle(position);
-  const innerStyle = getDialogueBoxInnerStyle(position, isLeft, isRight);
   const previewChoices =
     !isMinigame && formData.complexityLevel !== 'linear' && formData.choices.length > 0
       ? formData.choices
@@ -240,61 +232,54 @@ export function PreviewPanel({
                 />
               )}
 
-              {/* DialogueBox — positionnée via utilitaire partagé */}
-              <div
-                style={getDialogueBoxWrapperStyle(
-                  position,
-                  dialogueBoxConfig.positionX,
-                  dialogueBoxConfig.positionY
-                )}
+              {/* DialogueBox — positionnée via composant partagé */}
+              <DialogueBoxPositioned
+                position={position}
+                positionX={dialogueBoxConfig.positionX}
+                positionY={dialogueBoxConfig.positionY}
                 onMouseDown={position === 'custom' ? handleDragStart : undefined}
+                outerSlot={
+                  position === 'custom' ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: -20,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        background: '#8b5cf6bf',
+                        color: 'white',
+                        fontSize: 9,
+                        fontWeight: 700,
+                        cursor: 'move',
+                        userSelect: 'none',
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                      aria-hidden="true"
+                    >
+                      <Move size={9} /> Glisser pour repositionner
+                    </div>
+                  ) : undefined
+                }
               >
-                {/* Gradient directionnel */}
-                {gradientStyle && <div aria-hidden="true" style={gradientStyle} />}
-
-                {/* Drag handle visible en mode custom (Norman §9.1 affordance) */}
-                {position === 'custom' && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: -20,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 8px',
-                      borderRadius: 4,
-                      background: '#8b5cf6bf',
-                      color: 'white',
-                      fontSize: 9,
-                      fontWeight: 700,
-                      cursor: 'move',
-                      userSelect: 'none',
-                      pointerEvents: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                    aria-hidden="true"
-                  >
-                    <Move size={9} /> Glisser pour repositionner
-                  </div>
-                )}
-
-                <div style={innerStyle}>
-                  <DialogueBox
-                    speaker={isNarrator ? undefined : speakerName}
-                    displayText={formData.text || 'Aucun texte…'}
-                    isNarrator={isNarrator}
-                    isTypewriterDone={true}
-                    hasChoices={!!previewChoices?.length}
-                    choices={previewChoices}
-                    config={dialogueBoxConfig}
-                    scaleFactor={0.48}
-                    speakerPortraitUrl={speakerPortraitUrl || null}
-                    speakerColor={speakerColor}
-                  />
-                </div>
-              </div>
+                <DialogueBox
+                  speaker={isNarrator ? undefined : speakerName}
+                  displayText={formData.text || 'Aucun texte…'}
+                  isNarrator={isNarrator}
+                  isTypewriterDone={true}
+                  hasChoices={!!previewChoices?.length}
+                  choices={previewChoices}
+                  config={dialogueBoxConfig}
+                  scaleFactor={0.48}
+                  speakerPortraitUrl={speakerPortraitUrl || null}
+                  speakerColor={speakerColor}
+                />
+              </DialogueBoxPositioned>
             </VisualFilterLayer>
           </div>
 

@@ -6,11 +6,7 @@ import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { useSpeakerLayout } from '@/hooks/useSpeakerLayout';
 import { Z_INDEX } from '@/utils/zIndexLayers';
 import { DialogueBox } from '@/components/ui/DialogueBox';
-import {
-  getDialogueBoxWrapperStyle,
-  getDialogueBoxGradientStyle,
-  getDialogueBoxInnerStyle,
-} from '@/utils/dialogueBoxPosition';
+import { DialogueBoxPositioned } from '@/components/ui/DialogueBoxPositioned';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
@@ -157,48 +153,33 @@ export function DialoguePreviewOverlay({
 
   // Les narrateurs s'affichent toujours au centre (style Octopath Traveler).
   const position = isNarrator ? 'center' : dialogueBoxConfig.position;
-  const isLeft = position.endsWith('-left');
-  const isRight = position.endsWith('-right');
-  const gradientStyle = getDialogueBoxGradientStyle(position);
-  const innerStyle = getDialogueBoxInnerStyle(position, isLeft, isRight);
 
   return (
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        ...getDialogueBoxWrapperStyle(
-          position,
-          dialogueBoxConfig.positionX,
-          dialogueBoxConfig.positionY
-        ),
-        zIndex: Z_INDEX.CANVAS_DIALOGUE_OVERLAY,
-      }}
+    <DialogueBoxPositioned
+      position={position}
+      positionX={dialogueBoxConfig.positionX}
+      positionY={dialogueBoxConfig.positionY}
+      zIndex={Z_INDEX.CANVAS_DIALOGUE_OVERLAY}
+      outerClassName="absolute pointer-events-none"
+      innerClassName="pointer-events-auto"
     >
-      {/* Gradient adaptatif selon position */}
-      {gradientStyle && (
-        <div className="absolute pointer-events-none" style={gradientStyle} aria-hidden="true" />
-      )}
-
-      {/* Boîte de dialogue */}
-      <div className="pointer-events-auto" style={innerStyle}>
-        <DialogueBox
-          speaker={isNarrator ? undefined : speakerDisplayName || undefined}
-          displayText={displayText}
-          richText={isNarrator ? undefined : dialogue.richText}
-          choices={hasChoices ? dialogue.choices : undefined}
-          isNarrator={isNarrator}
-          isTypewriterDone={isComplete}
-          hasChoices={hasChoices}
-          config={dialogueBoxConfig}
-          scaleFactor={scaleFactor}
-          speakerPortraitUrl={isNarrator ? null : speakerPortraitUrl}
-          speakerIsOnRight={speakerIsOnRight}
-          speakerColor={speakerColor}
-          onAdvance={skip}
-          onChoose={onChoose}
-          navigationSlot={navigationSlot}
-        />
-      </div>
-    </div>
+      <DialogueBox
+        speaker={isNarrator ? undefined : speakerDisplayName || undefined}
+        displayText={displayText}
+        richText={isNarrator ? undefined : dialogue.richText}
+        choices={hasChoices ? dialogue.choices : undefined}
+        isNarrator={isNarrator}
+        isTypewriterDone={isComplete}
+        hasChoices={hasChoices}
+        config={dialogueBoxConfig}
+        scaleFactor={scaleFactor}
+        speakerPortraitUrl={isNarrator ? null : speakerPortraitUrl}
+        speakerIsOnRight={speakerIsOnRight}
+        speakerColor={speakerColor}
+        onAdvance={skip}
+        onChoose={onChoose}
+        navigationSlot={navigationSlot}
+      />
+    </DialogueBoxPositioned>
   );
 }

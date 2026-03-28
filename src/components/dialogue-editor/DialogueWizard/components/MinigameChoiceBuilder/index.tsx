@@ -534,7 +534,7 @@ export function MinigameChoiceBuilder({
           </div>
           <div className="space-y-1.5">
             {(cfg.items ?? []).map((item, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+              <div key={`item-${idx}`} className="flex items-center gap-2">
                 <span
                   style={{
                     fontSize: '0.7rem',
@@ -613,7 +613,7 @@ export function MinigameChoiceBuilder({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minHeight: 32 }}>
             {(cfg.keySequence ?? []).map((key, idx) => (
               <span
-                key={idx}
+                key={`seq-${idx}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -717,7 +717,7 @@ export function MinigameChoiceBuilder({
                 </p>
                 <div className="space-y-1.5">
                   {(cfg.brailleWords ?? []).map((word, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={`bword-${idx}`} className="flex items-center gap-2">
                       <span
                         style={{
                           fontSize: '0.7rem',

@@ -446,7 +446,7 @@ export function MinigameBraille({ config, onResult }: MinigameBrailleProps) {
                 const isCurrent = idx === currentLetterIdx && !wordComplete;
                 return (
                   <motion.div
-                    key={idx}
+                    key={`letter-${idx}`}
                     animate={
                       revealed
                         ? { scale: [1, 1.25, 1], backgroundColor: 'rgba(139,92,246,0.3)' }

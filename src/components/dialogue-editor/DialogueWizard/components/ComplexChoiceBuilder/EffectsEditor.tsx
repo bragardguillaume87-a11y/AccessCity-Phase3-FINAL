@@ -63,7 +63,7 @@ export function EffectsEditor({ effects, onChange }: EffectsEditorProps) {
               if (!isStatEffect(effect)) return acc;
               acc.push(
                 <EffectRow
-                  key={originalIndex}
+                  key={`${effect.variable}-${effect.operation}-${originalIndex}`}
                   effect={effect}
                   onUpdate={(updates) => handleUpdateEffect(originalIndex, updates)}
                   onRemove={() => handleRemoveEffect(originalIndex)}

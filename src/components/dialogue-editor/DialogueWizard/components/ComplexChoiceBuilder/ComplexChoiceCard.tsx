@@ -147,7 +147,7 @@ export function ComplexChoiceCard({
             >
               {conditions.map((cond, idx) => (
                 <ConditionRow
-                  key={idx}
+                  key={`cond-${idx}`}
                   condition={cond}
                   onUpdate={(updates) => handleUpdateCondition(idx, updates)}
                   onRemove={() => handleRemoveCondition(idx)}

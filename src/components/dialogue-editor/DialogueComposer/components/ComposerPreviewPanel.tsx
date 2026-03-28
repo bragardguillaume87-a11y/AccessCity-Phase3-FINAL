@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GitBranch, MessageSquare, Play, RotateCcw } from 'lucide-react';
 import type { DialogueChoice, MinigameConfig } from '@/types';
@@ -117,6 +117,7 @@ export function ComposerPreviewPanel({
   const [mgPreview, setMgPreview] = useState<'idle' | 'playing' | 'success' | 'failure'>('idle');
   // Zoom de la fenêtre de jeu — 0.80 par défaut (auto-fit), ajustable par l'utilisateur
   const [previewZoom, setPreviewZoom] = useState(0.8);
+  const mgResultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoomIn = useCallback(
     () => setPreviewZoom((z) => Math.min(1.0, Math.round((z + 0.1) * 10) / 10)),
     []
@@ -126,14 +127,22 @@ export function ComposerPreviewPanel({
     []
   );
 
+  // Cleanup du timeout au démontage pour éviter setState sur composant démonté
+  useEffect(() => {
+    return () => {
+      if (mgResultTimeoutRef.current) clearTimeout(mgResultTimeoutRef.current);
+    };
+  }, []);
+
   const handleStartPreview = useCallback(() => {
     uiSounds.initialize();
     setMgPreview('playing');
   }, []);
 
   const handleMgResult = useCallback((success: boolean) => {
+    if (mgResultTimeoutRef.current) clearTimeout(mgResultTimeoutRef.current);
     setMgPreview(success ? 'success' : 'failure');
-    setTimeout(() => setMgPreview('idle'), 1500);
+    mgResultTimeoutRef.current = setTimeout(() => setMgPreview('idle'), 1500);
   }, []);
 
   // ── Console bezel layout — minigame type (header fixe + corps scrollable) ──

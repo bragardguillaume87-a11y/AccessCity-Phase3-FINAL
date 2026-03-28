@@ -1,5 +1,5 @@
 import { Save, Network, Move } from 'lucide-react';
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import type { DialogueFormData } from '../../DialogueWizard/hooks/useDialogueForm';
 import type { Scene } from '@/types';
 import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
@@ -44,6 +44,16 @@ export function PreviewPanel({
 
   // Drag ref pour le mode custom
   const previewRef = useRef<HTMLDivElement>(null);
+  // Refs des listeners actifs — cleanup si le composant se démonte mid-drag
+  const dragMoveRef = useRef<((e: MouseEvent) => void) | null>(null);
+  const dragUpRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dragMoveRef.current) window.removeEventListener('mousemove', dragMoveRef.current);
+      if (dragUpRef.current) window.removeEventListener('mouseup', dragUpRef.current);
+    };
+  }, []);
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent) => {
@@ -65,7 +75,11 @@ export function PreviewPanel({
       const onUp = () => {
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
+        dragMoveRef.current = null;
+        dragUpRef.current = null;
       };
+      dragMoveRef.current = onMove;
+      dragUpRef.current = onUp;
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     },

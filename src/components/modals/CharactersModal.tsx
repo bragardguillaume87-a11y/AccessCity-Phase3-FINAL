@@ -107,6 +107,7 @@ export function CharactersModal({ isOpen, onClose, initialCharacterId }: Charact
     }
   }, [isOpen, initialCharacterId, characters]);
 
+  const clearSelection = selection.clearSelection;
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery('');
@@ -117,10 +118,10 @@ export function CharactersModal({ isOpen, onClose, initialCharacterId }: Charact
       setPreviewCharacter(null);
       setEditingCharacter(null);
       setCharToDelete(null);
-      selection.clearSelection();
+      clearSelection();
       setActiveTab('library');
     }
-  }, [isOpen, selection]);
+  }, [isOpen, clearSelection]);
 
   useEffect(() => {
     setPreviewCharacter(null);

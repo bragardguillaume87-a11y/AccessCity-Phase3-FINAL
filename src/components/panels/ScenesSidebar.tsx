@@ -6,50 +6,62 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core'
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { useScenesStore } from '../../stores/index'
-import { useDialoguesStore } from '@/stores/dialoguesStore'
-import { useSceneElementsStore } from '@/stores/sceneElementsStore'
-import { Button } from '@/components/ui/button'
-import { Plus, Copy, Trash2, Film } from 'lucide-react'
-import type { SceneMetadata } from '@/types'
-import { useUIStore } from '@/stores/uiStore'
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { NarrativeThreads } from './NarrativeThreads'
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useScenesStore } from '../../stores/index';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import { Button } from '@/components/ui/button';
+import { Plus, Copy, Trash2, Film } from 'lucide-react';
+import type { SceneMetadata } from '@/types';
+import { useUIStore } from '@/stores/uiStore';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { NarrativeThreads } from './NarrativeThreads';
 
 /** Cycle de backgrounds pour les scènes sans image (correspond aux classes scene-bg-* de studio.css) */
-const BG_CYCLE = ['scene-bg-city', 'scene-bg-interior', 'scene-bg-night', 'scene-bg-forest'] as const
+const BG_CYCLE = [
+  'scene-bg-city',
+  'scene-bg-interior',
+  'scene-bg-night',
+  'scene-bg-forest',
+] as const;
 
 /** Palette couleurs pour la pastille de scène */
 const COLOR_PALETTE = [
-  '#6b5ce7', '#fa6d9a', '#4ade80', '#fbbf24',
-  '#f87171', '#67e8f9', '#a78bfa', '#fb923c',
-  '#e879f9', 'rgba(255,255,255,0.3)',
-]
+  '#6b5ce7',
+  '#fa6d9a',
+  '#4ade80',
+  '#fbbf24',
+  '#f87171',
+  '#67e8f9',
+  '#a78bfa',
+  '#fb923c',
+  '#e879f9',
+  'rgba(255,255,255,0.3)',
+];
 
 /**
  * SceneCard Props Interface
  */
 interface SceneCardProps {
-  scene: SceneMetadata
-  index: number
-  isSelected: boolean
-  charactersCount: number
-  dialogueCount: number
-  onSelect: () => void
-  onHover: (id: string | null) => void
-  onUpdateColor: (sceneId: string, color: string) => void
-  onDuplicate: (sceneId: string) => void
-  onDelete: (sceneId: string) => void
-  onOpenCinematic?: (sceneId: string) => void
+  scene: SceneMetadata;
+  index: number;
+  isSelected: boolean;
+  charactersCount: number;
+  dialogueCount: number;
+  onSelect: () => void;
+  onHover: (id: string | null) => void;
+  onUpdateColor: (sceneId: string, color: string) => void;
+  onDuplicate: (sceneId: string) => void;
+  onDelete: (sceneId: string) => void;
+  onOpenCinematic?: (sceneId: string) => void;
 }
 
 /**
@@ -62,31 +74,35 @@ interface SceneCardProps {
  * a simple click fires onClick normally before drag activates.
  */
 function SceneCard({
-  scene, index, isSelected, charactersCount, dialogueCount,
-  onSelect, onHover, onUpdateColor, onDuplicate, onDelete, onOpenCinematic
+  scene,
+  index,
+  isSelected,
+  charactersCount,
+  dialogueCount,
+  onSelect,
+  onHover,
+  onUpdateColor,
+  onDuplicate,
+  onDelete,
+  onOpenCinematic,
 }: SceneCardProps) {
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const pickerRef = useRef<HTMLDivElement>(null)
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: scene.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: scene.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
-  }
+  };
 
-  const hasBackground = !!scene.backgroundUrl
-  const isCinematic = scene.sceneType === 'cinematic'
-  const bgClass = BG_CYCLE[index % BG_CYCLE.length]
-  const sceneColor = scene.color ?? 'var(--color-primary)'
+  const hasBackground = !!scene.backgroundUrl;
+  const isCinematic = scene.sceneType === 'cinematic';
+  const bgClass = BG_CYCLE[index % BG_CYCLE.length];
+  const sceneColor = scene.color ?? 'var(--color-primary)';
 
   return (
     <div
@@ -104,12 +120,12 @@ function SceneCard({
       onMouseEnter={() => onHover(scene.id)}
       onMouseLeave={() => onHover(null)}
       onDoubleClick={() => {
-        if (isCinematic && onOpenCinematic) onOpenCinematic(scene.id)
+        if (isCinematic && onOpenCinematic) onOpenCinematic(scene.id);
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
+          e.preventDefault();
+          onSelect();
         }
       }}
     >
@@ -120,7 +136,13 @@ function SceneCard({
             src={scene.backgroundUrl}
             alt=""
             aria-hidden="true"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
           />
         ) : (
           <div className={bgClass} />
@@ -152,7 +174,10 @@ function SceneCard({
             <button
               className="scene-color-dot"
               style={{ background: sceneColor }}
-              onClick={(e) => { e.stopPropagation(); setPickerOpen(o => !o) }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPickerOpen((o) => !o);
+              }}
               onKeyDown={(e) => e.stopPropagation()}
               aria-label="Changer la couleur de la scène"
             />
@@ -167,7 +192,10 @@ function SceneCard({
                     key={c}
                     className="scene-color-swatch"
                     style={{ background: c }}
-                    onClick={() => { onUpdateColor(scene.id, c); setPickerOpen(false) }}
+                    onClick={() => {
+                      onUpdateColor(scene.id, c);
+                      setPickerOpen(false);
+                    }}
                     aria-label={`Couleur ${c}`}
                   />
                 ))}
@@ -183,7 +211,10 @@ function SceneCard({
               className="scene-action"
               title="Éditer la cinématique"
               aria-label="Ouvrir l'éditeur cinématique"
-              onClick={(e) => { e.stopPropagation(); onOpenCinematic(scene.id) }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCinematic(scene.id);
+              }}
               onKeyDown={(e) => e.stopPropagation()}
             >
               <Film size={10} />
@@ -193,7 +224,10 @@ function SceneCard({
             className="scene-action"
             title="Dupliquer"
             aria-label="Dupliquer la scène"
-            onClick={(e) => { e.stopPropagation(); onDuplicate(scene.id) }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate(scene.id);
+            }}
             onKeyDown={(e) => e.stopPropagation()}
           >
             <Copy size={10} />
@@ -202,7 +236,10 @@ function SceneCard({
             className="scene-action danger"
             title="Supprimer"
             aria-label="Supprimer la scène"
-            onClick={(e) => { e.stopPropagation(); onDelete(scene.id) }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(scene.id);
+            }}
             onKeyDown={(e) => e.stopPropagation()}
           >
             <Trash2 size={10} />
@@ -218,16 +255,16 @@ function SceneCard({
         {charactersCount > 0 && <span className="scene-meta">· {charactersCount} perso.</span>}
       </div>
     </div>
-  )
+  );
 }
 
 /**
  * ScenesSidebar Props Interface
  */
 export interface ScenesSidebarProps {
-  scenes: SceneMetadata[]
-  selectedSceneId?: string | null
-  onSceneSelect: (sceneId: string) => void
+  scenes: SceneMetadata[];
+  selectedSceneId?: string | null;
+  onSceneSelect: (sceneId: string) => void;
 }
 
 /**
@@ -236,51 +273,51 @@ export interface ScenesSidebarProps {
 export default function ScenesSidebar({
   scenes,
   selectedSceneId,
-  onSceneSelect
+  onSceneSelect,
 }: ScenesSidebarProps) {
-  const addScene = useScenesStore(state => state.addScene)
-  const deleteScene = useScenesStore(state => state.deleteScene)
-  const updateScene = useScenesStore(state => state.updateScene)
-  const reorderScenes = useScenesStore(state => state.reorderScenes)
-  const setCinematicEditorOpen = useUIStore(state => state.setCinematicEditorOpen)
+  const addScene = useScenesStore((state) => state.addScene);
+  const deleteScene = useScenesStore((state) => state.deleteScene);
+  const updateScene = useScenesStore((state) => state.updateScene);
+  const reorderScenes = useScenesStore((state) => state.reorderScenes);
+  const setCinematicEditorOpen = useUIStore((state) => state.setCinematicEditorOpen);
 
   // Real character counts come from sceneElementsStore (not scene.characters which is always [])
-  const elementsByScene = useSceneElementsStore(state => state.elementsByScene)
+  const elementsByScene = useSceneElementsStore((state) => state.elementsByScene);
 
   // Dialogue counts per scene + detection des scènes avec choix (pour NarrativeThreads)
-  const dialoguesByScene = useDialoguesStore(state => state.dialoguesByScene)
+  const dialoguesByScene = useDialoguesStore((state) => state.dialoguesByScene);
 
   const scenesWithChoices = useMemo<Set<string>>(() => {
-    const result = new Set<string>()
+    const result = new Set<string>();
     Object.entries(dialoguesByScene).forEach(([sceneId, dialogues]) => {
-      if (dialogues.some(d => d.choices && d.choices.length > 0)) {
-        result.add(sceneId)
+      if (dialogues.some((d) => d.choices && d.choices.length > 0)) {
+        result.add(sceneId);
       }
-    })
-    return result
-  }, [dialoguesByScene])
+    });
+    return result;
+  }, [dialoguesByScene]);
 
   // Hover tracking pour NarrativeThreads
-  const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null)
+  const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
 
   // Ref sur le container filmstrip (NarrativeThreads l'utilise pour les calculs DOM)
-  const filmstripRef = useRef<HTMLDivElement>(null)
+  const filmstripRef = useRef<HTMLDivElement>(null);
 
   // Add scene dropdown
-  const [addMenuOpen, setAddMenuOpen] = useState(false)
-  const addMenuRef = useRef<HTMLDivElement>(null)
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
 
   // Close menu on outside click
   useEffect(() => {
-    if (!addMenuOpen) return
+    if (!addMenuOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
-        setAddMenuOpen(false)
+        setAddMenuOpen(false);
       }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [addMenuOpen])
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [addMenuOpen]);
 
   // activationConstraint: drag only starts after 8px movement, so simple clicks still fire
   const sensors = useSensors(
@@ -290,41 +327,41 @@ export default function ScenesSidebar({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
-  )
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = scenes.findIndex(s => s.id === active.id)
-      const newIndex = scenes.findIndex(s => s.id === over.id)
-      reorderScenes(arrayMove(scenes, oldIndex, newIndex))
+      const oldIndex = scenes.findIndex((s) => s.id === active.id);
+      const newIndex = scenes.findIndex((s) => s.id === over.id);
+      reorderScenes(arrayMove(scenes, oldIndex, newIndex));
     }
-  }
+  };
 
   const handleAddScene = (sceneType?: 'standard' | 'cinematic') => {
-    const newId = addScene(sceneType)
-    onSceneSelect(newId)
-    setAddMenuOpen(false)
+    const newId = addScene(sceneType);
+    onSceneSelect(newId);
+    setAddMenuOpen(false);
     if (sceneType === 'cinematic') {
-      setCinematicEditorOpen(true, newId)
+      setCinematicEditorOpen(true, newId);
     }
-  }
+  };
 
   const handleOpenCinematic = (sceneId: string) => {
-    setCinematicEditorOpen(true, sceneId)
-  }
+    setCinematicEditorOpen(true, sceneId);
+  };
 
   const handleUpdateColor = (sceneId: string, color: string) => {
-    updateScene(sceneId, { color })
-  }
+    updateScene(sceneId, { color });
+  };
 
   const handleDuplicateScene = (sceneId: string) => {
-    const scene = scenes.find(s => s.id === sceneId)
-    if (!scene) return
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
 
-    const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId)
-    const elements = useSceneElementsStore.getState().getElementsForScene(sceneId)
-    const newId = addScene(scene.sceneType)
+    const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
+    const elements = useSceneElementsStore.getState().getElementsForScene(sceneId);
+    const newId = addScene(scene.sceneType);
 
     // Copier les métadonnées via scenesStore
     updateScene(newId, {
@@ -333,40 +370,50 @@ export default function ScenesSidebar({
       backgroundUrl: scene.backgroundUrl,
       color: scene.color,
       cinematicEvents: scene.cinematicEvents ? [...scene.cinematicEvents] : undefined,
-    })
+    });
 
     // Copier les dialogues via dialoguesStore (Post-Phase 3)
     if (dialogues.length > 0) {
-      useDialoguesStore.getState().addDialogues(newId, dialogues)
+      useDialoguesStore.getState().addDialogues(newId, dialogues);
     }
 
     // Copier les personnages via sceneElementsStore (Post-Phase 3)
-    elements.characters.forEach(char => {
-      useSceneElementsStore.getState().addCharacterToScene(newId, char.characterId, char.mood, char.position)
-    })
+    elements.characters.forEach((char) => {
+      useSceneElementsStore
+        .getState()
+        .addCharacterToScene(newId, char.characterId, char.mood, char.position);
+    });
 
-    onSceneSelect(newId)
-  }
+    onSceneSelect(newId);
+  };
 
   const handleDeleteScene = (sceneId: string) => {
-    if (scenes.length === 1) return
+    if (scenes.length === 1) return;
     if (window.confirm('Supprimer cette scène ?')) {
-      deleteScene(sceneId)
-      if (selectedSceneId === sceneId) {
-        const next = scenes.find(s => s.id !== sceneId)
-        if (next) onSceneSelect(next.id)
-      }
+      // Calculer la scène suivante AVANT la suppression (évite la race condition
+      // où 'scenes' capturée en closure contiendrait encore la scène supprimée)
+      const nextScene =
+        selectedSceneId === sceneId ? scenes.find((s) => s.id !== sceneId) : undefined;
+      deleteScene(sceneId);
+      if (nextScene) onSceneSelect(nextScene.id);
     }
-  }
+  };
 
   return (
-    <div className="h-full flex flex-col bg-[var(--color-bg-elevated)]" role="complementary" aria-label="Filmstrip des scènes">
+    <div
+      className="h-full flex flex-col bg-[var(--color-bg-elevated)]"
+      role="complementary"
+      aria-label="Filmstrip des scènes"
+    >
       {/* Header compact — bouton + menu déroulant type de scène */}
-      <div className="flex-shrink-0 p-2 border-b border-[var(--color-border-base)] relative" ref={addMenuRef}>
+      <div
+        className="flex-shrink-0 p-2 border-b border-[var(--color-border-base)] relative"
+        ref={addMenuRef}
+      >
         <Button
           variant="token-primary"
           size="sm"
-          onClick={() => setAddMenuOpen(prev => !prev)}
+          onClick={() => setAddMenuOpen((prev) => !prev)}
           className="w-full h-9 text-[13px] font-semibold justify-center focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus)]"
           aria-label="Ajouter une scène"
           aria-expanded={addMenuOpen}
@@ -420,15 +467,8 @@ export default function ScenesSidebar({
           />
         )}
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={scenes.map(s => s.id)}
-            strategy={verticalListSortingStrategy}
-          >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={scenes.map((s) => s.id)} strategy={verticalListSortingStrategy}>
             {scenes.map((scene, index) => (
               <div key={scene.id} role="listitem" style={{ position: 'relative', zIndex: 1 }}>
                 <SceneCard
@@ -449,7 +489,6 @@ export default function ScenesSidebar({
           </SortableContext>
         </DndContext>
       </div>
-
     </div>
-  )
+  );
 }

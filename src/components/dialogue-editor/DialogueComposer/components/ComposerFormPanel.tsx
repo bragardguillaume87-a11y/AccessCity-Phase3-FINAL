@@ -182,7 +182,7 @@ export function ComposerFormPanel({
                 const active = safeTab === i;
                 return (
                   <button
-                    key={i}
+                    key={choices[i].id}
                     type="button"
                     onClick={() => setActiveTab(i)}
                     className={cn(

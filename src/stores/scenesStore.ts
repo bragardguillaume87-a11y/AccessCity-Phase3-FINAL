@@ -7,6 +7,7 @@ import { generateId } from '../utils/generateId';
 import type { SceneMetadata, SceneType, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
+import { useUIStore } from './uiStore';
 
 /**
  * Scenes Store
@@ -302,6 +303,13 @@ export const useScenesStore = create<ScenesState>()(
             // CASCADE DELETE: Supprimer les données associées (synchrone)
             useDialoguesStore.getState().deleteAllDialoguesForScene(sceneId);
             useSceneElementsStore.getState().deleteAllElementsForScene(sceneId);
+
+            // Invalider les références orphelines dans uiStore
+            const ui = useUIStore.getState();
+            if (ui.selectedSceneId === sceneId) ui.setSelectedSceneId(null);
+            if (ui.selectedSceneForEdit === sceneId) ui.setSelectedSceneForEdit(null);
+            if (ui.dialogueGraphSelectedScene === sceneId) ui.setDialogueGraphSelectedScene(null);
+            if (ui.cinematicEditorSceneId === sceneId) ui.setCinematicEditorOpen(false, null);
           },
 
           // ============================================================

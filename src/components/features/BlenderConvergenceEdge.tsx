@@ -1,3 +1,4 @@
+import React from 'react';
 import { BaseEdge, EdgeProps, Edge, getBezierPath } from '@xyflow/react';
 import type { CosmosConvergenceData } from './CosmosConvergenceEdge';
 
@@ -8,7 +9,7 @@ import type { CosmosConvergenceData } from './CosmosConvergenceEdge';
  * qui se déplace le long du chemin (SVG animateMotion + rotate="auto").
  * Aucun texte — le sens de lecture est communiqué visuellement.
  */
-export function BlenderConvergenceEdge({
+export const BlenderConvergenceEdge = React.memo(function BlenderConvergenceEdge({
   id,
   sourceX,
   sourceY,
@@ -71,4 +72,4 @@ export function BlenderConvergenceEdge({
       </path>
     </>
   );
-}
+});

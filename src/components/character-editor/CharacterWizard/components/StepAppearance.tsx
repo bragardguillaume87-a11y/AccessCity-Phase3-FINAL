@@ -180,9 +180,9 @@ export function StepAppearance({
             Images récentes
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-            {recentAssets.map((assetPath, idx) => (
+            {recentAssets.map((assetPath) => (
               <SpriteCard
-                key={idx}
+                key={assetPath}
                 path={assetPath}
                 isSelected={
                   assetPath === currentSprite ||
@@ -207,11 +207,11 @@ export function StepAppearance({
               Aucune image trouvée
             </div>
           ) : (
-            filteredAssets.map((asset, idx) => {
+            filteredAssets.map((asset) => {
               const assetUrl = asset.url ?? asset.path;
               return (
                 <SpriteCard
-                  key={idx}
+                  key={asset.path}
                   path={assetUrl}
                   name={asset.name}
                   isSelected={assetUrl === currentSprite || asset.path === currentSprite}

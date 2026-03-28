@@ -9,6 +9,7 @@ import type { Scene, DialogueChoice } from '@/types';
 import { EventBus } from './EventBus';
 import { VariableManager } from './VariableManager';
 import { ConditionEvaluator } from './ConditionEvaluator';
+import { STAT_BOUNDS } from '@/config/gameConstants';
 
 export class DialogueEngine {
   private eventBus: EventBus;
@@ -74,13 +75,17 @@ export class DialogueEngine {
       const before = this.vm.get(effect.variable);
 
       if (effect.operation === 'set') {
-        this.vm.set(effect.variable, effect.value);
+        const clamped = Math.max(STAT_BOUNDS.MIN, Math.min(STAT_BOUNDS.MAX, effect.value));
+        this.vm.set(effect.variable, clamped);
         deltas.push({
           variable: effect.variable,
-          delta: effect.value - before,
+          delta: clamped - before,
         });
       } else if (effect.operation === 'multiply') {
-        const newValue = Math.round(before * effect.value);
+        const raw = Math.round(before * effect.value);
+        const newValue = isNaN(raw)
+          ? before
+          : Math.max(STAT_BOUNDS.MIN, Math.min(STAT_BOUNDS.MAX, raw));
         this.vm.set(effect.variable, newValue);
         deltas.push({
           variable: effect.variable,

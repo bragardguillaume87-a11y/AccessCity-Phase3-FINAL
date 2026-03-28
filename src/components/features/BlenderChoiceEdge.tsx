@@ -1,3 +1,4 @@
+import React from 'react';
 import { BaseEdge, EdgeProps, Edge, getBezierPath } from '@xyflow/react';
 
 /**
@@ -6,7 +7,7 @@ import { BaseEdge, EdgeProps, Edge, getBezierPath } from '@xyflow/react';
  * Ligne violette pleine avec un marqueur triangulaire animé
  * qui se déplace le long du chemin (SVG animateMotion + rotate="auto").
  */
-export function BlenderChoiceEdge({
+export const BlenderChoiceEdge = React.memo(function BlenderChoiceEdge({
   id,
   sourceX,
   sourceY,
@@ -47,15 +48,10 @@ export function BlenderChoiceEdge({
         opacity="0.9"
         style={{ filter: 'drop-shadow(0 0 3px rgba(123,94,167,0.9))' }}
       >
-        <animateMotion
-          dur="2s"
-          repeatCount="indefinite"
-          rotate="auto"
-          calcMode="linear"
-        >
+        <animateMotion dur="2s" repeatCount="indefinite" rotate="auto" calcMode="linear">
           <mpath href={`#${id}`} />
         </animateMotion>
       </path>
     </>
   );
-}
+});

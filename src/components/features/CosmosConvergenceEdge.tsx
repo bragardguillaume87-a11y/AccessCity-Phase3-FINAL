@@ -1,3 +1,4 @@
+import React from 'react';
 import { BaseEdge, EdgeProps, Edge, getSmoothStepPath } from '@xyflow/react';
 import { COSMOS_COLORS, COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
 
@@ -26,7 +27,7 @@ const { convergence } = COSMOS_COLORS;
  * - Y_SPREAD: slightly shifts source/target Y per edge index
  * The combination creates a clean fan where all edges are visually distinct.
  */
-export function CosmosConvergenceEdge({
+export const CosmosConvergenceEdge = React.memo(function CosmosConvergenceEdge({
   id,
   sourceX,
   sourceY,
@@ -43,9 +44,7 @@ export function CosmosConvergenceEdge({
 
   // Fan stepPosition: single edge = 0.5, multiple = evenly in [0.3, 0.7]
   const stepPosition =
-    parallelCount === 1
-      ? 0.5
-      : 0.3 + (parallelIndex / Math.max(parallelCount - 1, 1)) * stepRange;
+    parallelCount === 1 ? 0.5 : 0.3 + (parallelIndex / Math.max(parallelCount - 1, 1)) * stepRange;
 
   // Slight Y offset: centres the fan around the handle
   const spread = (parallelIndex - (parallelCount - 1) / 2) * ySpread;
@@ -76,7 +75,6 @@ export function CosmosConvergenceEdge({
           ...style,
         }}
       />
-
     </>
   );
-}
+});

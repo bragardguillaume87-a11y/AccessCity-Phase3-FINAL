@@ -161,6 +161,9 @@ export interface DialogueBoxStyle {
   narratorBorderColor?: string;
   /** Opacité du fond narrateur 0–1 (défaut : 0.93). */
   narratorBgOpacity?: number;
+  // ── Dimensionnement de la boîte ──────────────────────────────────────────────
+  /** Largeur de la boîte en % du canvas (défaut : 76). Plage : 40–100. */
+  boxWidth?: number;
 }
 
 export interface Dialogue {

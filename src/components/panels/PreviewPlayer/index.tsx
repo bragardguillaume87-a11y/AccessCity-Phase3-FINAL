@@ -233,8 +233,7 @@ export default function PreviewPlayer({
   const effectiveTypewriterDone = isNarrator || typewriterDone;
 
   // ── Position boîte de dialogue ─────────────────────────────────────────────
-  // Narrateur → toujours centré (style Octopath Traveler), sinon config projet
-  const dlgPosition = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const dlgPosition = dialogueBoxConfig.position;
 
   // ── Mood overrides ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -713,6 +712,7 @@ export default function PreviewPlayer({
                 position={dlgPosition}
                 positionX={dialogueBoxConfig.positionX}
                 positionY={dialogueBoxConfig.positionY}
+                boxWidth={dialogueBoxConfig.boxWidth}
                 zIndex={10}
                 outerClassName="pointer-events-none"
               >

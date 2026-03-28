@@ -55,6 +55,7 @@ export const DIALOGUE_BOX_DEFAULTS: Required<DialogueBoxStyle> = {
   narratorTextColor: '#ede8d5',
   narratorBorderColor: '#c9a84c',
   narratorBgOpacity: 0.93,
+  boxWidth: 76,
 };
 
 /**
@@ -579,256 +580,24 @@ export function DialogueBox({
     );
   }
 
-  // ── Layout NARRATEUR — style Octopath Traveler ─────────────────────────────
-  // Boîte navy semi-transparente, bordure dorée, coins ornementaux, texte Crimson Pro italique crème.
-  // Pas de nameplate — l'absence du nom signale la narration (convention VN universelle).
-  if (isNarrator) {
-    const GOLD = config.narratorBorderColor;
-    const CREAM = config.narratorTextColor;
-    const BOX_BG = hexToRgba(config.narratorBgColor, config.narratorBgOpacity);
-
-    const padX = Math.round(30 * sf);
-    const padY = Math.round(18 * sf);
-    const sepMt = Math.round(11 * sf);
-    const ornSize = Math.round(9 * sf);
-
-    const narratorTextStyle: React.CSSProperties = {
-      fontSize: effectiveFontSize,
-      fontFamily: "'Crimson Pro', Georgia, 'Palatino Linotype', serif",
-      fontStyle: 'italic',
-      fontWeight: 400,
-      color: CREAM,
-      lineHeight: 1.88,
-      letterSpacing: '0.022em',
-      textAlign: 'center',
-      minHeight: textMinHeightPx || undefined,
-    };
-
-    const words = displayText.split(' ').filter(Boolean);
-
-    return (
-      <div style={{ position: 'relative', paddingTop: navigationSlot ? Math.round(36 * sf) : 0 }}>
-        {/* Slot de navigation éditeur */}
-        {navigationSlot && (
-          <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>{navigationSlot}</div>
-        )}
-
-        {/* ── Boîte principale ── */}
-        <div
-          className="backdrop-blur-md"
-          style={{
-            position: 'relative',
-            background: BOX_BG,
-            border: `1.5px solid ${GOLD}`,
-            borderRadius: Math.round(4 * sf),
-            boxShadow: [
-              `0 0 0 1px rgba(201,168,76,0.09)`,
-              `inset 0 0 50px rgba(0,0,0,0.38)`,
-              `0 12px 40px rgba(0,0,0,0.7)`,
-            ].join(', '),
-            padding: `${padY}px ${padX}px`,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Coins décoratifs dorés */}
-          <CornerDecorations color={GOLD} sf={sf} />
-
-          {/* Lueur de coin — ambiance parchemin */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: [
-                'radial-gradient(ellipse 60% 40% at top left, rgba(201,168,76,0.06) 0%, transparent 70%)',
-                'radial-gradient(ellipse 60% 40% at bottom right, rgba(201,168,76,0.06) 0%, transparent 70%)',
-              ].join(', '),
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* ── Ornement supérieur ── */}
-          <motion.div
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
-            style={{
-              transformOrigin: 'center',
-              marginBottom: sepMt,
-              display: 'flex',
-              alignItems: 'center',
-              gap: Math.round(7 * sf),
-            }}
-          >
-            <div
-              style={{
-                flex: 1,
-                height: 1,
-                background: `linear-gradient(to right, transparent, ${GOLD}55)`,
-              }}
-            />
-            <span
-              aria-hidden="true"
-              style={{ color: GOLD, fontSize: ornSize, opacity: 0.9, lineHeight: 1, flexShrink: 0 }}
-            >
-              ✦
-            </span>
-            <div
-              style={{
-                flex: 1,
-                height: 1,
-                background: `linear-gradient(to left, transparent, ${GOLD}55)`,
-              }}
-            />
-          </motion.div>
-
-          {/* ── Texte ── */}
-          <div
-            onClick={onAdvance}
-            role={onAdvance ? 'button' : undefined}
-            style={{ cursor: onAdvance ? 'pointer' : undefined }}
-          >
-            {isTypewriterDone && richText ? (
-              <p style={narratorTextStyle} dangerouslySetInnerHTML={{ __html: richText }} />
-            ) : (
-              <p style={narratorTextStyle}>
-                {words.map((word, i) => (
-                  <motion.span
-                    key={`word-${i}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.038, duration: 0.3, ease: 'easeOut' }}
-                  >
-                    {word}{' '}
-                  </motion.span>
-                ))}
-              </p>
-            )}
-          </div>
-
-          {/* ── Ornement inférieur ── */}
-          <motion.div
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ duration: 0.45, delay: 0.2, ease: 'easeOut' }}
-            style={{
-              transformOrigin: 'center',
-              marginTop: sepMt,
-              display: 'flex',
-              alignItems: 'center',
-              gap: Math.round(7 * sf),
-            }}
-          >
-            <div
-              style={{
-                flex: 1,
-                height: 1,
-                background: `linear-gradient(to right, transparent, ${GOLD}55)`,
-              }}
-            />
-            <span
-              aria-hidden="true"
-              style={{ color: GOLD, fontSize: ornSize, opacity: 0.9, lineHeight: 1, flexShrink: 0 }}
-            >
-              ✦
-            </span>
-            <div
-              style={{
-                flex: 1,
-                height: 1,
-                background: `linear-gradient(to left, transparent, ${GOLD}55)`,
-              }}
-            />
-          </motion.div>
-
-          {/* ── Indicateur continuer — chevron doré ── */}
-          <AnimatePresence>
-            {isTypewriterDone && !hasChoices && !isAtLastDialogue && (
-              <motion.div
-                key="narrator-continue"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{ display: 'flex', justifyContent: 'center', marginTop: Math.round(6 * sf) }}
-              >
-                <motion.span
-                  animate={{ opacity: [0.38, 0.85, 0.38], y: [0, Math.round(4 * sf), 0] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ color: GOLD, fontSize: Math.round(12 * sf), lineHeight: 1 }}
-                  aria-hidden="true"
-                >
-                  ▼
-                </motion.span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* ── Fin de scène ── */}
-          {isTypewriterDone && !hasChoices && isAtLastDialogue && (onRestart || onClose) && (
-            <div
-              style={{
-                marginTop: Math.round(16 * sf),
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <p
-                style={{
-                  color: `${GOLD}70`,
-                  fontSize: Math.round(9 * sf),
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  fontFamily: "'Cinzel', serif",
-                }}
-              >
-                — Fin de la scène —
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {onRestart && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRestart();
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-                    style={{ border: `1px solid ${GOLD}40`, color: `${GOLD}90` }}
-                  >
-                    <RotateCcw className="w-3 h-3" aria-hidden="true" /> Recommencer
-                  </button>
-                )}
-                {onClose && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClose();
-                    }}
-                    variant="gaming-primary"
-                    size="sm"
-                    className="min-w-[120px] text-xs"
-                  >
-                    Fermer
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Layout CLASSIQUE (défaut) ───────────────────────────────────────────────
+  // ── Layout CLASSIQUE (défaut) + Narrateur ──────────────────────────────────────
+  const narratorGold = config.narratorBorderColor;
+  const narratorOrnSize = Math.round(9 * sf);
+  const narratorSepMt = Math.round(11 * sf);
   return (
     <div
-      className="border backdrop-blur-md shadow-2xl overflow-hidden"
+      className="border backdrop-blur-md shadow-2xl overflow-hidden relative"
       style={{
-        background: boxBgStyle,
-        borderColor: borderColorStyle(config.borderStyle, config.borderColor),
+        background: isNarrator
+          ? hexToRgba(config.narratorBgColor, config.narratorBgOpacity)
+          : boxBgStyle,
+        borderColor: isNarrator
+          ? narratorGold
+          : borderColorStyle(config.borderStyle, config.borderColor),
         borderRadius: borderRadiusCss(config.borderRadius),
       }}
     >
+      {isNarrator && <CornerDecorations color={narratorGold} sf={sf} />}
       {/* ── En-tête speaker ── */}
       {/* navigationSlot doit s'afficher même sans speaker (dialogues sans personnage) */}
       {(speaker || navigationSlot) && (
@@ -886,6 +655,47 @@ export function DialogueBox({
       )}
 
       {/* ── Texte du dialogue ── */}
+      {isNarrator && (
+        <motion.div
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          style={{
+            transformOrigin: 'center',
+            marginBottom: narratorSepMt,
+            display: 'flex',
+            alignItems: 'center',
+            gap: Math.round(7 * sf),
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              height: 1,
+              background: `linear-gradient(to right, transparent, ${narratorGold}55)`,
+            }}
+          />
+          <span
+            aria-hidden="true"
+            style={{
+              color: narratorGold,
+              fontSize: narratorOrnSize,
+              opacity: 0.9,
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            ✦
+          </span>
+          <div
+            style={{
+              flex: 1,
+              height: 1,
+              background: `linear-gradient(to left, transparent, ${narratorGold}55)`,
+            }}
+          />
+        </motion.div>
+      )}
       <div
         className={`relative px-4 ${speaker || navigationSlot ? 'pt-0' : 'pt-3'} ${hasChoices ? 'pb-1' : 'pb-3'}`}
         onClick={onAdvance}
@@ -898,7 +708,14 @@ export function DialogueBox({
             style={{
               fontSize: effectiveFontSize,
               minHeight: textMinHeightPx || undefined,
-              color: config.textColor,
+              color: isNarrator ? config.narratorTextColor : config.textColor,
+              fontFamily: isNarrator
+                ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
+                : undefined,
+              fontStyle: isNarrator ? 'italic' : undefined,
+              lineHeight: isNarrator ? 1.88 : undefined,
+              letterSpacing: isNarrator ? '0.022em' : undefined,
+              textAlign: isNarrator ? 'center' : undefined,
             }}
             dangerouslySetInnerHTML={{ __html: richText }}
           />
@@ -908,7 +725,14 @@ export function DialogueBox({
             style={{
               fontSize: effectiveFontSize,
               minHeight: textMinHeightPx || undefined,
-              color: config.textColor,
+              color: isNarrator ? config.narratorTextColor : config.textColor,
+              fontFamily: isNarrator
+                ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
+                : undefined,
+              fontStyle: isNarrator ? 'italic' : undefined,
+              lineHeight: isNarrator ? 1.88 : undefined,
+              letterSpacing: isNarrator ? '0.022em' : undefined,
+              textAlign: isNarrator ? 'center' : undefined,
             }}
           >
             {displayText || '…'}
@@ -988,6 +812,47 @@ export function DialogueBox({
         )}
       </div>
 
+      {isNarrator && (
+        <motion.div
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{ duration: 0.45, delay: 0.2, ease: 'easeOut' }}
+          style={{
+            transformOrigin: 'center',
+            marginTop: narratorSepMt,
+            display: 'flex',
+            alignItems: 'center',
+            gap: Math.round(7 * sf),
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              height: 1,
+              background: `linear-gradient(to right, transparent, ${narratorGold}55)`,
+            }}
+          />
+          <span
+            aria-hidden="true"
+            style={{
+              color: narratorGold,
+              fontSize: narratorOrnSize,
+              opacity: 0.9,
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            ✦
+          </span>
+          <div
+            style={{
+              flex: 1,
+              height: 1,
+              background: `linear-gradient(to left, transparent, ${narratorGold}55)`,
+            }}
+          />
+        </motion.div>
+      )}
       {/* ── Choix ── */}
       {isTypewriterDone && hasChoices && choices && (
         <div className="px-4 pb-4 space-y-1.5">

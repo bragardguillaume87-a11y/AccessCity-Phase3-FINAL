@@ -151,14 +151,14 @@ export function DialoguePreviewOverlay({
     </div>
   );
 
-  // Les narrateurs s'affichent toujours au centre (style Octopath Traveler).
-  const position = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const position = dialogueBoxConfig.position;
 
   return (
     <DialogueBoxPositioned
       position={position}
       positionX={dialogueBoxConfig.positionX}
       positionY={dialogueBoxConfig.positionY}
+      boxWidth={dialogueBoxConfig.boxWidth}
       zIndex={Z_INDEX.CANVAS_DIALOGUE_OVERLAY}
       outerClassName="absolute pointer-events-none"
       innerClassName="pointer-events-auto"

@@ -86,8 +86,7 @@ export function PreviewPanel({
     [dialogueBoxConfig.position, updateDialogueBoxDefaults]
   );
 
-  // isNarrator vient du parent (même logique que useSpeakerLayout : role + ID système)
-  const position = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const position = dialogueBoxConfig.position;
   const previewChoices =
     !isMinigame && formData.complexityLevel !== 'linear' && formData.choices.length > 0
       ? formData.choices
@@ -251,6 +250,7 @@ export function PreviewPanel({
                 position={position}
                 positionX={dialogueBoxConfig.positionX}
                 positionY={dialogueBoxConfig.positionY}
+                boxWidth={dialogueBoxConfig.boxWidth}
                 onMouseDown={position === 'custom' ? handleDragStart : undefined}
                 outerSlot={
                   position === 'custom' ? (

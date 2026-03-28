@@ -10,6 +10,8 @@ interface DialogueBoxPositionedProps {
   position: DialogueBoxPosition;
   positionX?: number;
   positionY?: number;
+  /** Largeur de la boîte en % du canvas (défaut : 76). */
+  boxWidth?: number;
   /**
    * z-index de l'enveloppe absolue.
    * Défaut : 2 (valeur native de getDialogueBoxWrapperStyle).
@@ -41,6 +43,7 @@ export function DialogueBoxPositioned({
   position,
   positionX,
   positionY,
+  boxWidth = 76,
   zIndex = 2,
   outerClassName,
   innerClassName,
@@ -53,12 +56,12 @@ export function DialogueBoxPositioned({
   return (
     <div
       className={outerClassName}
-      style={{ ...getDialogueBoxWrapperStyle(position, positionX, positionY), zIndex }}
+      style={{ ...getDialogueBoxWrapperStyle(position, positionX, positionY, boxWidth), zIndex }}
       onMouseDown={onMouseDown}
     >
       {outerSlot}
       {gradientStyle && <div aria-hidden="true" style={gradientStyle} />}
-      <div className={innerClassName} style={getDialogueBoxInnerStyle(position)}>
+      <div className={innerClassName} style={getDialogueBoxInnerStyle(position, boxWidth)}>
         {children}
       </div>
     </div>

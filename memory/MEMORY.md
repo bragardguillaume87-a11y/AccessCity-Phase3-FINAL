@@ -12,7 +12,8 @@
 ## Patterns validés
 
 - [validated_ux_panel_organisation.md](validated_ux_panel_organisation.md) — Organisation confirmée des panneaux Dialogue + Style (audit 2026-03-24)
+- [validated_patterns.md](validated_patterns.md) — clés stables disponibles, zone Konva déjà conforme, resolveCharacterSprite, generateId, dual-caller DialogueBox (audit 2026-03-28)
 
 ## Hallucinations connues
 
-_(aucune documentée à ce jour — créer hallucination_patterns.md à la première occurrence)_
+- [hallucination_patterns.md](hallucination_patterns.md) — key={idx} zones corrigées, fuites audio, faux positifs agents IA fréquents (audit 2026-03-28)

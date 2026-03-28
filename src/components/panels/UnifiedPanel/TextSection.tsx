@@ -3,6 +3,8 @@ import { Eye, EyeOff, RotateCcw, Move } from 'lucide-react';
 import type { DialogueBoxPosition } from '@/utils/dialogueBoxPosition';
 import { useSettingsStore } from '@/stores';
 import { PanelSection } from '@/components/ui/CollapsibleSection';
+import { SliderRow } from '@/components/ui/SliderRow';
+import { IosToggle } from '@/components/ui/IosToggle';
 import type { DialogueBoxStyle } from '@/types/scenes';
 import {
   NAME_FONTS,
@@ -43,6 +45,7 @@ const UI_DEFAULTS: Required<DialogueBoxStyle> = {
   narratorTextColor: '#ede8d5',
   narratorBorderColor: '#c9a84c',
   narratorBgOpacity: 0.93,
+  boxWidth: 76,
 };
 
 // ── Presets thème ──────────────────────────────────────────────────────────────
@@ -102,51 +105,6 @@ const THEMES: Array<{
     },
   },
 ];
-
-// ============================================================================
-// SUB-COMPONENTS
-// ============================================================================
-
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step,
-  unit,
-  onChange,
-  ariaLabel,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  onChange: (v: number) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="mb-3">
-      <div className="sp-row">
-        <span>{label}</span>
-        <span>
-          {value} {unit}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="sp-slider"
-        aria-label={ariaLabel}
-      />
-    </div>
-  );
-}
 
 function ToggleGroup<T extends string>({
   label,
@@ -620,6 +578,7 @@ export function TextSection() {
           unit="ms/car"
           onChange={(v) => update({ typewriterSpeed: v })}
           ariaLabel={`Vitesse de frappe : ${cfg.typewriterSpeed} ms par caractère`}
+          className="mb-3"
         />
         <SliderRow
           label="Taille du texte"
@@ -630,6 +589,7 @@ export function TextSection() {
           unit="px"
           onChange={(v) => update({ fontSize: v })}
           ariaLabel={`Taille du texte : ${cfg.fontSize} pixels`}
+          className="mb-3"
         />
       </PanelSection>
 
@@ -734,6 +694,7 @@ export function TextSection() {
             unit="%"
             onChange={(v) => update({ boxOpacity: v / 100 })}
             ariaLabel={`Opacité du fond : ${Math.round(cfg.boxOpacity * 100)} %`}
+            className="mb-3"
           />
         </SubSection>
 
@@ -772,6 +733,17 @@ export function TextSection() {
             onChange={(v) => update({ position: v })}
             onChangeXY={(x, y) => update({ positionX: x, positionY: y })}
           />
+          <SliderRow
+            label="Largeur"
+            value={cfg.boxWidth ?? 76}
+            min={40}
+            max={100}
+            step={2}
+            unit="%"
+            onChange={(v) => update({ boxWidth: v })}
+            ariaLabel={`Largeur de la boîte : ${cfg.boxWidth ?? 76} % du canvas`}
+            className="mb-1"
+          />
         </SubSection>
       </PanelSection>
 
@@ -790,23 +762,11 @@ export function TextSection() {
               </>
             )}
           </span>
-          <button
-            onClick={() => update({ showPortrait: !cfg.showPortrait })}
-            className={[
-              'relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]',
-              cfg.showPortrait ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-hover)]',
-            ].join(' ')}
-            role="switch"
-            aria-checked={cfg.showPortrait}
-            aria-label={cfg.showPortrait ? 'Masquer le portrait' : 'Afficher le portrait'}
-          >
-            <span
-              className={[
-                'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-                cfg.showPortrait ? 'translate-x-4' : 'translate-x-0.5',
-              ].join(' ')}
-            />
-          </button>
+          <IosToggle
+            enabled={cfg.showPortrait}
+            onToggle={() => update({ showPortrait: !cfg.showPortrait })}
+            label="le portrait"
+          />
         </div>
 
         {/* Cadrage */}
@@ -835,6 +795,7 @@ export function TextSection() {
               unit="%"
               onChange={(v) => update({ portraitOffsetX: v })}
               ariaLabel={`Pan horizontal du portrait : ${cfg.portraitOffsetX} %`}
+              className="mb-3"
             />
             <SliderRow
               label="Pan vertical"
@@ -845,6 +806,7 @@ export function TextSection() {
               unit="%"
               onChange={(v) => update({ portraitOffsetY: v })}
               ariaLabel={`Pan vertical du portrait : ${cfg.portraitOffsetY} %`}
+              className="mb-3"
             />
             <SliderRow
               label="Zoom"
@@ -855,6 +817,7 @@ export function TextSection() {
               unit="×"
               onChange={(v) => update({ portraitScale: Math.round(v * 10) / 10 })}
               ariaLabel={`Zoom du portrait : ${cfg.portraitScale} ×`}
+              className="mb-3"
             />
             <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
               Masque non-destructif — déplace et zoome sans recadrer l'image originale.
@@ -965,6 +928,7 @@ export function TextSection() {
           unit="px"
           onChange={(v) => update({ nameLetterSpacing: v })}
           ariaLabel={`Espacement des lettres du nom : ${cfg.nameLetterSpacing ?? 1.5} px`}
+          className="mb-3"
         />
         <p className="text-[10px] text-[var(--color-text-muted)] leading-tight -mt-1">
           Aperçu en temps réel dans la boîte de dialogue.
@@ -999,7 +963,7 @@ export function TextSection() {
       </PanelSection>
 
       {/* ── Narrateur ── */}
-      <PanelSection title="NARRATEUR" id="dlgbox-narrator" defaultOpen={false}>
+      <PanelSection title="NARRATEUR" id="dlgbox-narrator" defaultOpen={true}>
         <p className="text-[10px] text-[var(--color-text-muted)] mb-3 leading-relaxed">
           Dialogues sans speaker — style Octopath Traveler (boîte navy + bordure dorée).
         </p>
@@ -1120,6 +1084,7 @@ export function TextSection() {
           unit="%"
           onChange={(v) => update({ narratorBgOpacity: v / 100 })}
           ariaLabel={`Opacité fond narrateur : ${Math.round((cfg.narratorBgOpacity ?? 0.93) * 100)} %`}
+          className="mb-3"
         />
 
         {/* Reset Octopath */}

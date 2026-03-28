@@ -13,7 +13,8 @@ export type DialogueBoxPosition = NonNullable<DialogueBoxStyle['position']>;
 export function getDialogueBoxWrapperStyle(
   position: DialogueBoxPosition,
   positionX = 50,
-  positionY = 75
+  positionY = 75,
+  boxWidth = 76
 ): CSSProperties {
   if (position === 'custom') {
     return {
@@ -21,7 +22,7 @@ export function getDialogueBoxWrapperStyle(
       left: `${positionX}%`,
       top: `${positionY}%`,
       transform: 'translate(-50%, -50%)',
-      width: '76%',
+      width: `${boxWidth}%`,
       zIndex: 2,
     };
   }
@@ -86,7 +87,10 @@ export function getDialogueBoxGradientStyle(position: DialogueBoxPosition): CSSP
  * Retourne le padding interne du conteneur de la DialogueBox selon la position.
  * Pour les modes left/right, réduit le max-width pour ne pas déborder.
  */
-export function getDialogueBoxInnerStyle(position: DialogueBoxPosition): CSSProperties {
+export function getDialogueBoxInnerStyle(
+  position: DialogueBoxPosition,
+  boxWidth = 76
+): CSSProperties {
   const isLeft = position.endsWith('-left');
   const isRight = position.endsWith('-right');
   const isTop = position.startsWith('top');
@@ -100,9 +104,12 @@ export function getDialogueBoxInnerStyle(position: DialogueBoxPosition): CSSProp
         ? { padding: 0 }
         : { paddingTop: 0, paddingBottom: 10 };
 
+  // En mode left/right, la boîte est limitée à 55% pour ne pas déborder du côté opposé
+  const maxWidthPct = isLeft || isRight ? Math.min(boxWidth, 55) : boxWidth;
+
   return {
     position: 'relative',
-    maxWidth: isLeft || isRight ? '55%' : '76%',
+    maxWidth: `${maxWidthPct}%`,
     width: '100%',
     ...(isLeft ? { marginLeft: 12 } : isRight ? { marginRight: 12 } : { margin: '0 auto' }),
     ...verticalPadding,

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Music, Library, Play, Square, Trash2, RefreshCw, AlertCircle, Wind } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useUIStore } from '@/stores/uiStore';
@@ -23,14 +23,21 @@ interface IconBtnProps {
 function IconBtn({ onClick, icon, label, variant = 'default', className = '' }: IconBtnProps) {
   const base = 'p-1.5 rounded-lg border transition-all flex items-center justify-center';
   const variants: Record<string, string> = {
-    default: 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]',
-    active:  'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]',
-    danger:  'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40',
+    default:
+      'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]',
+    active:
+      'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]',
+    danger:
+      'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40',
   };
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>
-        <button onClick={onClick} className={`${base} ${variants[variant]} ${className}`} aria-label={label}>
+        <button
+          onClick={onClick}
+          className={`${base} ${variants[variant]} ${className}`}
+          aria-label={label}
+        >
           {icon}
         </button>
       </Tooltip.Trigger>
@@ -57,7 +64,12 @@ interface AudioSectionProps {
 // ============================================================================
 
 function getFilename(url: string): string {
-  return url.split('/').pop()?.replace(/\.[^.]+$/, '') ?? url;
+  return (
+    url
+      .split('/')
+      .pop()
+      ?.replace(/\.[^.]+$/, '') ?? url
+  );
 }
 
 function getExtension(url: string): string {
@@ -68,7 +80,15 @@ function getExtension(url: string): string {
 // IOS TOGGLE
 // ============================================================================
 
-function IosToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
+function IosToggle({
+  enabled,
+  onToggle,
+  label,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
   return (
     <button
       onClick={onToggle}
@@ -80,10 +100,12 @@ function IosToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: (
       aria-checked={enabled}
       aria-label={`${enabled ? 'Désactiver' : 'Activer'} ${label}`}
     >
-      <span className={[
-        'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-        enabled ? 'translate-x-4' : 'translate-x-0.5',
-      ].join(' ')} />
+      <span
+        className={[
+          'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
+          enabled ? 'translate-x-4' : 'translate-x-0.5',
+        ].join(' ')}
+      />
     </button>
   );
 }
@@ -108,15 +130,29 @@ function useAudioPreview(url: string | undefined, volume: number) {
     }
     const player = new Audio(url);
     player.volume = volume;
-    player.play().then(() => {
-      setIsPlaying(true);
-      player.onended = () => setIsPlaying(false);
-    }).catch(() => {
-      setPlayError(true);
-      setIsPlaying(false);
-    });
+    player
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        player.onended = () => setIsPlaying(false);
+      })
+      .catch(() => {
+        setPlayError(true);
+        setIsPlaying(false);
+      });
     audioRef.current = player;
   }, [url, volume, isPlaying]);
+
+  // Cleanup : stop audio if component unmounts while playing
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.onended = null;
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   return { isPlaying, playError, handlePreview, audioRef };
 }
@@ -135,7 +171,7 @@ interface MusicControlsProps {
 function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicControlsProps) {
   const { isPlaying, playError, handlePreview, audioRef } = useAudioPreview(
     audio.url,
-    audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME,
+    audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME
   );
 
   const volume = audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME;
@@ -147,8 +183,14 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
     <>
       {/* Fichier + extension */}
       <div className="flex items-center gap-2 mb-2">
-        <Music className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-[12px] text-[var(--color-text-primary)] truncate" title={audio.url}>
+        <Music
+          className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0"
+          aria-hidden="true"
+        />
+        <span
+          className="flex-1 text-[12px] text-[var(--color-text-primary)] truncate"
+          title={audio.url}
+        >
           {getFilename(audio.url)}
         </span>
         <span className="text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-border-base)] flex-shrink-0">
@@ -162,8 +204,12 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
         <span>{Math.round(volume * 100)}%</span>
       </div>
       <input
-        type="range" min="0" max="1" step="0.05" value={volume}
-        onChange={e => {
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={volume}
+        onChange={(e) => {
           const vol = parseFloat(e.target.value);
           onUpdate({ volume: vol });
           if (audioRef.current) audioRef.current.volume = vol;
@@ -176,11 +222,14 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
       <div className="flex gap-2 mb-0">
         <IconBtn
           onClick={handlePreview}
-          icon={playError
-            ? <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-            : isPlaying
-              ? <Square className="w-3.5 h-3.5" aria-hidden="true" />
-              : <Play className="w-3.5 h-3.5" aria-hidden="true" />
+          icon={
+            playError ? (
+              <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+            ) : isPlaying ? (
+              <Square className="w-3.5 h-3.5" aria-hidden="true" />
+            ) : (
+              <Play className="w-3.5 h-3.5" aria-hidden="true" />
+            )
           }
           label={playError ? 'Erreur de lecture' : isPlaying ? 'Arrêter' : 'Écouter'}
           variant={isPlaying ? 'active' : 'default'}
@@ -225,9 +274,13 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
           <div className="flex items-center gap-2 mt-2">
             <span className="text-xs text-[var(--color-text-muted)]">Nombre :</span>
             <input
-              type="number" min="1" max="99"
+              type="number"
+              min="1"
+              max="99"
               value={audio.durationDialogues ?? 1}
-              onChange={e => onUpdate({ durationDialogues: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+              onChange={(e) =>
+                onUpdate({ durationDialogues: Math.max(1, parseInt(e.target.value, 10) || 1) })
+              }
               className="w-14 text-xs text-center border border-[var(--color-border-base)] rounded-lg px-1 py-1 bg-[var(--color-bg-base)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
             />
             <span className="text-xs text-[var(--color-text-muted)]">dialogue(s)</span>
@@ -246,7 +299,9 @@ function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicContro
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--color-text-secondary)]">Continue après la scène</span>
+          <span className="text-xs text-[var(--color-text-secondary)]">
+            Continue après la scène
+          </span>
           <IosToggle
             enabled={isContinuing}
             onToggle={() => onUpdate({ continueToNextScene: !isContinuing })}
@@ -270,10 +325,16 @@ interface AmbientTrackSlotProps {
   onOpenLibrary: () => void;
 }
 
-function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: AmbientTrackSlotProps) {
+function AmbientTrackSlot({
+  slot,
+  track,
+  onUpdate,
+  onRemove,
+  onOpenLibrary,
+}: AmbientTrackSlotProps) {
   const { isPlaying, playError, handlePreview, audioRef } = useAudioPreview(
     track?.url,
-    track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME,
+    track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME
   );
 
   const volume = track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME;
@@ -285,8 +346,7 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
         onClick={onOpenLibrary}
         className="w-full flex items-center justify-center gap-2 text-xs py-2 px-3 rounded-lg border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-colors"
       >
-        <Wind className="w-3.5 h-3.5" aria-hidden="true" />
-        + Choisir un son d'ambiance {slot + 1}
+        <Wind className="w-3.5 h-3.5" aria-hidden="true" />+ Choisir un son d'ambiance {slot + 1}
       </button>
     );
   }
@@ -295,8 +355,14 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
   return (
     <div className="sp-track">
       <div className="flex items-center gap-2 mb-2">
-        <Wind className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-[12px] text-[var(--color-text-primary)] truncate" title={track.url}>
+        <Wind
+          className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0"
+          aria-hidden="true"
+        />
+        <span
+          className="flex-1 text-[12px] text-[var(--color-text-primary)] truncate"
+          title={track.url}
+        >
           {getFilename(track.url)}
         </span>
         <span className="text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-border-base)] flex-shrink-0">
@@ -315,8 +381,12 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
         <span>{Math.round(volume * 100)}%</span>
       </div>
       <input
-        type="range" min="0" max="1" step="0.05" value={volume}
-        onChange={e => {
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={volume}
+        onChange={(e) => {
           const vol = parseFloat(e.target.value);
           onUpdate({ volume: vol });
           if (audioRef.current) audioRef.current.volume = vol;
@@ -326,13 +396,16 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
       />
       <IconBtn
         onClick={handlePreview}
-        icon={playError
-          ? <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-          : isPlaying
-            ? <Square className="w-3.5 h-3.5" aria-hidden="true" />
-            : <Play className="w-3.5 h-3.5" aria-hidden="true" />
+        icon={
+          playError ? (
+            <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : isPlaying ? (
+            <Square className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : (
+            <Play className="w-3.5 h-3.5" aria-hidden="true" />
+          )
         }
-        label={playError ? 'Fichier introuvable' : isPlaying ? 'Arrêter' : 'Écouter l\'ambiance'}
+        label={playError ? 'Fichier introuvable' : isPlaying ? 'Arrêter' : "Écouter l'ambiance"}
         variant={isPlaying ? 'active' : 'default'}
         className="w-full"
       />
@@ -345,7 +418,7 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
 // ============================================================================
 
 export function AudioSection({ onOpenModal }: AudioSectionProps) {
-  const sceneId = useUIStore(s => s.selectedSceneForEdit);
+  const sceneId = useUIStore((s) => s.selectedSceneForEdit);
   const scene = useSceneById(sceneId);
   const { updateScene } = useSceneActions();
 
@@ -353,10 +426,13 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   const ambientTracks = scene?.ambientTracks;
   const ambientCount = [ambientTracks?.[0], ambientTracks?.[1]].filter(Boolean).length;
 
-  const handleBgmUpdate = useCallback((patch: Partial<SceneAudio>) => {
-    if (!sceneId) return;
-    updateScene(sceneId, { audio: { url: '', ...audio, ...patch } as SceneAudio });
-  }, [sceneId, audio, updateScene]);
+  const handleBgmUpdate = useCallback(
+    (patch: Partial<SceneAudio>) => {
+      if (!sceneId) return;
+      updateScene(sceneId, { audio: { url: '', ...audio, ...patch } as SceneAudio });
+    },
+    [sceneId, audio, updateScene]
+  );
 
   const handleBgmRemove = useCallback(() => {
     if (!sceneId) return;
@@ -364,26 +440,44 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   }, [sceneId, updateScene]);
 
   const handleOpenMusicLibrary = useCallback(() => {
-    onOpenModal('assets', { category: 'music', targetSceneId: sceneId ?? undefined, purpose: 'sceneAudio' });
+    onOpenModal('assets', {
+      category: 'music',
+      targetSceneId: sceneId ?? undefined,
+      purpose: 'sceneAudio',
+    });
   }, [onOpenModal, sceneId]);
 
-  const handleAmbientUpdate = useCallback((slot: 0 | 1, patch: Partial<AmbientAudio>) => {
-    if (!sceneId) return;
-    const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
-    current[slot] = { url: '', ...current[slot], ...patch } as AmbientAudio;
-    updateScene(sceneId, { ambientTracks: current });
-  }, [sceneId, ambientTracks, updateScene]);
+  const handleAmbientUpdate = useCallback(
+    (slot: 0 | 1, patch: Partial<AmbientAudio>) => {
+      if (!sceneId) return;
+      const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
+      current[slot] = { url: '', ...current[slot], ...patch } as AmbientAudio;
+      updateScene(sceneId, { ambientTracks: current });
+    },
+    [sceneId, ambientTracks, updateScene]
+  );
 
-  const handleAmbientRemove = useCallback((slot: 0 | 1) => {
-    if (!sceneId) return;
-    const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
-    current[slot] = undefined;
-    updateScene(sceneId, { ambientTracks: current });
-  }, [sceneId, ambientTracks, updateScene]);
+  const handleAmbientRemove = useCallback(
+    (slot: 0 | 1) => {
+      if (!sceneId) return;
+      const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
+      current[slot] = undefined;
+      updateScene(sceneId, { ambientTracks: current });
+    },
+    [sceneId, ambientTracks, updateScene]
+  );
 
-  const handleOpenAmbientLibrary = useCallback((slot: 0 | 1) => {
-    onOpenModal('assets', { category: 'atmosphere', targetSceneId: sceneId ?? undefined, purpose: 'ambientTrack', slot });
-  }, [onOpenModal, sceneId]);
+  const handleOpenAmbientLibrary = useCallback(
+    (slot: 0 | 1) => {
+      onOpenModal('assets', {
+        category: 'atmosphere',
+        targetSceneId: sceneId ?? undefined,
+        purpose: 'ambientTrack',
+        slot,
+      });
+    },
+    [onOpenModal, sceneId]
+  );
 
   if (!sceneId || !scene) {
     return (
@@ -401,7 +495,6 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   return (
     <Tooltip.Provider delayDuration={400}>
       <div>
-
         {/* === Musique de fond === */}
         <PanelSection title="MUSIQUE DE FOND" id="audio-bgm" defaultOpen>
           {audio?.url ? (
@@ -426,7 +519,9 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
         {/* === Ambiance sonore === */}
         <PanelSection
           title="AMBIANCE SONORE"
-          badge={ambientCount > 0 ? `${ambientCount} piste${ambientCount > 1 ? 's' : ''}` : undefined}
+          badge={
+            ambientCount > 0 ? `${ambientCount} piste${ambientCount > 1 ? 's' : ''}` : undefined
+          }
           id="audio-ambient"
           defaultOpen
         >
@@ -454,7 +549,6 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
         <PanelSection title="GÉNÉRATEUR SFX 8-BIT" id="audio-sfx" defaultOpen={false}>
           <SfxGeneratorPanel />
         </PanelSection>
-
       </div>
     </Tooltip.Provider>
   );

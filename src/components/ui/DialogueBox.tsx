@@ -466,9 +466,9 @@ export function DialogueBox({
                         (e): e is import('@/types').StatEffect =>
                           'variable' in e && e.operation === 'add'
                       )
-                      .map((eff, i) => (
+                      .map((eff) => (
                         <span
-                          key={i}
+                          key={`${eff.variable}-${eff.operation}`}
                           className={`inline-block px-1.5 py-0.5 rounded-full font-semibold ${eff.value >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
                           style={{ fontSize: Math.round(9 * sf) }}
                         >
@@ -694,7 +694,7 @@ export function DialogueBox({
               <p style={narratorTextStyle}>
                 {words.map((word, i) => (
                   <motion.span
-                    key={i}
+                    key={`word-${i}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.038, duration: 0.3, ease: 'easeOut' }}
@@ -1076,9 +1076,9 @@ export function DialogueBox({
                         (e): e is import('@/types').StatEffect =>
                           'variable' in e && e.operation === 'add'
                       )
-                      .map((eff, i) => (
+                      .map((eff) => (
                         <span
-                          key={i}
+                          key={`${eff.variable}-${eff.operation}`}
                           className={`inline-block px-1.5 py-0.5 rounded-full font-semibold ${
                             eff.value >= 0
                               ? 'bg-green-500/20 text-green-400'

@@ -47,6 +47,11 @@ import { CompactStatHUD } from '@/components/ui/compact-stat-hud';
 import { DiceOverlay } from './DiceOverlay';
 import { MinigameOverlay } from './MinigameOverlay';
 import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
+import {
+  getDialogueBoxWrapperStyle,
+  getDialogueBoxGradientStyle,
+  getDialogueBoxInnerStyle,
+} from '@/utils/dialogueBoxPosition';
 
 /** Aspect ratio 16:9 */
 const ASPECT_RATIO = 16 / 9;
@@ -128,13 +133,6 @@ export default function PreviewPlayer({
   const canvasSize = useMemo(
     () => computePlayerSize(centerSize.width, centerSize.height),
     [centerSize]
-  );
-
-  // Largeur boîte dialogue : 76% du canvas (standard VN 1080p = 60-80%)
-  // max-w-2xl fixe (672px) = seulement 35% à 1920px → trop étroit
-  const dialogueBoxMaxWidth = useMemo(
-    () => (canvasSize.width > 0 ? Math.max(320, Math.round(canvasSize.width * 0.76)) : 672),
-    [canvasSize.width]
   );
 
   // Facteur d'échelle : la typographie de la boîte est authoriée à 960px (REFERENCE_CANVAS_WIDTH).
@@ -236,6 +234,12 @@ export default function PreviewPlayer({
 
   // En mode narrateur, le typewriter ne s'affiche pas — le clic avance directement
   const effectiveTypewriterDone = isNarrator || typewriterDone;
+
+  // ── Position boîte de dialogue ─────────────────────────────────────────────
+  // Narrateur → toujours centré (style Octopath Traveler), sinon config projet
+  const dlgPosition = isNarrator ? 'center' : dialogueBoxConfig.position;
+  const dlgIsLeft = dlgPosition.endsWith('-left');
+  const dlgIsRight = dlgPosition.endsWith('-right');
 
   // ── Mood overrides ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -712,55 +716,35 @@ export default function PreviewPlayer({
                 />
               )}
 
-              {/* ── Dégradé adaptatif (selon position de la boîte) — masqué en mode narrateur ── */}
-              {!isNarrator && dialogueBoxConfig.position !== 'center' && (
-                <div
-                  className="absolute left-0 right-0 pointer-events-none"
-                  style={{
-                    ...(dialogueBoxConfig.position === 'top'
-                      ? {
-                          top: 0,
-                          height: '45%',
-                          background:
-                            'linear-gradient(to bottom, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.72) 28%, rgba(3,7,18,0.22) 60%, transparent 100%)',
-                        }
-                      : {
-                          bottom: 0,
-                          height: '55%',
-                          background:
-                            'linear-gradient(to top, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.72) 28%, rgba(3,7,18,0.22) 60%, transparent 100%)',
-                        }),
-                    zIndex: 9,
-                  }}
-                />
-              )}
+              {/* ── Dégradé adaptatif — via utilitaire partagé avec DialoguePreviewOverlay ── */}
+              {(() => {
+                const gradStyle = getDialogueBoxGradientStyle(dlgPosition);
+                return gradStyle ? (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{ ...gradStyle, zIndex: 9 }}
+                  />
+                ) : null;
+              })()}
 
-              {/* ── Boîte de dialogue (composant partagé) ── */}
-              {/* En mode narrateur : toujours centré verticalement */}
+              {/* ── Boîte de dialogue — position via utilitaire partagé ── */}
               <div
-                className={`absolute inset-0 flex flex-col pointer-events-none ${
-                  isNarrator
-                    ? 'justify-center'
-                    : dialogueBoxConfig.position === 'top'
-                      ? 'justify-start'
-                      : dialogueBoxConfig.position === 'center'
-                        ? 'justify-center'
-                        : 'justify-end'
-                }`}
-                style={{ zIndex: 10 }}
+                className="pointer-events-none"
+                style={{
+                  ...getDialogueBoxWrapperStyle(
+                    dlgPosition,
+                    dialogueBoxConfig.positionX,
+                    dialogueBoxConfig.positionY
+                  ),
+                  zIndex: 10,
+                }}
               >
                 {/* AnimatePresence : keyed sur currentDialogue.id → rejoue enter/exit à chaque dialogue */}
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={currentDialogue?.id ?? 'no-dialogue'}
-                    className={`pointer-events-auto px-4 mx-auto w-full ${
-                      dialogueBoxConfig.position === 'top'
-                        ? 'mt-4'
-                        : dialogueBoxConfig.position === 'center'
-                          ? 'my-2'
-                          : 'mb-4'
-                    }`}
-                    style={{ maxWidth: `${dialogueBoxMaxWidth}px` }}
+                    className="pointer-events-auto"
+                    style={getDialogueBoxInnerStyle(dlgPosition, dlgIsLeft, dlgIsRight)}
                     {...(dialogueBoxConfig.dialogueTransition === 'fondu'
                       ? {
                           initial: { opacity: 0 },

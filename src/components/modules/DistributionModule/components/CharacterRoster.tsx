@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useCharactersStore } from '@/stores';
 import { useRigStore } from '@/stores/rigStore';
+import { resolveCharacterSprite } from '@/utils/characterSprite';
 import type { Character } from '@/types/characters';
 
 interface CharacterRosterProps {
@@ -35,7 +36,7 @@ export function CharacterRoster({ selectedCharacterId, onSelect }: CharacterRost
       {characters.map((char: Character) => {
         const isActive = char.id === selectedCharacterId;
         const hasRig = riggedIds.has(char.id);
-        const portrait = char.sprites['default'] ?? Object.values(char.sprites)[0] ?? null;
+        const portrait = resolveCharacterSprite(char);
 
         return (
           <button

@@ -10,6 +10,7 @@ import { AnimationPreviewView } from './components/AnimationPreviewView';
 import { BoneEditorRightPanel } from './components/BoneEditorRightPanel';
 import { AnimationRightPanel } from './components/AnimationRightPanel';
 import { useCharactersStore } from '@/stores';
+import { resolveCharacterSprite } from '@/utils/characterSprite';
 
 const TAB_ITEMS: { id: DistributionView; emoji: string; label: string }[] = [
   { id: 'casting-table', emoji: '🎭', label: 'Casting' },
@@ -161,7 +162,7 @@ export function DistributionModule() {
           }}
         >
           {characters.map((char, idx) => {
-            const portrait = char.sprites['default'] ?? Object.values(char.sprites)[0] ?? null;
+            const portrait = resolveCharacterSprite(char);
             return (
               <motion.button
                 key={char.id}

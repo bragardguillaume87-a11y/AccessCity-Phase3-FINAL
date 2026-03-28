@@ -6,6 +6,7 @@ import { DEFAULTS } from '@/config/constants';
 import type { Dialogue } from '@/types';
 import type { MinigameType } from '@/types/game';
 import { useUIStore, useCharactersStore, useSettingsStore } from '@/stores';
+import { resolveCharacterSprite, isNarratorSpeaker } from '@/utils/characterSprite';
 import { MinigameOverlay } from '@/components/panels/PreviewPlayer/MinigameOverlay';
 import { useAllScenesWithElements } from '@/stores/selectors';
 import { useDialogueForm } from '../DialogueWizard/hooks/useDialogueForm';
@@ -56,23 +57,17 @@ export function DialogueComposerV2({
   );
   const speakerName = speakerChar?.name ?? 'Narrateur';
 
-  // isNarrator — même logique que useSpeakerLayout (role narrator + ID system)
+  // isNarrator — via utilitaire partagé (source canonique : useSpeakerLayout)
   const isNarrator = useMemo(
-    () => !formData.speaker || formData.speaker === 'narrator' || speakerChar?.role === 'narrator',
+    () => isNarratorSpeaker(formData.speaker, speakerChar),
     [formData.speaker, speakerChar]
   );
 
-  // Portrait URL — sprites[mood] || default || premier disponible
-  const speakerPortraitUrl = useMemo(() => {
-    if (!speakerChar) return '';
-    const mood = formData.speakerMood;
-    return (
-      (mood && speakerChar.sprites[mood]) ||
-      speakerChar.sprites['default'] ||
-      Object.values(speakerChar.sprites)[0] ||
-      ''
-    );
-  }, [speakerChar, formData.speakerMood]);
+  // Portrait URL — via utilitaire partagé (source canonique : useSpeakerLayout)
+  const speakerPortraitUrl = useMemo(
+    () => resolveCharacterSprite(speakerChar, formData.speakerMood) ?? '',
+    [speakerChar, formData.speakerMood]
+  );
 
   // Couleur accent thème pour ComposerFormPanel
   const themeColors = useMemo(() => {

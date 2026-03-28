@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { hashStringToColor } from '@/components/ui/DialogueBox';
+import { resolveCharacterSprite, isNarratorSpeaker } from '@/utils/characterSprite';
 import type { Character, SceneCharacter } from '@/types';
 import type { DialogueBoxStyle } from '@/types/scenes';
 
@@ -114,17 +115,14 @@ export function useSpeakerLayout({
       const char = characterLibrary.find((c) => c.id === speakerSceneChar.characterId);
       if (!char?.sprites) return null;
       const mood = moodOverrides[speakerSceneChar.id] ?? speakerSceneChar.mood ?? 'neutral';
-      return (
-        char.sprites[mood] ?? char.sprites['neutral'] ?? Object.values(char.sprites)[0] ?? null
-      );
+      return resolveCharacterSprite(char, mood);
     }
 
     // Fallback : speaker dans la bibliothèque mais non placé sur le canvas
     // (ex. protagoniste narrateur, PNJ hors-scène)
     if (speakerNameOrId) {
       const char = characterLibrary.find((c) => c.id === speakerNameOrId);
-      if (!char?.sprites) return null;
-      return char.sprites['neutral'] ?? Object.values(char.sprites)[0] ?? null;
+      return resolveCharacterSprite(char);
     }
 
     return null;
@@ -136,13 +134,10 @@ export function useSpeakerLayout({
   );
 
   const isNarrator = useMemo(() => {
-    // Pas de speaker assigné = narration par convention VN (style Octopath Traveler)
-    if (!speakerNameOrId) return true;
-    if (speakerNameOrId === 'narrator') return true;
     const char = characterLibrary.find(
-      (c) => c.id === speakerNameOrId || c.name?.toLowerCase() === speakerNameOrId.toLowerCase()
+      (c) => c.id === speakerNameOrId || c.name?.toLowerCase() === speakerNameOrId?.toLowerCase()
     );
-    return char?.role === 'narrator';
+    return isNarratorSpeaker(speakerNameOrId, char);
   }, [speakerNameOrId, characterLibrary]);
 
   return { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor, isNarrator };

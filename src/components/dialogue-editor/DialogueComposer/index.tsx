@@ -7,6 +7,7 @@ import { logger } from '@/utils/logger';
 import { DEFAULTS } from '@/config/constants';
 import type { Dialogue } from '@/types';
 import { useUIStore, useCharactersStore, useSettingsStore } from '@/stores';
+import { resolveCharacterSprite } from '@/utils/characterSprite';
 import { useAllScenesWithElements } from '@/stores/selectors';
 import { useDialogueForm } from '../DialogueWizard/hooks/useDialogueForm';
 import type { ComplexityLevel } from '@/types';
@@ -78,18 +79,11 @@ export function DialogueComposer({
     return char?.name || formData.speaker;
   }, [formData.speaker, characters]);
 
-  // ── Speaker portrait URL (sprite du mood actif ou premier sprite dispo) ──
+  // ── Speaker portrait URL — via utilitaire partagé (source canonique : useSpeakerLayout) ──
   const speakerPortraitUrl = useMemo(() => {
     if (!formData.speaker) return '';
     const char = characters.find((c) => c.id === formData.speaker);
-    if (!char) return '';
-    const mood = formData.speakerMood;
-    return (
-      (mood && char.sprites[mood]) ||
-      char.sprites['default'] ||
-      Object.values(char.sprites)[0] ||
-      ''
-    );
+    return resolveCharacterSprite(char, formData.speakerMood) ?? '';
   }, [formData.speaker, formData.speakerMood, characters]);
 
   // ── Theme colors — Pokémon type-color system (Quilez §14.1, Muratori §13.3) ─

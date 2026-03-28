@@ -1,4 +1,5 @@
 import { useCharactersStore } from '@/stores';
+import { resolveCharacterSprite } from '@/utils/characterSprite';
 
 /**
  * Helper hook: Get character avatar URL from store.
@@ -12,7 +13,6 @@ import { useCharactersStore } from '@/stores';
 export function useCharacterAvatar(speakerId: string, mood: string): string | null {
   return useCharactersStore((state) => {
     const character = state.characters.find((c) => c.id === speakerId);
-    if (!character?.sprites) return null;
-    return character.sprites[mood] || character.sprites['neutral'] || Object.values(character.sprites)[0] || null;
+    return resolveCharacterSprite(character, mood);
   });
 }

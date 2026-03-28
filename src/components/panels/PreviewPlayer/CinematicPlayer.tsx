@@ -15,6 +15,7 @@ import { DialogueBox } from '@/components/ui/DialogueBox';
 import { useDialogueBoxConfig } from '@/hooks/useDialogueBoxConfig';
 import { useSpeakerLayout } from '@/hooks/useSpeakerLayout';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import { resolveCharacterSprite } from '@/utils/characterSprite';
 import type { CinematicEvent, TintPreset } from '@/types';
 import type { CinematicTracks } from '@/types/cinematic';
 import type { Character } from '@/types/characters';
@@ -476,10 +477,7 @@ export function CinematicPlayer({
           .filter((c) => c.visible)
           .map((ac) => {
             const char = characterLibrary.find((c) => c.id === ac.characterId);
-            const spriteUrl =
-              char?.sprites?.[ac.mood] ??
-              char?.sprites?.['neutral'] ??
-              (char?.sprites ? Object.values(char.sprites)[0] : undefined);
+            const spriteUrl = resolveCharacterSprite(char, ac.mood);
             return (
               <motion.div
                 key={ac.characterId}

@@ -48,6 +48,7 @@ import { DiceOverlay } from './DiceOverlay';
 import { MinigameOverlay } from './MinigameOverlay';
 import { VisualFilterLayer } from '@/components/ui/VisualFilterLayer';
 import { DialogueBoxPositioned } from '@/components/ui/DialogueBoxPositioned';
+import { resolveCharacterSprite } from '@/utils/characterSprite';
 
 /** Aspect ratio 16:9 */
 const ASPECT_RATIO = 16 / 9;
@@ -617,10 +618,7 @@ export default function PreviewPlayer({
                 {currentScene.characters.map((sc) => {
                   const char = characterLibrary.find((c) => c.id === sc.characterId);
                   const mood = moodOverrides[sc.id] ?? sc.mood ?? 'neutral';
-                  const spriteUrl =
-                    char?.sprites?.[mood] ??
-                    char?.sprites?.['neutral'] ??
-                    (char?.sprites ? Object.values(char.sprites)[0] : undefined);
+                  const spriteUrl = resolveCharacterSprite(char, mood);
                   const widthPct = ((128 * (sc.scale ?? 1)) / 960) * 100;
                   const heightPct = ((128 * (sc.scale ?? 1)) / 540) * 100;
 

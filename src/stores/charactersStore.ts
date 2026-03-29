@@ -36,23 +36,23 @@ interface CharactersState {
 
 const SAMPLE_CHARACTERS: Character[] = [
   {
-    id: "player",
-    name: "Joueur",
-    description: "",
-    sprites: { neutral: "assets/characters/player/neutral.svg" },
-    moods: ["neutral"],
+    id: 'player',
+    name: 'Joueur',
+    description: '',
+    sprites: { neutral: 'assets/characters/player/neutral.svg' },
+    moods: ['neutral'],
   },
   {
-    id: "counsellor",
-    name: "Maire",
-    description: "",
-    sprites: { neutral: "assets/characters/counsellor/neutral.svg" },
-    moods: ["neutral", "professional", "helpful"],
+    id: 'counsellor',
+    name: 'Maire',
+    description: '',
+    sprites: { neutral: 'assets/characters/counsellor/neutral.svg' },
+    moods: ['neutral', 'professional', 'helpful'],
   },
   {
-    id: "narrator",
-    name: "Narrateur",
-    description: "",
+    id: 'narrator',
+    name: 'Narrateur',
+    description: '',
     sprites: {},
     moods: [],
   },
@@ -72,34 +72,46 @@ export const useCharactersStore = create<CharactersState>()(
 
           // Actions
           addCharacter: () => {
-            const id = "char-" + Date.now();
+            const id = 'char-' + Date.now();
             const newCharacter: Character = {
               id,
-              name: "New character",
-              description: "",
-              sprites: { neutral: "" },
-              moods: ["neutral"],
+              name: 'New character',
+              description: '',
+              sprites: { neutral: '' },
+              moods: ['neutral'],
             };
 
-            set((state) => ({
-              characters: [...state.characters, newCharacter],
-            }), false, 'characters/addCharacter');
+            set(
+              (state) => ({
+                characters: [...state.characters, newCharacter],
+              }),
+              false,
+              'characters/addCharacter'
+            );
 
             return id;
           },
 
           updateCharacter: (updated) => {
-            set((state) => ({
-              characters: state.characters.map((c) =>
-                c.id === updated.id ? { ...c, ...updated } : c
-              ),
-            }), false, 'characters/updateCharacter');
+            set(
+              (state) => ({
+                characters: state.characters.map((c) =>
+                  c.id === updated.id ? { ...c, ...updated } : c
+                ),
+              }),
+              false,
+              'characters/updateCharacter'
+            );
           },
 
           deleteCharacter: (charId) => {
-            set((state) => ({
-              characters: state.characters.filter((c) => c.id !== charId),
-            }), false, 'characters/deleteCharacter');
+            set(
+              (state) => ({
+                characters: state.characters.filter((c) => c.id !== charId),
+              }),
+              false,
+              'characters/deleteCharacter'
+            );
           },
 
           importCharacters: (characters) => {
@@ -117,6 +129,12 @@ export const useCharactersStore = create<CharactersState>()(
         name: 'characters-storage',
         storage: createJSONStorage(() => localStorage),
         version: 1,
+        // Guard hydratation : si localStorage vide ou corrompu, restaurer SAMPLE_CHARACTERS
+        onRehydrateStorage: () => (state) => {
+          if (state && state.characters.length === 0) {
+            state.characters = SAMPLE_CHARACTERS;
+          }
+        },
       }
     ),
     {
@@ -126,7 +144,7 @@ export const useCharactersStore = create<CharactersState>()(
       // PERFORMANCE: Only track 'characters' in undo history (not actions)
       // @ts-expect-error - Zundo partialize expects subset of state (this is correct behavior)
       partialize: (state) => ({
-        characters: state.characters
+        characters: state.characters,
       }),
     }
   )

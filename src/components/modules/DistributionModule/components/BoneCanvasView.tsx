@@ -1,10 +1,24 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
-import { Stage, Layer, Line, Group, Circle } from 'react-konva';
+import {
+  Stage,
+  Layer,
+  Line,
+  Group,
+  Circle,
+  RegularPolygon,
+  Image as KonvaImage,
+} from 'react-konva';
 import type Konva from 'konva';
 import { useRigStore } from '@/stores/rigStore';
 import type { BoneTool, CharacterRig } from '@/types/bone';
 import { BONE_DEFAULT_COLORS, DEFAULT_BONE_LENGTH } from '@/types/bone';
-import { getRootBones } from '../utils/boneUtils';
+import {
+  getRootBones,
+  getBoneChain,
+  computeChainWorldState,
+  fabrikToRotations,
+} from '../utils/boneUtils';
+import { solveFabrik } from '@/utils/fabrik';
 import { useBoneImageCache } from '../hooks/useBoneImageCache';
 import { BoneGroup } from './BoneGroup';
 import { AvatarPicker } from '@/components/tabs/characters/components/AvatarPicker';
@@ -12,10 +26,24 @@ import { AvatarPicker } from '@/components/tabs/characters/components/AvatarPick
 // Fallbacks stables (konva-patterns §16, Acton §15.4)
 const EMPTY_BONES: CharacterRig['bones'] = [];
 const EMPTY_PARTS: CharacterRig['parts'] = [];
+const EMPTY_IK_CHAINS: CharacterRig['ikChains'] = [];
 
 // Grille de fond
 const GRID_COLOR = 'rgba(255,255,255,0.04)';
 const GRID_SIZE = 40;
+
+// Bouton zoom toolbar
+const ZOOM_BTN: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--color-text-secondary)',
+  padding: '2px 5px',
+  borderRadius: 5,
+  lineHeight: 1,
+};
 
 interface BoneCanvasViewProps {
   characterId: string;
@@ -26,22 +54,30 @@ interface BoneCanvasViewProps {
   onSelectBone: (boneId: string | null) => void;
   onZoomChange: (zoom: number) => void;
   onStagePosChange: (pos: { x: number; y: number }) => void;
+  /** URL du sprite du personnage à superposer derrière le squelette (mode Réf.) */
+  referenceImageUrl?: string;
+  /** Afficher le sprite de référence semi-transparent */
+  showRefImage?: boolean;
+  /** Échelle de l'image de référence (0.3 → 1.5, défaut 0.6) */
+  refScale?: number;
+  /** Opacité de l'image de référence (0.1 → 0.8, défaut 0.45) */
+  refOpacity?: number;
 }
 
 /**
- * BoneCanvasView — Stage Konva 3 layers pour l'éditeur osseux FK.
+ * BoneCanvasView — Stage Konva 3 layers pour l'éditeur osseux FK + IK.
  *
  * Layer 1 : fond + grille (listening=false)
  * Layer 2 : RigLayer — <BoneGroup> récursif
- * Layer 3 : OverlayLayer — anneau de sélection (position absolue via getAbsolutePosition)
+ * Layer 3 : OverlayLayer — anneau sélection + diamants IK
  *
  * Checklist konva-patterns :
  * §1  dragend guard : if (e.target !== stageRef.current) return
  * §7  PAS de destroy() dans cleanup
  * §8  touchAction: 'none' sur wrapper div
- * §12 guard getStage() avant getAbsolutePosition() dans OverlayLayer
+ * §12 guard getStage() avant getAbsolutePosition()
  * §16 EMPTY_* module-level
- * §17 pas de prop style sur nœuds Konva (cursor géré sur wrapper div)
+ * §17 pas de prop style sur nœuds Konva
  * §20 3 layers ≤ 7
  */
 export function BoneCanvasView({
@@ -53,6 +89,10 @@ export function BoneCanvasView({
   onSelectBone,
   onZoomChange,
   onStagePosChange,
+  referenceImageUrl,
+  showRefImage = false,
+  refScale = 0.6,
+  refOpacity = 0.45,
 }: BoneCanvasViewProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,6 +101,7 @@ export function BoneCanvasView({
   const rig = useRigStore((s) => s.rigs.find((r) => r.characterId === characterId));
   const bones = rig?.bones ?? EMPTY_BONES;
   const parts = rig?.parts ?? EMPTY_PARTS;
+  const ikChains = rig?.ikChains ?? EMPTY_IK_CHAINS;
 
   // ── Image cache (konva-patterns §15) ──────────────────────────────────────
   const imageCache = useBoneImageCache(parts);
@@ -80,6 +121,27 @@ export function BoneCanvasView({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // ── Sprite de référence (konva-patterns §15 : cancelled flag) ────────────
+  const [refImgElement, setRefImgElement] = useState<HTMLImageElement | null>(null);
+  // Position locale de l'image de référence (draggable, non persistée)
+  const [refImgOffset, setRefImgOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!referenceImageUrl || !showRefImage) {
+      setRefImgElement(null);
+      return;
+    }
+    let cancelled = false;
+    const img = new window.Image();
+    img.onload = () => {
+      if (!cancelled) setRefImgElement(img);
+    };
+    img.src = referenceImageUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [referenceImageUrl, showRefImage]);
 
   // ── Grille de fond (Konva Lines, listening=false) ─────────────────────────
   const gridKonvaLines = useMemo(() => {
@@ -129,6 +191,47 @@ export function BoneCanvasView({
     }
     setOverlayPos(node.getAbsolutePosition());
   }, [selectedBoneId, bones, zoom, stagePos]);
+
+  // ── IK — positions monde des end effectors ────────────────────────────────
+  const ikEndEffectors = useMemo(() => {
+    if (!rig || activeTool !== 'ik') return [];
+    const result: { chainId: string; x: number; y: number }[] = [];
+    for (const chain of ikChains) {
+      const boneChain = getBoneChain(chain.rootBoneId, chain.endBoneId, bones);
+      if (!boneChain) continue;
+      const { joints } = computeChainWorldState(boneChain, bones, rig.originX, rig.originY);
+      // joints[last] = tip du dernier os = end effector
+      const tip = joints[joints.length - 1];
+      result.push({ chainId: chain.id, x: tip.x, y: tip.y });
+    }
+    return result;
+  }, [rig, bones, ikChains, activeTool]);
+
+  // ── IK drag handler ───────────────────────────────────────────────────────
+  const handleIkDragMove = useCallback(
+    (chainId: string, worldX: number, worldY: number) => {
+      if (!rig) return;
+      const chain = ikChains.find((c) => c.id === chainId);
+      if (!chain) return;
+      const boneChain = getBoneChain(chain.rootBoneId, chain.endBoneId, bones);
+      if (!boneChain) return;
+
+      const { joints, lengths } = computeChainWorldState(
+        boneChain,
+        bones,
+        rig.originX,
+        rig.originY
+      );
+      const solved = solveFabrik(joints, lengths, worldX, worldY);
+      const rotMap = fabrikToRotations(solved, boneChain);
+
+      const state = useRigStore.getState();
+      rotMap.forEach((rotation, boneId) => {
+        state.updateBone(rig.id, boneId, { rotation });
+      });
+    },
+    [rig, bones, ikChains]
+  );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -254,7 +357,9 @@ export function BoneCanvasView({
         ? 'cell'
         : activeTool === 'add-part'
           ? 'copy'
-          : 'default';
+          : activeTool === 'ik'
+            ? 'grab'
+            : 'default';
 
   return (
     // §8 touchAction: 'none' sur le wrapper div
@@ -281,8 +386,21 @@ export function BoneCanvasView({
         onWheel={handleWheel}
         onClick={handleStageClick}
       >
-        {/* Layer 1 : fond + grille (listening=false) */}
-        <Layer listening={false}>{gridKonvaLines}</Layer>
+        {/* Layer 1 : fond + grille + sprite de référence */}
+        <Layer listening={showRefImage && !!refImgElement}>
+          {gridKonvaLines}
+          {showRefImage && refImgElement && (
+            <RefImage
+              image={refImgElement}
+              originX={rig?.originX ?? 300}
+              originY={rig?.originY ?? 280}
+              offset={refImgOffset}
+              onOffsetChange={setRefImgOffset}
+              scale={refScale}
+              opacity={refOpacity}
+            />
+          )}
+        </Layer>
 
         {/* Layer 2 : rig (FK via Groups imbriqués) */}
         <Layer>
@@ -301,12 +419,12 @@ export function BoneCanvasView({
               />
             ))}
           </Group>
-          {/* Pivots désormais identifiés dans BoneGroup (Fix #1) — pas de circles orphelins ici */}
         </Layer>
 
-        {/* Layer 3 : overlay sélection (déclaratif, listening=false) */}
-        <Layer listening={false}>
-          {overlayPos && (
+        {/* Layer 3 : overlay sélection + end effectors IK */}
+        <Layer listening={activeTool === 'ik'}>
+          {/* Anneau de sélection */}
+          {overlayPos && activeTool !== 'ik' && (
             <Circle
               x={overlayPos.x}
               y={overlayPos.y}
@@ -317,6 +435,19 @@ export function BoneCanvasView({
               listening={false}
             />
           )}
+
+          {/* Diamants IK — end effectors draggables */}
+          {activeTool === 'ik' &&
+            ikEndEffectors.map(({ chainId, x, y }) => (
+              <IkHandle
+                key={`ik-${chainId}`}
+                x={x}
+                y={y}
+                chainId={chainId}
+                zoom={zoom}
+                onDragMove={handleIkDragMove}
+              />
+            ))}
         </Layer>
       </Stage>
 
@@ -373,12 +504,111 @@ export function BoneCanvasView({
                 ✕
               </button>
             </div>
+            {/* Import depuis l'ordinateur — Bug 3 */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 12px',
+                marginBottom: 8,
+                borderRadius: 6,
+                border: '1px dashed var(--color-border-hover)',
+                cursor: 'pointer',
+                fontSize: 12,
+                color: 'var(--color-text-secondary)',
+                transition: 'border-color 150ms, color 150ms',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary)';
+                (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-hover)';
+                (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)';
+              }}
+            >
+              📂 Depuis l'ordinateur
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const url = URL.createObjectURL(file);
+                  handleAddPart(url);
+                  e.target.value = '';
+                }}
+              />
+            </label>
             <AvatarPicker mood="default" onSelect={(_mood, url) => handleAddPart(url)} />
           </div>
         </div>
       )}
 
-      {/* Message vide — positionné en CSS sur le wrapper */}
+      {/* Toolbar zoom — overlay bas-droit (Nijman §8.1 : feedback < 100ms) */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 12,
+          right: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          background: 'rgba(17,19,24,0.88)',
+          border: '1px solid var(--color-border-base)',
+          borderRadius: 8,
+          padding: '3px 5px',
+        }}
+      >
+        <button
+          type="button"
+          title="Recentrer la vue"
+          onClick={() => {
+            onZoomChange(1);
+            onStagePosChange({
+              x: canvasSize.w / 2 - (rig?.originX ?? 300),
+              y: canvasSize.h / 2 - (rig?.originY ?? 100),
+            });
+          }}
+          style={ZOOM_BTN}
+        >
+          ⊡
+        </button>
+        <button
+          type="button"
+          title="Dézoom"
+          onClick={() => onZoomChange(Math.max(0.1, zoom * 0.85))}
+          style={ZOOM_BTN}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          title="Reset 100%"
+          onClick={() => {
+            onZoomChange(1);
+            onStagePosChange({
+              x: canvasSize.w / 2 - (rig?.originX ?? 300),
+              y: canvasSize.h / 2 - (rig?.originY ?? 100),
+            });
+          }}
+          style={{ ...ZOOM_BTN, minWidth: 38, fontVariantNumeric: 'tabular-nums' }}
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          type="button"
+          title="Zoom"
+          onClick={() => onZoomChange(Math.min(8, zoom * 1.18))}
+          style={ZOOM_BTN}
+        >
+          +
+        </button>
+      </div>
+
+      {/* Message vide */}
       {bones.length === 0 && (
         <div
           style={{
@@ -400,5 +630,96 @@ export function BoneCanvasView({
         </div>
       )}
     </div>
+  );
+}
+
+// ── RefImage — sprite de référence draggable (Spine/DragonBones style) ──────
+
+interface RefImageProps {
+  image: HTMLImageElement;
+  originX: number;
+  originY: number;
+  offset: { x: number; y: number };
+  onOffsetChange: (offset: { x: number; y: number }) => void;
+  scale: number;
+  opacity: number;
+}
+
+/**
+ * KonvaImage draggable pour le sprite de référence.
+ * Centré horizontalement sur l'origine du rig, pieds alignés sur le pivot.
+ * Le drag accumule l'offset dans le state parent (konva-patterns §5).
+ */
+function RefImage({
+  image,
+  originX,
+  originY,
+  offset,
+  onOffsetChange,
+  scale,
+  opacity,
+}: RefImageProps) {
+  const w = image.width * scale;
+  const h = image.height * scale;
+  const baseX = originX - w / 2;
+  const baseY = originY - h;
+
+  return (
+    <KonvaImage
+      image={image}
+      x={baseX + offset.x}
+      y={baseY + offset.y}
+      width={w}
+      height={h}
+      opacity={opacity}
+      draggable
+      imageSmoothingEnabled={false}
+      onDragEnd={(e) => {
+        onOffsetChange({
+          x: e.target.x() - baseX,
+          y: e.target.y() - baseY,
+        });
+      }}
+    />
+  );
+}
+
+// ── IkHandle — diamant IK draggable ─────────────────────────────────────────
+
+interface IkHandleProps {
+  x: number;
+  y: number;
+  chainId: string;
+  zoom: number;
+  onDragMove: (chainId: string, worldX: number, worldY: number) => void;
+}
+
+/**
+ * Diamant IK draggable.
+ * Placé directement dans un Layer → x/y = coordonnées monde (§2 konva-patterns).
+ * e.target.x()/y() retourne déjà les coords monde après drag — pas de conversion.
+ */
+function IkHandle({ x, y, chainId, zoom, onDragMove }: IkHandleProps) {
+  const handleDragMove = useCallback(
+    (e: Konva.KonvaEventObject<DragEvent>) => {
+      // e.target.x()/y() = position monde (Layer hérite du Stage transform)
+      onDragMove(chainId, e.target.x(), e.target.y());
+    },
+    [chainId, onDragMove]
+  );
+
+  return (
+    <RegularPolygon
+      x={x}
+      y={y}
+      sides={4}
+      radius={10 / zoom}
+      fill="rgba(251,191,36,0.9)"
+      stroke="#fbbf24"
+      strokeWidth={1.5 / zoom}
+      rotation={45}
+      draggable
+      onDragMove={handleDragMove}
+    />
   );
 }

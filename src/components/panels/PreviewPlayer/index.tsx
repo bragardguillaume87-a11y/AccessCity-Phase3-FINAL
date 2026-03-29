@@ -184,6 +184,16 @@ export default function PreviewPlayer({
   // ── Config boîte de dialogue (hook partagé avec DialoguePreviewOverlay) ──
   const dialogueBoxConfig = useDialogueBoxConfig(currentDialogue?.boxStyle);
 
+  // ── Speaker layout (hook partagé avec DialoguePreviewOverlay) ────────────
+  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor, isNarrator } =
+    useSpeakerLayout({
+      speakerNameOrId: currentDialogue?.speaker,
+      sceneCharacters: currentScene?.characters ?? [],
+      characterLibrary,
+      config: dialogueBoxConfig,
+      moodOverrides,
+    });
+
   // ── Typewriter ────────────────────────────────────────────────────────────
   const {
     displayText,
@@ -194,10 +204,20 @@ export default function PreviewPlayer({
     cursor: true,
     contextAware: true,
     // onTick via ref interne → pas de redémarrage de l'animation sur re-render
-    onTick: useCallback((char: string) => {
-      uiSounds.tick(char);
-    }, []),
+    // Narrateur : style 'doux' fixe (indépendant du style global du projet)
+    onTick: useCallback(
+      (char: string) => {
+        if (isNarrator) {
+          uiSounds.tickAs(char, 'doux');
+        } else {
+          uiSounds.tick(char);
+        }
+      },
+      [isNarrator]
+    ),
   });
+
+  const effectiveTypewriterDone = typewriterDone;
 
   const handleAdvance = useCallback(() => {
     if (!typewriterDone) {
@@ -218,19 +238,6 @@ export default function PreviewPlayer({
     },
     [chooseOption]
   );
-
-  // ── Speaker layout (hook partagé avec DialoguePreviewOverlay) ────────────
-  const { speakerDisplayName, speakerIsOnRight, speakerPortraitUrl, speakerColor, isNarrator } =
-    useSpeakerLayout({
-      speakerNameOrId: currentDialogue?.speaker,
-      sceneCharacters: currentScene?.characters ?? [],
-      characterLibrary,
-      config: dialogueBoxConfig,
-      moodOverrides,
-    });
-
-  // En mode narrateur, le typewriter ne s'affiche pas — le clic avance directement
-  const effectiveTypewriterDone = isNarrator || typewriterDone;
 
   // ── Position boîte de dialogue ─────────────────────────────────────────────
   const dlgPosition = dialogueBoxConfig.position;
@@ -756,8 +763,7 @@ export default function PreviewPlayer({
                     <DialogueBox
                       speaker={isNarrator ? undefined : speakerDisplayName || undefined}
                       isNarrator={isNarrator}
-                      // En mode narrateur : texte complet immédiatement (pas de typewriter)
-                      displayText={isNarrator ? (currentDialogue?.text ?? '') : displayText}
+                      displayText={displayText}
                       richText={isNarrator ? undefined : currentDialogue?.richText}
                       choices={visibleChoices.length > 0 ? visibleChoices : undefined}
                       isTypewriterDone={effectiveTypewriterDone}
@@ -769,6 +775,7 @@ export default function PreviewPlayer({
                       speakerIsOnRight={speakerIsOnRight}
                       speakerColor={speakerColor}
                       isRolling={diceState.lastRoll !== null}
+                      dialogueKey={currentDialogue?.id}
                       onChoose={handleChoose}
                       onRestart={() => goToScene(currentScene.id, null)}
                       onClose={onClose}

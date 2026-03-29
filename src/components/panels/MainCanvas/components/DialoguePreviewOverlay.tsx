@@ -176,6 +176,7 @@ export function DialoguePreviewOverlay({
         speakerPortraitUrl={isNarrator ? null : speakerPortraitUrl}
         speakerIsOnRight={speakerIsOnRight}
         speakerColor={speakerColor}
+        dialogueKey={dialogue.id}
         onAdvance={skip}
         onChoose={onChoose}
         navigationSlot={navigationSlot}

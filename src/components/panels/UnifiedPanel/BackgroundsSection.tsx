@@ -1,11 +1,13 @@
 import { useCallback, useMemo, type DragEvent } from 'react';
 import { Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IosToggle } from '@/components/ui/IosToggle';
 import { useAssets } from '@/hooks/useAssets';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { buildFilterCSS, BACKGROUND_FILTER_DEFAULTS } from '@/utils/backgroundFilter';
 import { PanelSection } from '@/components/ui/CollapsibleSection';
+import { SliderRow } from '@/components/ui/SliderRow';
 import type { BackgroundFilter } from '@/types/scenes';
 
 // ============================================================================
@@ -18,40 +20,6 @@ interface BackgroundsSectionProps {
 
 // ⚠️ Module-level constant — évite `?? {}` inline qui crée une nouvelle référence à chaque render.
 const EMPTY_FILTER: BackgroundFilter = {};
-
-// ============================================================================
-// IOS TOGGLE (inline)
-// ============================================================================
-
-function IosToggle({
-  enabled,
-  onToggle,
-  label,
-}: {
-  enabled: boolean;
-  onToggle: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={[
-        'relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]',
-        enabled ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-hover)]',
-      ].join(' ')}
-      role="switch"
-      aria-checked={enabled}
-      aria-label={`${enabled ? 'Désactiver' : 'Activer'} ${label}`}
-    >
-      <span
-        className={[
-          'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-          enabled ? 'translate-x-4' : 'translate-x-0.5',
-        ].join(' ')}
-      />
-    </button>
-  );
-}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -191,68 +159,48 @@ export function BackgroundsSection({ onOpenModal }: BackgroundsSectionProps) {
 
         {/* Sliders — toujours visibles, grisés si désactivés */}
         <div className={filtersEnabled ? '' : 'opacity-40 pointer-events-none'}>
-          {/* Luminosité */}
-          <div className="sp-row">
-            <span>Luminosité</span>
-            <span>{brightnessValue}%</span>
-          </div>
-          <input
-            type="range"
-            min={50}
-            max={150}
-            step={5}
+          <SliderRow
+            label="Luminosité"
             value={brightnessValue}
-            onChange={(e) => handleFilterChange('brightness', parseFloat(e.target.value))}
-            className="sp-slider mb-2"
-            aria-label={`Luminosité : ${brightnessValue} %`}
-          />
-
-          {/* Contraste */}
-          <div className="sp-row">
-            <span>Contraste</span>
-            <span>{contrastValue}%</span>
-          </div>
-          <input
-            type="range"
             min={50}
             max={150}
             step={5}
-            value={contrastValue}
-            onChange={(e) => handleFilterChange('contrast', parseFloat(e.target.value))}
-            className="sp-slider mb-2"
-            aria-label={`Contraste : ${contrastValue} %`}
+            unit="%"
+            onChange={(v) => handleFilterChange('brightness', v)}
+            ariaLabel={`Luminosité : ${brightnessValue} %`}
+            className="mb-2"
           />
-
-          {/* Saturation */}
-          <div className="sp-row">
-            <span>Saturation</span>
-            <span>{saturationValue}%</span>
-          </div>
-          <input
-            type="range"
+          <SliderRow
+            label="Contraste"
+            value={contrastValue}
+            min={50}
+            max={150}
+            step={5}
+            unit="%"
+            onChange={(v) => handleFilterChange('contrast', v)}
+            ariaLabel={`Contraste : ${contrastValue} %`}
+            className="mb-2"
+          />
+          <SliderRow
+            label="Saturation"
+            value={saturationValue}
             min={0}
             max={200}
             step={5}
-            value={saturationValue}
-            onChange={(e) => handleFilterChange('saturation', parseFloat(e.target.value))}
-            className="sp-slider mb-2"
-            aria-label={`Saturation : ${saturationValue} %`}
+            unit="%"
+            onChange={(v) => handleFilterChange('saturation', v)}
+            ariaLabel={`Saturation : ${saturationValue} %`}
+            className="mb-2"
           />
-
-          {/* Flou */}
-          <div className="sp-row">
-            <span>Flou</span>
-            <span>{blurValue}px</span>
-          </div>
-          <input
-            type="range"
+          <SliderRow
+            label="Flou"
+            value={blurValue}
             min={0}
             max={20}
             step={1}
-            value={blurValue}
-            onChange={(e) => handleFilterChange('blur', parseFloat(e.target.value))}
-            className="sp-slider"
-            aria-label={`Flou : ${blurValue} px`}
+            unit="px"
+            onChange={(v) => handleFilterChange('blur', v)}
+            ariaLabel={`Flou : ${blurValue} px`}
           />
         </div>
 

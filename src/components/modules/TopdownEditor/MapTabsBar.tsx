@@ -10,7 +10,7 @@
  */
 
 import { useState, useRef } from 'react';
-import { Plus, Map, Settings, X, Check } from 'lucide-react';
+import { Plus, Map, Settings, X, Check, Play } from 'lucide-react';
 import type { MapMetadata } from '@/types/map';
 
 interface MapTabsBarProps {
@@ -21,6 +21,7 @@ interface MapTabsBarProps {
   onRenameMap?: (mapId: string, newName: string) => void;
   onDeleteMap?: (mapId: string) => void;
   onOpenSettings?: (mapId: string) => void;
+  onPreview?: () => void;
 }
 
 export default function MapTabsBar({
@@ -31,6 +32,7 @@ export default function MapTabsBar({
   onRenameMap,
   onDeleteMap,
   onOpenSettings,
+  onPreview,
 }: MapTabsBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -287,7 +289,7 @@ export default function MapTabsBar({
       >
         <button
           onClick={onAddMap}
-          title="Nouvelle carte"
+          title="Ajouter une nouvelle carte"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -314,6 +316,49 @@ export default function MapTabsBar({
           <Plus size={14} />
         </button>
       </div>
+
+      {/* Bouton Prévisualiser — accès rapide sans quitter la carte 2D */}
+      {onPreview && (
+        <div
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            paddingRight: 8,
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={onPreview}
+            title="Prévisualiser le jeu (Ctrl+R)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 5,
+              border: '1px solid rgba(139,92,246,0.4)',
+              background: 'rgba(139,92,246,0.12)',
+              color: 'var(--color-primary, #8b5cf6)',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontWeight: 600,
+              transition: 'background 0.1s, border-color 0.1s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(139,92,246,0.25)';
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.7)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(139,92,246,0.12)';
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)';
+            }}
+          >
+            <Play size={11} />
+            Prévisualiser
+          </button>
+        </div>
+      )}
     </div>
   );
 }

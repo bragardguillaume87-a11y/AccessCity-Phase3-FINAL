@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Image, Volume2, Users, Package, MessageSquare, Type, Sparkles } from 'lucide-react';
 import { BackgroundsSection } from './BackgroundsSection';
-import { TextSection } from './TextSection';
+import { TextSection } from './TextSection_v2';
 import CharacterMoodPicker from './CharacterMoodPicker';
 import { ObjectsSection } from './ObjectsSection';
 import { AudioSection } from './AudioSection';

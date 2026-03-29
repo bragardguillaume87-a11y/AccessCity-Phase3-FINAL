@@ -593,6 +593,42 @@ textarea {
   }
 }
 
+/* ========================================
+   DIALOGUE BOX — VN TYPEWRITER ANIMATIONS
+   ======================================== */
+
+/* A — Curseur vivant : respiration douce (1.1s sinusoïdale) */
+@keyframes vn-cursor-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+.vn-cursor {
+  display: inline-block;
+  animation: vn-cursor-pulse 1.1s ease-in-out infinite;
+  margin-left: 1px;
+  font-weight: 300;
+  user-select: none;
+}
+
+/* B — Fondu par caractère : chaque nouveau char fade-in en 70ms */
+@keyframes vn-char-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.vn-char-in {
+  display: inline;
+  animation: vn-char-in 70ms ease-out forwards;
+}
+
 /* Shadcn/ui base layer - commented out to preserve custom theme
 @layer base {
   * {

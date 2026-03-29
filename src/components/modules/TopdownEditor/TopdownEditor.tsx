@@ -15,6 +15,7 @@
  */
 
 import { useRef, useEffect, useState, useCallback, useLayoutEffect, useMemo } from 'react';
+import { useUIStore } from '@/stores/uiStore';
 import { toast } from 'sonner';
 import { useMapsStore, useTemporalMapsStore } from '@/stores/mapsStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -757,6 +758,7 @@ export default function TopdownEditor() {
             editor.selectMap(mapId);
             setMapSettingsOpen(true);
           }}
+          onPreview={() => useUIStore.getState().setActiveModule('preview')}
         />
         <div
           ref={canvasContainerRef}

@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  BookOpen,
-  Map,
-  LayoutDashboard,
-  Play,
-  GitBranch,
-  Users2,
-  type LucideIcon,
-} from 'lucide-react';
+import { BookOpen, Map, LayoutDashboard, GitBranch, Users2, type LucideIcon } from 'lucide-react';
 import {
   useUIStore,
   useScenesStore,
@@ -131,8 +123,7 @@ const MODULE_TABS: Array<{
   { id: 'topdown', label: 'Carte 2D', Icon: Map },
   { id: 'behavior', label: 'Comportements', Icon: GitBranch, disabled: true },
   { id: 'ui-builder', label: 'Interface', Icon: LayoutDashboard, disabled: true },
-  { id: 'distribution', label: 'Distribution', Icon: Users2, disabled: true },
-  { id: 'preview', label: 'Prévisualiser', Icon: Play },
+  { id: 'distribution', label: 'Marionnette', Icon: Users2 },
 ];
 
 function StudioModuleSwitcher({
@@ -209,9 +200,8 @@ const MODULE_PLACEHOLDER_LABELS: Record<
   },
   distribution: {
     emoji: '🎭',
-    title: 'Distribution',
-    description:
-      'Gérez les sprites par humeur (table de casting) et animez les personnages par squelette cut-out.',
+    title: 'Marionnette',
+    description: 'Rigge tes personnages avec un squelette et crée des animations cut-out.',
   },
   preview: {
     emoji: '🎮',

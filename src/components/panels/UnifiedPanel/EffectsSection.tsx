@@ -17,6 +17,8 @@ import { useState, useCallback, useMemo } from 'react';
 import { ChevronDown, RotateCcw } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { PanelSection } from '@/components/ui/CollapsibleSection';
+import { IosToggle } from '@/components/ui/IosToggle';
+import { SliderRow } from '@/components/ui/SliderRow';
 import { useSettingsStore, DEFAULT_CHARACTER_FX } from '@/stores/settingsStore';
 import type { CharacterFxSettings } from '@/stores/settingsStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
@@ -25,38 +27,6 @@ import type { SceneEffectConfig, SceneEffectType, SceneEffectShared } from '@/ty
 import { SCENE_EFFECT_TYPES, makeDefaultEffect } from '@/config/sceneEffects';
 
 const DEFAULT_UI_SOUNDS_VOLUME = 0.3;
-
-// ── Toggle iOS ────────────────────────────────────────────────────────────────
-
-function IosToggle({
-  enabled,
-  onToggle,
-  label,
-}: {
-  enabled: boolean;
-  onToggle: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={[
-        'relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]',
-        enabled ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-hover)]',
-      ].join(' ')}
-      role="switch"
-      aria-checked={enabled}
-      aria-label={`${enabled ? 'Désactiver' : 'Activer'} ${label}`}
-    >
-      <span
-        className={[
-          'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-          enabled ? 'translate-x-4' : 'translate-x-0.5',
-        ].join(' ')}
-      />
-    </button>
-  );
-}
 
 // ── Carte d'effet ─────────────────────────────────────────────────────────────
 
@@ -90,53 +60,6 @@ function EffectCard({ emoji, label, description, enabled, onToggle, children }: 
         <IosToggle enabled={enabled} onToggle={onToggle} label={label} />
       </div>
       {children}
-    </div>
-  );
-}
-
-// ── Curseur sp-slider ─────────────────────────────────────────────────────────
-
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step,
-  unit,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  disabled: boolean;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
-      <div className="sp-row">
-        <span>{label}</span>
-        <span>
-          {value}
-          {unit}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="sp-slider"
-        aria-label={`${label} : ${value}${unit}`}
-        aria-valuemin={min}
-        aria-valuemax={max}
-        aria-valuenow={value}
-      />
     </div>
   );
 }

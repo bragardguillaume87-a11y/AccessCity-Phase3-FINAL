@@ -6,6 +6,10 @@
  * node.getAbsoluteTransform() donne la position monde de chaque joint gratuitement.
  */
 
+import type { EasingType, BezierPoints } from '@/utils/animationEasing';
+
+export type { EasingType, BezierPoints };
+
 export interface Bone {
   id: string;
   name: string;
@@ -32,6 +36,12 @@ export interface SpritePart {
   height: number;
   /** Ordre de rendu — parties triées avant le stick visuel de l'os */
   zOrder: number;
+  /**
+   * Miroir horizontal — vrai pour les membres du côté opposé (ex: bras droit = bras gauche retourné).
+   * Le canvas applique scaleX=-1 avec décalage x pour un flip en place (konva-patterns §17).
+   * Champ optionnel : absent/undefined = false (backward compat automatique).
+   */
+  flipX?: boolean;
 }
 
 /** FK : seule la rotation locale est nécessaire par os dans une pose */
@@ -52,10 +62,12 @@ export interface BonePose {
  */
 export interface KeyframeEntry {
   poseId: string;
-  /** Durée en frames (défaut = 1 × fps pour 1 seconde) */
+  /** Durée en secondes (défaut : 1.0). Valeur min : 0.1 */
   duration: number;
   /** Courbe d'interpolation vers le keyframe suivant */
-  easing: import('@/utils/animationEasing').EasingType;
+  easing: EasingType;
+  /** Points de contrôle Bézier cubique [x1, y1, x2, y2] ∈ [0,1] — requis si easing === 'bezier' */
+  bezierPoints?: BezierPoints;
 }
 
 export interface AnimationClip {
@@ -73,6 +85,19 @@ export interface AnimationClip {
   loop: boolean;
 }
 
+/**
+ * Chaîne IK (Inverse Kinematics) — définit un groupe d'os résolu par FABRIK.
+ * L'utilisateur déplace le end effector (endBoneId) et les os parents s'orientent automatiquement.
+ */
+export interface IKChain {
+  id: string;
+  name: string;
+  /** Os racine de la chaîne (fixe pendant la résolution IK) */
+  rootBoneId: string;
+  /** Os extrémité — le "end effector" que l'utilisateur déplace */
+  endBoneId: string;
+}
+
 export interface CharacterRig {
   id: string;
   characterId: string;
@@ -83,10 +108,12 @@ export interface CharacterRig {
   parts: SpritePart[];
   poses: BonePose[];
   animationClips: AnimationClip[];
+  /** Chaînes IK définies sur ce rig (mode Expert) */
+  ikChains: IKChain[];
 }
 
-export type BoneTool = 'select' | 'rotate' | 'add-bone' | 'add-part';
-export type DistributionView = 'casting-table' | 'bone-editor' | 'animation-preview';
+export type BoneTool = 'select' | 'rotate' | 'add-bone' | 'add-part' | 'ik';
+export type DistributionView = 'bone-editor' | 'animation-preview';
 
 export const BONE_DEFAULT_COLORS = [
   '#a78bfa',
@@ -99,3 +126,5 @@ export const BONE_DEFAULT_COLORS = [
 
 export const DEFAULT_BONE_LENGTH = 60; // pixels
 export const DEFAULT_ANIMATION_FPS = 24;
+/** Durée par défaut d'un keyframe en secondes */
+export const DEFAULT_KEYFRAME_DURATION = 1.0;

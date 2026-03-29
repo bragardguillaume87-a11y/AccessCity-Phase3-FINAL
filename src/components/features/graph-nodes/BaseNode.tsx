@@ -79,45 +79,57 @@ export const BaseNode = React.memo(function BaseNode({
   const sizes = theme.sizes;
 
   const avatarUrl = useCharacterAvatar(speaker, speakerMood || 'neutral');
-  const setWizardOpen = useUIStore(s => s.setDialogueWizardOpen);
-  const setEditIndex = useUIStore(s => s.setDialogueWizardEditIndex);
+  const setWizardOpen = useUIStore((s) => s.setDialogueWizardOpen);
+  const setEditIndex = useUIStore((s) => s.setDialogueWizardEditIndex);
 
-  const handleEditClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditIndex(index);
-    setWizardOpen(true);
-  }, [index, setEditIndex, setWizardOpen]);
+  const handleEditClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditIndex(index);
+      setWizardOpen(true);
+    },
+    [index, setEditIndex, setWizardOpen]
+  );
 
   const { hasErrors, hasWarnings } = getIssueStatus(issues);
   const hasIssues = hasErrors || hasWarnings;
 
   const bgColor = themeColors.headerBg
-    ? (hasIssues ? colors.bg : themeColors.bg)
-    : (hasIssues ? colors.bg : (themeColors.bgGradient || themeColors.bg));
+    ? hasIssues
+      ? colors.bg
+      : themeColors.bg
+    : hasIssues
+      ? colors.bg
+      : themeColors.bgGradient || themeColors.bg;
   const borderColor = hasIssues ? colors.border : themeColors.border;
 
   // Header strip: uses headerBgGradient (CSS gradient) when available, falls back to solid headerBg.
   // Note: outputColor (SVG handles) still receives headerBg (solid) — CSS gradients aren't valid SVG stroke colors.
   const headerVisualBg = hasIssues
     ? colors.border
-    : (themeColors.headerBgGradient || themeColors.headerBg);
-  const headerWrapperStyle: React.CSSProperties = themeColors.headerBg ? {
-    margin: '-12px -12px 10px -12px',
-    padding: '10px 12px',
-    background: headerVisualBg,
-    borderRadius: `${sizes.nodeBorderRadius}px ${sizes.nodeBorderRadius}px 0 0`,
-    display: 'flex', alignItems: 'flex-start', gap: '10px',
-    boxShadow: 'inset 0 -1px 0 rgba(0,0,0,0.2)',
-  } : HEADER_ROW_STYLE;
+    : themeColors.headerBgGradient || themeColors.headerBg;
+  const headerWrapperStyle: React.CSSProperties = themeColors.headerBg
+    ? {
+        margin: '-12px -12px 10px -12px',
+        padding: '10px 12px',
+        background: headerVisualBg,
+        borderRadius: `${sizes.nodeBorderRadius}px ${sizes.nodeBorderRadius}px 0 0`,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '10px',
+        boxShadow: 'inset 0 -1px 0 rgba(0,0,0,0.2)',
+      }
+    : HEADER_ROW_STYLE;
   const textColor = hasIssues ? colors.text : themeColors.text;
   // On a colored header, always use white text for maximum contrast
   const headerTextColor = themeColors.headerBg ? '#ffffff' : textColor;
   const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
+  const borderWidth = selected ? '3px' : '2px';
 
   // Choice nodes get a thicker left accent border for instant visual differentiation (n8n/Unreal pattern)
   const isChoiceAccent = themeNodeKey === 'choice' && themeColors.headerBg && !hasIssues;
   const accentLeftBorder = isChoiceAccent
-    ? `4px solid ${selected ? COLORS.SELECTED : (themeColors.headerBg || borderColor)}`
+    ? `4px solid ${selected ? COLORS.SELECTED : themeColors.headerBg || borderColor}`
     : undefined;
 
   // Floating index chip: used when headerBg is present (default + blender themes).
@@ -132,8 +144,10 @@ export const BaseNode = React.memo(function BaseNode({
   const nodeClasses = [
     nodeClassName,
     theme.animations.nodeHover,
-    selected && theme.animations.nodeSelected
-  ].filter(Boolean).join(' ');
+    selected && theme.animations.nodeSelected,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
@@ -146,7 +160,7 @@ export const BaseNode = React.memo(function BaseNode({
       style={{
         background: bgColor,
         borderColor: selected ? COLORS.SELECTED : borderColor,
-        borderWidth: selected ? '3px' : '2px',
+        borderWidth,
         borderStyle: 'solid',
         borderLeft: accentLeftBorder,
         borderRadius: `${sizes.nodeBorderRadius}px`,
@@ -156,13 +170,14 @@ export const BaseNode = React.memo(function BaseNode({
         boxShadow: shadow,
         transition: COSMOS_ANIMATIONS.transitionFast,
         position: 'relative',
-        overflow: 'visible'
+        overflow: 'visible',
       }}
     >
-      {theme.shapes?.decorativeElements && (
+      {theme.shapes?.decorativeElements &&
         // In serpentine mode, only show stars on first/last node to reduce visual noise
-        !data.serpentine || data.serpentine.isFirst || data.serpentine.isLast
-      ) && <DecorativeStars position={layout.decorativePosition} />}
+        (!data.serpentine || data.serpentine.isFirst || data.serpentine.isLast) && (
+          <DecorativeStars position={layout.decorativePosition} />
+        )}
       {theme.interactions?.showDragIndicators && <DragIndicator />}
 
       {data.serpentine && <SerpentineBadge layout={layout} />}
@@ -177,7 +192,7 @@ export const BaseNode = React.memo(function BaseNode({
         choices={choices}
         choiceHandlePosition={layout.choiceHandles.position}
         inputColor={themeColors.headerBg ? '#8a9ba8' : undefined}
-        outputColor={themeColors.headerBg ? (themeColors.headerBg) : undefined}
+        outputColor={themeColors.headerBg ? themeColors.headerBg : undefined}
         handleOpacity={themeColors.headerBg ? 0.85 : 0.2}
       />
 
@@ -205,11 +220,16 @@ export const BaseNode = React.memo(function BaseNode({
               textShadow: '0 1px 6px rgba(0,0,0,0.5)',
             }}
           >
-            {responseLabel ?? (index + 1)}
+            {responseLabel ?? index + 1}
           </div>
         )}
 
-        <div style={{ ...AVATAR_BASE_STYLE, border: `2px solid ${themeColors.headerBg ? 'rgba(255,255,255,0.3)' : borderColor}` }}>
+        <div
+          style={{
+            ...AVATAR_BASE_STYLE,
+            border: `2px solid ${themeColors.headerBg ? 'rgba(255,255,255,0.3)' : borderColor}`,
+          }}
+        >
           {avatarUrl ? (
             <img src={avatarUrl} alt={speaker} style={AVATAR_IMG_STYLE} />
           ) : (
@@ -227,11 +247,25 @@ export const BaseNode = React.memo(function BaseNode({
               ) : (
                 <Icon size={14} color={headerTextColor} />
               )}
-              <span style={{ fontSize: `${sizes.fontSizeSpeaker}px`, fontWeight: '700', color: headerTextColor, letterSpacing: '0.02em' }}>
+              <span
+                style={{
+                  fontSize: `${sizes.fontSizeSpeaker}px`,
+                  fontWeight: '700',
+                  color: headerTextColor,
+                  letterSpacing: '0.02em',
+                }}
+              >
                 {speaker || 'Narrator'}
               </span>
               {speakerMood && speakerMood !== 'neutral' && (
-                <span style={{ fontSize: `${NODE_FONT.meta}px`, color: headerTextColor, opacity: 0.9, fontStyle: 'italic' }}>
+                <span
+                  style={{
+                    fontSize: `${NODE_FONT.meta}px`,
+                    color: headerTextColor,
+                    opacity: 0.9,
+                    fontStyle: 'italic',
+                  }}
+                >
                   ({speakerMood})
                 </span>
               )}
@@ -250,7 +284,7 @@ export const BaseNode = React.memo(function BaseNode({
                   }}
                 >
                   {theme.icons?.useEmoji && indexBadgeEmoji && <span>{indexBadgeEmoji}</span>}
-                  {responseLabel ?? (index + 1)}
+                  {responseLabel ?? index + 1}
                 </span>
               )}
               <button
@@ -268,8 +302,12 @@ export const BaseNode = React.memo(function BaseNode({
                   opacity: 0.7,
                   transition: 'opacity 0.15s',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = '0.7';
+                }}
               >
                 <Pencil size={11} />
               </button>
@@ -279,8 +317,15 @@ export const BaseNode = React.memo(function BaseNode({
       </div>
 
       {displayStageDirections && (
-        <p style={{ ...STAGE_DIRECTIONS_BASE_STYLE, color: textColor, borderLeft: `3px solid ${borderColor}` }}>
-          {theme.icons?.useEmoji ? '🎬 ' : ''}{displayStageDirections}
+        <p
+          style={{
+            ...STAGE_DIRECTIONS_BASE_STYLE,
+            color: textColor,
+            borderLeft: `3px solid ${borderColor}`,
+          }}
+        >
+          {theme.icons?.useEmoji ? '🎬 ' : ''}
+          {displayStageDirections}
         </p>
       )}
 
@@ -304,7 +349,10 @@ export const BaseNode = React.memo(function BaseNode({
           {hasErrors && (
             <div
               style={{ ...ERROR_BADGE_STYLE, backgroundColor: COLORS.ERROR }}
-              title={issues.filter((i: ValidationProblem) => i.type === 'error').map((i: ValidationProblem) => i.message).join(', ')}
+              title={issues
+                .filter((i: ValidationProblem) => i.type === 'error')
+                .map((i: ValidationProblem) => i.message)
+                .join(', ')}
             >
               <AlertCircle size={14} color={COLORS.TEXT_WHITE} />
             </div>
@@ -312,7 +360,10 @@ export const BaseNode = React.memo(function BaseNode({
           {hasWarnings && (
             <div
               style={{ ...ERROR_BADGE_STYLE, backgroundColor: COLORS.WARNING }}
-              title={issues.filter((i: ValidationProblem) => i.type === 'warning').map((i: ValidationProblem) => i.message).join(', ')}
+              title={issues
+                .filter((i: ValidationProblem) => i.type === 'warning')
+                .map((i: ValidationProblem) => i.message)
+                .join(', ')}
             >
               <AlertTriangle size={14} color={COLORS.TEXT_WHITE} />
             </div>
@@ -321,9 +372,10 @@ export const BaseNode = React.memo(function BaseNode({
       )}
 
       {theme.shapes?.speechBubbleTail && (
-        <SpeechBubbleTail color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg} />
+        <SpeechBubbleTail
+          color={themeColors.bgGradient?.match(/#[0-9a-fA-F]{6}/)?.[0] || themeColors.bg}
+        />
       )}
-
     </div>
   );
 });

@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { Group, Line, Circle, Image as KonvaImage } from 'react-konva';
+import { Group, Line, Circle, Rect, Text, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
 import type { Bone, SpritePart, BoneTool } from '@/types/bone';
 import { getBoneChildren } from '../utils/boneUtils';
@@ -20,6 +20,8 @@ interface BoneGroupProps {
   overridesMap?: Record<string, { rotation: number }>;
   onSelectBone: (boneId: string) => void;
   onRotateBone: (boneId: string, angleDeg: number) => void;
+  /** Rotation monde accumulée depuis la racine — pour contre-rotation du label (toujours horizontal) */
+  parentWorldRotation?: number;
 }
 
 /**
@@ -50,11 +52,18 @@ const BoneGroupInner = ({
   overridesMap,
   onSelectBone,
   onRotateBone,
+  parentWorldRotation = 0,
 }: BoneGroupProps) => {
   const isSelected = bone.id === selectedBoneId;
   const rotation = rotationOverride ?? bone.rotation;
+  // Rotation monde = somme de toutes les rotations parentes + rotation locale
+  // Contre-rotation appliquée au <Text> pour qu'il reste toujours horizontal (lisible)
+  const worldRotation = parentWorldRotation + rotation;
   const children = getBoneChildren(allBones, bone.id) ?? EMPTY_CHILDREN;
   const parts = allParts.filter((p) => p.boneId === bone.id) ?? EMPTY_PARTS;
+
+  // Capsule cartoon — largeur proportionnelle à la longueur de l'os (Will Wright §4.1)
+  const capsuleH = Math.max(10, Math.min(24, bone.length * 0.35));
 
   // Fix #4 : pivot abs pos capturé à dragStart pour éviter drift si dragBoundFunc
   // réinitialise la position à chaque frame (konva-patterns §5 étendu).
@@ -97,16 +106,46 @@ const BoneGroupInner = ({
           return (
             <KonvaImage
               key={part.id}
-              x={part.offsetX}
+              // Flip en place : décaler x d'une largeur, puis scaleX=-1 dessine vers la gauche
+              // → l'image occupe [offsetX, offsetX+width] dans les deux cas (konva-patterns §17)
+              x={part.flipX ? part.offsetX + part.width : part.offsetX}
               y={part.offsetY}
               width={part.width}
               height={part.height}
+              scaleX={part.flipX ? -1 : 1}
               image={img}
               imageSmoothingEnabled={false}
               listening={false}
             />
           );
         })}
+
+      {/* Capsule cartoon — visible quand aucune SpritePart n'est assignée.
+          Donne une silhouette lisible sans image (Will Wright §4.1). */}
+      {parts.length === 0 && (
+        <Rect
+          x={0}
+          y={-capsuleH / 2}
+          width={bone.length}
+          height={capsuleH}
+          cornerRadius={capsuleH / 2}
+          fill={bone.color}
+          opacity={0.28}
+          listening={false}
+        />
+      )}
+
+      {/* Label nom de l'os — toujours horizontal (contre-rotation = -worldRotation) */}
+      <Text
+        x={bone.length * 0.15}
+        y={-capsuleH / 2 - 11}
+        text={bone.name}
+        fontSize={9}
+        fill={bone.color}
+        opacity={isSelected ? 1 : 0.7}
+        listening={false}
+        rotation={-worldRotation}
+      />
 
       {/* Stick visuel de l'os */}
       <Line
@@ -147,6 +186,7 @@ const BoneGroupInner = ({
             overridesMap={overridesMap}
             onSelectBone={onSelectBone}
             onRotateBone={onRotateBone}
+            parentWorldRotation={worldRotation}
           />
         ))}
       </Group>

@@ -20,6 +20,7 @@ interface StorageKeys {
   readonly SETTINGS: string;
   readonly SELECTED_SCENE: string;
   readonly SELECTED_TAB: string;
+  readonly DISTRIBUTION_TUTORIAL_SEEN: string;
 }
 
 // ============================================================================
@@ -45,9 +46,11 @@ export const STORAGE_KEYS: StorageKeys = {
   // UI state (if needed)
   SELECTED_SCENE: 'accesscity-selected-scene',
   SELECTED_TAB: 'accesscity-selected-tab',
+
+  // Onboarding — DistributionModule (bone editor / animation)
+  DISTRIBUTION_TUTORIAL_SEEN: 'ac_dist_tutorial_v1',
 } as const;
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-

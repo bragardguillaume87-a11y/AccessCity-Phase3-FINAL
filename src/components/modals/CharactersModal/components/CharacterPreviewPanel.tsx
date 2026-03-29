@@ -1,7 +1,18 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Users, Edit, Copy, Trash2, AlertCircle, AlertTriangle, MapPin, Eye, Image } from 'lucide-react';
+import {
+  X,
+  Users,
+  Edit,
+  Copy,
+  Trash2,
+  AlertCircle,
+  AlertTriangle,
+  MapPin,
+  Eye,
+  Image,
+} from 'lucide-react';
 import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
 import type { CharacterUsageData } from '../hooks/useCharacterUsage';
@@ -170,10 +181,10 @@ export function CharacterPreviewPanel({
                   stats.completeness === 100
                     ? 'bg-green-500/20 border-green-400/50 text-green-200'
                     : hasErrors
-                    ? 'bg-red-500/20 border-red-400/50 text-red-200'
-                    : hasWarnings
-                    ? 'bg-amber-500/20 border-amber-400/50 text-amber-200'
-                    : 'bg-slate-500/20 border-slate-400/50 text-slate-200'
+                      ? 'bg-red-500/20 border-red-400/50 text-red-200'
+                      : hasWarnings
+                        ? 'bg-amber-500/20 border-amber-400/50 text-amber-200'
+                        : 'bg-slate-500/20 border-slate-400/50 text-slate-200'
                 }`}
               >
                 {stats.completeness}% complet
@@ -191,7 +202,9 @@ export function CharacterPreviewPanel({
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-primary">{stats.moodCount}</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Humeur{stats.moodCount > 1 ? 's' : ''}</div>
+                  <div className="text-[10px] text-slate-400 font-medium">
+                    Humeur{stats.moodCount > 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,7 +217,9 @@ export function CharacterPreviewPanel({
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-400">{stats.spriteCount}</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Sprite{stats.spriteCount > 1 ? 's' : ''}</div>
+                  <div className="text-[10px] text-slate-400 font-medium">
+                    Sprite{stats.spriteCount > 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
             </div>
@@ -228,7 +243,9 @@ export function CharacterPreviewPanel({
                     <span aria-hidden="true">{getMoodEmoji(mood)}</span>
                     {getMoodLabel(mood)}
                     {character.sprites?.[mood] && (
-                      <span className="text-green-400 font-bold" aria-label="sprite assigné">✓</span>
+                      <span className="text-green-400 font-bold" aria-label="sprite assigné">
+                        ✓
+                      </span>
                     )}
                   </Badge>
                 ))}
@@ -246,7 +263,7 @@ export function CharacterPreviewPanel({
               <div className="space-y-1">
                 {errorsList.map((error, index) => (
                   <div
-                    key={index}
+                    key={error.message ?? index}
                     className="text-[10px] p-2 bg-red-900/30 border border-red-800/40 rounded-lg text-red-300"
                   >
                     {error.message}
@@ -266,7 +283,7 @@ export function CharacterPreviewPanel({
               <div className="space-y-1">
                 {warningsList.map((warning, index) => (
                   <div
-                    key={index}
+                    key={warning.message ?? index}
                     className="text-[10px] p-2 bg-yellow-900/30 border border-yellow-800/40 rounded-lg text-yellow-300"
                   >
                     {warning.message}
@@ -286,7 +303,7 @@ export function CharacterPreviewPanel({
               <div className="space-y-1">
                 {usageInfo.scenes.slice(0, 3).map((scene, index) => (
                   <div
-                    key={index}
+                    key={scene ?? index}
                     className="text-[10px] p-2 bg-blue-900/30 border border-blue-800/40 rounded-lg text-blue-300 truncate"
                   >
                     {scene}

@@ -346,6 +346,35 @@ function tick(char: string): void {
 }
 
 /**
+ * Frappe typewriter avec style forcé — pour le narrateur (style 'doux' fixe)
+ * sans modifier le style global du projet.
+ */
+function tickAs(char: string, style: TickStyle): void {
+  if (_muted || !isRunning()) return;
+  if (SILENT_CHARS.has(char)) return;
+  const now = performance.now();
+  if (now - _lastTickMs < _tickInterval) return;
+  _lastTickMs = now;
+  switch (style) {
+    case 'vintage':
+      tickVintage();
+      break;
+    case 'gaming':
+      tickGaming();
+      break;
+    case '8bit':
+      tick8bit();
+      break;
+    case 'doux':
+      tickDoux();
+      break;
+    default:
+      tickMecanique();
+      break;
+  }
+}
+
+/**
  * Clic "dialogue suivant".
  * Sweep sawtooth montant 400→900 Hz — action décisive, tonalité positive.
  */
@@ -946,6 +975,7 @@ function setTickInterval(ms: number): void {
 
 export const uiSounds = {
   tick,
+  tickAs,
   advance,
   skipTypewriter,
   typewriterComplete,

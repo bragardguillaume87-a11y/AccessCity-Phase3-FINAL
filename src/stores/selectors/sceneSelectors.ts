@@ -11,7 +11,10 @@ import { useCallback, useMemo } from 'react';
 import { useScenesStore } from '../scenesStore';
 import { useDialoguesStore } from '../dialoguesStore';
 import { useSceneElementsStore } from '../sceneElementsStore';
-import type { SceneMetadata } from '../../types';
+import type { SceneMetadata, SceneCharacter } from '../../types';
+
+// Module-level fallback — référence stable pour React.memo et Zustand
+const EMPTY_SCENE_CHARACTERS: SceneCharacter[] = [];
 
 // ============================================================================
 // SCENE SELECTORS
@@ -34,6 +37,30 @@ export function useSceneById(sceneId: string | null | undefined): SceneMetadata 
   return useScenesStore(
     useCallback(
       (state) => (sceneId ? state?.scenes?.find((s) => s.id === sceneId) : undefined),
+      [sceneId]
+    )
+  );
+}
+
+/**
+ * Récupère les personnages placés sur une scène.
+ *
+ * ⚠️ Retourne les SceneCharacter (positions, moods) — pas les Character du projet.
+ * Pour les données de personnage (nom, sprites) → combiner avec useCharacters().
+ *
+ * Abonne uniquement à sceneElementsStore (pas de surcoût scenesStore/dialoguesStore).
+ *
+ * @example
+ * const sceneChars = useSceneCharacters(sceneId);
+ * // sceneChars[i].characterId → id dans charactersStore
+ */
+export function useSceneCharacters(sceneId: string | null | undefined): SceneCharacter[] {
+  return useSceneElementsStore(
+    useCallback(
+      (s) =>
+        sceneId
+          ? (s?.elementsByScene[sceneId]?.characters ?? EMPTY_SCENE_CHARACTERS)
+          : EMPTY_SCENE_CHARACTERS,
       [sceneId]
     )
   );

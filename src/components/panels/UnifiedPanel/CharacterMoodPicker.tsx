@@ -4,15 +4,12 @@ import { ChevronRight, Plus } from 'lucide-react';
 import { useCharactersStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import { useSceneCharacters } from '@/stores/selectors';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { isDialogueSelection } from '@/stores/selectionStore.types';
 import { convertFileSrcIfNeeded } from '@/utils/tauri';
 import { getMoodLabel, getMoodEmoji } from '@/hooks/useMoodPresets';
-import type { SceneCharacter } from '@/types';
-
-// ⚠️ Module-level constant — évite || [] inline dans le sélecteur Zustand.
-const EMPTY_SCENE_CHARACTERS: SceneCharacter[] = [];
 
 export interface CharacterMoodPickerProps {
   onDragStart?: (characterId: string, mood: string) => void;
@@ -30,11 +27,7 @@ export interface CharacterMoodPickerProps {
 export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
   const characters = useCharactersStore((state) => state.characters);
   const selectedSceneId = useUIStore((s) => s.selectedSceneForEdit);
-  const sceneCharacters = useSceneElementsStore((s) =>
-    selectedSceneId
-      ? s.elementsByScene[selectedSceneId]?.characters || EMPTY_SCENE_CHARACTERS
-      : EMPTY_SCENE_CHARACTERS
-  );
+  const sceneCharacters = useSceneCharacters(selectedSceneId);
   const updateSceneCharacter = useSceneElementsStore((s) => s.updateSceneCharacter);
 
   // Dialogue sélectionné (mode Dialogues)

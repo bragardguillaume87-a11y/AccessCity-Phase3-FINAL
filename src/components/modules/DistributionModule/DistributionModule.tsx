@@ -1,19 +1,22 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { Panel, Group as PanelGroup, Separator } from 'react-resizable-panels';
 import type { DistributionView } from '@/types/bone';
 import { useBoneEditor } from './hooks/useBoneEditor';
 import { CharacterRoster } from './components/CharacterRoster';
-import { CastingTableView } from './components/CastingTableView';
 import { BoneCanvasView } from './components/BoneCanvasView';
 import { AnimationPreviewView } from './components/AnimationPreviewView';
 import { BoneEditorRightPanel } from './components/BoneEditorRightPanel';
 import { AnimationRightPanel } from './components/AnimationRightPanel';
+import { SpotlightTutorial } from './components/SpotlightTutorial';
+import { TutorialPathChooser } from './components/TutorialPathChooser';
+import { TutorialHelpButton } from './components/TutorialHelpButton';
+import { IosToggle } from '@/components/ui/IosToggle';
 import { useCharactersStore } from '@/stores';
 import { resolveCharacterSprite } from '@/utils/characterSprite';
+import { useOnboardingStore } from '@/stores/onboardingStore';
+import { getTutorial } from '@/config/tutorials';
 
 const TAB_ITEMS: { id: DistributionView; emoji: string; label: string }[] = [
-  { id: 'casting-table', emoji: '🎭', label: 'Casting' },
   { id: 'bone-editor', emoji: '🦴', label: 'Squelette' },
   { id: 'animation-preview', emoji: '🎬', label: 'Animation' },
 ];
@@ -38,23 +41,53 @@ const RIGHT_PANEL_STYLE: React.CSSProperties = {
 };
 
 /**
- * DistributionModule — Shell 3 colonnes (bone-editor / animation)
- *                   ou pleine largeur (casting-table).
- *
- * Correction UX : le PanelGroup ne change plus de structure selon la vue
- * pour éviter l'écrasement du panneau roster lors des transitions.
- * Chaque vue non-casting a son propre layout stable :
- *   [CharacterRoster ~18%] | [Vue centrale flex] | [Panel droit ~22%]
+ * DistributionModule — Shell 3 colonnes (Squelette / Animation).
+ * Mode Débutant / Expert : IosToggle en haut à droite de la barre d'onglets.
+ * Propagé en prop à BoneEditorRightPanel et AnimationRightPanel.
  */
 export function DistributionModule() {
-  const [activeView, setActiveView] = useState<DistributionView>('casting-table');
+  const [activeView, setActiveView] = useState<DistributionView>('bone-editor');
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [selectedPoseId, setSelectedPoseId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBeginnerMode, setIsBeginnerMode] = useState(true); // débutant par défaut (§6a)
+  const [showRefSprite, setShowRefSprite] = useState(false);
+  const [refScale, setRefScale] = useState(0.6);
+  const [refOpacity, setRefOpacity] = useState(0.45);
 
   const boneEditor = useBoneEditor();
   const characters = useCharactersStore((s) => s.characters);
+
+  // URL du sprite du personnage sélectionné — pour l'overlay de référence
+  const selectedChar = characters.find((c) => c.id === selectedCharId);
+  const refImageUrl = selectedChar
+    ? (resolveCharacterSprite(selectedChar) ?? undefined)
+    : undefined;
+
+  // ── Onboarding ───────────────────────────────────────────────────────────
+  const seenTutorials = useOnboardingStore((s) => s.seenTutorials);
+  const activeTutorialId = useOnboardingStore((s) => s.activeTutorialId);
+  const activeTutorialStep = useOnboardingStore((s) => s.activeTutorialStep);
+  const nextStep = useOnboardingStore((s) => s.nextStep);
+  const prevStep = useOnboardingStore((s) => s.prevStep);
+  const skipTutorial = useOnboardingStore((s) => s.skipTutorial);
+
+  const [pathChooserOpen, setPathChooserOpen] = useState(false);
+
+  // Auto-ouvrir au premier accès à l'onglet Squelette (tutoriel jamais vu)
+  useEffect(() => {
+    if (
+      activeView === 'bone-editor' &&
+      !seenTutorials.includes('dist-squelette') &&
+      !activeTutorialId
+    ) {
+      setPathChooserOpen(true);
+    }
+  }, [activeView, seenTutorials, activeTutorialId]);
+
+  const tutorialDef = activeTutorialId ? getTutorial(activeTutorialId) : null;
+  const currentStep = tutorialDef?.steps[activeTutorialStep] ?? null;
 
   // ── Barre d'onglets ─────────────────────────────────────────────────────
   const TabBar = (
@@ -76,6 +109,7 @@ export function DistributionModule() {
             key={tab.id}
             type="button"
             onClick={() => setActiveView(tab.id)}
+            data-tutorial-id={tab.id === 'animation-preview' ? 'animation-tab' : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -96,132 +130,36 @@ export function DistributionModule() {
           </button>
         );
       })}
+
+      {/* Toggle Débutant / Expert + bouton ? */}
+      <div
+        style={{
+          marginLeft: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <TutorialHelpButton onClick={() => setPathChooserOpen(true)} />
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+          {isBeginnerMode ? '🎒 Débutant' : '👨‍💻 Expert'}
+        </span>
+        <IosToggle
+          enabled={!isBeginnerMode}
+          onToggle={() => setIsBeginnerMode((b) => !b)}
+          label="mode Expert"
+        />
+      </div>
     </div>
   );
 
-  // ── Casting — pleine largeur ─────────────────────────────────────────────
-  if (activeView === 'casting-table') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-        {TabBar}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <CastingTableView />
-        </div>
-      </div>
-    );
-  }
-
-  // ── Sélecteur de personnage inline (état vide) ───────────────────────────
-  const InlineCharacterPicker = (
+  // ── Empty state — aucun personnage sélectionné ──────────────────────────
+  const EmptyState = (
     <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 20,
-        padding: 32,
-      }}
+      data-tutorial-id="character-picker"
+      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 20, marginBottom: 6 }}>
-          {activeView === 'bone-editor' ? '🦴' : '🎬'}
-        </p>
-        <p
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: 'var(--color-text-primary)',
-            marginBottom: 4,
-          }}
-        >
-          {activeView === 'bone-editor'
-            ? 'Quel personnage veux-tu rigger ?'
-            : 'Quel personnage veux-tu animer ?'}
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-          {activeView === 'bone-editor'
-            ? "Sélectionne un personnage pour ouvrir l'éditeur de squelette."
-            : 'Sélectionne un personnage pour prévisualiser ses animations.'}
-        </p>
-      </div>
-
-      {characters.length === 0 ? (
-        <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-          Aucun personnage — crée-en un dans l'onglet Personnages.
-        </p>
-      ) : (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 10,
-            justifyContent: 'center',
-            maxWidth: 520,
-          }}
-        >
-          {characters.map((char, idx) => {
-            const portrait = resolveCharacterSprite(char);
-            return (
-              <motion.button
-                key={char.id}
-                type="button"
-                onClick={() => setSelectedCharId(char.id)}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.18, ease: 'easeOut' }}
-                whileHover={{ y: -3, scale: 1.03 }}
-                whileTap={{ scale: 0.95, y: 0 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 14px',
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  border: '1.5px solid var(--color-border-base)',
-                  background: 'var(--color-bg-elevated)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  minWidth: 150,
-                }}
-              >
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 6,
-                    flexShrink: 0,
-                    background: 'var(--color-bg-hover)',
-                    overflow: 'hidden',
-                    border: '1px solid var(--color-border-base)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {portrait ? (
-                    <img
-                      src={portrait}
-                      alt={char.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: 18 }}>🧑</span>
-                  )}
-                </div>
-                <span
-                  style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                >
-                  {char.name}
-                </span>
-              </motion.button>
-            );
-          })}
-        </div>
-      )}
+      <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>← Sélectionne un personnage</p>
     </div>
   );
 
@@ -231,7 +169,7 @@ export function DistributionModule() {
       {TabBar}
 
       <PanelGroup orientation="horizontal" style={{ flex: 1, overflow: 'hidden' }}>
-        {/* Roster toujours visible — valeurs en string "N%" car numerics = pixels en v4 */}
+        {/* Roster toujours visible */}
         <Panel defaultSize="18%" minSize="15%" maxSize="28%" style={ROSTER_PANEL_STYLE}>
           <CharacterRoster
             selectedCharacterId={selectedCharId}
@@ -244,9 +182,9 @@ export function DistributionModule() {
 
         <Separator style={SEP_STYLE} />
 
-        {/* Vue centrale — defaultSize explicite pour éviter que le panel prenne 100% */}
+        {/* Vue centrale */}
         <Panel defaultSize="60%" style={{ display: 'flex', overflow: 'hidden' }}>
-          {activeView === 'bone-editor' && !selectedCharId && InlineCharacterPicker}
+          {activeView === 'bone-editor' && !selectedCharId && EmptyState}
 
           {activeView === 'bone-editor' && selectedCharId && (
             <BoneCanvasView
@@ -258,23 +196,28 @@ export function DistributionModule() {
               onSelectBone={boneEditor.setSelectedBoneId}
               onZoomChange={boneEditor.setZoom}
               onStagePosChange={boneEditor.setStagePos}
+              referenceImageUrl={refImageUrl}
+              showRefImage={showRefSprite}
+              refScale={refScale}
+              refOpacity={refOpacity}
             />
           )}
 
-          {activeView === 'animation-preview' && !selectedCharId && InlineCharacterPicker}
+          {activeView === 'animation-preview' && !selectedCharId && EmptyState}
 
           {activeView === 'animation-preview' && selectedCharId && (
             <AnimationPreviewView
               characterId={selectedCharId}
               selectedClipId={selectedClipId}
               isPlaying={isPlaying}
+              onPlayToggle={() => setIsPlaying((p) => !p)}
             />
           )}
         </Panel>
 
         <Separator style={SEP_STYLE} />
 
-        {/* Panneau droit — valeurs en string "N%" (numerics = pixels en v4) */}
+        {/* Panneau droit */}
         <Panel defaultSize="22%" minSize="18%" maxSize="32%" style={RIGHT_PANEL_STYLE}>
           {activeView === 'bone-editor' && (
             <BoneEditorRightPanel
@@ -283,6 +226,13 @@ export function DistributionModule() {
               selectedBoneId={boneEditor.selectedBoneId}
               onSelectBone={boneEditor.setSelectedBoneId}
               onToolChange={boneEditor.setActiveTool}
+              isBeginnerMode={isBeginnerMode}
+              showRefImage={showRefSprite}
+              onToggleRefImage={() => setShowRefSprite((v) => !v)}
+              refScale={refScale}
+              refOpacity={refOpacity}
+              onRefScaleChange={setRefScale}
+              onRefOpacityChange={setRefOpacity}
             />
           )}
           {activeView === 'animation-preview' && (
@@ -294,10 +244,26 @@ export function DistributionModule() {
               onSelectClip={setSelectedClipId}
               onSelectPose={setSelectedPoseId}
               onPlayToggle={() => setIsPlaying((p) => !p)}
+              isBeginnerMode={isBeginnerMode}
             />
           )}
         </Panel>
       </PanelGroup>
+
+      {/* ── Tutoriel : overlay spotlight ── */}
+      {currentStep && tutorialDef && (
+        <SpotlightTutorial
+          step={currentStep}
+          stepIndex={activeTutorialStep}
+          totalSteps={tutorialDef.steps.length}
+          onNext={() => nextStep(tutorialDef.steps.length)}
+          onPrev={prevStep}
+          onSkip={skipTutorial}
+        />
+      )}
+
+      {/* ── Tutoriel : choix de parcours ── */}
+      <TutorialPathChooser open={pathChooserOpen} onClose={() => setPathChooserOpen(false)} />
     </div>
   );
 }

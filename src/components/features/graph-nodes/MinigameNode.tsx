@@ -40,6 +40,7 @@ export const MinigameNode = React.memo(function MinigameNode({
   const shadow = selected
     ? '0 0 0 2px rgba(20,184,166,0.5), 0 8px 24px rgba(0,0,0,0.35)'
     : '0 4px 12px rgba(0,0,0,0.25)';
+  const borderWidth = selected ? '3px' : '2px';
 
   const nodeClasses = [
     'minigame-node',
@@ -59,7 +60,7 @@ export const MinigameNode = React.memo(function MinigameNode({
       style={{
         background: bgColor,
         borderColor,
-        borderWidth: selected ? '3px' : '2px',
+        borderWidth,
         borderStyle: 'solid',
         borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',

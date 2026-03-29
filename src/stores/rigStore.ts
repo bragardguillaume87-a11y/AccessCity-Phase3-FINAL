@@ -10,11 +10,19 @@ import type {
   BonePose,
   AnimationClip,
   KeyframeEntry,
+  IKChain,
 } from '../types/bone';
+import { DEFAULT_KEYFRAME_DURATION } from '../types/bone';
+import { RIG_TEMPLATES } from '../config/rigTemplates';
+import type { RigTemplate } from '../config/rigTemplates';
 
 /** Génère un tableau de KeyframeEntry depuis un tableau de poseIds (migration / défaut). */
 function poseIdsToKeyframes(poseIds: string[]): KeyframeEntry[] {
-  return poseIds.map((poseId) => ({ poseId, duration: 1, easing: 'linear' as const }));
+  return poseIds.map((poseId) => ({
+    poseId,
+    duration: DEFAULT_KEYFRAME_DURATION,
+    easing: 'linear' as const,
+  }));
 }
 
 /**
@@ -57,6 +65,13 @@ interface RigState {
   updateClip: (rigId: string, clipId: string, patch: Partial<Omit<AnimationClip, 'id'>>) => void;
   deleteClip: (rigId: string, clipId: string) => void;
 
+  // IKChain CRUD
+  addIKChain: (rigId: string, chain: Omit<IKChain, 'id'>) => string;
+  removeIKChain: (rigId: string, chainId: string) => void;
+
+  // Template
+  addRigFromTemplate: (characterId: string, templateId: string) => string | null;
+
   // Import (restauration de projet)
   importRigs: (rigs: CharacterRig[]) => void;
 }
@@ -82,11 +97,12 @@ export const useRigStore = create<RigState>()(
               id,
               characterId,
               originX: 300,
-              originY: 100,
+              originY: 280,
               bones: [],
               parts: [],
               poses: [],
               animationClips: [],
+              ikChains: [],
             };
             set((state) => ({ rigs: [...state.rigs, newRig] }), false, 'rigs/addRig');
             return id;
@@ -307,6 +323,89 @@ export const useRigStore = create<RigState>()(
             );
           },
 
+          // ── IKChain ──────────────────────────────────────────────────────────
+          addIKChain: (rigId, chain) => {
+            const id = `ikchain-${Date.now()}`;
+            set(
+              (state) => ({
+                rigs: state.rigs.map((r) =>
+                  r.id === rigId ? { ...r, ikChains: [...(r.ikChains ?? []), { id, ...chain }] } : r
+                ),
+              }),
+              false,
+              'rigs/addIKChain'
+            );
+            return id;
+          },
+
+          removeIKChain: (rigId, chainId) => {
+            set(
+              (state) => ({
+                rigs: state.rigs.map((r) =>
+                  r.id === rigId
+                    ? { ...r, ikChains: (r.ikChains ?? []).filter((c) => c.id !== chainId) }
+                    : r
+                ),
+              }),
+              false,
+              'rigs/removeIKChain'
+            );
+          },
+
+          // ── Template ─────────────────────────────────────────────────────────
+          addRigFromTemplate: (characterId, templateId) => {
+            const template: RigTemplate | undefined = RIG_TEMPLATES.find(
+              (t) => t.id === templateId
+            );
+            if (!template) return null;
+
+            // Résout les parentKey → IDs réels, dans l'ordre topologique
+            const keyToId: Record<string, string> = {};
+            const ts = Date.now();
+            const bones: Bone[] = template.bones.map((node, i) => {
+              const id = `bone-${ts}-${i}`;
+              keyToId[node.key] = id;
+              return {
+                id,
+                name: node.name,
+                parentId: node.parentKey ? (keyToId[node.parentKey] ?? null) : null,
+                localX: node.localX,
+                localY: node.localY,
+                length: node.length,
+                rotation: node.rotation,
+                color: node.color,
+              };
+            });
+
+            const existingRig = get().rigs.find((r) => r.characterId === characterId);
+            if (existingRig) {
+              // Remplace uniquement les os — conserve clips, poses, parts
+              set(
+                (state) => ({
+                  rigs: state.rigs.map((r) => (r.id === existingRig.id ? { ...r, bones } : r)),
+                }),
+                false,
+                'rigs/addRigFromTemplate'
+              );
+              return existingRig.id;
+            }
+
+            const rigId = `rig-${ts}`;
+            const newRig: CharacterRig = {
+              id: rigId,
+              characterId,
+              originX: 300,
+              originY: 280,
+              bones,
+              parts: [],
+              poses: [],
+              animationClips: [],
+              ikChains: [],
+            };
+            set((state) => ({ rigs: [...state.rigs, newRig] }), false, 'rigs/addRigFromTemplate');
+            return rigId;
+          },
+
           // ── Import ───────────────────────────────────────────────────────────
           importRigs: (rigs) => {
             set(() => ({ rigs }), false, 'rigs/importRigs');
@@ -317,7 +416,18 @@ export const useRigStore = create<RigState>()(
       {
         name: 'rigs-storage',
         storage: createJSONStorage(() => localStorage),
-        version: 1,
+        version: 2,
+        migrate: (persisted: unknown, version: number) => {
+          const state = persisted as { rigs?: CharacterRig[] };
+          if (version < 2 && state.rigs) {
+            // Migration v1→v2 : ajouter ikChains: [] sur les rigs existants
+            state.rigs = state.rigs.map((r) => ({
+              ...r,
+              ikChains: r.ikChains ?? [],
+            }));
+          }
+          return state;
+        },
       }
     ),
     {

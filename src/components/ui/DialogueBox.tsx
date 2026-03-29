@@ -204,6 +204,13 @@ export interface DialogueBoxProps {
   /** Élément optionnel rendu dans le coin supérieur droit de l'en-tête speaker.
    *  Utilisé par DialoguePreviewOverlay pour les boutons de navigation prev/next. */
   navigationSlot?: ReactNode;
+
+  /**
+   * Clé unique du dialogue courant (ex: dialogue.id).
+   * Déclenche la transition D : fade-out/in lors du changement de réplique.
+   * Optionnel — sans cette prop, aucune transition entre dialogues.
+   */
+  dialogueKey?: string;
 }
 
 // ── Composant ─────────────────────────────────────────────────────────────────
@@ -234,6 +241,7 @@ export function DialogueBox({
   onRestart,
   onClose,
   navigationSlot,
+  dialogueKey,
 }: DialogueBoxProps) {
   const boxBgStyle = hexToRgba(config.bgColor, config.boxOpacity);
 
@@ -702,42 +710,69 @@ export function DialogueBox({
         role={onAdvance ? 'button' : undefined}
         style={{ cursor: onAdvance ? 'pointer' : undefined }}
       >
-        {isTypewriterDone && richText ? (
-          <p
-            className="leading-relaxed"
-            style={{
-              fontSize: effectiveFontSize,
-              minHeight: textMinHeightPx || undefined,
-              color: isNarrator ? config.narratorTextColor : config.textColor,
-              fontFamily: isNarrator
-                ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
-                : undefined,
-              fontStyle: isNarrator ? 'italic' : undefined,
-              lineHeight: isNarrator ? 1.88 : undefined,
-              letterSpacing: isNarrator ? '0.022em' : undefined,
-              textAlign: isNarrator ? 'center' : undefined,
-            }}
-            dangerouslySetInnerHTML={{ __html: richText }}
-          />
-        ) : (
-          <p
-            className="leading-relaxed"
-            style={{
-              fontSize: effectiveFontSize,
-              minHeight: textMinHeightPx || undefined,
-              color: isNarrator ? config.narratorTextColor : config.textColor,
-              fontFamily: isNarrator
-                ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
-                : undefined,
-              fontStyle: isNarrator ? 'italic' : undefined,
-              lineHeight: isNarrator ? 1.88 : undefined,
-              letterSpacing: isNarrator ? '0.022em' : undefined,
-              textAlign: isNarrator ? 'center' : undefined,
-            }}
+        {/* D — Transition entre dialogues : fade-out/in sur changement de dialogueKey */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={dialogueKey ?? 'static'}
+            initial={{ opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.1, ease: 'easeOut' }}
           >
-            {displayText || '…'}
-          </p>
-        )}
+            {isTypewriterDone && richText ? (
+              <p
+                className="leading-relaxed"
+                style={{
+                  fontSize: effectiveFontSize,
+                  minHeight: textMinHeightPx || undefined,
+                  color: isNarrator ? config.narratorTextColor : config.textColor,
+                  fontFamily: isNarrator
+                    ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
+                    : undefined,
+                  fontStyle: isNarrator ? 'italic' : undefined,
+                  lineHeight: isNarrator ? 1.88 : undefined,
+                  letterSpacing: isNarrator ? '0.022em' : undefined,
+                  textAlign: isNarrator ? 'center' : undefined,
+                }}
+                dangerouslySetInnerHTML={{ __html: richText }}
+              />
+            ) : (
+              <p
+                className="leading-relaxed"
+                style={{
+                  fontSize: effectiveFontSize,
+                  minHeight: textMinHeightPx || undefined,
+                  color: isNarrator ? config.narratorTextColor : config.textColor,
+                  fontFamily: isNarrator
+                    ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
+                    : undefined,
+                  fontStyle: isNarrator ? 'italic' : undefined,
+                  lineHeight: isNarrator ? 1.88 : undefined,
+                  letterSpacing: isNarrator ? '0.022em' : undefined,
+                  textAlign: isNarrator ? 'center' : undefined,
+                }}
+              >
+                {/* B — Fondu par caractère : chaque nouveau char monte un nouveau nœud DOM */}
+                {displayText
+                  .replace(/\|$/, '')
+                  .split('')
+                  .map((char, i) => (
+                    <span key={i} className="vn-char-in">
+                      {char}
+                    </span>
+                  ))}
+                {/* A — Curseur vivant : rendu séparé pour l'animation CSS indépendante */}
+                {!isTypewriterDone && displayText.endsWith('|') && (
+                  <span className="vn-cursor" aria-hidden="true">
+                    |
+                  </span>
+                )}
+                {/* Placeholder si texte vide */}
+                {displayText.replace(/\|$/, '') === '' && '…'}
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* ── Indicateur "continuer" — pill animée, visible ── */}
         <AnimatePresence>

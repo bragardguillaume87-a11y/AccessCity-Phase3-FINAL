@@ -1,38 +1,43 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react'
-import { useScenesStore } from '@/stores'
-import { useUIStore } from '@/stores/uiStore'
-import { useDialoguesStore } from '@/stores/dialoguesStore'
-import { useSelectionStore } from '@/stores/selectionStore'
-import type { DialogueSelection } from '@/stores/selectionStore.types'
-import type { Dialogue } from '@/types'
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { useScenesStore } from '@/stores';
+import { useUIStore } from '@/stores/uiStore';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useSelectionStore } from '@/stores/selectionStore';
+import type { DialogueSelection } from '@/stores/selectionStore.types';
+import type { Dialogue } from '@/types';
 
-const EMPTY_DIALOGUES: Dialogue[] = []
+const EMPTY_DIALOGUES: Dialogue[] = [];
 
 export interface LeftPanelJumpBarProps {
-  activeTab: 'scenes' | 'dialogues'
-  onSceneSelect: (sceneId: string) => void
-  onDialogueSelect?: (sceneId: string, index: number) => void
+  activeTab: 'scenes' | 'dialogues';
+  onSceneSelect: (sceneId: string) => void;
+  onDialogueSelect?: (sceneId: string, index: number) => void;
 }
 
 function getTypeClass(d: Dialogue): string {
-  if (d.choices?.some(c => c.diceCheck)) return 'type-dice'
-  if (d.choices && d.choices.length > 0) return 'type-choice'
-  return 'type-simple'
+  if (d.choices?.some((c) => c.diceCheck)) return 'type-dice';
+  if (d.choices && d.choices.length > 0) return 'type-choice';
+  return 'type-simple';
 }
 
 const SceneIcon = () => (
   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-    <rect x="0.5" y="0.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1"/>
-    <path d="M3.5 3L7 5L3.5 7V3Z" fill="currentColor"/>
+    <rect x="0.5" y="0.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1" />
+    <path d="M3.5 3L7 5L3.5 7V3Z" fill="currentColor" />
   </svg>
-)
+);
 
 const DialogueIcon = () => (
   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-    <path d="M1 2C1 1.45 1.45 1 2 1H8C8.55 1 9 1.45 9 2V6C9 6.55 8.55 7 8 7H6L5 9L4 7H2C1.45 7 1 6.55 1 6V2Z" stroke="currentColor" strokeWidth="1" fill="none"/>
+    <path
+      d="M1 2C1 1.45 1.45 1 2 1H8C8.55 1 9 1.45 9 2V6C9 6.55 8.55 7 8 7H6L5 9L4 7H2C1.45 7 1 6.55 1 6V2Z"
+      stroke="currentColor"
+      strokeWidth="1"
+      fill="none"
+    />
   </svg>
-)
+);
 
 /**
  * LeftPanelJumpBar — HUD Compact 110px sous les onglets Scènes/Dialogues.
@@ -42,111 +47,125 @@ const DialogueIcon = () => (
  *
  * Toujours visible — ne pas envelopper dans un TabsContent.
  */
-export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }: LeftPanelJumpBarProps) {
+export function LeftPanelJumpBar({
+  activeTab,
+  onSceneSelect,
+  onDialogueSelect,
+}: LeftPanelJumpBarProps) {
   // ── Données scènes ───────────────────────────────────────────
-  const scenes = useScenesStore(s => s.scenes)
-  const selectedSceneId = useUIStore(s => s.selectedSceneForEdit)
-  const selectedSceneIndex = scenes.findIndex(s => s.id === selectedSceneId)
-  const currentSceneNum = selectedSceneIndex >= 0 ? selectedSceneIndex + 1 : 1
-  const selectedScene = selectedSceneIndex >= 0 ? scenes[selectedSceneIndex] : null
+  const scenes = useScenesStore((s) => s.scenes);
+  const selectedSceneId = useUIStore((s) => s.selectedSceneForEdit);
+  const selectedSceneIndex = scenes.findIndex((s) => s.id === selectedSceneId);
+  const currentSceneNum = selectedSceneIndex >= 0 ? selectedSceneIndex + 1 : 1;
+  const selectedScene = selectedSceneIndex >= 0 ? scenes[selectedSceneIndex] : null;
 
   // ── Données dialogues ────────────────────────────────────────
-  const dialoguesByScene = useDialoguesStore(s => s.dialoguesByScene)
+  const dialoguesByScene = useDialoguesStore((s) => s.dialoguesByScene);
   const dialogues = selectedSceneId
     ? (dialoguesByScene[selectedSceneId] ?? EMPTY_DIALOGUES)
-    : EMPTY_DIALOGUES
+    : EMPTY_DIALOGUES;
 
-  const selectedElement = useSelectionStore(s => s.selectedElement)
+  const selectedElement = useSelectionStore((s) => s.selectedElement);
   const selectedDialogueIdx = (() => {
-    if (!selectedElement || selectedElement.type !== 'dialogue') return -1
-    const sel = selectedElement as DialogueSelection
-    if (sel.sceneId !== selectedSceneId) return -1
-    return sel.index
-  })()
-  const currentDialogueNum = selectedDialogueIdx >= 0 ? selectedDialogueIdx + 1 : 0
+    if (!selectedElement || selectedElement.type !== 'dialogue') return -1;
+    const sel = selectedElement as DialogueSelection;
+    if (sel.sceneId !== selectedSceneId) return -1;
+    return sel.index;
+  })();
+  const currentDialogueNum = selectedDialogueIdx >= 0 ? selectedDialogueIdx + 1 : 0;
 
   // ── Dropdowns ────────────────────────────────────────────────
-  const [sceneOpen, setSceneOpen] = useState(false)
-  const [dialogueOpen, setDialogueOpen] = useState(false)
-  const sceneRef = useRef<HTMLDivElement>(null)
-  const dialogueRef = useRef<HTMLDivElement>(null)
+  const [sceneOpen, setSceneOpen] = useState(false);
+  const [dialogueOpen, setDialogueOpen] = useState(false);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const dialogueRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!sceneOpen && !dialogueOpen) return
+    if (!sceneOpen && !dialogueOpen) return;
     const handleClick = (e: MouseEvent) => {
-      const t = e.target as Node
-      if (sceneRef.current && !sceneRef.current.contains(t)) setSceneOpen(false)
-      if (dialogueRef.current && !dialogueRef.current.contains(t)) setDialogueOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [sceneOpen, dialogueOpen])
+      const t = e.target as Node;
+      if (sceneRef.current && !sceneRef.current.contains(t)) setSceneOpen(false);
+      if (dialogueRef.current && !dialogueRef.current.contains(t)) setDialogueOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [sceneOpen, dialogueOpen]);
 
   // ── Navigation scènes ────────────────────────────────────────
   const scrollToScene = useCallback((sceneId: string) => {
     setTimeout(() => {
-      document.querySelector(`[data-scene-id="${sceneId}"]`)
-        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }, 50)
-  }, [])
+      document
+        .querySelector(`[data-scene-id="${sceneId}"]`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 50);
+  }, []);
 
-  const handleSceneJumpTo = useCallback((sceneId: string) => {
-    onSceneSelect(sceneId)
-    setSceneOpen(false)
-    scrollToScene(sceneId)
-  }, [onSceneSelect, scrollToScene])
+  const handleSceneJumpTo = useCallback(
+    (sceneId: string) => {
+      onSceneSelect(sceneId);
+      setSceneOpen(false);
+      scrollToScene(sceneId);
+    },
+    [onSceneSelect, scrollToScene]
+  );
 
   const handleScenePrev = useCallback(() => {
-    if (selectedSceneIndex <= 0) return
-    handleSceneJumpTo(scenes[selectedSceneIndex - 1].id)
-  }, [selectedSceneIndex, scenes, handleSceneJumpTo])
+    if (selectedSceneIndex <= 0) return;
+    handleSceneJumpTo(scenes[selectedSceneIndex - 1].id);
+  }, [selectedSceneIndex, scenes, handleSceneJumpTo]);
 
   const handleSceneNext = useCallback(() => {
-    if (selectedSceneIndex < 0 || selectedSceneIndex >= scenes.length - 1) return
-    handleSceneJumpTo(scenes[selectedSceneIndex + 1].id)
-  }, [selectedSceneIndex, scenes, handleSceneJumpTo])
+    if (selectedSceneIndex < 0 || selectedSceneIndex >= scenes.length - 1) return;
+    handleSceneJumpTo(scenes[selectedSceneIndex + 1].id);
+  }, [selectedSceneIndex, scenes, handleSceneJumpTo]);
 
   // ── Navigation dialogues ─────────────────────────────────────
-  const scrollToDialogue = useCallback((idx: number) => {
-    if (!selectedSceneId) return
-    setTimeout(() => {
-      document.querySelector(`[data-dialogue-id="${selectedSceneId}-${idx}"]`)
-        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }, 50)
-  }, [selectedSceneId])
+  const scrollToDialogue = useCallback(
+    (idx: number) => {
+      if (!selectedSceneId) return;
+      setTimeout(() => {
+        document
+          .querySelector(`[data-dialogue-id="${selectedSceneId}-${idx}"]`)
+          ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 50);
+    },
+    [selectedSceneId]
+  );
 
-  const handleDialogueJumpTo = useCallback((idx: number) => {
-    if (!selectedSceneId) return
-    onDialogueSelect?.(selectedSceneId, idx)
-    setDialogueOpen(false)
-    scrollToDialogue(idx)
-  }, [selectedSceneId, onDialogueSelect, scrollToDialogue])
+  const handleDialogueJumpTo = useCallback(
+    (idx: number) => {
+      if (!selectedSceneId) return;
+      onDialogueSelect?.(selectedSceneId, idx);
+      setDialogueOpen(false);
+      scrollToDialogue(idx);
+    },
+    [selectedSceneId, onDialogueSelect, scrollToDialogue]
+  );
 
   const handleDialoguePrev = useCallback(() => {
-    if (selectedDialogueIdx <= 0) return
-    handleDialogueJumpTo(selectedDialogueIdx - 1)
-  }, [selectedDialogueIdx, handleDialogueJumpTo])
+    if (selectedDialogueIdx <= 0) return;
+    handleDialogueJumpTo(selectedDialogueIdx - 1);
+  }, [selectedDialogueIdx, handleDialogueJumpTo]);
 
   const handleDialogueNext = useCallback(() => {
-    if (selectedDialogueIdx < 0 || selectedDialogueIdx >= dialogues.length - 1) return
-    handleDialogueJumpTo(selectedDialogueIdx + 1)
-  }, [selectedDialogueIdx, dialogues.length, handleDialogueJumpTo])
+    if (selectedDialogueIdx < 0 || selectedDialogueIdx >= dialogues.length - 1) return;
+    handleDialogueJumpTo(selectedDialogueIdx + 1);
+  }, [selectedDialogueIdx, dialogues.length, handleDialogueJumpTo]);
 
   // ── Calculs progression ──────────────────────────────────────
-  const sceneProgress = scenes.length > 1 ? (currentSceneNum / scenes.length) * 100 : 100
-  const dialogueProgress = dialogues.length > 1 && currentDialogueNum > 0
-    ? (currentDialogueNum / dialogues.length) * 100
-    : 0
+  const sceneProgress = scenes.length > 1 ? (currentSceneNum / scenes.length) * 100 : 100;
+  const dialogueProgress =
+    dialogues.length > 1 && currentDialogueNum > 0
+      ? (currentDialogueNum / dialogues.length) * 100
+      : 0;
 
   // Mini-barres : max 8 affichées
-  const minibarDialogues = dialogues.slice(0, 8)
+  const minibarDialogues = dialogues.slice(0, 8);
 
   return (
     <div className="jump-hud" role="navigation" aria-label="Navigation rapide">
-
       {/* ── Rangée navigation (haut) — pleine largeur selon l'onglet actif ── */}
       <div className="jump-hud-nav">
-
         {activeTab === 'scenes' ? (
           /* Section Scènes — pleine largeur */
           <div className="jump-hud-section" ref={sceneRef}>
@@ -154,8 +173,8 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
               <div className="jump-bar-dropdown" role="listbox" aria-label="Liste des scènes">
                 <div className="jump-bar-list">
                   {scenes.map((scene, idx) => {
-                    const isActive = idx === selectedSceneIndex
-                    const sceneColor = scene.color ?? 'var(--color-primary)'
+                    const isActive = idx === selectedSceneIndex;
+                    const sceneColor = scene.color ?? 'var(--color-primary)';
                     return (
                       <button
                         key={scene.id}
@@ -164,19 +183,31 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
                         role="option"
                         aria-selected={isActive}
                       >
-                        <span className="jump-bar-list-num">{String(idx + 1).padStart(2, '0')}</span>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: sceneColor, flexShrink: 0 }} />
+                        <span className="jump-bar-list-num">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <div
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: sceneColor,
+                            flexShrink: 0,
+                          }}
+                        />
                         <span className="jump-bar-list-label">{scene.title}</span>
                         {isActive && <Check size={11} className="jump-bar-list-check" />}
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
             )}
 
             <span className="jump-hud-label scenes">
-              <span className="jump-hud-label-icon"><SceneIcon /></span>
+              <span className="jump-hud-label-icon">
+                <SceneIcon />
+              </span>
               SCÈNES
             </span>
 
@@ -192,12 +223,15 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
               </button>
               <button
                 className={`jump-hud-trigger scenes${sceneOpen ? ' open' : ''}`}
-                onClick={() => setSceneOpen(o => !o)}
+                onClick={() => setSceneOpen((o) => !o)}
                 aria-expanded={sceneOpen}
                 aria-haspopup="listbox"
                 aria-label="Aller à une scène"
               >
-                <span>{String(currentSceneNum).padStart(2, '0')}/{String(scenes.length).padStart(2, '0')}</span>
+                <span>
+                  {String(currentSceneNum).padStart(2, '0')}/
+                  {String(scenes.length).padStart(2, '0')}
+                </span>
                 <ChevronDown size={8} />
               </button>
               <button
@@ -220,7 +254,7 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
                   <div className="jump-bar-grid">
                     {dialogues.map((dialogue, idx) => (
                       <button
-                        key={idx}
+                        key={dialogue.id}
                         className={`jump-bar-cell ${getTypeClass(dialogue)}${idx === selectedDialogueIdx ? ' active' : ''}`}
                         onClick={() => handleDialogueJumpTo(idx)}
                         role="option"
@@ -234,20 +268,34 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
                 </div>
                 <div className="jump-bar-legend">
                   <span className="jump-bar-legend-item" style={{ color: 'rgba(74,222,128,0.8)' }}>
-                    <span className="jump-bar-legend-dot" style={{ background: 'rgba(74,222,128,0.6)' }} />Simple
+                    <span
+                      className="jump-bar-legend-dot"
+                      style={{ background: 'rgba(74,222,128,0.6)' }}
+                    />
+                    Simple
                   </span>
                   <span className="jump-bar-legend-item" style={{ color: 'rgba(167,139,250,0.8)' }}>
-                    <span className="jump-bar-legend-dot" style={{ background: 'rgba(167,139,250,0.6)' }} />Choix
+                    <span
+                      className="jump-bar-legend-dot"
+                      style={{ background: 'rgba(167,139,250,0.6)' }}
+                    />
+                    Choix
                   </span>
                   <span className="jump-bar-legend-item" style={{ color: 'rgba(251,191,36,0.8)' }}>
-                    <span className="jump-bar-legend-dot" style={{ background: 'rgba(251,191,36,0.6)' }} />Dé
+                    <span
+                      className="jump-bar-legend-dot"
+                      style={{ background: 'rgba(251,191,36,0.6)' }}
+                    />
+                    Dé
                   </span>
                 </div>
               </div>
             )}
 
             <span className="jump-hud-label dialogues">
-              <span className="jump-hud-label-icon"><DialogueIcon /></span>
+              <span className="jump-hud-label-icon">
+                <DialogueIcon />
+              </span>
               DIALOGUES
             </span>
 
@@ -263,7 +311,7 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
               </button>
               <button
                 className={`jump-hud-trigger dialogues${dialogueOpen ? ' open' : ''}`}
-                onClick={() => dialogues.length > 0 && setDialogueOpen(o => !o)}
+                onClick={() => dialogues.length > 0 && setDialogueOpen((o) => !o)}
                 aria-expanded={dialogueOpen}
                 aria-haspopup="listbox"
                 aria-label="Aller à un dialogue"
@@ -279,7 +327,11 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
               <button
                 className="jump-hud-btn"
                 onClick={handleDialogueNext}
-                disabled={dialogues.length === 0 || selectedDialogueIdx < 0 || selectedDialogueIdx >= dialogues.length - 1}
+                disabled={
+                  dialogues.length === 0 ||
+                  selectedDialogueIdx < 0 ||
+                  selectedDialogueIdx >= dialogues.length - 1
+                }
                 aria-label="Dialogue suivant"
                 title="Dialogue suivant"
               >
@@ -303,10 +355,7 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
               <span>{selectedScene?.title ?? 'Aucune scène'}</span>
             </div>
             <div className="jump-hud-progress-track">
-              <div
-                className="jump-hud-progress-fill"
-                style={{ width: `${sceneProgress}%` }}
-              />
+              <div className="jump-hud-progress-fill" style={{ width: `${sceneProgress}%` }} />
             </div>
           </div>
         ) : (
@@ -319,13 +368,20 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
                 <div className="jump-hud-minibars">
                   {minibarDialogues.map((d, idx) => (
                     <div
-                      key={idx}
+                      key={d.id}
                       className={`jump-hud-minibar ${getTypeClass(d)}${idx === selectedDialogueIdx ? ' active' : ''}`}
                       title={`Dialogue ${idx + 1}`}
                     />
                   ))}
                   {dialogues.length > 8 && (
-                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', alignSelf: 'center', marginLeft: 2 }}>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        color: 'rgba(255,255,255,0.3)',
+                        alignSelf: 'center',
+                        marginLeft: 2,
+                      }}
+                    >
                       +{dialogues.length - 8}
                     </span>
                   )}
@@ -335,7 +391,8 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
                     className="jump-hud-progress-fill"
                     style={{
                       width: `${dialogueProgress}%`,
-                      background: 'linear-gradient(90deg, rgba(167,139,250,0.7), rgba(98,70,234,0.9))'
+                      background:
+                        'linear-gradient(90deg, rgba(167,139,250,0.7), rgba(98,70,234,0.9))',
                     }}
                   />
                 </div>
@@ -345,5 +402,5 @@ export function LeftPanelJumpBar({ activeTab, onSceneSelect, onDialogueSelect }:
         )}
       </div>
     </div>
-  )
+  );
 }

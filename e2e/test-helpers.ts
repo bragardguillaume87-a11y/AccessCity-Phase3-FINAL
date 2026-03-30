@@ -27,18 +27,31 @@ export async function openEditor(page: Page) {
   const questCards = page.locator('.quest-card');
   const questCount = await questCards.count();
 
-  // Créer une quête si aucune n'existe
+  // Si l'app démarre directement en mode studio (dev), sauter le flow HomePage
   if (questCount === 0) {
     const createInput = page.getByPlaceholder(/Ex: La visite à la mairie/i);
-    await createInput.fill('Test E2E Quest');
+    const inputVisible = await createInput.isVisible({ timeout: 2000 }).catch(() => false);
 
-    // Le bouton s'appelle simplement "Créer"
-    const createButton = page.getByRole('button', { name: /Créer/i }).first();
-    await createButton.click();
-    await page.waitForTimeout(500);
+    if (inputVisible) {
+      // HomePage visible — créer une quête et lancer
+      await createInput.fill('Test E2E Quest');
+      const createButton = page.getByRole('button', { name: /Créer/i }).first();
+      await createButton.click();
+      await page.waitForTimeout(500);
+
+      const firstQuest = page.locator('.quest-card').first();
+      await firstQuest.click().catch(() => {});
+      await page.waitForTimeout(300);
+
+      const editorButton = page.getByRole('button', { name: /Lancer/i });
+      await editorButton.click();
+      await page.waitForTimeout(1000);
+    }
+    // Sinon : app déjà en mode studio (currentView = 'studio' par défaut en dev)
+    return;
   }
 
-  // S'assurer qu'une quête est sélectionnée
+  // Quêtes existantes : sélectionner + lancer si sur HomePage
   const firstQuest = page.locator('.quest-card').first();
   const isSelected = await firstQuest
     .evaluate((el) => el.className.includes('quest-card--selected'))
@@ -49,12 +62,12 @@ export async function openEditor(page: Page) {
     await page.waitForTimeout(300);
   }
 
-  // Cliquer sur le bouton "Lancer"
   const editorButton = page.getByRole('button', { name: /Lancer/i });
-  await editorButton.click();
-
-  // Attendre que l'éditeur charge
-  await page.waitForTimeout(1000);
+  const hasLaunchBtn = await editorButton.isVisible({ timeout: 2000 }).catch(() => false);
+  if (hasLaunchBtn) {
+    await editorButton.click();
+    await page.waitForTimeout(1000);
+  }
 }
 
 /**
@@ -124,7 +137,9 @@ export async function createCharacter(page: Page, name: string, skipToEnd: boole
   }
 
   // Cliquer sur le bouton de création/sauvegarde final
-  const saveButton = dialog.getByRole('button', { name: /Créer|Sauvegarder|Terminer|Enregistrer/i });
+  const saveButton = dialog.getByRole('button', {
+    name: /Créer|Sauvegarder|Terminer|Enregistrer/i,
+  });
   const hasSaveButton = await saveButton.isVisible().catch(() => false);
 
   if (hasSaveButton) {
@@ -168,10 +183,12 @@ export function getSceneCards(page: Page): Locator {
  * Une scène sélectionnée a les classes: border-t-cyan-500, bg-cyan-500/30
  */
 export async function isSceneSelected(sceneLocator: Locator): Promise<boolean> {
-  return sceneLocator.evaluate(el => {
-    const classes = el.className;
-    return classes.includes('cyan-500') || classes.includes('bg-cyan');
-  }).catch(() => false);
+  return sceneLocator
+    .evaluate((el) => {
+      const classes = el.className;
+      return classes.includes('cyan-500') || classes.includes('bg-cyan');
+    })
+    .catch(() => false);
 }
 
 /**
@@ -179,9 +196,10 @@ export async function isSceneSelected(sceneLocator: Locator): Promise<boolean> {
  */
 export async function selectSceneByTitle(page: Page, titlePattern: string | RegExp) {
   await goToScenesTab(page);
-  const pattern = typeof titlePattern === 'string'
-    ? new RegExp(`Scene:.*${titlePattern}`, 'i')
-    : new RegExp(`Scene:.*${titlePattern.source}`, 'i');
+  const pattern =
+    typeof titlePattern === 'string'
+      ? new RegExp(`Scene:.*${titlePattern}`, 'i')
+      : new RegExp(`Scene:.*${titlePattern.source}`, 'i');
   const scene = page.getByRole('button', { name: pattern });
   await scene.click();
   await page.waitForTimeout(300);
@@ -233,7 +251,10 @@ export async function openGraphModal(page: Page) {
   ];
 
   for (const button of graphButtonSelectors) {
-    const isVisible = await button.first().isVisible({ timeout: 2000 }).catch(() => false);
+    const isVisible = await button
+      .first()
+      .isVisible({ timeout: 2000 })
+      .catch(() => false);
     if (isVisible) {
       await button.first().click();
       await page.waitForSelector('text=Éditeur Nodal', { timeout: 5000 });

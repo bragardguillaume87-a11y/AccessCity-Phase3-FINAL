@@ -1,6 +1,18 @@
 /**
  * Editor Facade — Unified interface to editor subsystems
  * (Scenes, Characters, Selection, Factories, Builders)
+ *
+ * ARCHITECTURE NOTE:
+ * All mutation callbacks use `.getState()` internally (never the reactive store objects).
+ * This keeps every callback dep list empty ([]) → editor useMemo is a stable singleton.
+ *
+ * Cascade prevented:
+ *   Before: useScenesStore() (whole obj) → any mutation → new scenesStore ref
+ *           → all useCallback([scenesStore]) recreated → useMemo reruns → new editor
+ *           → handleDialogueSelect recreated → onSelectDialogue prop changes in MainCanvas
+ *           → auto-select effect fires → setState → re-render → infinite loop
+ *
+ *   After: getState() inside callbacks → [] deps → editor never recreated → no cascade
  */
 
 import { useMemo, useCallback } from 'react';
@@ -48,59 +60,75 @@ export interface EditorFacadeAPI {
 
 /** Main hook providing the complete EditorFacade API */
 export function useEditorFacade(): EditorFacadeAPI {
-  const scenesStore = useScenesStore();
-  const dialoguesStore = useDialoguesStore();
-  const elementsStore = useSceneElementsStore();
-  const charactersStore = useCharactersStore();
-  const scenes = useScenesStore((s) => s.scenes);
-  const selection = useSelection();
+  // Destructure stable function refs individually — the plain object returned by useSelection()
+  // is a new reference on every render, which would cause editor (useMemo) to recompute on
+  // every render and cascade into infinite effect loops. Each individual function is stable
+  // (useCallback with stable Zustand action deps) and safe to use as a useMemo dep.
+  const {
+    selectScene: selectionSelectScene,
+    selectDialogue: selectionSelectDialogue,
+    selectCharacter: selectionSelectCharacter,
+    clearSelection: selectionClearSelection,
+  } = useSelection();
 
+  // ── Scene reads ──
+  // Use getState() for fresh data on each call without creating reactive subscriptions.
+  // These functions are called in event handlers (not render), so getState() is correct
+  // per CLAUDE.md §6.7 "getState() dans un handler/callback → lecture ponctuelle correcte".
+  const getScene = useCallback(
+    (sceneId: string): SceneMetadata | undefined =>
+      useScenesStore.getState().scenes.find((s) => s.id === sceneId),
+    []
+  );
+
+  const getAllScenes = useCallback(
+    (): SceneMetadata[] => useScenesStore.getState().scenes,
+    []
+  );
+
+  // ── Scene mutations ──
   const createScene = useCallback(
     (title: string, description: string = ''): string => {
-      const sceneId = scenesStore.addScene();
-      scenesStore.updateScene(sceneId, { title, description });
+      const store = useScenesStore.getState();
+      const sceneId = store.addScene();
+      store.updateScene(sceneId, { title, description });
       return sceneId;
     },
-    [scenesStore]
+    []
   );
 
   const createSceneWithBackground = useCallback(
     (title: string, description: string, backgroundUrl: string): string => {
-      const sceneId = scenesStore.addScene();
-      scenesStore.updateScene(sceneId, { title, description, backgroundUrl });
+      const store = useScenesStore.getState();
+      const sceneId = store.addScene();
+      store.updateScene(sceneId, { title, description, backgroundUrl });
       return sceneId;
     },
-    [scenesStore]
+    []
   );
-
-  const getScene = useCallback(
-    (sceneId: string): SceneMetadata | undefined => scenesStore.scenes.find((s) => s.id === sceneId),
-    [scenesStore.scenes]
-  );
-
-  const getAllScenes = useCallback((): SceneMetadata[] => scenesStore.scenes, [scenesStore.scenes]);
 
   const updateScene = useCallback(
     (sceneId: string, updates: Partial<SceneMetadata>): void => {
-      scenesStore.updateScene(sceneId, updates);
+      useScenesStore.getState().updateScene(sceneId, updates);
     },
-    [scenesStore]
+    []
   );
 
   const deleteScene = useCallback(
-    (sceneId: string): void => { scenesStore.deleteScene(sceneId); },
-    [scenesStore]
+    (sceneId: string): void => { useScenesStore.getState().deleteScene(sceneId); },
+    []
   );
 
   const duplicateScene = useCallback(
     (sceneId: string, newTitle?: string): string => {
-      const originalScene = getScene(sceneId);
+      const scenesState = useScenesStore.getState();
+      const originalScene = scenesState.scenes.find((s) => s.id === sceneId);
       if (!originalScene) {
         throw new Error(`[EditorFacade] Cannot duplicate - scene not found: ${sceneId}`);
       }
-      const newSceneId = scenesStore.addScene();
+      const newSceneId = scenesState.addScene();
       // Copy metadata only — dialogues/characters are in their own stores
-      scenesStore.updateScene(newSceneId, {
+      scenesState.updateScene(newSceneId, {
         title: newTitle || `${originalScene.title} (Copy)`,
         description: originalScene.description,
         backgroundUrl: originalScene.backgroundUrl,
@@ -108,9 +136,10 @@ export function useEditorFacade(): EditorFacadeAPI {
       });
       return newSceneId;
     },
-    [scenesStore, getScene]
+    []
   );
 
+  // ── Dialogue mutations ──
   const addDialogueToScene = useCallback(
     (sceneId: string, speaker: string, text: string, sfxUrl?: string): void => {
       const dialogue = DialogueFactory.create({
@@ -118,79 +147,85 @@ export function useEditorFacade(): EditorFacadeAPI {
         text,
         ...(sfxUrl && { sfx: { url: sfxUrl, volume: AUDIO_DEFAULTS.SFX_VOLUME } }),
       });
-      dialoguesStore.addDialogue(sceneId, dialogue);
+      useDialoguesStore.getState().addDialogue(sceneId, dialogue);
     },
-    [dialoguesStore]
+    []
   );
 
   const updateDialogue = useCallback(
     (sceneId: string, dialogueIndex: number, updates: Partial<Dialogue>): void => {
-      dialoguesStore.updateDialogue(sceneId, dialogueIndex, updates);
+      useDialoguesStore.getState().updateDialogue(sceneId, dialogueIndex, updates);
     },
-    [dialoguesStore]
+    []
   );
 
   const deleteDialogue = useCallback(
     (sceneId: string, dialogueIndex: number): void => {
-      dialoguesStore.deleteDialogue(sceneId, dialogueIndex);
+      useDialoguesStore.getState().deleteDialogue(sceneId, dialogueIndex);
     },
-    [dialoguesStore]
+    []
   );
 
   const duplicateDialogue = useCallback(
     (sceneId: string, dialogueIndex: number): void => {
-      dialoguesStore.duplicateDialogue(sceneId, dialogueIndex);
+      useDialoguesStore.getState().duplicateDialogue(sceneId, dialogueIndex);
     },
-    [dialoguesStore]
+    []
   );
 
   const reorderDialogues = useCallback(
     (sceneId: string, oldIndex: number, newIndex: number): void => {
-      dialoguesStore.reorderDialogues(sceneId, oldIndex, newIndex);
+      useDialoguesStore.getState().reorderDialogues(sceneId, oldIndex, newIndex);
     },
-    [dialoguesStore]
+    []
   );
 
+  // ── Character operations ──
   const createCharacter = useCallback(
     (name: string, description: string = ''): string => {
-      const characterId = charactersStore.addCharacter();
-      charactersStore.updateCharacter({ id: characterId, name, description });
+      const store = useCharactersStore.getState();
+      const characterId = store.addCharacter();
+      store.updateCharacter({ id: characterId, name, description });
       return characterId;
     },
-    [charactersStore]
+    []
   );
 
   const getCharacter = useCallback(
-    (characterId: string): Character | undefined => charactersStore.getCharacterById(characterId),
-    [charactersStore]
+    (characterId: string): Character | undefined =>
+      useCharactersStore.getState().getCharacterById(characterId),
+    []
   );
 
-  const getAllCharacters = useCallback((): Character[] => charactersStore.characters, [charactersStore.characters]);
+  const getAllCharacters = useCallback(
+    (): Character[] => useCharactersStore.getState().characters,
+    []
+  );
 
   const updateCharacter = useCallback(
     (characterId: string, updates: Partial<Character>): void => {
-      charactersStore.updateCharacter({ id: characterId, ...updates });
+      useCharactersStore.getState().updateCharacter({ id: characterId, ...updates });
     },
-    [charactersStore]
+    []
   );
 
   const deleteCharacter = useCallback(
-    (characterId: string): void => { charactersStore.deleteCharacter(characterId); },
-    [charactersStore]
+    (characterId: string): void => { useCharactersStore.getState().deleteCharacter(characterId); },
+    []
   );
 
   const addCharacterToScene = useCallback(
     (sceneId: string, characterId: string, position?: Position, mood: string = 'neutral'): void => {
-      elementsStore.addCharacterToScene(sceneId, characterId, mood, position);
+      useSceneElementsStore.getState().addCharacterToScene(sceneId, characterId, mood, position);
     },
-    [elementsStore]
+    []
   );
 
   const removeCharacterFromScene = useCallback(
     (sceneId: string, sceneCharacterId: string): void => {
-      elementsStore.removeCharacterFromScene(sceneId, sceneCharacterId);
+      useSceneElementsStore.getState().removeCharacterFromScene(sceneId, sceneCharacterId);
     },
-    [elementsStore]
+    []
   );
 
   const updateSceneCharacter = useCallback(
@@ -198,11 +233,12 @@ export function useEditorFacade(): EditorFacadeAPI {
       const updates: { x?: number; y?: number; scale?: number } = {};
       if (position) { updates.x = position.x; updates.y = position.y; }
       if (scale !== undefined) { updates.scale = scale; }
-      elementsStore.updateCharacterPosition(sceneId, sceneCharacterId, updates);
+      useSceneElementsStore.getState().updateCharacterPosition(sceneId, sceneCharacterId, updates);
     },
-    [elementsStore]
+    []
   );
 
+  // ── Builder ──
   const getSceneBuilder = useCallback(
     (title: string, description?: string): SceneBuilder => new SceneBuilder(title, description),
     []
@@ -211,50 +247,58 @@ export function useEditorFacade(): EditorFacadeAPI {
   const buildAndAddScene = useCallback(
     (builder: SceneBuilder): string => {
       const builtScene = builder.build();
-      const sceneId = scenesStore.addScene();
-      scenesStore.updateScene(sceneId, {
+      const scenesState = useScenesStore.getState();
+      const sceneId = scenesState.addScene();
+      scenesState.updateScene(sceneId, {
         title: builtScene.title,
         description: builtScene.description,
         backgroundUrl: builtScene.backgroundUrl,
         audio: builtScene.audio,
       });
+      const dialoguesState = useDialoguesStore.getState();
+      const elementsState = useSceneElementsStore.getState();
       if (builtScene.dialogues?.length) {
-        dialoguesStore.addDialogues(sceneId, builtScene.dialogues);
+        dialoguesState.addDialogues(sceneId, builtScene.dialogues);
       }
       if (builtScene.characters?.length) {
         for (const char of builtScene.characters) {
-          elementsStore.addCharacterToScene(sceneId, char.characterId, char.mood, char.position, char.entranceAnimation);
+          elementsState.addCharacterToScene(sceneId, char.characterId, char.mood, char.position, char.entranceAnimation);
         }
       }
       if (builtScene.props?.length) {
-        for (const prop of builtScene.props) { elementsStore.addPropToScene(sceneId, prop); }
+        for (const prop of builtScene.props) { elementsState.addPropToScene(sceneId, prop); }
       }
       if (builtScene.textBoxes?.length) {
-        for (const textBox of builtScene.textBoxes) { elementsStore.addTextBoxToScene(sceneId, textBox); }
+        for (const textBox of builtScene.textBoxes) { elementsState.addTextBoxToScene(sceneId, textBox); }
       }
       return sceneId;
     },
-    [scenesStore, dialoguesStore, elementsStore]
+    []
   );
 
+  // ── Selection ──
   const selectSceneWithAutoDialogue = useCallback(
     (sceneId: string) => {
-      const scene = scenes.find((s) => s.id === sceneId);
+      const scene = useScenesStore.getState().scenes.find((s) => s.id === sceneId);
       if (!scene) {
         logger.warn(`[EditorFacade] Scene not found: ${sceneId}`);
         return;
       }
       // Lire les dialogues depuis dialoguesStore (scenesStore a des tableaux vides)
-      const sceneDialogues = dialoguesStore.getDialoguesByScene(sceneId);
+      const sceneDialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
       if (sceneDialogues.length > 0) {
-        selection.selectDialogue(sceneId, 0);
+        selectionSelectDialogue(sceneId, 0);
       } else {
-        selection.selectScene(sceneId);
+        selectionSelectScene(sceneId);
       }
     },
-    [scenes, dialoguesStore, selection]
+    [selectionSelectDialogue, selectionSelectScene]
   );
 
+  // CRITICAL: editor is now a stable singleton.
+  // All callbacks have [] deps (mutations via getState) except selectSceneWithAutoDialogue
+  // which only depends on the two stable Zustand selection action refs.
+  // The editor useMemo will never recompute → no cascade → no infinite loop.
   return useMemo(
     () => ({
       createScene, createSceneWithBackground, getScene, getAllScenes,
@@ -263,10 +307,10 @@ export function useEditorFacade(): EditorFacadeAPI {
       createCharacter, getCharacter, getAllCharacters, updateCharacter, deleteCharacter,
       addCharacterToScene, removeCharacterFromScene, updateSceneCharacter,
       selectSceneWithAutoDialogue,
-      selectScene: selection.selectScene,
-      selectDialogue: selection.selectDialogue,
-      selectCharacter: selection.selectCharacter,
-      clearSelection: selection.clearSelection,
+      selectScene: selectionSelectScene,
+      selectDialogue: selectionSelectDialogue,
+      selectCharacter: selectionSelectCharacter,
+      clearSelection: selectionClearSelection,
       getSceneBuilder, buildAndAddScene,
     }),
     [
@@ -275,7 +319,9 @@ export function useEditorFacade(): EditorFacadeAPI {
       addDialogueToScene, updateDialogue, deleteDialogue, duplicateDialogue, reorderDialogues,
       createCharacter, getCharacter, getAllCharacters, updateCharacter, deleteCharacter,
       addCharacterToScene, removeCharacterFromScene, updateSceneCharacter,
-      selectSceneWithAutoDialogue, selection, getSceneBuilder, buildAndAddScene,
+      selectSceneWithAutoDialogue,
+      selectionSelectScene, selectionSelectDialogue, selectionSelectCharacter, selectionClearSelection,
+      getSceneBuilder, buildAndAddScene,
     ]
   );
 }

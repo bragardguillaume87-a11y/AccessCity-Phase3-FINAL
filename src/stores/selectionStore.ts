@@ -16,7 +16,6 @@ import type {
   SelectedElement,
 } from './selectionStore.types';
 import { describeSelection } from './selectionStore.types';
-import { isSameSelection } from './selectionHelpers';
 
 const initialState = {
   selectedElement: null as SelectedElement,
@@ -90,13 +89,3 @@ export const selectionSelectors = {
   isCharacterSelected: (state: SelectionStore) => state.selectedElement?.type === 'character',
 };
 
-/** Subscribe to selection changes with equality check */
-export function subscribeToSelectionChanges(
-  callback: (selection: SelectedElement) => void
-): () => void {
-  return useSelectionStore.subscribe(
-    (state) => state.selectedElement,
-    callback,
-    { fireImmediately: false, equalityFn: isSameSelection }
-  );
-}

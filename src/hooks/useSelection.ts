@@ -17,7 +17,7 @@ import {
 } from '@/stores/selectionStore.types';
 import { logger } from '@/utils/logger';
 
-export interface UseSelectionReturn {
+interface UseSelectionReturn {
   selectedElement: SelectedElement;
   isSceneSelected: boolean;
   isDialogueSelected: boolean;

@@ -1,4 +1,5 @@
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, Edge, getSmoothStepPath } from '@xyflow/react';
+import React from 'react';
+import { BaseEdge, EdgeProps, Edge, getSmoothStepPath } from '@xyflow/react';
 import { COSMOS_COLORS, COSMOS_DIMENSIONS } from '@/config/cosmosConstants';
 
 /**
@@ -26,7 +27,7 @@ const { convergence } = COSMOS_COLORS;
  * - Y_SPREAD: slightly shifts source/target Y per edge index
  * The combination creates a clean fan where all edges are visually distinct.
  */
-export function CosmosConvergenceEdge({
+export const CosmosConvergenceEdge = React.memo(function CosmosConvergenceEdge({
   id,
   sourceX,
   sourceY,
@@ -43,15 +44,13 @@ export function CosmosConvergenceEdge({
 
   // Fan stepPosition: single edge = 0.5, multiple = evenly in [0.3, 0.7]
   const stepPosition =
-    parallelCount === 1
-      ? 0.5
-      : 0.3 + (parallelIndex / Math.max(parallelCount - 1, 1)) * stepRange;
+    parallelCount === 1 ? 0.5 : 0.3 + (parallelIndex / Math.max(parallelCount - 1, 1)) * stepRange;
 
   // Slight Y offset: centres the fan around the handle
   const spread = (parallelIndex - (parallelCount - 1) / 2) * ySpread;
 
   const dim = COSMOS_DIMENSIONS.convergenceEdge;
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY: sourceY + spread,
     sourcePosition,
@@ -76,28 +75,6 @@ export function CosmosConvergenceEdge({
           ...style,
         }}
       />
-
-      <EdgeLabelRenderer>
-        <div
-          style={{
-            position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            background: convergence.labelBg,
-            border: `1px solid ${convergence.labelBorder}`,
-            color: convergence.labelText,
-            fontSize: dim.labelFontSize,
-            fontWeight: dim.labelFontWeight,
-            letterSpacing: '0.02em',
-            padding: dim.labelPadding,
-            borderRadius: dim.labelBorderRadius,
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
-            boxShadow: convergence.labelShadow,
-          }}
-        >
-          ↩ rejoint
-        </div>
-      </EdgeLabelRenderer>
     </>
   );
-}
+});

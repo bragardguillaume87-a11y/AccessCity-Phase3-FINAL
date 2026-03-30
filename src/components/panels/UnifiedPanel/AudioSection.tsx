@@ -1,11 +1,56 @@
-import { useCallback, useRef, useState } from 'react';
-import { Music, Library, Play, Square, Trash2, RefreshCw, Volume2, Repeat, AlertCircle, Wind } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Music, Library, Play, Square, Trash2, RefreshCw, AlertCircle, Wind } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { IosToggle } from '@/components/ui/IosToggle';
 import { useUIStore } from '@/stores/uiStore';
 import { useSceneById, useSceneActions } from '@/stores/selectors';
 import { AUDIO_DEFAULTS } from '@/config/constants';
-import { logger } from '@/utils/logger';
-import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { SfxGeneratorPanel } from './SfxGeneratorPanel';
+import { PanelSection } from '@/components/ui/CollapsibleSection';
 import type { SceneAudio, AmbientAudio } from '@/types/audio';
+
+// ============================================================================
+// ICON BUTTON WITH TOOLTIP
+// ============================================================================
+
+interface IconBtnProps {
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  variant?: 'default' | 'active' | 'danger';
+  className?: string;
+}
+
+function IconBtn({ onClick, icon, label, variant = 'default', className = '' }: IconBtnProps) {
+  const base = 'p-1.5 rounded-lg border transition-all flex items-center justify-center';
+  const variants: Record<string, string> = {
+    default:
+      'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]',
+    active:
+      'bg-[var(--color-primary)]/15 border-[var(--color-primary)]/60 text-[var(--color-primary)]',
+    danger:
+      'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40',
+  };
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <button
+          onClick={onClick}
+          className={`${base} ${variants[variant]} ${className}`}
+          aria-label={label}
+        >
+          {icon}
+        </button>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content side="top" className="toolbar-tooltip" sideOffset={6}>
+          {label}
+          <Tooltip.Arrow className="toolbar-tooltip-arrow" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
 
 // ============================================================================
 // TYPES
@@ -20,30 +65,63 @@ interface AudioSectionProps {
 // ============================================================================
 
 function getFilename(url: string): string {
-  return url.split('/').pop()?.replace(/\.[^.]+$/, '') ?? url;
-}
-
-// ============================================================================
-// SOUS-COMPOSANTS RÉUTILISABLES
-// ============================================================================
-
-/** Carte de groupe de contrôles — fond subtil + bordure douce */
-function ControlCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-[var(--color-bg-base)]/60 border border-[var(--color-border-base)]/50 p-3 space-y-3">
-      {children}
-    </div>
+    url
+      .split('/')
+      .pop()
+      ?.replace(/\.[^.]+$/, '') ?? url
   );
 }
 
-/** Label de contrôle avec icône optionnelle */
-function ControlLabel({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <p className="text-[13px] font-medium text-[var(--color-text-primary)] flex items-center gap-1.5">
-      {icon}
-      {children}
-    </p>
-  );
+function getExtension(url: string): string {
+  return url.split('.').pop()?.toUpperCase() ?? '?';
+}
+
+// ============================================================================
+// AUDIO PREVIEW HOOK (local)
+// ============================================================================
+
+function useAudioPreview(url: string | undefined, volume: number) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playError, setPlayError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePreview = useCallback(() => {
+    if (!url) return;
+    setPlayError(false);
+    if (isPlaying) {
+      audioRef.current?.pause();
+      if (audioRef.current) audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+      return;
+    }
+    const player = new Audio(url);
+    player.volume = volume;
+    player
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        player.onended = () => setIsPlaying(false);
+      })
+      .catch(() => {
+        setPlayError(true);
+        setIsPlaying(false);
+      });
+    audioRef.current = player;
+  }, [url, volume, isPlaying]);
+
+  // Cleanup : stop audio if component unmounts while playing
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.onended = null;
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  return { isPlaying, playError, handlePreview, audioRef };
 }
 
 // ============================================================================
@@ -58,230 +136,147 @@ interface MusicControlsProps {
 }
 
 function MusicControls({ audio, onUpdate, onRemove, onOpenLibrary }: MusicControlsProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playError, setPlayError] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { isPlaying, playError, handlePreview, audioRef } = useAudioPreview(
+    audio.url,
+    audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME
+  );
 
-  const handlePreview = useCallback(() => {
-    setPlayError(false);
-    if (isPlaying) {
-      audioRef.current?.pause();
-      if (audioRef.current) audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      return;
-    }
-    const player = new Audio(audio.url);
-    player.volume = audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME;
-    player.play().then(() => {
-      setIsPlaying(true);
-      player.onended = () => setIsPlaying(false);
-    }).catch((err) => {
-      logger.warn('[AudioSection] Preview playback failed:', audio.url, err);
-      setPlayError(true);
-      setIsPlaying(false);
-    });
-    audioRef.current = player;
-  }, [audio.url, audio.volume, isPlaying]);
-
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value);
-    onUpdate({ volume: vol });
-    if (audioRef.current) audioRef.current.volume = vol;
-  }, [onUpdate]);
-
-  const handleDurationMode = useCallback((mode: 'scene' | 'dialogues') => {
-    onUpdate({ durationMode: mode });
-  }, [onUpdate]);
-
-  const handleDurationCount = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-    onUpdate({ durationDialogues: val });
-  }, [onUpdate]);
-
-  const durationMode = audio.durationMode ?? 'scene';
   const volume = audio.volume ?? AUDIO_DEFAULTS.MUSIC_VOLUME;
+  const durationMode = audio.durationMode ?? 'scene';
   const isLooping = audio.loop ?? true;
   const isContinuing = audio.continueToNextScene ?? false;
 
   return (
-    <div className="space-y-3">
-
-      {/* En-tête fichier */}
-      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--color-bg-base)] border border-[var(--color-border-base)]">
-        <Music className="w-4 h-4 text-blue-400 flex-shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-[13px] text-[var(--color-text-primary)] truncate" title={audio.url}>
+    <>
+      {/* Fichier + extension */}
+      <div className="flex items-center gap-2 mb-2">
+        <Music
+          className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0"
+          aria-hidden="true"
+        />
+        <span
+          className="flex-1 text-[12px] text-[var(--color-text-primary)] truncate"
+          title={audio.url}
+        >
           {getFilename(audio.url)}
         </span>
-        <button
-          onClick={onRemove}
-          className="p-1 rounded-lg hover:bg-red-500/10 text-[var(--color-text-muted)] hover:text-red-400 transition-colors flex-shrink-0"
-          aria-label="Supprimer la musique"
-        >
-          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-        </button>
+        <span className="text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-border-base)] flex-shrink-0">
+          {getExtension(audio.url)}
+        </span>
       </div>
 
-      {/* Bouton écouter */}
-      <button
-        onClick={handlePreview}
-        className={`w-full flex items-center justify-center gap-2 text-[13px] font-medium py-2.5 px-3 rounded-xl border transition-all min-h-[40px] ${
-          isPlaying
-            ? 'bg-blue-500/15 border-blue-500/60 text-blue-400'
-            : playError
-              ? 'bg-red-500/10 border-red-500/40 text-red-400'
-              : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-blue-500/40 hover:text-blue-400'
-        }`}
-        aria-label={isPlaying ? 'Arrêter la lecture' : 'Écouter un extrait'}
-      >
-        {playError
-          ? <><AlertCircle className="w-4 h-4" aria-hidden="true" /> Fichier introuvable</>
-          : isPlaying
-            ? <><Square className="w-4 h-4" aria-hidden="true" /> Arrêter</>
-            : <><Play className="w-4 h-4" aria-hidden="true" /> Écouter</>
-        }
-      </button>
+      {/* Volume */}
+      <div className="sp-row">
+        <span>Volume</span>
+        <span>{Math.round(volume * 100)}%</span>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={volume}
+        onChange={(e) => {
+          const vol = parseFloat(e.target.value);
+          onUpdate({ volume: vol });
+          if (audioRef.current) audioRef.current.volume = vol;
+        }}
+        className="sp-slider mb-3"
+        aria-label={`Volume de la musique : ${Math.round(volume * 100)} %`}
+      />
 
-      {/* Carte : Volume + Durée */}
-      <ControlCard>
-        {/* Volume */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <ControlLabel icon={<Volume2 className="w-3.5 h-3.5" aria-hidden="true" />}>
-              Volume
-            </ControlLabel>
-            <span className="text-[13px] font-semibold text-[var(--color-text-muted)] tabular-nums">
-              {Math.round(volume * 100)} %
-            </span>
+      {/* Actions : Écouter | Changer | Supprimer */}
+      <div className="flex gap-2 mb-0">
+        <IconBtn
+          onClick={handlePreview}
+          icon={
+            playError ? (
+              <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+            ) : isPlaying ? (
+              <Square className="w-3.5 h-3.5" aria-hidden="true" />
+            ) : (
+              <Play className="w-3.5 h-3.5" aria-hidden="true" />
+            )
+          }
+          label={playError ? 'Erreur de lecture' : isPlaying ? 'Arrêter' : 'Écouter'}
+          variant={isPlaying ? 'active' : 'default'}
+          className="flex-1"
+        />
+        <IconBtn
+          onClick={onOpenLibrary}
+          icon={<RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />}
+          label="Changer de musique"
+          className="flex-1"
+        />
+        <IconBtn
+          onClick={onRemove}
+          icon={<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
+          label="Supprimer la musique"
+          variant="danger"
+        />
+      </div>
+
+      {/* Durée — segmented control */}
+      <div className="mt-3">
+        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
+          Quand s'arrête la musique ?
+        </p>
+        <div className="sp-seg">
+          <button
+            onClick={() => onUpdate({ durationMode: 'scene' })}
+            className={`sp-seg-btn${durationMode === 'scene' ? ' active' : ''}`}
+            aria-pressed={durationMode === 'scene'}
+          >
+            Toute la scène
+          </button>
+          <button
+            onClick={() => onUpdate({ durationMode: 'dialogues' })}
+            className={`sp-seg-btn${durationMode === 'dialogues' ? ' active' : ''}`}
+            aria-pressed={durationMode === 'dialogues'}
+          >
+            X dialogues
+          </button>
+        </div>
+        {durationMode === 'dialogues' && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-[var(--color-text-muted)]">Nombre :</span>
+            <input
+              type="number"
+              min="1"
+              max="99"
+              value={audio.durationDialogues ?? 1}
+              onChange={(e) =>
+                onUpdate({ durationDialogues: Math.max(1, parseInt(e.target.value, 10) || 1) })
+              }
+              className="w-14 text-xs text-center border border-[var(--color-border-base)] rounded-lg px-1 py-1 bg-[var(--color-bg-base)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+            />
+            <span className="text-xs text-[var(--color-text-muted)]">dialogue(s)</span>
           </div>
-          <input
-            type="range" min="0" max="1" step="0.05" value={volume}
-            onChange={handleVolumeChange}
-            className="w-full h-2.5 cursor-pointer rounded-full"
-            style={{ accentColor: '#3b82f6' }}
-            aria-label={`Volume de la musique : ${Math.round(volume * 100)} %`}
+        )}
+      </div>
+
+      {/* Toggles */}
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[var(--color-text-secondary)]">Musique en boucle</span>
+          <IosToggle
+            enabled={isLooping}
+            onToggle={() => onUpdate({ loop: !isLooping })}
+            label="Musique en boucle"
           />
         </div>
-
-        {/* Durée — boutons en colonne */}
-        <div className="space-y-2">
-          <ControlLabel>⏱️ Quand s'arrête la musique ?</ControlLabel>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => handleDurationMode('scene')}
-              className={`w-full text-[13px] py-2.5 px-3 rounded-xl border transition-all min-h-[40px] text-left flex items-center gap-2 ${
-                durationMode === 'scene'
-                  ? 'bg-blue-500 text-white border-blue-500 font-semibold shadow-md shadow-blue-500/25'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-blue-500/40'
-              }`}
-              aria-pressed={durationMode === 'scene'}
-            >
-              🎬 Toute la scène
-            </button>
-            <button
-              onClick={() => handleDurationMode('dialogues')}
-              className={`w-full text-[13px] py-2.5 px-3 rounded-xl border transition-all min-h-[40px] text-left flex items-center gap-2 ${
-                durationMode === 'dialogues'
-                  ? 'bg-blue-500 text-white border-blue-500 font-semibold shadow-md shadow-blue-500/25'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-blue-500/40'
-              }`}
-              aria-pressed={durationMode === 'dialogues'}
-            >
-              💬 Seulement X dialogues
-            </button>
-          </div>
-
-          {durationMode === 'dialogues' && (
-            <div className="flex items-center gap-2 pt-1">
-              <label htmlFor="audio-duration-count" className="text-[13px] text-[var(--color-text-muted)] flex-shrink-0">
-                Nombre :
-              </label>
-              <input
-                id="audio-duration-count"
-                type="number" min="1" max="99"
-                value={audio.durationDialogues ?? 1}
-                onChange={handleDurationCount}
-                className="w-16 text-[13px] text-center border border-[var(--color-border-base)] rounded-lg px-1 py-1 bg-[var(--color-bg-base)] text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500"
-              />
-              <span className="text-xs text-[var(--color-text-muted)]">dialogue(s)</span>
-            </div>
-          )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[var(--color-text-secondary)]">
+            Continue après la scène
+          </span>
+          <IosToggle
+            enabled={isContinuing}
+            onToggle={() => onUpdate({ continueToNextScene: !isContinuing })}
+            label="Continue après la scène"
+          />
         </div>
-      </ControlCard>
-
-      {/* Carte : Options (boucle + continue) */}
-      <ControlCard>
-        {/* Boucle */}
-        <div className="space-y-2">
-          <ControlLabel icon={<Repeat className="w-3.5 h-3.5" aria-hidden="true" />}>
-            Musique en boucle ?
-          </ControlLabel>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onUpdate({ loop: true })}
-              className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
-                isLooping
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-blue-500/40'
-              }`}
-              aria-pressed={isLooping}
-            >
-              OUI
-            </button>
-            <button
-              onClick={() => onUpdate({ loop: false })}
-              className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
-                !isLooping
-                  ? 'bg-slate-600 text-white border-slate-500 shadow-md shadow-slate-500/20'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-slate-500/40'
-              }`}
-              aria-pressed={!isLooping}
-            >
-              NON
-            </button>
-          </div>
-        </div>
-
-        {/* Continue */}
-        <div className="space-y-2">
-          <ControlLabel icon={<RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />}>
-            Continue après la scène ?
-          </ControlLabel>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onUpdate({ continueToNextScene: true })}
-              className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
-                isContinuing
-                  ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/30'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-blue-500/40'
-              }`}
-              aria-pressed={isContinuing}
-            >
-              OUI
-            </button>
-            <button
-              onClick={() => onUpdate({ continueToNextScene: false })}
-              className={`flex-1 text-[13px] py-2.5 rounded-xl border transition-all min-h-[40px] font-semibold ${
-                !isContinuing
-                  ? 'bg-slate-600 text-white border-slate-500 shadow-md shadow-slate-500/20'
-                  : 'bg-[var(--color-bg-base)]/80 text-[var(--color-text-muted)] border-[var(--color-border-base)] hover:border-slate-500/40'
-              }`}
-              aria-pressed={!isContinuing}
-            >
-              NON
-            </button>
-          </div>
-        </div>
-      </ControlCard>
-
-      {/* Changer de musique */}
-      <button
-        onClick={onOpenLibrary}
-        className="w-full flex items-center justify-center gap-2 text-[13px] py-2 px-3 rounded-xl border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-blue-500/40 hover:text-blue-400 transition-colors min-h-[36px]"
-      >
-        <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
-        Changer de musique
-      </button>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -297,116 +292,91 @@ interface AmbientTrackSlotProps {
   onOpenLibrary: () => void;
 }
 
-function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: AmbientTrackSlotProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playError, setPlayError] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+function AmbientTrackSlot({
+  slot,
+  track,
+  onUpdate,
+  onRemove,
+  onOpenLibrary,
+}: AmbientTrackSlotProps) {
+  const { isPlaying, playError, handlePreview, audioRef } = useAudioPreview(
+    track?.url,
+    track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME
+  );
 
-  const handlePreview = useCallback(() => {
-    if (!track) return;
-    setPlayError(false);
-    if (isPlaying) {
-      audioRef.current?.pause();
-      if (audioRef.current) audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      return;
-    }
-    const player = new Audio(track.url);
-    player.volume = track.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME;
-    player.play().then(() => {
-      setIsPlaying(true);
-      player.onended = () => setIsPlaying(false);
-    }).catch(() => {
-      setPlayError(true);
-      setIsPlaying(false);
-    });
-    audioRef.current = player;
-  }, [track, isPlaying]);
-
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value);
-    onUpdate({ volume: vol });
-    if (audioRef.current) audioRef.current.volume = vol;
-  }, [onUpdate]);
-
-  const slotLabel = `Son d'ambiance ${slot + 1}`;
   const volume = track?.volume ?? AUDIO_DEFAULTS.AMBIENT_VOLUME;
 
   // Slot vide
   if (!track) {
     return (
-      <div className="space-y-1.5">
-        <p className="text-xs text-[var(--color-text-muted)]">{slotLabel} — non choisi</p>
-        <button
-          onClick={onOpenLibrary}
-          className="w-full flex items-center justify-center gap-2 text-[13px] py-2.5 px-3 rounded-xl border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-emerald-500/40 hover:text-emerald-400 transition-colors min-h-[40px]"
-        >
-          <Wind className="w-3.5 h-3.5" aria-hidden="true" />
-          + Choisir un son d'ambiance
-        </button>
-      </div>
+      <button
+        onClick={onOpenLibrary}
+        className="w-full flex items-center justify-center gap-2 text-xs py-2 px-3 rounded-lg border border-dashed border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-colors"
+      >
+        <Wind className="w-3.5 h-3.5" aria-hidden="true" />+ Choisir un son d'ambiance {slot + 1}
+      </button>
     );
   }
 
-  // Slot rempli
+  // Slot rempli — compact
   return (
-    <ControlCard>
-      {/* En-tête fichier */}
-      <div className="flex items-center gap-2">
-        <Wind className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" aria-hidden="true" />
-        <span className="flex-1 text-[13px] text-[var(--color-text-primary)] truncate" title={track.url}>
+    <div className="sp-track">
+      <div className="flex items-center gap-2 mb-2">
+        <Wind
+          className="w-3.5 h-3.5 text-[var(--color-primary)] flex-shrink-0"
+          aria-hidden="true"
+        />
+        <span
+          className="flex-1 text-[12px] text-[var(--color-text-primary)] truncate"
+          title={track.url}
+        >
           {getFilename(track.url)}
         </span>
-        <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0 bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded-md border border-[var(--color-border-base)]">
-          {slot + 1}
+        <span className="text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg-base)] px-1.5 py-0.5 rounded border border-[var(--color-border-base)] flex-shrink-0">
+          {getExtension(track.url)} · loop
         </span>
         <button
           onClick={onRemove}
-          className="p-1 rounded-lg hover:bg-red-500/10 text-[var(--color-text-muted)] hover:text-red-400 transition-colors flex-shrink-0"
-          aria-label={`Supprimer ${slotLabel.toLowerCase()}`}
+          className="p-1 rounded hover:bg-red-500/10 text-[var(--color-text-muted)] hover:text-red-400 transition-colors flex-shrink-0"
+          aria-label={`Supprimer le son d'ambiance ${slot + 1}`}
         >
           <Trash2 className="w-3 h-3" aria-hidden="true" />
         </button>
       </div>
-
-      {/* Volume */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <ControlLabel icon={<Volume2 className="w-3.5 h-3.5" aria-hidden="true" />}>
-            Volume
-          </ControlLabel>
-          <span className="text-[13px] font-semibold text-[var(--color-text-muted)] tabular-nums">
-            {Math.round(volume * 100)} %
-          </span>
-        </div>
-        <input
-          type="range" min="0" max="1" step="0.05" value={volume}
-          onChange={handleVolumeChange}
-          className="w-full h-2.5 cursor-pointer rounded-full"
-          style={{ accentColor: '#34d399' }}
-          aria-label={`Volume ${slotLabel} : ${Math.round(volume * 100)} %`}
-        />
+      <div className="sp-row">
+        <span>Volume</span>
+        <span>{Math.round(volume * 100)}%</span>
       </div>
-
-      {/* Preview */}
-      <button
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={volume}
+        onChange={(e) => {
+          const vol = parseFloat(e.target.value);
+          onUpdate({ volume: vol });
+          if (audioRef.current) audioRef.current.volume = vol;
+        }}
+        className="sp-slider mb-2"
+        aria-label={`Volume ambiance ${slot + 1} : ${Math.round(volume * 100)} %`}
+      />
+      <IconBtn
         onClick={handlePreview}
-        className={`w-full flex items-center justify-center gap-2 text-[13px] py-2.5 px-3 rounded-xl border transition-all min-h-[40px] ${
-          isPlaying
-            ? 'bg-emerald-500/15 border-emerald-500/60 text-emerald-400'
-            : playError
-              ? 'bg-red-500/10 border-red-500/40 text-red-400'
-              : 'bg-[var(--color-bg-base)]/80 border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-emerald-500/40 hover:text-emerald-400'
-        }`}
-      >
-        {playError
-          ? <><AlertCircle className="w-4 h-4" aria-hidden="true" /> Fichier introuvable</>
-          : isPlaying
-            ? <><Square className="w-4 h-4" aria-hidden="true" /> Arrêter</>
-            : <><Play className="w-4 h-4" aria-hidden="true" /> Écouter</>
+        icon={
+          playError ? (
+            <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : isPlaying ? (
+            <Square className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : (
+            <Play className="w-3.5 h-3.5" aria-hidden="true" />
+          )
         }
-      </button>
-    </ControlCard>
+        label={playError ? 'Fichier introuvable' : isPlaying ? 'Arrêter' : "Écouter l'ambiance"}
+        variant={isPlaying ? 'active' : 'default'}
+        className="w-full"
+      />
+    </div>
   );
 }
 
@@ -414,22 +384,8 @@ function AmbientTrackSlot({ slot, track, onUpdate, onRemove, onOpenLibrary }: Am
 // MAIN COMPONENT
 // ============================================================================
 
-/**
- * AudioSection — Panneau de configuration audio pour la scène sélectionnée.
- *
- * Design pour public mixte (adultes + 8 ans+) — Panel 3 à 320px :
- * - 🎵 Musique de fond (bleu) : fichier, écouter, volume, durée, boucle, continue
- * - 🌿 Ambiance sonore (emerald) : 2 pistes indépendantes en boucle
- * - 📚 Bibliothèque audio (slate) : accès aux fichiers
- *
- * Principes UX :
- * - Cartes de groupe (ControlCard) pour séparer les contrôles visuellement
- * - Boutons durée en colonne (pas de wrap)
- * - Toggles OUI/NON avec shadow-md sur l'état actif
- * - text-[13px] pour les labels, text-xs pour les textes secondaires
- */
 export function AudioSection({ onOpenModal }: AudioSectionProps) {
-  const sceneId = useUIStore(s => s.selectedSceneForEdit);
+  const sceneId = useUIStore((s) => s.selectedSceneForEdit);
   const scene = useSceneById(sceneId);
   const { updateScene } = useSceneActions();
 
@@ -437,11 +393,13 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   const ambientTracks = scene?.ambientTracks;
   const ambientCount = [ambientTracks?.[0], ambientTracks?.[1]].filter(Boolean).length;
 
-  // ── BGM handlers ──
-  const handleBgmUpdate = useCallback((patch: Partial<SceneAudio>) => {
-    if (!sceneId) return;
-    updateScene(sceneId, { audio: { url: '', ...audio, ...patch } as SceneAudio });
-  }, [sceneId, audio, updateScene]);
+  const handleBgmUpdate = useCallback(
+    (patch: Partial<SceneAudio>) => {
+      if (!sceneId) return;
+      updateScene(sceneId, { audio: { url: '', ...audio, ...patch } as SceneAudio });
+    },
+    [sceneId, audio, updateScene]
+  );
 
   const handleBgmRemove = useCallback(() => {
     if (!sceneId) return;
@@ -449,90 +407,92 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
   }, [sceneId, updateScene]);
 
   const handleOpenMusicLibrary = useCallback(() => {
-    onOpenModal('assets', { category: 'music', targetSceneId: sceneId ?? undefined, purpose: 'sceneAudio' });
+    onOpenModal('assets', {
+      category: 'music',
+      targetSceneId: sceneId ?? undefined,
+      purpose: 'sceneAudio',
+    });
   }, [onOpenModal, sceneId]);
 
-  // ── Ambient handlers ──
-  const handleAmbientUpdate = useCallback((slot: 0 | 1, patch: Partial<AmbientAudio>) => {
-    if (!sceneId) return;
-    const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
-    current[slot] = { url: '', ...current[slot], ...patch } as AmbientAudio;
-    updateScene(sceneId, { ambientTracks: current });
-  }, [sceneId, ambientTracks, updateScene]);
+  const handleAmbientUpdate = useCallback(
+    (slot: 0 | 1, patch: Partial<AmbientAudio>) => {
+      if (!sceneId) return;
+      const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
+      current[slot] = { url: '', ...current[slot], ...patch } as AmbientAudio;
+      updateScene(sceneId, { ambientTracks: current });
+    },
+    [sceneId, ambientTracks, updateScene]
+  );
 
-  const handleAmbientRemove = useCallback((slot: 0 | 1) => {
-    if (!sceneId) return;
-    const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
-    current[slot] = undefined;
-    updateScene(sceneId, { ambientTracks: current });
-  }, [sceneId, ambientTracks, updateScene]);
+  const handleAmbientRemove = useCallback(
+    (slot: 0 | 1) => {
+      if (!sceneId) return;
+      const current: [AmbientAudio?, AmbientAudio?] = [...(ambientTracks ?? [])];
+      current[slot] = undefined;
+      updateScene(sceneId, { ambientTracks: current });
+    },
+    [sceneId, ambientTracks, updateScene]
+  );
 
-  const handleOpenAmbientLibrary = useCallback((slot: 0 | 1) => {
-    onOpenModal('assets', { category: 'atmosphere', targetSceneId: sceneId ?? undefined, purpose: 'ambientTrack', slot });
-  }, [onOpenModal, sceneId]);
+  const handleOpenAmbientLibrary = useCallback(
+    (slot: 0 | 1) => {
+      onOpenModal('assets', {
+        category: 'atmosphere',
+        targetSceneId: sceneId ?? undefined,
+        purpose: 'ambientTrack',
+        slot,
+      });
+    },
+    [onOpenModal, sceneId]
+  );
 
-  // Aucune scène sélectionnée
   if (!sceneId || !scene) {
     return (
-      <div className="flex flex-col items-center justify-center h-32 gap-2 p-4 text-center">
-        <Music className="w-6 h-6 text-[var(--color-text-muted)]" aria-hidden="true" />
-        <p className="text-[13px] text-[var(--color-text-muted)]">
-          Sélectionne une scène pour configurer l'audio
-        </p>
-      </div>
+      <section className="sp-sec">
+        <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
+          <Music className="w-6 h-6 text-[var(--color-text-muted)]" aria-hidden="true" />
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Sélectionne une scène pour configurer l'audio
+          </p>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="px-3 py-2 space-y-1.5">
+    <Tooltip.Provider delayDuration={400}>
+      <div>
+        {/* === Musique de fond === */}
+        <PanelSection title="MUSIQUE DE FOND" id="audio-bgm" defaultOpen>
+          {audio?.url ? (
+            <MusicControls
+              audio={audio}
+              onUpdate={handleBgmUpdate}
+              onRemove={handleBgmRemove}
+              onOpenLibrary={handleOpenMusicLibrary}
+            />
+          ) : (
+            <button
+              onClick={handleOpenMusicLibrary}
+              className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2.5 px-3 rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity"
+              aria-label="Parcourir la bibliothèque musicale"
+            >
+              <Library className="w-4 h-4" aria-hidden="true" />
+              Parcourir la bibliothèque
+            </button>
+          )}
+        </PanelSection>
 
-      {/* === Musique de fond — bleu === */}
-      <div className="pl-2 border-l-2 border-blue-500/70 py-0.5">
-        <CollapsibleSection
-          title="🎵 Musique de fond"
-          variant="flat"
-          defaultOpen={true}
+        {/* === Ambiance sonore === */}
+        <PanelSection
+          title="AMBIANCE SONORE"
+          badge={
+            ambientCount > 0 ? `${ambientCount} piste${ambientCount > 1 ? 's' : ''}` : undefined
+          }
+          id="audio-ambient"
+          defaultOpen
         >
-          <div className="pb-3">
-            {audio?.url ? (
-              <MusicControls
-                audio={audio}
-                onUpdate={handleBgmUpdate}
-                onRemove={handleBgmRemove}
-                onOpenLibrary={handleOpenMusicLibrary}
-              />
-            ) : (
-              <div className="space-y-2">
-                <button
-                  onClick={handleOpenMusicLibrary}
-                  className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold py-3 px-3 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors min-h-[44px] shadow-md shadow-blue-600/20"
-                >
-                  <Library className="w-4 h-4" aria-hidden="true" />
-                  Choisir dans la bibliothèque
-                </button>
-                <p className="text-xs text-[var(--color-text-muted)] text-center">
-                  Aucune musique pour cette scène
-                </p>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
-      </div>
-
-      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
-
-      {/* === Ambiance sonore — emerald === */}
-      <div className="pl-2 border-l-2 border-emerald-500/70 py-0.5">
-        <CollapsibleSection
-          title="🌿 Ambiance sonore"
-          variant="flat"
-          defaultOpen={false}
-          badge={ambientCount > 0 ? `${ambientCount} piste${ambientCount > 1 ? 's' : ''}` : undefined}
-        >
-          <div className="pb-3 space-y-3">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Ajoute jusqu'à 2 sons de fond (vent, foule, pluie…) qui tournent en boucle.
-            </p>
+          <div className="space-y-2">
             <AmbientTrackSlot
               slot={0}
               track={ambientTracks?.[0]}
@@ -540,42 +500,23 @@ export function AudioSection({ onOpenModal }: AudioSectionProps) {
               onRemove={() => handleAmbientRemove(0)}
               onOpenLibrary={() => handleOpenAmbientLibrary(0)}
             />
-            <div className="border-t border-[var(--color-border-base)]/40" aria-hidden="true" />
-            <AmbientTrackSlot
-              slot={1}
-              track={ambientTracks?.[1]}
-              onUpdate={(patch) => handleAmbientUpdate(1, patch)}
-              onRemove={() => handleAmbientRemove(1)}
-              onOpenLibrary={() => handleOpenAmbientLibrary(1)}
-            />
+            {ambientTracks?.[0] && (
+              <AmbientTrackSlot
+                slot={1}
+                track={ambientTracks?.[1]}
+                onUpdate={(patch) => handleAmbientUpdate(1, patch)}
+                onRemove={() => handleAmbientRemove(1)}
+                onOpenLibrary={() => handleOpenAmbientLibrary(1)}
+              />
+            )}
           </div>
-        </CollapsibleSection>
+        </PanelSection>
+
+        {/* === Générateur SFX 8-bit === */}
+        <PanelSection title="GÉNÉRATEUR SFX 8-BIT" id="audio-sfx" defaultOpen={false}>
+          <SfxGeneratorPanel />
+        </PanelSection>
       </div>
-
-      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
-
-      {/* === Bibliothèque audio — slate === */}
-      <div className="pl-2 border-l-2 border-slate-500/50 py-0.5">
-        <CollapsibleSection
-          title="📚 Bibliothèque audio"
-          variant="flat"
-          defaultOpen={false}
-        >
-          <div className="pb-3 space-y-2">
-            <button
-              onClick={() => onOpenModal('assets', { category: 'music' })}
-              className="w-full flex items-center justify-start gap-2 text-[13px] py-2.5 px-3 rounded-xl border border-[var(--color-border-base)] text-[var(--color-text-secondary)] hover:border-slate-400/50 hover:text-[var(--color-text-primary)] bg-[var(--color-bg-base)] transition-colors min-h-[40px]"
-            >
-              <Library className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-              Gérer les fichiers audio
-            </button>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Importe et organise tes musiques et sons d'ambiance
-            </p>
-          </div>
-        </CollapsibleSection>
-      </div>
-
-    </div>
+    </Tooltip.Provider>
   );
 }

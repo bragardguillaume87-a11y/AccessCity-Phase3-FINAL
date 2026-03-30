@@ -11,15 +11,6 @@
 // TYPES
 // ============================================================================
 
-type TailwindDuration =
-  | 'duration-75'
-  | 'duration-100'
-  | 'duration-150'
-  | 'duration-200'
-  | 'duration-300'
-  | 'duration-500'
-  | 'duration-700'
-  | 'duration-1000';
 
 interface TimingConstants {
   readonly ANIMATION_DELAY: number;
@@ -110,24 +101,6 @@ export const TIMING: TimingConstants = {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Get animation duration from Tailwind duration classes
- * @param className - Tailwind duration class name
- * @returns Duration in milliseconds
- */
-export const getTailwindDuration = (className: TailwindDuration): number => {
-  const durations: Record<TailwindDuration, number> = {
-    'duration-75': 75,
-    'duration-100': 100,
-    'duration-150': 150,
-    'duration-200': 200,
-    'duration-300': 300,
-    'duration-500': 500,
-    'duration-700': 700,
-    'duration-1000': 1000,
-  };
-  return durations[className] || TIMING.ANIMATION_DELAY;
-};
 
 /**
  * Create a delay Promise for async operations

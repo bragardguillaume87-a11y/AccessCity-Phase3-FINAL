@@ -33,7 +33,7 @@ export default function AddCharacterToSceneModal({
   isOpen,
   onClose,
   characters,
-  onAddCharacter
+  onAddCharacter,
 }: AddCharacterToSceneModalProps) {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [mood, setMood] = useState<string>('neutral');
@@ -45,21 +45,22 @@ export default function AddCharacterToSceneModal({
   const filteredCharacters = useMemo(() => {
     let filtered = characters;
     if (searchTerm) {
-      filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.id.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (c) =>
+          c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (activeTab === 'favorites') {
       // Note: favorite field planned for future phase
-      filtered = filtered.filter(c => ('favorite' in c && c.favorite));
+      filtered = filtered.filter((c) => 'favorite' in c && c.favorite);
     }
 
     return filtered;
   }, [characters, searchTerm, activeTab]);
 
-  const selectedCharacter = characters.find(c => c.id === selectedCharacterId);
+  const selectedCharacter = characters.find((c) => c.id === selectedCharacterId);
   const availableMoods = selectedCharacter?.moods || ['neutral'];
   const currentSprite = selectedCharacter?.sprites?.[mood];
 
@@ -86,7 +87,7 @@ export default function AddCharacterToSceneModal({
         <DialogHeader>
           <DialogTitle>Ajouter un personnage à la scène</DialogTitle>
 
-            <div className="relative mt-4">
+          <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher un personnage..."
@@ -97,11 +98,14 @@ export default function AddCharacterToSceneModal({
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'favorites')}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as 'all' | 'favorites')}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="all">Tous ({characters.length})</TabsTrigger>
             <TabsTrigger value="favorites">
-              Favoris ({characters.filter(c => ('favorite' in c && c.favorite)).length})
+              Favoris ({characters.filter((c) => 'favorite' in c && c.favorite).length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -174,7 +178,8 @@ export default function AddCharacterToSceneModal({
                                 )}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {character.moods?.length || 0} humeur{character.moods?.length > 1 ? 's' : ''}
+                                {character.moods?.length || 0} humeur
+                                {character.moods?.length > 1 ? 's' : ''}
                               </div>
                             </div>
                           </div>
@@ -213,15 +218,25 @@ export default function AddCharacterToSceneModal({
                         setIsDragging(true);
                         dragEvent.dataTransfer.effectAllowed = 'copy';
                         dragEvent.dataTransfer.setData('text/x-drag-type', 'character');
-                        dragEvent.dataTransfer.setData('application/json', JSON.stringify({
-                          characterId: selectedCharacterId,
-                          mood: mood,
-                          type: 'character'
-                        }));
-                        const img = (dragEvent.target as HTMLImageElement).cloneNode() as HTMLImageElement;
+                        dragEvent.dataTransfer.setData('text/x-drag-type-character', '');
+                        dragEvent.dataTransfer.setData(
+                          'application/json',
+                          JSON.stringify({
+                            characterId: selectedCharacterId,
+                            mood: mood,
+                            type: 'character',
+                          })
+                        );
+                        const img = (
+                          dragEvent.target as HTMLImageElement
+                        ).cloneNode() as HTMLImageElement;
                         img.style.opacity = '0.5';
                         document.body.appendChild(img);
-                        dragEvent.dataTransfer.setDragImage(img, (dragEvent.target as HTMLImageElement).width / 2, (dragEvent.target as HTMLImageElement).height / 2);
+                        dragEvent.dataTransfer.setDragImage(
+                          img,
+                          (dragEvent.target as HTMLImageElement).width / 2,
+                          (dragEvent.target as HTMLImageElement).height / 2
+                        );
                         setTimeout(() => document.body.removeChild(img), 0);
                       }}
                       onDragEnd={() => setIsDragging(false)}
@@ -236,18 +251,13 @@ export default function AddCharacterToSceneModal({
                 </h2>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Humeur / Expression
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Humeur / Expression</label>
                   <div className="grid grid-cols-3 gap-2">
                     {availableMoods.map((moodOption) => (
                       <TooltipProvider key={moodOption}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                               <Card
                                 className={`p-3 cursor-pointer text-center transition-all ${
                                   mood === moodOption
@@ -267,9 +277,7 @@ export default function AddCharacterToSceneModal({
                                     😐
                                   </div>
                                 )}
-                                <span className="text-xs font-medium capitalize">
-                                  {moodOption}
-                                </span>
+                                <span className="text-xs font-medium capitalize">{moodOption}</span>
                               </Card>
                             </motion.div>
                           </TooltipTrigger>
@@ -306,7 +314,9 @@ export default function AddCharacterToSceneModal({
                         </label>
                         <Slider
                           value={[position.x]}
-                          onValueChange={([x]) => setPosition(prev => prev ? { ...prev, x } : { x, y: 50 })}
+                          onValueChange={([x]) =>
+                            setPosition((prev) => (prev ? { ...prev, x } : { x, y: 50 }))
+                          }
                           max={100}
                           step={1}
                           className="w-full"
@@ -319,7 +329,9 @@ export default function AddCharacterToSceneModal({
                         </label>
                         <Slider
                           value={[position.y]}
-                          onValueChange={([y]) => setPosition(prev => prev ? { ...prev, y } : { x: 50, y })}
+                          onValueChange={([y]) =>
+                            setPosition((prev) => (prev ? { ...prev, y } : { x: 50, y }))
+                          }
                           max={100}
                           step={1}
                           className="w-full"
@@ -328,23 +340,33 @@ export default function AddCharacterToSceneModal({
                     </>
                   ) : (
                     <div className="text-sm text-muted-foreground bg-card/50 rounded-lg p-3 border border-border">
-                      🎯 Position automatique intelligente activée<br/>
+                      🎯 Position automatique intelligente activée
+                      <br />
                       <span className="text-xs text-muted-foreground/70">
-                        Le personnage sera placé automatiquement selon son type (player à gauche, autres au centre/droite)
+                        Le personnage sera placé automatiquement selon son type (player à gauche,
+                        autres au centre/droite)
                       </span>
                     </div>
                   )}
                 </div>
 
-                <div className={`border rounded-lg p-3 text-sm transition-all ${
-                  isDragging
-                    ? 'bg-green-500/10 border-green-500/20 animate-pulse'
-                    : 'bg-blue-500/10 border-blue-500/20'
-                }`}>
+                <div
+                  className={`border rounded-lg p-3 text-sm transition-all ${
+                    isDragging
+                      ? 'bg-green-500/10 border-green-500/20 animate-pulse'
+                      : 'bg-blue-500/10 border-blue-500/20'
+                  }`}
+                >
                   {isDragging ? (
-                    <>🎯 <strong>En cours:</strong> Glissez sur le canvas pour positionner le personnage!</>
+                    <>
+                      🎯 <strong>En cours:</strong> Glissez sur le canvas pour positionner le
+                      personnage!
+                    </>
                   ) : (
-                    <>💡 <strong>Astuce:</strong> Glissez-déposez l&apos;aperçu sur le canvas ou utilisez les sliders.</>
+                    <>
+                      💡 <strong>Astuce:</strong> Glissez-déposez l&apos;aperçu sur le canvas ou
+                      utilisez les sliders.
+                    </>
                   )}
                 </div>
               </div>
@@ -368,8 +390,6 @@ export default function AddCharacterToSceneModal({
 function calculateCompleteness(character: Character): number {
   if (!character.moods || character.moods.length === 0) return 0;
   const totalMoods = character.moods.length;
-  const moodsWithSprites = character.moods.filter(
-    mood => character.sprites?.[mood]
-  ).length;
+  const moodsWithSprites = character.moods.filter((mood) => character.sprites?.[mood]).length;
   return Math.round((moodsWithSprites / totalMoods) * 100);
 }

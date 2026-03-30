@@ -29,6 +29,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
     open: true,
     hmr: {
       protocol: 'ws',
@@ -79,8 +80,8 @@ export default defineConfig({
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
           // Misc vendors extracted from main chunk
           'vendor-misc': ['canvas-confetti', 'react-resizable-panels'],
-          // Phaser — lazy-loaded uniquement quand le PreviewPlayer s'ouvre
-          'vendor-phaser': ['phaser'],
+          // Three.js + React Three Fiber — lazy-loaded uniquement quand DiceOverlay s'ouvre
+          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
         },
         // Naming convention for chunks
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -88,8 +89,8 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Warn if chunks exceed 500KB
-    chunkSizeWarningLimit: 500,
+    // vendor-three (Three.js + R3F + drei) pèse ~1100KB raw / 298KB gzip — lazy loaded
+    chunkSizeWarningLimit: 1200,
   },
   preview: {
     port: 4173,

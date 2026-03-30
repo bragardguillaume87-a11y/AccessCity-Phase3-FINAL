@@ -59,7 +59,9 @@ export const CharactersExplorer: React.FC<CharactersExplorerProps> = ({
             transition: 'background-color 0.2s'
           }}
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+          onFocus={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+          onBlur={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
         >
           + {labels.new || 'Nouveau'}
         </button>

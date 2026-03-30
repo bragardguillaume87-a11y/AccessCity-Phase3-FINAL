@@ -26,6 +26,8 @@ export interface DialogueNodeData extends Record<string, unknown> {
   choices: DialogueChoice[];
   issues: ValidationProblem[];
   serpentine?: SerpentineNodeData;
+  /** For isResponse nodes: "7A", "7B" etc. instead of plain sequential number */
+  responseLabel?: string;
 }
 
 export interface TerminalNodeData extends Record<string, unknown> {

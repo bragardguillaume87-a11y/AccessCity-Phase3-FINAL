@@ -378,7 +378,7 @@ export const COSMOS_ANIMATIONS = {
 
 export const TRUNCATION = {
   /** Main dialogue text in node (BaseNode) */
-  nodeText: 80,
+  nodeText: 240,
   /** Stage directions in node (BaseNode) */
   stageDirections: 50,
   /** Choice preview in ChoiceNode badge */

@@ -12,18 +12,20 @@ import { CARD_SLIDE_UP } from '@/constants/animations';
 
 interface DiceChoiceCardProps {
   choice: DialogueChoice;
-  index: number;
+  title: string;
   onUpdate: (updates: Partial<DialogueChoice>) => void;
   onRemove: () => void;
   canRemove: boolean;
+  currentSceneId: string;
 }
 
 export function DiceChoiceCard({
   choice,
-  index,
+  title,
   onUpdate,
   onRemove,
   canRemove,
+  currentSceneId,
 }: DiceChoiceCardProps) {
   const diceCheck = choice.diceCheck!;
 
@@ -35,29 +37,29 @@ export function DiceChoiceCard({
     <motion.div
       {...CARD_SLIDE_UP}
       className={cn(
-        "rounded-2xl border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5",
-        "p-6 space-y-5 relative group"
+        "rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5",
+        "p-4 space-y-4 relative group"
       )}
     >
       <ChoiceCardHeader
-        icon={<span className="text-2xl">🎲</span>}
+        icon={<span className="text-xl">🎲</span>}
         iconGradient="from-purple-500 to-pink-500"
-        title={`Test #${index + 1}`}
+        title={title}
         canRemove={canRemove}
         onRemove={onRemove}
-        removeAriaLabel={`Supprimer le test #${index + 1}`}
+        removeAriaLabel={`Supprimer ${title}`}
       />
 
       <div className="space-y-2">
-        <Label htmlFor={`dice-text-${choice.id}`} className="text-sm font-semibold">
-          Texte du choix (ce que voit le joueur)
+        <Label htmlFor={`dice-text-${choice.id}`} className="text-sm font-medium text-muted-foreground">
+          Ce que le joueur choisit
         </Label>
         <Input
           id={`dice-text-${choice.id}`}
           value={choice.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
-          placeholder="Ex: Tenter de convaincre le gardien"
-          className="h-12 text-base"
+          placeholder="Ex : Tenter de convaincre le gardien"
+          className="h-9 text-sm"
         />
       </div>
 
@@ -76,11 +78,13 @@ export function DiceChoiceCard({
           type="success"
           branch={diceCheck.success || {}}
           onChange={(success) => updateDiceCheck({ success })}
+          currentSceneId={currentSceneId}
         />
         <OutcomeEditor
           type="failure"
           branch={diceCheck.failure || {}}
           onChange={(failure) => updateDiceCheck({ failure })}
+          currentSceneId={currentSceneId}
         />
       </div>
     </motion.div>

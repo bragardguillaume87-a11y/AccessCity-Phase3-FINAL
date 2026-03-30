@@ -14,7 +14,7 @@ import type { EdgeStyle } from '@/config/graphThemes/types';
 
 export type EdgeCategory = 'linear' | 'choice' | 'convergence' | 'sceneJump';
 
-export interface EdgeConfig {
+interface EdgeConfig {
   id: string;
   source: string;
   sourceHandle: string;

@@ -83,7 +83,7 @@ export interface UseCanvasDragDropReturn {
 export function useCanvasDragDrop({
   selectedScene,
   canvasNode,
-  actions
+  actions,
 }: UseCanvasDragDropProps): UseCanvasDragDropReturn {
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragType, setDragType] = useState<DragType | null>(null);
@@ -101,10 +101,12 @@ export function useCanvasDragDrop({
     e.dataTransfer.dropEffect = 'copy';
     setIsDragOver(true);
 
-    // Detect drag type from custom MIME type (accessible during dragOver)
-    if (e.dataTransfer.types.includes('text/x-drag-type')) {
-      const dragTypeValue = e.dataTransfer.getData('text/x-drag-type');
-      if (dragTypeValue && ['background', 'character', 'textbox', 'prop', 'emoji'].includes(dragTypeValue)) {
+    // Detect drag type from MIME type names (values are not readable during dragOver — HTML5 restriction).
+    // Drag sources set 'text/x-drag-type-{type}' as a secondary MIME name so it's readable here.
+    const typeEntry = e.dataTransfer.types.find((t) => t.startsWith('text/x-drag-type-'));
+    if (typeEntry) {
+      const dragTypeValue = typeEntry.slice('text/x-drag-type-'.length);
+      if (['background', 'character', 'textbox', 'prop', 'emoji'].includes(dragTypeValue)) {
         setDragType(dragTypeValue as DragType);
       }
     }
@@ -147,7 +149,7 @@ export function useCanvasDragDrop({
 
     const position: Position = {
       x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y))
+      y: Math.max(0, Math.min(100, y)),
     };
 
     // Handle different drop types
@@ -170,7 +172,7 @@ export function useCanvasDragDrop({
           actions.addCharacterToScene(
             selectedScene.id,
             data.characterId,
-            'neutral',
+            data.mood || 'neutral',
             position,
             'none'
           );
@@ -186,8 +188,8 @@ export function useCanvasDragDrop({
           size: { ...ELEMENT_SIZES.TEXTBOX },
           style: {
             fontSize: ELEMENT_DEFAULTS.FONT_SIZE,
-            fontWeight: 'normal'
-          }
+            fontWeight: 'normal',
+          },
         };
         actions.addTextBoxToScene(selectedScene.id, textBox);
         break;
@@ -199,7 +201,7 @@ export function useCanvasDragDrop({
           id: `prop-${Date.now()}`,
           assetUrl: data.emoji || data.url || '',
           position,
-          size: { ...ELEMENT_SIZES.PROP }
+          size: { ...ELEMENT_SIZES.PROP },
         };
         actions.addPropToScene(selectedScene.id, prop);
         break;

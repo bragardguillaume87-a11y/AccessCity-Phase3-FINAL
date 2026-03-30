@@ -1,0 +1,2030 @@
+{
+  "_accesscity_export_version": "2.0",
+  "exportedAt": "2026-03-20T12:00:00.000Z",
+  "projectTitle": "Bienvenue à AccessCity",
+  "scenes": [
+    {
+      "id": "scene-intro",
+      "title": "Introduction — Demeure du Narrateur",
+      "description": "Abel His-Toar accueille le joueur et présente les règles du jeu.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-01",
+      "title": "Séquence 01 — Chez Fabrice (le site administratif)",
+      "description": "Fabrice tente de faire sa démarche administrative en ligne. Le site est un désastre.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-02",
+      "title": "Séquence 02 — L'appel à HandiVroum",
+      "description": "Fabrice tente de commander un transport adapté. Pas de chance.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-03",
+      "title": "Séquence 03 — Les rues d'AccessCity",
+      "description": "Fabrice traverse la ville pour rejoindre l'arrêt de bus. Rencontre avec un passant.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-04",
+      "title": "Séquence 04 — L'arrêt de bus",
+      "description": "Fabrice prend le bus. Le narrateur pose une question au joueur sur les places PMR.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-05",
+      "title": "Séquence 05 — Devant le bâtiment administratif",
+      "description": "Fabrice essaie d'entrer. QR Code, Braille, interphone trop haut.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-06",
+      "title": "Séquence 06 — Dans le bâtiment administratif",
+      "description": "File d'attente. La compagne appelle. Math Dé arrive.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-07",
+      "title": "Séquence 07 — Bureau de Math Dé",
+      "description": "La confrontation avec l'agent administratif. Le formulaire B6. La signature impossible.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    },
+    {
+      "id": "scene-conclusion",
+      "title": "Séquence conclusive — Retour au domicile",
+      "description": "Fabrice rentre chez lui. La compagne lui révèle le bouton Accessibilité.",
+      "backgroundUrl": "",
+      "dialogues": [],
+      "characters": [],
+      "textBoxes": [],
+      "props": []
+    }
+  ],
+  "dialoguesByScene": {
+    "scene-intro": [
+      {
+        "id": "d-intro-01",
+        "speaker": "abel-histoar",
+        "text": "Oh, vous êtes déjà là ? Fort bien ! Installez-vous ici, ce sera bien… Oh, et excusez-moi pour le désordre, c'est que je n'ai pas l'habitude de recevoir du monde… Enfin, vous savez, on peut toujours faire moins pratique. Je connais même une ville qui s'en est fait une spécialité !",
+        "choices": [],
+        "stageDirections": "Demeure d'Abel His-Toar, vénérable sage et conteur."
+      },
+      {
+        "id": "d-intro-02",
+        "speaker": "abel-histoar",
+        "text": "Ho, c'est vrai, c'est justement pour ça que vous êtes là, j'imagine. Pour entendre une histoire sur AccessCity, la ville à la mode ? Je vous comprends, y'a de quoi s'intéresser. «La ville simple où il fait bon vivre !», si ça ce n'est pas une accroche qui claque. Il est doué, cet Otto Nommy, pour rassembler les foules, aucun doute là-dessus.\n\n… Bon, après, c'est ce qui se dit. Moi qui y ait vécu, je peux vous le dire, ça n'a pas été de tout repos.",
+        "choices": []
+      },
+      {
+        "id": "d-intro-03",
+        "speaker": "abel-histoar",
+        "text": "… Je devine à votre air dubitatif que vous attendez un exemple, c'est ça ? Si vous y tenez.",
+        "choices": [],
+        "stageDirections": "(Ouvre son grimoire)"
+      },
+      {
+        "id": "d-intro-04",
+        "speaker": "abel-histoar",
+        "text": "Ho, une précision avant de débuter. Vous n'allez pas seulement découvrir une histoire. Vous allez en être le personnage principal.\n\nOui, dit comme ça, cela peut surprendre, mais tout se passera bien. En théorie. En tous cas, personne ne s'est jamais plaint.",
+        "choices": []
+      },
+      {
+        "id": "d-intro-05",
+        "speaker": "abel-histoar",
+        "text": "Bien, pour avancer dans cette histoire, vous devrez parfois faire des choix. Avancer, refuser, discuter, agir… À vous de décider. Choisissez bien : selon vos interactions, votre santé et votre moral peuvent en prendre un coup. Tenez, voici vos indicateurs personnels. Dites-leur bonjour !",
+        "choices": [],
+        "stageDirections": "(Faire apparaître les indicateurs de Physique et de Moral)"
+      },
+      {
+        "id": "d-intro-06",
+        "speaker": "abel-histoar",
+        "text": "… En réalité, ils ne peuvent pas vous répondre… S'ils atteignent zéro, l'histoire continuera malgré tout. Il ne s'agit que d'un indicateur. Les barres de vie, ça n'existe pas dans la vraie vie.",
+        "choices": []
+      },
+      {
+        "id": "d-intro-07",
+        "speaker": "abel-histoar",
+        "text": "Sur ce, commençons notre histoire !",
+        "choices": [],
+        "isConclusion": false
+      }
+    ],
+
+    "scene-01": [
+      {
+        "id": "d-01-01",
+        "speaker": "abel-histoar",
+        "text": "Notre personnage du jour s'appelle Fabrice Madek. Bientôt un demi-siècle à son actif, et toujours une certaine hargne au quotidien. La vie lui souriait plutôt jusqu'à présent.\n\nMais vous savez, le hasard, c'est un habile farceur. Le hasard, il a décidé un beau soir que Fabrice allait sortir les poubelles. Le hasard, il a décidé qu'en même temps, une belle andouille ayant une forte attache à la bibine prenne le volant. Le hasard, il a choisi de mettre pour toujours notre bon Fabrice dans un fauteuil roulant.\n\nLà où le hasard aurait pu être davantage outrancier, c'est que Fabrice a toujours gardé cette bonhomie qui le caractérise si bien. Même s'il est devenu un peu plus… disons… chafouin ?",
+        "choices": [],
+        "stageDirections": "Chez Fabrice Madek, chez lui."
+      },
+      {
+        "id": "d-01-02",
+        "speaker": "fabrice-madek",
+        "text": "…\n\nMon petit Fabrice, c'est une belle journée qui se présente à toi ! Premièrement, parce que ce soir, c'est dîner aux chandelles avec ta belle… Deuxièmement, parce que c'est le jour pour faire ta déclaration !\n\n… Bon, c'est aussi le jour pour faire L'AUTRE déclaration… Ma situation fiscale auprès de la mairie. Youpi.",
+        "choices": []
+      },
+      {
+        "id": "d-01-03",
+        "speaker": "fabrice-madek",
+        "text": "Mais même ça, c'est devenu bien ! Pour une fois, je ne suis pas obligé d'aller là-bas. Je vais pouvoir faire ça tranquillement de chez moi, haha !\n\n(Sort un courrier de sa poche) J'ai ENFIN reçu mes identifiants de connexion par le facteur. Je l'attendais, ce courrier !",
+        "choices": []
+      },
+      {
+        "id": "d-01-04",
+        "speaker": "fabrice-madek",
+        "text": "Bon… c'est pas tout, mais si je veux avoir le temps de tout préparer pour ma belle, autant régler cette chose maintenant. Allez hop, on allume l'ordinateur ! … L'ordinateur… Relax Fabrice, ce n'est pas parce que je ne m'en sers qu'une fois tous les deux mois que cela va mal se passer. Je devrais prendre confiance en moi, y'a pas de raisons… non ?",
+        "choices": []
+      },
+      {
+        "id": "d-01-choice",
+        "speaker": "fabrice-madek",
+        "text": "Qu'est-ce que je fais ?",
+        "choices": [
+          {
+            "id": "c-01-A",
+            "text": "Je vais directement sur place",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-01-resp-A"
+          },
+          {
+            "id": "c-01-B",
+            "text": "Je fais sur l'ordinateur",
+            "effects": [],
+            "nextDialogueId": "d-01-resp-B"
+          }
+        ]
+      },
+      {
+        "id": "d-01-resp-A",
+        "speaker": "fabrice-madek",
+        "text": "Pis, c'est pas comme si, la dernière fois que je suis allé sur l'ordi, j'avais téléchargé ce virus à la mode… Ni qu'après cela, j'avais dû payer 2000 balles pour éviter que mes données bancaires soient supprimées à tout jamais… La confiance, ce n'est définitivement pas mon truc.",
+        "choices": [],
+        "nextDialogueId": "d-01-narr-A"
+      },
+      {
+        "id": "d-01-narr-A",
+        "speaker": "abel-histoar",
+        "text": "Ha, vous auriez peut-être dû vous faire confiance sur cette fois ! Votre moral en a pris un coup. Mais au moins, cela vous a permis de comprendre un peu mieux comment vos actions peuvent avoir des conséquences dans ce jeu. Allez, votre personnage va donc s'y rendre par lui-même… Oui, mais comment il va faire ?",
+        "choices": [],
+        "nextDialogueId": "d-01-end"
+      },
+      {
+        "id": "d-01-resp-B",
+        "speaker": "fabrice-madek",
+        "text": "Bon, ce n'est pas en ne faisant rien, que j'y arriverais un jour. Et puis, vu que c'est un truc fait par plein de personnes, c'est bien que ça ne doit pas être compliqué !",
+        "choices": [],
+        "nextDialogueId": "d-01-narr-B"
+      },
+      {
+        "id": "d-01-narr-B",
+        "speaker": "abel-histoar",
+        "text": "Ai-je oublié de préciser que Fabrice était du genre à être trop optimiste ? Cela étant, vous avez fait le bon choix, le moral de Fabrice reste au beau fixe. C'est comme cela que vos actions peuvent avoir des conséquences dans ce jeu. Mais revenons à nos moutons.",
+        "choices": [],
+        "nextDialogueId": "d-01-clique"
+      },
+      {
+        "id": "d-01-clique",
+        "speaker": "fabrice-madek",
+        "text": "Hop… Je clique là… Hougeul Brillant… Le site administratif, j'y vais… CLIC.\n\nHum. Je sais que mon ordinateur n'est pas tout jeune, mais là, on est sur un autre niveau. Où est-ce que je clique ?",
+        "choices": [],
+        "stageDirections": "(À l'écran, on y voit un site très fouillis — menus superposés, polices illisibles, boutons introuvables.)",
+        "nextDialogueId": "d-01-minigame"
+      },
+      {
+        "id": "d-01-minigame",
+        "speaker": "abel-histoar",
+        "text": "Catastrophe, la version FALC (Facile à Lire et à Comprendre) du site est toute désordonnée ! Saurez-vous y remettre un peu d'ordre ?",
+        "choices": [],
+        "stageDirections": "But : comprendre l'importance d'un site pratique en FALC, bien plus accessible et compréhensible par le plus grand nombre. Même si le joueur réussit le jeu, le résultat sera le même narrativement.",
+        "minigame": {
+          "type": "falc",
+          "difficulty": 2,
+          "timeout": 90000,
+          "items": [
+            "🏠 Accueil — Bienvenue sur le portail",
+            "📋 Mes démarches — Gérer mes dossiers",
+            "🏛️ Trouver un service — Annuaire",
+            "♿ Accessibilité — Mode FALC",
+            "📞 Aide — Nous contacter"
+          ],
+          "onSuccess": { "nextDialogueId": "d-01-minigame-bonus" },
+          "onFailure": { "nextDialogueId": "d-01-end" }
+        },
+        "nextDialogueId": "d-01-end"
+      },
+      {
+        "id": "d-01-minigame-bonus",
+        "speaker": "abel-histoar",
+        "text": "Bravo, le site est nettement plus lisible comme ça ! C'est exactement à quoi ressemble un site bien conçu en FALC.",
+        "choices": [],
+        "effects": [
+          { "variable": "moral", "operation": "add", "value": 5 },
+          { "variable": "physique", "operation": "add", "value": 5 }
+        ],
+        "nextDialogueId": "d-01-end"
+      },
+      {
+        "id": "d-01-end",
+        "speaker": "fabrice-madek",
+        "text": "Bien, et en cliquant là… J'ai réussi… à me connecter sur le site «DoggoFood.com». Hum. Bon, je crois que pour le site pratique, c'est loupé…",
+        "choices": []
+      }
+    ],
+
+    "scene-02": [
+      {
+        "id": "d-02-01",
+        "speaker": "fabrice-madek",
+        "text": "J'ai tellement envie de me rendre là-bas, youpi. En plus, c'est pas la porte à côté, y'a une sacrée trotte. Allez, râle donc pas Fabrice… Un petit coup de fil à «HandiVroum», ce sera plus simple.",
+        "choices": []
+      },
+      {
+        "id": "d-02-02",
+        "speaker": "abel-histoar",
+        "text": "Vu que vous n'êtes pas du coin, vous ne connaissez pas «HandiVroum», je me trompe ? C'est un service pratique pour les personnes en situation de handicap. Il permet de faire un transport à la demande, depuis son domicile jusqu'au lieu désiré.\n\nUne très belle initiative. Dommage qu'ils soient les seuls à proposer ça sur AccessCity.",
+        "choices": []
+      },
+      {
+        "id": "d-02-03",
+        "speaker": "fabrice-madek",
+        "text": "Passe un coup de téléphone fixe… J'espère que ça ne trainera pas trop.",
+        "choices": [
+          {
+            "id": "c-02-dice-attente",
+            "text": "🎲 Attendre la réponse",
+            "effects": [],
+            "diceCheck": {
+              "stat": "moral",
+              "difficulty": 11,
+              "success": { "nextDialogueId": "d-02-interlocuteur" },
+              "failure": {
+                "nextDialogueId": "d-02-attente-longue",
+                "statEffect": { "stat": "moral", "amount": -10 }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "d-02-attente-longue",
+        "speaker": "abel-histoar",
+        "text": "«Votre temps d'attente est estimé à 20 minutes.» Votre moral en prend un coup.",
+        "choices": [],
+        "nextDialogueId": "d-02-interlocuteur"
+      },
+      {
+        "id": "d-02-interlocuteur",
+        "speaker": "interlocuteur-handivroum",
+        "text": "HandiVroum, bonjour, que puis-je faire pour vous ?",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-fabrice-intro"
+      },
+      {
+        "id": "d-02-fabrice-intro",
+        "speaker": "fabrice-madek",
+        "text": "Bonjour, monsieur Madek au téléphone, j'aurais aimé prendre un transport pour me rendre au centre administratif…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-pas-reconnu"
+      },
+      {
+        "id": "d-02-pas-reconnu",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Je ne vous reconnais pas, vous êtes bien client chez nous ?",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-epelle"
+      },
+      {
+        "id": "d-02-epelle",
+        "speaker": "fabrice-madek",
+        "text": "Oui, Mr Madek… M. A. D. E. K.",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-confusion"
+      },
+      {
+        "id": "d-02-confusion",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Alors… N, A…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-choice-epel"
+      },
+      {
+        "id": "d-02-choice-epel",
+        "speaker": "fabrice-madek",
+        "text": "Non, M !",
+        "choices": [
+          {
+            "id": "c-02-A",
+            "text": "Il va bien comprendre, si j'épelle mieux le nom",
+            "effects": [],
+            "nextDialogueId": "d-02-epel-A"
+          },
+          {
+            "id": "c-02-B",
+            "text": "Il ne comprend rien ce type, je tente autre chose",
+            "effects": [],
+            "nextDialogueId": "d-02-epel-B"
+          }
+        ],
+        "dialogueSubtype": "phonecall"
+      },
+      {
+        "id": "d-02-epel-A",
+        "speaker": "fabrice-madek",
+        "text": "Non, M… comme dans Mathieu !",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-ok-compris"
+      },
+      {
+        "id": "d-02-ok-compris",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Ho, pardon… M… Ha oui, Mr Madek, c'est cela !",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-suite"
+      },
+      {
+        "id": "d-02-epel-B",
+        "speaker": "fabrice-madek",
+        "text": "Non. Madek, numéro de client 1589.",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-1973"
+      },
+      {
+        "id": "d-02-1973",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Ha, je note… 1973…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-mille"
+      },
+      {
+        "id": "d-02-mille",
+        "speaker": "fabrice-madek",
+        "text": "MILLE. CINQ. CENTS. QUAT…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-andouille"
+      },
+      {
+        "id": "d-02-andouille",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Ho, dites, vous me prenez pour une andouille ? Si c'est comme ça, je vais vous laisser 10 minutes d'attente, le temps de réfléchir.",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-sigh"
+      },
+      {
+        "id": "d-02-sigh",
+        "speaker": "fabrice-madek",
+        "text": "Mais ce n'est pas ce que je voulais… dire…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+        "nextDialogueId": "d-02-suite"
+      },
+      {
+        "id": "d-02-suite",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Vous souhaitez un transport ? À la cité administrative, c'est ça ? Et il vous faudrait vite un véhicule, c'est ça ?",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-ideal"
+      },
+      {
+        "id": "d-02-ideal",
+        "speaker": "fabrice-madek",
+        "text": "Ce serait l'idéal, mais…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-17h30"
+      },
+      {
+        "id": "d-02-17h30",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Sauf qu'on n'aura pas de chauffeurs avant 17h30.",
+        "choices": [
+          {
+            "id": "c-02-C",
+            "text": "Demander s'il n'y a pas d'autre option",
+            "effects": [],
+            "nextDialogueId": "d-02-option-A"
+          },
+          {
+            "id": "c-02-D",
+            "text": "Raccrocher brutalement",
+            "effects": [{ "variable": "physique", "operation": "add", "value": -5 }],
+            "nextDialogueId": "d-02-raccrocher"
+          }
+        ],
+        "dialogueSubtype": "phonecall"
+      },
+      {
+        "id": "d-02-option-A",
+        "speaker": "fabrice-madek",
+        "text": "Mais je fais comment dans ce cas ?",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-bus-option"
+      },
+      {
+        "id": "d-02-bus-option",
+        "speaker": "interlocuteur-handivroum",
+        "text": "Vraiment désolé pour vous… Je vois sur votre dossier que vous habitez près d'un arrêt de bus, et que le prochain ne passe pas dans longtemps. Je peux l'appeler pour qu'il vous attende.",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-merci"
+      },
+      {
+        "id": "d-02-merci",
+        "speaker": "fabrice-madek",
+        "text": "C'est très chic de votre part, merci beaucoup !",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "effects": [{ "variable": "moral", "operation": "add", "value": 10 }],
+        "nextDialogueId": "d-02-service"
+      },
+      {
+        "id": "d-02-service",
+        "speaker": "interlocuteur-handivroum",
+        "text": "À votre service !",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-02-end"
+      },
+      {
+        "id": "d-02-raccrocher",
+        "speaker": "fabrice-madek",
+        "text": "Et pourquoi vous ne me l'avez pas dit plus tôt ?? (Raccroche le téléphone si fort, qu'il s'en fait mal au bras.)",
+        "choices": [],
+        "nextDialogueId": "d-02-super"
+      },
+      {
+        "id": "d-02-super",
+        "speaker": "fabrice-madek",
+        "text": "Super, manquait plus que ça. … Quelle heure est-il ? Si je me dépêche, je peux encore prendre le bus.",
+        "choices": [],
+        "nextDialogueId": "d-02-end"
+      },
+      {
+        "id": "d-02-end",
+        "speaker": "fabrice-madek",
+        "text": "Bon. Pas le choix, direction l'arrêt de bus.",
+        "choices": []
+      }
+    ],
+
+    "scene-03": [
+      {
+        "id": "d-03-01",
+        "speaker": "fabrice-madek",
+        "text": "Bon, l'arrêt de bus n'est pas loin… Faut juste que je traverse la rue et… Oh, c'est vrai.",
+        "choices": [],
+        "stageDirections": "(On voit la rue, qui semble sortie d'un tableau d'artiste abstrait — trottoirs de travers, pavés inégaux.)"
+      },
+      {
+        "id": "d-03-dice-meteo",
+        "speaker": "fabrice-madek",
+        "text": "Et bien, heureusement qu'il ne pleut pas, hein.",
+        "choices": [
+          {
+            "id": "c-03-dice-meteo",
+            "text": "🎲 Traverser malgré tout",
+            "effects": [{ "variable": "physique", "operation": "add", "value": -5 }],
+            "diceCheck": {
+              "stat": "physique",
+              "difficulty": 11,
+              "success": { "nextDialogueId": "d-03-traverse" },
+              "failure": {
+                "nextDialogueId": "d-03-pluie",
+                "statEffect": { "stat": "physique", "amount": -5 }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "d-03-pluie",
+        "speaker": "fabrice-madek",
+        "text": "NON MAIS SERIEUSEMENT ?",
+        "choices": [],
+        "stageDirections": "(Il se met à pleuvoir.)",
+        "nextDialogueId": "d-03-traverse"
+      },
+      {
+        "id": "d-03-traverse",
+        "speaker": "fabrice-madek",
+        "text": "Bon, ne perdons pas de temps, allons-y…",
+        "choices": [
+          {
+            "id": "c-03-traverse",
+            "text": "🎲 Traverser la rue cabossée",
+            "effects": [{ "operation": "screenShake", "intensity": 7, "duration": 1000 }],
+            "nextDialogueId": "d-03-qte"
+          }
+        ]
+      },
+      {
+        "id": "d-03-qte",
+        "speaker": "abel-histoar",
+        "text": "Vous allez devoir traverser une rue assez cabossée. Prenez garde à ne pas tomber. La route défoncée rendra votre concentration plus difficile…",
+        "choices": [],
+        "minigame": {
+          "type": "qte",
+          "difficulty": 2,
+          "timeout": 12000,
+          "keySequence": ["ArrowRight", "ArrowUp", "ArrowRight", "ArrowRight", "ArrowUp"],
+          "onSuccess": { "nextDialogueId": "d-03-qte-ok" },
+          "onFailure": { "nextDialogueId": "d-03-arrive" }
+        },
+        "nextDialogueId": "d-03-arrive"
+      },
+      {
+        "id": "d-03-qte-ok",
+        "speaker": "abel-histoar",
+        "text": "Traversée réussie ! Un peu de courage récompensé.",
+        "choices": [],
+        "effects": [
+          { "variable": "moral", "operation": "add", "value": 5 },
+          { "variable": "physique", "operation": "add", "value": 5 }
+        ],
+        "nextDialogueId": "d-03-arrive"
+      },
+      {
+        "id": "d-03-arrive",
+        "speaker": "fabrice-madek",
+        "text": "Le bus n'est pas encore là, je suis dans les temps. Allez, encore quelques mètres…",
+        "choices": [],
+        "nextDialogueId": "d-03-passant-arrive"
+      },
+      {
+        "id": "d-03-passant-arrive",
+        "speaker": "passant",
+        "text": "Bonjour Monsieur ! Alors, on se promène ?",
+        "choices": [],
+        "nextDialogueId": "d-03-bj"
+      },
+      {
+        "id": "d-03-bj",
+        "speaker": "fabrice-madek",
+        "text": "Bonjour… on peut dire ça comme ça.",
+        "choices": [],
+        "nextDialogueId": "d-03-rues"
+      },
+      {
+        "id": "d-03-rues",
+        "speaker": "passant",
+        "text": "Ha, je vous comprends ! Rien de plus agréable que de se promener dans des rues aussi uniques ! Ce n'est pas à la Capitale que vous verrez ça, je vous le dis !",
+        "choices": [],
+        "nextDialogueId": "d-03-choice-1"
+      },
+      {
+        "id": "d-03-choice-1",
+        "speaker": "fabrice-madek",
+        "text": "Oui, enfin à ce sujet…",
+        "choices": [
+          {
+            "id": "c-03-A",
+            "text": "Ce n'est pas si génial de circuler",
+            "effects": [],
+            "nextDialogueId": "d-03-genial"
+          },
+          {
+            "id": "c-03-B",
+            "text": "Ne pas insister davantage",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -20 }],
+            "nextDialogueId": "d-03-pnr-fin"
+          }
+        ]
+      },
+      {
+        "id": "d-03-genial",
+        "speaker": "fabrice-madek",
+        "text": "Vous savez, quand on est en fauteuil…",
+        "choices": [],
+        "nextDialogueId": "d-03-passant-fauteuil"
+      },
+      {
+        "id": "d-03-passant-fauteuil",
+        "speaker": "passant",
+        "text": "Quoi, le fauteuil ? Le maire a bien précisé que sa ville était bien construite, pourtant, je ne vois pas le problème…",
+        "choices": [
+          {
+            "id": "c-03-C",
+            "text": "Ben, ce n'est pas vraiment idéal pour circuler",
+            "effects": [],
+            "nextDialogueId": "d-03-pratique"
+          },
+          {
+            "id": "c-03-D",
+            "text": "Mettre un terme à la discussion",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -20 }],
+            "nextDialogueId": "d-03-pnr-fin"
+          }
+        ]
+      },
+      {
+        "id": "d-03-pratique",
+        "speaker": "fabrice-madek",
+        "text": "Vous pensez que c'est pratique de circuler, avec un fauteuil ?",
+        "choices": [],
+        "nextDialogueId": "d-03-privileges"
+      },
+      {
+        "id": "d-03-privileges",
+        "speaker": "passant",
+        "text": "… Ha d'accord, vous ne vous souciez pas des autres, vous. Vous ne pensez qu'à vous, c'est ça. Sous prétexte que monsieur est handicapé, monsieur a tous les privilèges, c'est ça ?",
+        "choices": [],
+        "nextDialogueId": "d-03-pardon"
+      },
+      {
+        "id": "d-03-pardon",
+        "speaker": "fabrice-madek",
+        "text": "Je vous demande pardon ? (Mais qu'est-ce qu'il me raconte ?) Écoutez…",
+        "choices": [
+          {
+            "id": "c-03-E",
+            "text": "Vous ne voulez pas essayer mon fauteuil ?",
+            "effects": [],
+            "nextDialogueId": "d-03-essai"
+          },
+          {
+            "id": "c-03-F",
+            "text": "S'agacer",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -15 }],
+            "nextDialogueId": "d-03-agacement"
+          }
+        ]
+      },
+      {
+        "id": "d-03-essai",
+        "speaker": "fabrice-madek",
+        "text": "Je vous propose un truc, essayez mon fauteuil juste 30 secondes.",
+        "choices": [],
+        "nextDialogueId": "d-03-passant-essai"
+      },
+      {
+        "id": "d-03-passant-essai",
+        "speaker": "passant",
+        "text": "Fastoche, je vous fais ça les yeux fermés. (Essaye de se tenir droit… Et se ramasse au premier obstacle) … Aie.",
+        "choices": [],
+        "nextDialogueId": "d-03-joujou"
+      },
+      {
+        "id": "d-03-joujou",
+        "speaker": "fabrice-madek",
+        "text": "Maintenant que vous avez fait joujou…",
+        "choices": [],
+        "nextDialogueId": "d-03-aide"
+      },
+      {
+        "id": "d-03-aide",
+        "speaker": "passant",
+        "text": "C'est bon, c'est bon… Je vous aide à atteindre l'arrêt de bus…",
+        "choices": [],
+        "effects": [{ "variable": "physique", "operation": "add", "value": 5 }],
+        "nextDialogueId": "d-03-assiste"
+      },
+      {
+        "id": "d-03-assiste",
+        "speaker": "passant",
+        "text": "… Mais quand même, vous êtes vraiment un sacré assisté.",
+        "choices": [],
+        "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+        "nextDialogueId": "d-03-end"
+      },
+      {
+        "id": "d-03-agacement",
+        "speaker": "fabrice-madek",
+        "text": "Vous vous entendez parler, des fois, grossier que vous êtes ?",
+        "choices": [],
+        "nextDialogueId": "d-03-debrouille"
+      },
+      {
+        "id": "d-03-debrouille",
+        "speaker": "passant",
+        "text": "Ben si c'est comme ça, débrouillez-vous tout seul pour rejoindre le bus ! (Le passant part.)",
+        "choices": [],
+        "nextDialogueId": "d-03-triste"
+      },
+      {
+        "id": "d-03-triste",
+        "speaker": "fabrice-madek",
+        "text": "C'est toujours une joie d'être vu de la sorte…",
+        "choices": [],
+        "nextDialogueId": "d-03-end"
+      },
+      {
+        "id": "d-03-pnr-fin",
+        "speaker": "fabrice-madek",
+        "text": "… Je me rends à l'arrêt de bus, excusez-moi…",
+        "choices": [],
+        "nextDialogueId": "d-03-snobbe"
+      },
+      {
+        "id": "d-03-snobbe",
+        "speaker": "passant",
+        "text": "Bien entendu, encore quelqu'un de pressé, et qui ne veut pas parler avec moi. Le gars est assis toute la journée, et se permet de me snober de la sorte.",
+        "choices": [],
+        "nextDialogueId": "d-03-pnr-reaction"
+      },
+      {
+        "id": "d-03-pnr-reaction",
+        "speaker": "fabrice-madek",
+        "text": "(… Je ne préfère pas répondre…)",
+        "choices": [],
+        "nextDialogueId": "d-03-end"
+      },
+      {
+        "id": "d-03-end",
+        "speaker": "fabrice-madek",
+        "text": "Bon. L'arrêt de bus, c'est par ici.",
+        "choices": []
+      }
+    ],
+
+    "scene-04": [
+      {
+        "id": "d-04-01",
+        "speaker": "fabrice-madek",
+        "text": "Bon, j'ai un peu de chance… Le temps s'est remis, et me voilà pile à l'heure. Je vois le bus qui arrive. Pas dommage, je commence à piquer du nez…",
+        "choices": []
+      },
+      {
+        "id": "d-04-rampe",
+        "speaker": "seb-assorcie",
+        "text": "Holà voyageur, éloignez-vous le temps que je sorte la rampe d'accès…",
+        "choices": [
+          {
+            "id": "c-04-dice-rampe",
+            "text": "🎲 Monter dans le bus",
+            "effects": [],
+            "diceCheck": {
+              "stat": "physique",
+              "difficulty": 11,
+              "success": { "nextDialogueId": "d-04-entre-ok" },
+              "failure": {
+                "nextDialogueId": "d-04-rampe-rompt",
+                "statEffect": { "stat": "physique", "amount": -15 }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "d-04-rampe-rompt",
+        "speaker": "fabrice-madek",
+        "text": "Aieuh !",
+        "choices": [],
+        "stageDirections": "(La rampe rompt soudainement.)",
+        "nextDialogueId": "d-04-entre-ok"
+      },
+      {
+        "id": "d-04-entre-ok",
+        "speaker": "seb-assorcie",
+        "text": "Bon, c'est bon vous voilà rentré ? Allez, on se dirige vers votre place… Et on s'attache…",
+        "choices": [],
+        "nextDialogueId": "d-04-pmr-parking"
+      },
+      {
+        "id": "d-04-pmr-parking",
+        "speaker": "seb-assorcie",
+        "text": "Hé ben heureusement que je conduis un bus… Y'a pas d'autre places sur le parking. Même sur les places PMR…",
+        "choices": [],
+        "stageDirections": "(Le bus approche du bâtiment administratif.)",
+        "nextDialogueId": "d-04-question-narr"
+      },
+      {
+        "id": "d-04-question-narr",
+        "speaker": "abel-histoar",
+        "text": "Laissons notre Fabrice sortir de là. En attendant, j'avais une petite question pour vous.\n\nSelon vous : en admettant que l'on soit valide, combien de temps a-t-on le droit de se stationner sur une place PMR ?",
+        "choices": [
+          {
+            "id": "c-04-A",
+            "text": "1 heure",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-04-wrong"
+          },
+          {
+            "id": "c-04-B",
+            "text": "1 mois",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-04-wrong"
+          },
+          {
+            "id": "c-04-C",
+            "text": "5 minutes",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-04-wrong"
+          },
+          {
+            "id": "c-04-D",
+            "text": "0 secondes — c'est interdit !",
+            "effects": [],
+            "nextDialogueId": "d-04-correct"
+          },
+          {
+            "id": "c-04-E",
+            "text": "30 minutes",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-04-wrong"
+          },
+          {
+            "id": "c-04-F",
+            "text": "30 secondes",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-04-wrong"
+          }
+        ]
+      },
+      {
+        "id": "d-04-wrong",
+        "speaker": "abel-histoar",
+        "text": "… NOOOON ! C'EST PAS ÇAAAAA !\n\nVous n'avez pas le droit de vous arrêter sur une place PMR ! Pas même une seconde !\n\n… Bon, vu votre réponse, je n'ai pas le choix, on va tricher un peu. Pis de toute manière, c'est moi qui raconte. On va dire que Fabrice tombe dans une flaque d'eau à la sortie du bus. Et toc.",
+        "choices": [],
+        "nextDialogueId": "d-04-suite"
+      },
+      {
+        "id": "d-04-correct",
+        "speaker": "abel-histoar",
+        "text": "… Oui, très bonne réponse ! Sachez que si c'était peut-être évident pour vous, ça ne l'est franchement pas pour tout le monde. Et encore, ça n'est qu'une incivilité parmi tant d'autres, bien malheureusement.\n\nBon, et si on revenait à Fabrice ?",
+        "choices": [],
+        "nextDialogueId": "d-04-suite"
+      },
+      {
+        "id": "d-04-suite",
+        "speaker": "seb-assorcie",
+        "text": "Merci de votre confiance, les équipes de «VroumVroum Bus» vous souhaitent une agréable journée.",
+        "choices": [],
+        "nextDialogueId": "d-04-end"
+      },
+      {
+        "id": "d-04-end",
+        "speaker": "fabrice-madek",
+        "text": "Bon… Bientôt 11h du matin. On progresse.",
+        "choices": []
+      }
+    ],
+
+    "scene-05": [
+      {
+        "id": "d-05-01",
+        "speaker": "abel-histoar",
+        "text": "Vous savez, une des qualités d'Otto Nommy, le maire d'AccessCity… C'est de toujours vouloir être à la pointe de la modernité. Alors, quand il a fallu reconstruire les bâtiments administratifs après la tempête de 2056, le maire a engagé le même architecte pour faire la voierie, ET les bâtiments administratifs. Il a vraiment pensé à tout, quand même.",
+        "choices": [],
+        "stageDirections": "(On voit l'entrée du bâtiment, avec des marches très hautes, et pas de rampes d'accès. Mais à la place, un QR Code géant.)"
+      },
+      {
+        "id": "d-05-02",
+        "speaker": "fabrice-madek",
+        "text": "Alors voyons… «Scannez le code pour faire vos démarches depuis votre téléphone…» C'était déjà loin d'être pratique sur l'ordinateur, je ne vois pas en quoi ce le sera davantage sur mon smartphone. Enfin, j'ai bien 5 minutes, autant essayer… Je le déverrouille…",
+        "choices": []
+      },
+      {
+        "id": "d-05-braille",
+        "speaker": "abel-histoar",
+        "text": "Votre téléphone a été réglé en mode «Malvoyant». Vous aimeriez mettre votre mot de passe, mais pour cela vous allez devoir deviner la combinaison en braille…\n\nUne réussite vous restaurera un peu de santé morale et physique. Il n'y aura pas de conséquences en cas d'échec.",
+        "choices": [],
+        "minigame": {
+          "type": "braille",
+          "difficulty": 2,
+          "timeout": 60000,
+          "onSuccess": { "nextDialogueId": "d-05-braille-ok" },
+          "onFailure": { "nextDialogueId": "d-05-doggo" }
+        },
+        "nextDialogueId": "d-05-doggo"
+      },
+      {
+        "id": "d-05-braille-ok",
+        "speaker": "abel-histoar",
+        "text": "Bien joué ! Vous avez réussi à reproduire le motif braille.",
+        "choices": [],
+        "effects": [
+          { "variable": "moral", "operation": "add", "value": 5 },
+          { "variable": "physique", "operation": "add", "value": 5 }
+        ],
+        "nextDialogueId": "d-05-doggo"
+      },
+      {
+        "id": "d-05-doggo",
+        "speaker": "fabrice-madek",
+        "text": "Voyons voir… Ha, ce coup-ci, je me suis abonné à la newsletter de «DoggoFood.com», et je recevrais 50 boites de pâté pour chien dans ma boite aux lettres.\n\n… Ouais, allez, on va plutôt essayer l'interphone.",
+        "choices": [],
+        "nextDialogueId": "d-05-narr-interphone"
+      },
+      {
+        "id": "d-05-narr-interphone",
+        "speaker": "abel-histoar",
+        "text": "Oui, d'accord, j'ai été vache avec Otto Nommy. Évidemment qu'il avait mis un interphone à l'entrée. Et un vrai système, avec un humain qui te répond, et tout le toutim. Très efficace, il suffit : 1, d'atteindre le bouton ; 2, d'appuyer sur le bouton ; 3, d'attendre que ça réponde. C'est la simplicité même.",
+        "choices": [],
+        "stageDirections": "(Gros plan sur la scène, on se rend compte que l'interphone est quand même placé très — trop — en hauteur.)",
+        "nextDialogueId": "d-05-simplicite"
+      },
+      {
+        "id": "d-05-simplicite",
+        "speaker": "abel-histoar",
+        "text": "La simplicité, on vous a dit.",
+        "choices": [],
+        "nextDialogueId": "d-05-choice-interphone"
+      },
+      {
+        "id": "d-05-choice-interphone",
+        "speaker": "fabrice-madek",
+        "text": "Bon, il ne me semble pas pour autant inatteignable, ce bouton… Je tente le coup ?",
+        "choices": [
+          {
+            "id": "c-05-A",
+            "text": "J'essaie d'atteindre l'interphone",
+            "effects": [{ "variable": "physique", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-05-essai-dice"
+          },
+          {
+            "id": "c-05-B",
+            "text": "J'appelle à l'aide",
+            "effects": [],
+            "nextDialogueId": "d-05-aide-dice"
+          }
+        ]
+      },
+      {
+        "id": "d-05-essai-dice",
+        "speaker": "fabrice-madek",
+        "text": "Allez, ce n'est pas si haut, hop…",
+        "choices": [
+          {
+            "id": "c-05-dice-essai",
+            "text": "🎲 Tenter d'atteindre le bouton",
+            "effects": [],
+            "diceCheck": {
+              "stat": "physique",
+              "difficulty": 11,
+              "success": { "nextDialogueId": "d-05-essai-ok" },
+              "failure": { "nextDialogueId": "d-05-essai-ko" }
+            }
+          }
+        ]
+      },
+      {
+        "id": "d-05-essai-ok",
+        "speaker": "fabrice-madek",
+        "text": "(scrogneugneu) — Il y est parvenu !",
+        "choices": [],
+        "effects": [{ "variable": "moral", "operation": "add", "value": 10 }],
+        "nextDialogueId": "d-05-interphone-rep"
+      },
+      {
+        "id": "d-05-essai-ko",
+        "speaker": "fabrice-madek",
+        "text": "(scrogneugneu — il y parvient, mais manque de chuter dans son effort.)",
+        "choices": [],
+        "nextDialogueId": "d-05-interphone-rep"
+      },
+      {
+        "id": "d-05-interphone-rep",
+        "speaker": "gardien",
+        "text": "Oui ? Vous souhaitez rentrer ? Deux minutes, je viens voir…",
+        "choices": [],
+        "stageDirections": "(Le gardien sort et va en direction de Fabrice.)",
+        "nextDialogueId": "d-05-gardien"
+      },
+      {
+        "id": "d-05-aide-dice",
+        "speaker": "fabrice-madek",
+        "text": "HEHOOOO ? Y'A QUELQU'UN ? … VRAIMENT PERSONNE ? … HEHOOOOOOOOOOOOOO ??!! HEHOOOOOOo… Kof kof ! Mince, j'y suis allé un peu fort…",
+        "choices": [
+          {
+            "id": "c-05-dice-aide",
+            "text": "🎲 Attendre une réponse",
+            "effects": [],
+            "diceCheck": {
+              "stat": "moral",
+              "difficulty": 11,
+              "success": {
+                "nextDialogueId": "d-05-aide-vite",
+                "statEffect": { "stat": "moral", "amount": -10 }
+              },
+              "failure": {
+                "nextDialogueId": "d-05-aide-lent",
+                "statEffect": { "stat": "moral", "amount": -20 }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "d-05-aide-vite",
+        "speaker": "gardien",
+        "text": "Ha bravo, encore un assisté qui ne sait pas flasher un QR Code…",
+        "choices": [],
+        "nextDialogueId": "d-05-gardien"
+      },
+      {
+        "id": "d-05-aide-lent",
+        "speaker": "abel-histoar",
+        "text": "La personne met du temps à arriver. Fabrice trouve le temps long.",
+        "choices": [],
+        "nextDialogueId": "d-05-gardien"
+      },
+      {
+        "id": "d-05-gardien",
+        "speaker": "gardien",
+        "text": "Vous savez monsieur, vous aviez une entrée PMR, hein. Fallait juste faire le tour du bâtiment.",
+        "choices": [],
+        "nextDialogueId": "d-05-tour"
+      },
+      {
+        "id": "d-05-tour",
+        "speaker": "fabrice-madek",
+        "text": "Le tour complet ? C'est long ?",
+        "choices": [],
+        "nextDialogueId": "d-05-kilometre"
+      },
+      {
+        "id": "d-05-kilometre",
+        "speaker": "gardien",
+        "text": "Seulement un petit kilomètre. Mais le trottoir vaut le coup d'œil, c'est un artiste local qui a…",
+        "choices": [],
+        "nextDialogueId": "d-05-end"
+      },
+      {
+        "id": "d-05-end",
+        "speaker": "fabrice-madek",
+        "text": "Je me contenterai de passer par l'entrée classique, je vous remercie !",
+        "choices": []
+      }
+    ],
+
+    "scene-06": [
+      {
+        "id": "d-06-01",
+        "speaker": "fabrice-madek",
+        "text": "Nous y voilà… Dis donc, c'est plutôt classieux ici. Si seulement je savais dans quel bureau aller, ce serait peut-être mieux.",
+        "choices": []
+      },
+      {
+        "id": "d-06-02",
+        "speaker": "gardien",
+        "text": "Je connais le truc, en général, les gens prennent un ticket, et attendent qu'on les appelle.",
+        "choices": []
+      },
+      {
+        "id": "d-06-03",
+        "speaker": "fabrice-madek",
+        "text": "Merci, ce sera plus simple de faire comme ça.",
+        "choices": [],
+        "stageDirections": "(Il prend un ticket. Il se rend compte qu'il y aura une petite attente. Ellipse temporelle, quelques instants avant qu'on vienne le chercher. Son téléphone sonne.)"
+      },
+      {
+        "id": "d-06-choice-tel",
+        "speaker": "fabrice-madek",
+        "text": "Qu'est-ce que… Ho, ma chérie ! Et l'autre gars qui rapplique ! Qu'est-ce que je fais ?",
+        "choices": [
+          {
+            "id": "c-06-A",
+            "text": "Décrocher",
+            "effects": [],
+            "nextDialogueId": "d-06-compagne-parle"
+          },
+          {
+            "id": "c-06-B",
+            "text": "Ne pas répondre",
+            "effects": [{ "variable": "moral", "operation": "add", "value": 5 }],
+            "nextDialogueId": "d-06-math-appel"
+          }
+        ]
+      },
+      {
+        "id": "d-06-compagne-parle",
+        "speaker": "compagne",
+        "text": "Hé ben mon cœur, où tu es ?",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-06-fabrice-oublie"
+      },
+      {
+        "id": "d-06-fabrice-oublie",
+        "speaker": "fabrice-madek",
+        "text": "Ho, j'avais oublié de te prévenir… Je suis allé régler ma situation administrative…",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-06-compagne-ouah"
+      },
+      {
+        "id": "d-06-compagne-ouah",
+        "speaker": "compagne",
+        "text": "Tu t'y es rendu ? Ouah… T'as du courage quand même. Bravo mon chéri ! Je ne t'embête pas plus, tu dois être occupé… Mais je suis de tout cœur avec toi !",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "nextDialogueId": "d-06-merci-cherie"
+      },
+      {
+        "id": "d-06-merci-cherie",
+        "speaker": "fabrice-madek",
+        "text": "Je ne devrais plus traîner. Merci chérie. Bises !",
+        "choices": [],
+        "dialogueSubtype": "phonecall",
+        "effects": [{ "variable": "moral", "operation": "add", "value": 15 }],
+        "nextDialogueId": "d-06-pardon"
+      },
+      {
+        "id": "d-06-pardon",
+        "speaker": "fabrice-madek",
+        "text": "Pardon, je suis à vous…",
+        "choices": [],
+        "nextDialogueId": "d-06-math-arrive"
+      },
+      {
+        "id": "d-06-math-arrive",
+        "speaker": "math-de",
+        "text": "Bonjour, suivez-moi…",
+        "choices": [],
+        "nextDialogueId": "d-06-fabrice-force"
+      },
+      {
+        "id": "d-06-fabrice-force",
+        "speaker": "fabrice-madek",
+        "text": "(Bon, il n'a pas l'air ravi, mais elle m'a redonné de la force !)",
+        "choices": [],
+        "nextDialogueId": "d-06-end"
+      },
+      {
+        "id": "d-06-math-appel",
+        "speaker": "math-de",
+        "text": "Monsieur Madek ? Suivez-moi je vous prie…",
+        "choices": [],
+        "nextDialogueId": "d-06-optimisme"
+      },
+      {
+        "id": "d-06-optimisme",
+        "speaker": "fabrice-madek",
+        "text": "Allez, de l'optimisme, on y est presque, ouf !",
+        "choices": [],
+        "nextDialogueId": "d-06-end"
+      },
+      {
+        "id": "d-06-end",
+        "speaker": "abel-histoar",
+        "text": "Math Dé emmène Fabrice vers son bureau…",
+        "choices": []
+      }
+    ],
+
+    "scene-07": [
+      {
+        "id": "d-07-01",
+        "speaker": "abel-histoar",
+        "text": "Nous sommes au bureau de Math Dé. Rien de bien original. On peut y voir quelques livres ici et là, dont «Vive les chiffres», «J'excelle sur les tableurs» et «La compta, c'est mon dada».",
+        "choices": [],
+        "stageDirections": "Bureau sobre, légèrement encombré de formulaires."
+      },
+      {
+        "id": "d-07-02",
+        "speaker": "math-de",
+        "text": "Bon, voyons voir, c'est pour un dossier, c'est ça ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-03",
+        "speaker": "fabrice-madek",
+        "text": "Tout à fait, je veux régulariser ma situation suite à mon déménagement.",
+        "choices": []
+      },
+      {
+        "id": "d-07-04",
+        "speaker": "math-de",
+        "text": "Et vous n'avez pas scanné le QR Code à l'entrée ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-05",
+        "speaker": "fabrice-madek",
+        "text": "Ha non, parce que voyez-vous, pour moi c'est…",
+        "choices": []
+      },
+      {
+        "id": "d-07-06",
+        "speaker": "math-de",
+        "text": "Très bien, je note… «QR Code non scanné»… Bien, on va passer par la méthode 2. Alors, je suppose que vous avez avec vous le formulaire B6 ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-choice-b6",
+        "speaker": "fabrice-madek",
+        "text": "Heu, le formulaire B6 ?",
+        "choices": [
+          {
+            "id": "c-07-A",
+            "text": "Votre site n'était pas clair",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-07-site-A"
+          },
+          {
+            "id": "c-07-B",
+            "text": "Depuis quand il faut un formulaire ?",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-07-circulaire-B"
+          },
+          {
+            "id": "c-07-C",
+            "text": "Et on ne peut pas le remplir ensemble ?",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-07-remplir-C"
+          }
+        ]
+      },
+      {
+        "id": "d-07-site-A",
+        "speaker": "math-de",
+        "text": "Pas clair notre site ? (il se rend sur le site, on voit le même truc brouillon que dans la séquence 1) Je ne vois pas ce qu'il vous faut, c'est même limpide !",
+        "choices": [],
+        "nextDialogueId": "d-07-comprend-A"
+      },
+      {
+        "id": "d-07-comprend-A",
+        "speaker": "fabrice-madek",
+        "text": "Vous pensez vraiment que tout le monde comprend ce qu'on y voit ?",
+        "choices": [],
+        "nextDialogueId": "d-07-ingenieurs-conv"
+      },
+      {
+        "id": "d-07-circulaire-B",
+        "speaker": "math-de",
+        "text": "Depuis que la circulaire B65 est en cours, voyons, tout le monde sait ça ! C'était dans notre dernière lettre d'informations.",
+        "choices": [],
+        "nextDialogueId": "d-07-mail-B"
+      },
+      {
+        "id": "d-07-mail-B",
+        "speaker": "fabrice-madek",
+        "text": "Celle que j'ai reçue par mail ? Et qui était aussi compréhensible que votre site ?",
+        "choices": [],
+        "nextDialogueId": "d-07-ingenieurs-conv"
+      },
+      {
+        "id": "d-07-remplir-C",
+        "speaker": "math-de",
+        "text": "Pourquoi ? Vous n'êtes pas arrivé à le télécharger depuis notre site ?",
+        "choices": [],
+        "nextDialogueId": "d-07-trouver-C"
+      },
+      {
+        "id": "d-07-trouver-C",
+        "speaker": "fabrice-madek",
+        "text": "C'est surtout que je ne suis pas parvenu à trouver ce formulaire.",
+        "choices": [],
+        "nextDialogueId": "d-07-simple-C"
+      },
+      {
+        "id": "d-07-simple-C",
+        "speaker": "math-de",
+        "text": "Pourtant c'est très simple. Il faut cliquer sur «Services administratifs», puis «Démarches générales», puis «Sous-rubrique B», puis «Documents complémentaires facultatifs», puis sur…",
+        "choices": [],
+        "nextDialogueId": "d-07-pardon-C"
+      },
+      {
+        "id": "d-07-pardon-C",
+        "speaker": "fabrice-madek",
+        "text": "… Pardon, vous trouvez ça simple ?",
+        "choices": [],
+        "nextDialogueId": "d-07-ingenieurs-conv"
+      },
+      {
+        "id": "d-07-ingenieurs-conv",
+        "speaker": "math-de",
+        "text": "Notre équipe d'ingénieurs s'y est attelée avec soin.",
+        "choices": [],
+        "nextDialogueId": "d-07-combien-conv"
+      },
+      {
+        "id": "d-07-combien-conv",
+        "speaker": "fabrice-madek",
+        "text": "Et combien avec une situation de handicap ?",
+        "choices": [],
+        "nextDialogueId": "d-07-fauteuil-conv"
+      },
+      {
+        "id": "d-07-fauteuil-conv",
+        "speaker": "math-de",
+        "text": "Je ne vois pas le rapport, le handicap, ce sont des gens en fauteuil. Pas des gens qui ne savent pas lire.",
+        "choices": [],
+        "nextDialogueId": "d-07-pensais"
+      },
+      {
+        "id": "d-07-pensais",
+        "speaker": "fabrice-madek",
+        "text": "(C'est bien ce que je pensais, il n'y connaît rien en handicap…)",
+        "choices": []
+      },
+      {
+        "id": "d-07-temps",
+        "speaker": "math-de",
+        "text": "Bien… j'espère que vous avez un peu de temps devant vous.",
+        "choices": []
+      },
+      {
+        "id": "d-07-pourquoi",
+        "speaker": "fabrice-madek",
+        "text": "Pourquoi donc ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-papier",
+        "speaker": "math-de",
+        "text": "Parce que je n'ai pas de copie numérique du formulaire B6.",
+        "choices": []
+      },
+      {
+        "id": "d-07-grave",
+        "speaker": "fabrice-madek",
+        "text": "… Et c'est grave ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-tres-grave",
+        "speaker": "math-de",
+        "text": "Très grave. Je vais devoir le faire… EN PAPIER.",
+        "choices": []
+      },
+      {
+        "id": "d-07-ctout",
+        "speaker": "fabrice-madek",
+        "text": "… Et c'est tout ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-papier-cost",
+        "speaker": "math-de",
+        "text": "On voit bien que ce n'est pas vous qui achetez le papier. Remarquez… Pour vous…",
+        "choices": [],
+        "nextDialogueId": "d-07-choice-laisser"
+      },
+      {
+        "id": "d-07-choice-laisser",
+        "speaker": "fabrice-madek",
+        "text": "(Hoho, il va dire quoi, là ?)",
+        "choices": [
+          {
+            "id": "c-07-D",
+            "text": "Le laisser parler",
+            "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-07-aides-D"
+          },
+          {
+            "id": "c-07-E",
+            "text": "L'interrompre",
+            "effects": [],
+            "nextDialogueId": "d-07-interr-E"
+          }
+        ]
+      },
+      {
+        "id": "d-07-aides-D",
+        "speaker": "math-de",
+        "text": "Ben, vu toutes les aides que vous avez, faire des dépenses, ce n'est pas non plus…",
+        "choices": [],
+        "nextDialogueId": "d-07-formulaire-D"
+      },
+      {
+        "id": "d-07-formulaire-D",
+        "speaker": "fabrice-madek",
+        "text": "Oui, bon, si vous imprimiez ce formulaire, plutôt ?",
+        "choices": [],
+        "nextDialogueId": "d-07-desole-D"
+      },
+      {
+        "id": "d-07-desole-D",
+        "speaker": "math-de",
+        "text": "… Désolé.",
+        "choices": [],
+        "nextDialogueId": "d-07-aurais-D"
+      },
+      {
+        "id": "d-07-aurais-D",
+        "speaker": "fabrice-madek",
+        "text": "(Je n'aurais pas dû le laisser dire ça…)",
+        "choices": [],
+        "nextDialogueId": "d-07-ellipse-1"
+      },
+      {
+        "id": "d-07-interr-E",
+        "speaker": "fabrice-madek",
+        "text": "Ce n'est pas vous non plus, je me trompe ?",
+        "choices": [],
+        "nextDialogueId": "d-07-pas-tort-E"
+      },
+      {
+        "id": "d-07-pas-tort-E",
+        "speaker": "math-de",
+        "text": "… Vous n'avez pas tort.",
+        "choices": [],
+        "nextDialogueId": "d-07-ellipse-1"
+      },
+      {
+        "id": "d-07-ellipse-1",
+        "speaker": "abel-histoar",
+        "text": "(Petite ellipse — Math Dé remplit le formulaire.)",
+        "choices": []
+      },
+      {
+        "id": "d-07-choice-pmr",
+        "speaker": "math-de",
+        "text": "Alors attendez, je dois indiquer le handicap, mais… J'ai un trou de mémoire… L'abréviation, que je dois mettre, ici. Pour les personnes en fauteuil. C'est laquelle, déjà ?",
+        "choices": [
+          {
+            "id": "c-07-F",
+            "text": "PDR",
+            "effects": [],
+            "nextDialogueId": "d-07-wrong-pmr"
+          },
+          {
+            "id": "c-07-G",
+            "text": "PMR",
+            "effects": [{ "variable": "moral", "operation": "add", "value": 10 }],
+            "nextDialogueId": "d-07-correct-pmr"
+          },
+          {
+            "id": "c-07-H",
+            "text": "PRM",
+            "effects": [],
+            "nextDialogueId": "d-07-wrong-pmr"
+          },
+          {
+            "id": "c-07-I",
+            "text": "PMD",
+            "effects": [],
+            "nextDialogueId": "d-07-wrong-pmr"
+          },
+          {
+            "id": "c-07-J",
+            "text": "PTDR",
+            "effects": [],
+            "nextDialogueId": "d-07-wrong-pmr"
+          }
+        ]
+      },
+      {
+        "id": "d-07-correct-pmr",
+        "speaker": "math-de",
+        "text": "Ha oui, «Personne à mobilité réduite», tout à fait.",
+        "choices": [],
+        "nextDialogueId": "d-07-on-progresse"
+      },
+      {
+        "id": "d-07-on-progresse",
+        "speaker": "fabrice-madek",
+        "text": "(On progresse…)",
+        "choices": [],
+        "nextDialogueId": "d-07-ellipse-2"
+      },
+      {
+        "id": "d-07-wrong-pmr",
+        "speaker": "math-de",
+        "text": "Ha, c'est l'abréviation de… de…",
+        "choices": [],
+        "nextDialogueId": "d-07-correction-pmr"
+      },
+      {
+        "id": "d-07-correction-pmr",
+        "speaker": "fabrice-madek",
+        "text": "Personne à Mobilité Réduite.",
+        "choices": [],
+        "nextDialogueId": "d-07-ah-pmr"
+      },
+      {
+        "id": "d-07-ah-pmr",
+        "speaker": "math-de",
+        "text": "… Du coup, c'est PMR ?",
+        "choices": [],
+        "nextDialogueId": "d-07-langue"
+      },
+      {
+        "id": "d-07-langue",
+        "speaker": "fabrice-madek",
+        "text": "Ho oui pardon, ma langue a fourchée ! (super…)",
+        "choices": [],
+        "nextDialogueId": "d-07-ellipse-2"
+      },
+      {
+        "id": "d-07-ellipse-2",
+        "speaker": "abel-histoar",
+        "text": "(Petite ellipse — la suite du formulaire se remplit.)",
+        "choices": []
+      },
+      {
+        "id": "d-07-signature-req",
+        "speaker": "math-de",
+        "text": "Voilà, ça, c'est fait. Me reste plus qu'à vous demander votre signature, et je vous libère.",
+        "choices": []
+      },
+      {
+        "id": "d-07-formidable",
+        "speaker": "fabrice-madek",
+        "text": "Formidable !",
+        "choices": [],
+        "stageDirections": "(Math Dé pousse le papier pour que Fabrice le signe. Fabrice est hésitant, et pour cause : le papier n'est pas à sa portée.)"
+      },
+      {
+        "id": "d-07-attend",
+        "speaker": "math-de",
+        "text": "… Hé bien, qu'est-ce que vous attendez ?",
+        "choices": []
+      },
+      {
+        "id": "d-07-loin",
+        "speaker": "fabrice-madek",
+        "text": "C'est-à-dire que votre papier est un peu loin pour moi, là.",
+        "choices": []
+      },
+      {
+        "id": "d-07-lever",
+        "speaker": "math-de",
+        "text": "Oui, je sais, on a un petit bureau, mais si vous vous levez, vous pourrez aisément…",
+        "choices": []
+      },
+      {
+        "id": "d-07-silence",
+        "speaker": "fabrice-madek",
+        "text": "… (Long silence)",
+        "choices": []
+      },
+      {
+        "id": "d-07-pencher-quest",
+        "speaker": "math-de",
+        "text": "… Oui, effectivement, ça ne va pas être évident. Même en vous penchant ?",
+        "choices": [],
+        "nextDialogueId": "d-07-serieux"
+      },
+      {
+        "id": "d-07-serieux",
+        "speaker": "fabrice-madek",
+        "text": "(Il est sérieux ? Hoho, il est sérieux !)",
+        "choices": [
+          {
+            "id": "c-07-K",
+            "text": "Tenter de signer en se penchant",
+            "effects": [{ "variable": "physique", "operation": "add", "value": -10 }],
+            "nextDialogueId": "d-07-pencher-resp"
+          },
+          {
+            "id": "c-07-L",
+            "text": "Demander de rapprocher la feuille",
+            "effects": [],
+            "nextDialogueId": "d-07-rapprocher"
+          },
+          {
+            "id": "c-07-M",
+            "text": "Demander s'il n'aurait pas une tablette PMR",
+            "effects": [],
+            "nextDialogueId": "d-07-tablette"
+          }
+        ]
+      },
+      {
+        "id": "d-07-pencher-resp",
+        "speaker": "fabrice-madek",
+        "text": "Gnnn… (Il manque de se faire mal en essayant de se pencher. Il reprend son souffle.) Non, pfiou… désolé, mais… ça ne va pas le faire.",
+        "choices": [],
+        "nextDialogueId": "d-07-vois-ca"
+      },
+      {
+        "id": "d-07-vois-ca",
+        "speaker": "math-de",
+        "text": "Je vois ça…",
+        "choices": [],
+        "nextDialogueId": "d-07-final-choice"
+      },
+      {
+        "id": "d-07-rapprocher",
+        "speaker": "math-de",
+        "text": "Et comme ça, c'est mieux ?",
+        "choices": [],
+        "nextDialogueId": "d-07-gain"
+      },
+      {
+        "id": "d-07-gain",
+        "speaker": "fabrice-madek",
+        "text": "Ha oui, en la rapprochant de 10 centimètres, c'est un gain conséquent.",
+        "choices": [],
+        "nextDialogueId": "d-07-difficile"
+      },
+      {
+        "id": "d-07-difficile",
+        "speaker": "math-de",
+        "text": "Vous êtes vraiment difficile, vous.",
+        "choices": [],
+        "nextDialogueId": "d-07-non-mais"
+      },
+      {
+        "id": "d-07-non-mais",
+        "speaker": "fabrice-madek",
+        "text": "NON MAIS C'EST PAS UNE QUESTION DE… (Il s'arrête.) Gnnn…",
+        "choices": [],
+        "effects": [{ "variable": "physique", "operation": "add", "value": -10 }],
+        "nextDialogueId": "d-07-fatiguer"
+      },
+      {
+        "id": "d-07-fatiguer",
+        "speaker": "math-de",
+        "text": "Ne vous énervez pas, vous allez vous fatiguer.",
+        "choices": [],
+        "nextDialogueId": "d-07-desesperant"
+      },
+      {
+        "id": "d-07-desesperant",
+        "speaker": "fabrice-madek",
+        "text": "(Ce type est désespérant, mais il n'a pas tort…)",
+        "choices": [],
+        "nextDialogueId": "d-07-final-choice"
+      },
+      {
+        "id": "d-07-tablette",
+        "speaker": "fabrice-madek",
+        "text": "Surtout pas ! Je parle d'une tablette en bois, un support pour poser la feuille à proximité.",
+        "choices": [],
+        "nextDialogueId": "d-07-tablette-rep"
+      },
+      {
+        "id": "d-07-tablette-rep",
+        "speaker": "math-de",
+        "text": "Ha, ce genre de tablette. Oui, je crois qu'on en avait… Le problème, c'est que personne n'en voulait. Du coup, le directeur s'en est servi pour en faire un cale-porte.",
+        "choices": [],
+        "effects": [{ "variable": "moral", "operation": "add", "value": -10 }],
+        "nextDialogueId": "d-07-ha-cale"
+      },
+      {
+        "id": "d-07-ha-cale",
+        "speaker": "fabrice-madek",
+        "text": "… Ha. (Je suis persuadé qu'il se moque de moi…)",
+        "choices": [],
+        "nextDialogueId": "d-07-final-choice"
+      },
+      {
+        "id": "d-07-final-choice",
+        "speaker": "math-de",
+        "text": "Dites, on ne va pas y arriver si vous n'y mettez pas du vôtre.",
+        "choices": [],
+        "nextDialogueId": "d-07-mais-moi"
+      },
+      {
+        "id": "d-07-mais-moi",
+        "speaker": "fabrice-madek",
+        "text": "(Comme si c'était moi le problème ! Et l'heure tourne. Est-ce que je tente quelque chose, ou non ?)",
+        "choices": [
+          {
+            "id": "c-07-N",
+            "text": "Abandonner",
+            "effects": [{ "variable": "demarche_ok", "operation": "set", "value": 0 }],
+            "nextDialogueId": "d-07-abandon-01"
+          },
+          {
+            "id": "c-07-O",
+            "text": "Tenter une dernière approche",
+            "effects": [{ "variable": "demarche_ok", "operation": "set", "value": 1 }],
+            "nextDialogueId": "d-07-tenter-01"
+          }
+        ]
+      },
+      {
+        "id": "d-07-abandon-01",
+        "speaker": "fabrice-madek",
+        "text": "Écoutez, je crois que je vais revenir une autre fois.",
+        "choices": [],
+        "nextDialogueId": "d-07-abandon-02"
+      },
+      {
+        "id": "d-07-abandon-02",
+        "speaker": "math-de",
+        "text": "Pardon ? Alors que j'ai imprimé une feuille pour vous ?",
+        "choices": [],
+        "nextDialogueId": "d-07-abandon-03"
+      },
+      {
+        "id": "d-07-abandon-03",
+        "speaker": "fabrice-madek",
+        "text": "Disons que je suis vraiment rincé. La route, le QR Code, l'interphone… maintenant ça. Sans compter le temps qu'on a mis jusqu'à présent.",
+        "choices": [],
+        "nextDialogueId": "d-07-abandon-04"
+      },
+      {
+        "id": "d-07-abandon-04",
+        "speaker": "math-de",
+        "text": "Vous souhaitez abandonner votre démarche ?",
+        "choices": [],
+        "nextDialogueId": "d-07-abandon-05"
+      },
+      {
+        "id": "d-07-abandon-05",
+        "speaker": "fabrice-madek",
+        "text": "Écoutez, merci tout de même, mais je n'en peux plus…",
+        "choices": [],
+        "nextDialogueId": "d-07-narrateur-concl"
+      },
+      {
+        "id": "d-07-tenter-01",
+        "speaker": "fabrice-madek",
+        "text": "Et si vous veniez là vous-même, m'apporter un truc dur, pour que je signe sur vos genoux ?",
+        "choices": [],
+        "nextDialogueId": "d-07-tenter-02"
+      },
+      {
+        "id": "d-07-tenter-02",
+        "speaker": "math-de",
+        "text": "Ce n'est pas très professionnel.",
+        "choices": [],
+        "nextDialogueId": "d-07-tenter-03"
+      },
+      {
+        "id": "d-07-tenter-03",
+        "speaker": "fabrice-madek",
+        "text": "Ha, je sais… Mais ce serait si dommage d'avoir gaspillé du papier pour rien…",
+        "choices": [],
+        "nextDialogueId": "d-07-tenter-04"
+      },
+      {
+        "id": "d-07-tenter-04",
+        "speaker": "math-de",
+        "text": "… J'ai compris, n'en dites pas plus. (La signature se fait.)",
+        "choices": [],
+        "nextDialogueId": "d-07-tenter-05"
+      },
+      {
+        "id": "d-07-tenter-05",
+        "speaker": "math-de",
+        "text": "Bien, je pense qu'on est bons.",
+        "choices": [],
+        "nextDialogueId": "d-07-tenter-06"
+      },
+      {
+        "id": "d-07-tenter-06",
+        "speaker": "fabrice-madek",
+        "text": "Ravi de l'entendre.",
+        "choices": [],
+        "nextDialogueId": "d-07-tenter-07"
+      },
+      {
+        "id": "d-07-tenter-07",
+        "speaker": "math-de",
+        "text": "Je persiste à dire que sur le site, il y avait…",
+        "choices": [],
+        "nextDialogueId": "d-07-tablette-pmr"
+      },
+      {
+        "id": "d-07-tablette-pmr",
+        "speaker": "fabrice-madek",
+        "text": "Merci, monsieur Dé, à bientôt. Et pensez à récupérer votre tablette PMR.",
+        "choices": [],
+        "nextDialogueId": "d-07-reflechir"
+      },
+      {
+        "id": "d-07-reflechir",
+        "speaker": "math-de",
+        "text": "… J'y réfléchirai.",
+        "choices": [],
+        "nextDialogueId": "d-07-narrateur-concl"
+      },
+      {
+        "id": "d-07-narrateur-concl",
+        "speaker": "abel-histoar",
+        "text": "C'est quand même fou, quand on y pense, tout ce qu'il faut faire pour signer un petit bout de papier. C'est encore plus fou de se dire qu'il faudrait deux trois ajustements, çà et là, pour que cela devienne plus simple. Et là, je ne parle pas que pour Fabrice.\n\nBien, je vous passe le trajet retour, qui a un peu plus épuisé Fabrice, mais j'imagine que vous avez compris l'idée. Notre personnage est donc bien rentré chez lui…",
+        "choices": [],
+        "stageDirections": "(Note : les barres ont baissé volontairement, pour bien faire comprendre que tout ça a été épuisant. Le moral ne sera pas au beau fixe si la décision d'abandonner a été prise.)"
+      },
+      {
+        "id": "d-07-end",
+        "speaker": "fabrice-madek",
+        "text": "(Fabrice sort du bureau, épuisé.)",
+        "choices": []
+      }
+    ],
+
+    "scene-conclusion": [
+      {
+        "id": "d-concl-01",
+        "speaker": "fabrice-madek",
+        "text": "Bonsoir chérie…",
+        "choices": []
+      },
+      {
+        "id": "d-concl-02",
+        "speaker": "compagne",
+        "text": "Hé ben dis donc, t'arrives bien tard mon chou ! Qu'est-ce qui t'est arrivé ?",
+        "choices": []
+      },
+      {
+        "id": "d-concl-03",
+        "speaker": "fabrice-madek",
+        "text": "Trois fois rien, j'ai été faire de l'administratif…",
+        "choices": []
+      },
+      {
+        "id": "d-concl-04",
+        "speaker": "compagne",
+        "text": "Mais c'est par rapport au déménagement que t'y es allé ? Je croyais pourtant que tu avais reçu tes codes d'accès pour régler ça sur internet !",
+        "choices": []
+      },
+      {
+        "id": "d-concl-05",
+        "speaker": "fabrice-madek",
+        "text": "C'était le but initial, sauf que leur site web est aux fraises. Je n'ai jamais vu un truc aussi mal fichu.",
+        "choices": []
+      },
+      {
+        "id": "d-concl-06",
+        "speaker": "compagne",
+        "text": "Ha bon ? J'ai fait les miennes en deux minutes l'autre jour. J'étais persuadée que tu t'en sortirais…",
+        "choices": []
+      },
+      {
+        "id": "d-concl-07",
+        "speaker": "fabrice-madek",
+        "text": "Tu as pu te retrouver dans ce foutoir ?",
+        "choices": []
+      },
+      {
+        "id": "d-concl-08",
+        "speaker": "compagne",
+        "text": "Oui, regarde, y'a un mode d'accessibilité…",
+        "choices": [],
+        "stageDirections": "(On revoit l'écran fouillis de la première séquence. En tout petit, dans le coin intérieur gauche, on remarque un bouton où il est écrit «Accessible».)"
+      },
+      {
+        "id": "d-concl-09",
+        "speaker": "compagne",
+        "text": "Voilà… Tu cliques là et tu passes en mode Accessible. C'est vrai qu'ils l'ont un peu caché…",
+        "choices": []
+      },
+      {
+        "id": "d-concl-10",
+        "speaker": "fabrice-madek",
+        "text": "… En tout petit, bien évidemment.",
+        "choices": []
+      },
+      {
+        "id": "d-concl-11",
+        "speaker": "compagne",
+        "text": "Bon, et si tu me disais un peu comment tu t'en es tiré, le temps qu'on prépare le repas ?",
+        "choices": []
+      },
+      {
+        "id": "d-concl-12",
+        "speaker": "fabrice-madek",
+        "text": "… Alors accroche-toi bien mon cœur, que je te raconte mon périple à AccessCity !",
+        "choices": []
+      },
+      {
+        "id": "d-concl-13",
+        "speaker": "abel-histoar",
+        "text": "Laissons-les parler entre eux, nous, on connaît déjà l'histoire ! C'est ainsi que se conclut notre récit du jour dans les rues d'AccessCity…\n\nMais ce n'est pas tout à fait terminé pour vous ! Je vous propose de prendre désormais un temps, ensemble, pour faire un peu le point sur votre expérience. Répondez le plus honnêtement possible aux quelques questions qui vont suivre !",
+        "choices": [],
+        "isConclusion": true
+      }
+    ]
+  },
+
+  "elementsByScene": {},
+
+  "characters": [
+    {
+      "id": "abel-histoar",
+      "name": "Abel His-Toar",
+      "description": "Narrateur vénérable de l'histoire. Il n'interagit pas directement avec les personnages, mais commente, précise et reprend. Du fait de sa grande expérience, il n'est plus surpris par l'absurdité du monde.",
+      "sprites": {},
+      "moods": ["neutral", "amused", "concerned", "ironic"],
+      "voicePreset": "homme-grave",
+      "role": "narrator"
+    },
+    {
+      "id": "fabrice-madek",
+      "name": "Fabrice Madek",
+      "description": "Le personnage principal. En fauteuil roulant manuel suite à un accident. Bonhomme malgré tout, parfois chafouin. Essaie de faire sa démarche administrative.",
+      "sprites": {},
+      "moods": ["neutral", "happy", "tired", "frustrated", "determined"],
+      "voicePreset": "homme-neutre",
+      "isProtagonist": true,
+      "initialStats": {
+        "physique": 100,
+        "mentale": 100
+      }
+    },
+    {
+      "id": "interlocuteur-handivroum",
+      "name": "Opérateur HandiVroum",
+      "description": "Opérateur du service de transport adapté. Confond les lettres et les chiffres au téléphone.",
+      "sprites": {},
+      "moods": ["neutral", "annoyed", "apologetic"],
+      "voicePreset": "homme-neutre"
+    },
+    {
+      "id": "passant",
+      "name": "Le Passant",
+      "description": "Passant lambda d'AccessCity. Aime la ville pour son aspect esthétique mais ne capte rien au concept d'accessibilité. Peut devenir hostile.",
+      "sprites": {},
+      "moods": ["cheerful", "hostile", "condescending"],
+      "voicePreset": "homme-jovial"
+    },
+    {
+      "id": "seb-assorcie",
+      "name": "Séb Assorcié",
+      "description": "Chauffeur de bus et de bus adaptés PMR. L'organisation n'est pas son fort, mais il essaie.",
+      "sprites": {},
+      "moods": ["friendly", "neutral"],
+      "voicePreset": "homme-neutre"
+    },
+    {
+      "id": "gardien",
+      "name": "Le Gardien",
+      "description": "Gardien du bâtiment administratif. Pas forcément malveillant, mais condescendant par inadvertance.",
+      "sprites": {},
+      "moods": ["neutral", "condescending"],
+      "voicePreset": "homme-neutre"
+    },
+    {
+      "id": "compagne",
+      "name": "La Compagne",
+      "description": "Compagne de Fabrice. Aimante et encourageante. N'apparaît que dans les séquences 6 et conclusive.",
+      "sprites": {},
+      "moods": ["happy", "worried", "amused", "encouraging"],
+      "voicePreset": "femme-douce"
+    },
+    {
+      "id": "math-de",
+      "name": "Math Dé",
+      "description": "Agent administratif d'AccessCity. Suit la procédure à la lettre sans écart. Connaît tous les règlements, y compris les plus absurdes. Ne sera coopératif que si vous suivez sa «logique implacable».",
+      "sprites": {},
+      "moods": ["neutral", "bureaucratic", "embarrassed", "discomfort"],
+      "voicePreset": "homme-neutre"
+    }
+  ],
+
+  "projectData": {
+    "title": "Bienvenue à AccessCity",
+    "location": "AccessCity",
+    "tone": "Humour noir, sensibilisation au handicap",
+    "description": "Scénario pilote APF France Handicap — Territoire Limousin. Incarnez Fabrice Madek et découvrez les obstacles du quotidien à AccessCity."
+  },
+
+  "projectSettings": {
+    "project": {
+      "title": "Bienvenue à AccessCity",
+      "author": "APF France Handicap — Territoire Limousin",
+      "description": "Scénario pilote v1.0 — Fabrice Madek et la démarche administrative",
+      "version": "1.0"
+    },
+    "editor": {
+      "theme": "dark",
+      "autosave": true,
+      "autosaveInterval": 30,
+      "gridSize": 20,
+      "snapToGrid": false,
+      "showGrid": false
+    },
+    "game": {
+      "variables": {
+        "physique": { "initial": 100, "min": 0, "max": 100 },
+        "moral": { "initial": 100, "min": 0, "max": 100 },
+        "demarche_ok": { "initial": 0, "min": 0, "max": 1 }
+      }
+    }
+  }
+}

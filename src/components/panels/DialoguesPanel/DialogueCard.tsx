@@ -5,6 +5,7 @@ import { GripVertical, GitBranch, Wand2, Copy, Trash2, MessageCircleReply, Messa
 import { Button } from '../../ui/button';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useCharactersStore } from '@/stores/charactersStore';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import type { Dialogue } from '@/types';
 
 /**
@@ -46,6 +47,7 @@ interface TypeInfo {
   icon: React.ReactNode;
   label: string;
   colorClass: string;
+  bgClass: string; // fond de carte (couleur type)
 }
 
 function getDialogueTypeInfo(dialogue: Dialogue): TypeInfo {
@@ -54,6 +56,7 @@ function getDialogueTypeInfo(dialogue: Dialogue): TypeInfo {
       icon: <span aria-hidden="true" className="text-[10px]">🎲</span>,
       label: 'Dé',
       colorClass: 'border-amber-500/60 text-amber-400',
+      bgClass: 'bg-red-500/5',       // rouge — risque
     };
   }
   if (dialogue.choices && dialogue.choices.length > 0) {
@@ -61,12 +64,14 @@ function getDialogueTypeInfo(dialogue: Dialogue): TypeInfo {
       icon: <GitBranch className="w-3 h-3" aria-hidden="true" />,
       label: `${dialogue.choices.length} choix`,
       colorClass: 'border-purple-500/60 text-purple-400',
+      bgClass: 'bg-orange-500/5',    // orange — branchement
     };
   }
   return {
     icon: <MessageSquare className="w-3 h-3" aria-hidden="true" />,
     label: 'Simple',
     colorClass: 'border-slate-600 text-slate-500',
+    bgClass: 'bg-emerald-500/5',    // vert — simple
   };
 }
 
@@ -76,6 +81,7 @@ export interface DialogueCardProps {
   dialogue: Dialogue;
   index: number;
   sceneId: string;
+  isSelected?: boolean;
   onDialogueSelect?: (sceneId: string, index: number) => void;
   onEditWithWizard?: (index: number) => void;
 }
@@ -86,6 +92,7 @@ export function DialogueCard({
   dialogue,
   index,
   sceneId,
+  isSelected = false,
   onDialogueSelect,
   onEditWithWizard,
 }: DialogueCardProps) {
@@ -108,6 +115,7 @@ export function DialogueCard({
   const duplicateDialogue = useDialoguesStore(state => state.duplicateDialogue);
   const deleteDialogue    = useDialoguesStore(state => state.deleteDialogue);
   const sceneDialogues    = useDialoguesStore(s => s.getDialoguesByScene(sceneId));
+  const isKid = useIsKidMode();
 
   const speaker     = characters.find(c => c.id === dialogue.speaker);
   const speakerName = speaker?.name || dialogue.speaker || 'Inconnu';
@@ -149,12 +157,15 @@ export function DialogueCard({
     }
   };
 
-  // ── Border réponse A/B ───────────────────────────────────────────────────────
-  const responseBorderClass = isResponse
-    ? responseIndex === 0
-      ? 'border-l-4 border-l-emerald-500 border-[var(--color-border-base)] hover:border-emerald-400'
-      : 'border-l-4 border-l-rose-500 border-[var(--color-border-base)] hover:border-rose-400'
-    : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]';
+  // ── Fond & bordure ────────────────────────────────────────────────────────────
+  const cardBg = isSelected ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-base)]';
+  const borderCls = isSelected
+    ? 'border-[var(--color-primary)]'
+    : isResponse
+      ? responseIndex === 0
+        ? 'border-l-4 border-l-emerald-500 border-[var(--color-border-base)] hover:border-emerald-400'
+        : 'border-l-4 border-l-rose-500 border-[var(--color-border-base)] hover:border-rose-400'
+      : 'border-[var(--color-border-base)] hover:border-[var(--color-primary)]';
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -162,7 +173,7 @@ export function DialogueCard({
       ref={setNodeRef}
       style={style}
       data-dialogue-id={`${sceneId}-${index}`}
-      className={`group relative bg-[var(--color-bg-base)] border-2 rounded-lg px-2 py-2 transition-all cursor-pointer hover:shadow-[var(--shadow-game-glow)] ${responseBorderClass}`}
+      className={`group relative ${cardBg} border rounded-lg transition-all cursor-pointer hover:shadow-[var(--shadow-game-glow)] ${borderCls}`}
       onClick={handleClick}
       role="button"
       tabIndex={0}
@@ -177,73 +188,84 @@ export function DialogueCard({
         aria-label="Réorganiser"
         onClick={e => e.stopPropagation()}
       >
-        <GripVertical className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+        <GripVertical className={`w-3.5 h-3.5 ${isSelected ? 'text-white/50' : 'text-[var(--color-text-muted)]'}`} />
       </div>
 
-      {/* ── Contenu ────────────────────────────────────────────────────── */}
-      <div className="ml-4">
+      {/* ── Layout principal : colonne gauche + contenu ─────────────────── */}
+      <div className="flex items-stretch pl-5 pr-2 py-2">
 
-        {/* Ligne 1 : speaker dot + nom + index */}
-        <div className="flex items-center gap-1.5 mb-1 min-w-0">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${speakerBg}`} aria-hidden="true" />
-          <span className="text-[13px] font-semibold text-[var(--color-text-primary)] truncate flex-1 leading-tight">
-            {speakerName}
+        {/* Colonne gauche : numéro + pastille speaker */}
+        <div className="flex flex-col items-center justify-center gap-1.5 w-7 flex-shrink-0 mr-2">
+          <span className={`text-[11px] font-bold tabular-nums leading-none ${isSelected ? 'text-white/60' : 'text-[var(--color-text-muted)]'}`}>
+            {String(index + 1).padStart(2, '0')}
           </span>
-          {isResponse && (
-            <span className={`flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded border flex-shrink-0 ${
-              responseIndex === 0
-                ? 'border-emerald-500/60 text-emerald-400'
-                : 'border-rose-500/60 text-rose-400'
-            }`}>
-              <MessageCircleReply className="w-3 h-3" aria-hidden="true" />
-              {responseIndex === 0 ? 'A' : 'B'}
-            </span>
-          )}
-          <span className="text-[10px] text-[var(--color-text-muted)] font-mono flex-shrink-0">
-            #{String(index + 1).padStart(2, '0')}
-          </span>
+          <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white/70' : speakerBg}`} aria-hidden="true" />
         </div>
 
-        {/* Ligne 2 : texte (2 lignes max) */}
-        <p className="text-[13px] text-[var(--color-text-secondary)] line-clamp-2 leading-snug mb-1.5">
-          {dialogue.text || '(vide)'}
-        </p>
+        {/* Contenu principal */}
+        <div className="flex-1 min-w-0">
 
-        {/* Ligne 3 : badge type + actions */}
-        <div className="flex items-center justify-between gap-1">
-          <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border ${typeInfo.colorClass}`}>
-            {typeInfo.icon}
-            {typeInfo.label}
-          </span>
+          {/* Ligne 1 : speaker + badge réponse */}
+          <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
+            <span className={`${isKid ? 'text-[15px]' : 'text-[12px]'} font-semibold truncate flex-1 leading-tight ${isSelected ? 'text-white' : 'text-[var(--color-text-primary)]'}`}>
+              {speakerName}
+            </span>
+            {isResponse && (
+              <span className={`flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded border flex-shrink-0 ${
+                isSelected
+                  ? 'border-white/40 text-white'
+                  : responseIndex === 0
+                    ? 'border-emerald-500/60 text-emerald-400'
+                    : 'border-rose-500/60 text-rose-400'
+              }`}>
+                <MessageCircleReply className="w-3 h-3" aria-hidden="true" />
+                {responseIndex === 0 ? 'A' : 'B'}
+              </span>
+            )}
+          </div>
 
-          <div className="flex gap-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 hover:text-primary hover:bg-primary/10"
-              onClick={e => { e.stopPropagation(); onEditWithWizard?.(index); }}
-              aria-label="Modifier avec l'assistant"
-            >
-              <Wand2 className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 hover:bg-[var(--color-bg-hover)]"
-              onClick={handleDuplicate}
-              aria-label="Dupliquer"
-            >
-              <Copy className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-              onClick={handleDelete}
-              aria-label="Supprimer"
-            >
-              <Trash2 className="w-3 h-3" />
-            </Button>
+          {/* Ligne 2 : texte (2 lignes max) */}
+          <p className={`${isKid ? 'text-[14px]' : 'text-[12px]'} line-clamp-2 leading-snug mb-1 ${isSelected ? 'text-white/90' : 'text-[var(--color-text-secondary)]'}`}>
+            {dialogue.text || '(vide)'}
+          </p>
+
+          {/* Ligne 3 : badge type + actions (hover seulement) */}
+          <div className="flex items-center justify-between gap-1">
+            <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border min-w-0 ${isSelected ? 'border-white/30 text-white/80' : typeInfo.colorClass}`}>
+              {typeInfo.icon}
+              {typeInfo.label}
+            </span>
+
+            {/* Actions : visibles seulement au survol (toujours en mode kid ou sélectionné) */}
+            <div className={`flex gap-1 flex-shrink-0 transition-opacity duration-150 ${isSelected || isKid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isKid ? 'h-9 w-9' : 'h-6 w-6'} ${isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'hover:text-primary hover:bg-primary/10'}`}
+                onClick={e => { e.stopPropagation(); onEditWithWizard?.(index); }}
+                aria-label="Modifier avec l'assistant"
+              >
+                <Wand2 className={isKid ? 'w-4 h-4' : 'w-3 h-3'} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isKid ? 'h-9 w-9' : 'h-6 w-6'} ${isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'hover:bg-[var(--color-bg-hover)]'}`}
+                onClick={handleDuplicate}
+                aria-label="Dupliquer"
+              >
+                <Copy className={isKid ? 'w-4 h-4' : 'w-3 h-3'} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isKid ? 'h-9 w-9' : 'h-6 w-6'} ${isSelected ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-red-500 hover:text-red-400 hover:bg-red-500/10'}`}
+                onClick={handleDelete}
+                aria-label="Supprimer"
+              >
+                <Trash2 className={isKid ? 'w-4 h-4' : 'w-3 h-3'} />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

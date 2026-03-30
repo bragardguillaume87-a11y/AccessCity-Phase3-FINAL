@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import type { Dialogue } from '../types';
+import { generateId } from '../utils/generateId';
 
 /**
  * Dialogues Store
@@ -48,57 +50,169 @@ interface DialoguesState {
 
   // Cascade delete (appelé par scenesStore)
   deleteAllDialoguesForScene: (sceneId: string) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importDialoguesByScene: (data: Record<string, Dialogue[]>) => void;
 }
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-/**
- * Génère un ID unique pour dialogue
- */
-function generateDialogueId(): string {
-  return `dialogue-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
-
-/**
- * Génère un ID unique pour choice
- */
-function generateChoiceId(index: number): string {
-  return `choice-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`;
-}
+const generateDialogueId = () => generateId('dialogue');
+const generateChoiceId = (index: number) => `${generateId('choice')}-${index}`;
 
 // ============================================================================
 // SAMPLE DATA - Dialogues de démonstration
 // ============================================================================
 
+// ⚠️ Référence stable — évite || [] inline dans getDialoguesByScene (selector réactif).
+const EMPTY_DIALOGUES: Dialogue[] = [];
+
 const SAMPLE_DIALOGUES: Record<string, Dialogue[]> = {
   scenetest01: [
-    { id: 'd01-00', speaker: 'narrator', text: "Vous arrivez devant la mairie pour présenter AccessCity — une initiative pour rendre la ville accessible à tous.", choices: [], stageDirections: "Le joueur s'arrête devant l'entrée principale." },
-    { id: 'd01-01', speaker: 'counsellor', text: "Bonjour ! Je suis le conseiller Dupont. J'ai entendu parler de votre projet — je suis impatient d'en savoir plus.", choices: [], speakerMood: 'happy' },
-    { id: 'd01-02', speaker: 'player', text: "Merci de me recevoir, monsieur. AccessCity vise à cartographier et corriger tous les obstacles à l'accessibilité dans notre quartier.", choices: [] },
-    { id: 'd01-03', speaker: 'counsellor', text: "Intéressant. Quelle sera votre première priorité sur le terrain ?", choices: [
-      { id: 'c01-03-A', text: "Les rampes d'accès : elles bloquent les fauteuils roulants.", effects: [{ variable: 'mentale', value: 5, operation: 'add' }], actionType: 'continue', nextDialogueId: 'd01-04' },
-      { id: 'c01-03-B', text: 'La signalétique : les personnes malvoyantes sont aussi concernées.', effects: [{ variable: 'mentale', value: 3, operation: 'add' }], actionType: 'continue', nextDialogueId: 'd01-05' }
-    ]},
-    { id: 'd01-04', speaker: 'counsellor', text: 'Excellent choix ! Les rampes sont souvent négligées. Votre approche est très concrète.', choices: [], isResponse: true, speakerMood: 'happy', nextDialogueId: 'd01-06' },
-    { id: 'd01-05', speaker: 'counsellor', text: 'Très juste ! La signalétique profite à tout le monde — et c\'est souvent peu coûteux à corriger.', choices: [], isResponse: true, speakerMood: 'happy', nextDialogueId: 'd01-06' },
-    { id: 'd01-06', speaker: 'counsellor', text: "Avant de vous accorder un budget, je dois m'assurer que vous pouvez défendre ce projet devant le conseil. Êtes-vous prêt ?", choices: [
-      { id: 'c01-06-dice', text: 'Je tente de convaincre le conseil !', effects: [], actionType: 'diceCheck', diceCheck: { stat: 'mentale', difficulty: 50, success: { nextDialogueId: 'd01-07' }, failure: { nextDialogueId: 'd01-08' } }}
-    ], stageDirections: 'Le jet de dés détermine si le joueur convainc le conseil municipal.' },
-    { id: 'd01-07', speaker: 'counsellor', text: "Remarquable ! Votre discours a convaincu le conseil à l'unanimité. Le budget est accordé !", choices: [], speakerMood: 'happy', nextDialogueId: 'd01-09' },
-    { id: 'd01-08', speaker: 'counsellor', text: 'Le conseil hésite encore. Revenez avec des données de terrain plus précises et nous reconsidérerons.', choices: [], speakerMood: 'neutral', nextDialogueId: 'd01-09' },
-    { id: 'd01-09', speaker: 'narrator', text: "La rencontre s'est terminée. Votre aventure pour rendre la ville accessible à tous ne fait que commencer.", choices: [], stageDirections: 'Le joueur quitte la salle du conseil avec ses notes.' }
+    {
+      id: 'd01-00',
+      speaker: 'narrator',
+      text: 'Vous arrivez devant la mairie pour présenter AccessCity — une initiative pour rendre la ville accessible à tous.',
+      choices: [],
+      stageDirections: "Le joueur s'arrête devant l'entrée principale.",
+    },
+    {
+      id: 'd01-01',
+      speaker: 'counsellor',
+      text: "Bonjour ! Je suis le conseiller Dupont. J'ai entendu parler de votre projet — je suis impatient d'en savoir plus.",
+      choices: [],
+      speakerMood: 'happy',
+    },
+    {
+      id: 'd01-02',
+      speaker: 'player',
+      text: "Merci de me recevoir, monsieur. AccessCity vise à cartographier et corriger tous les obstacles à l'accessibilité dans notre quartier.",
+      choices: [],
+    },
+    {
+      id: 'd01-03',
+      speaker: 'counsellor',
+      text: 'Intéressant. Quelle sera votre première priorité sur le terrain ?',
+      choices: [
+        {
+          id: 'c01-03-A',
+          text: "Les rampes d'accès : elles bloquent les fauteuils roulants.",
+          effects: [{ variable: 'mentale', value: 5, operation: 'add' }],
+          actionType: 'continue',
+          nextDialogueId: 'd01-04',
+        },
+        {
+          id: 'c01-03-B',
+          text: 'La signalétique : les personnes malvoyantes sont aussi concernées.',
+          effects: [{ variable: 'mentale', value: 3, operation: 'add' }],
+          actionType: 'continue',
+          nextDialogueId: 'd01-05',
+        },
+      ],
+    },
+    {
+      id: 'd01-04',
+      speaker: 'counsellor',
+      text: 'Excellent choix ! Les rampes sont souvent négligées. Votre approche est très concrète.',
+      choices: [],
+      isResponse: true,
+      speakerMood: 'happy',
+      nextDialogueId: 'd01-06',
+    },
+    {
+      id: 'd01-05',
+      speaker: 'counsellor',
+      text: "Très juste ! La signalétique profite à tout le monde — et c'est souvent peu coûteux à corriger.",
+      choices: [],
+      isResponse: true,
+      speakerMood: 'happy',
+      nextDialogueId: 'd01-06',
+    },
+    {
+      id: 'd01-06',
+      speaker: 'counsellor',
+      text: "Avant de vous accorder un budget, je dois m'assurer que vous pouvez défendre ce projet devant le conseil. Êtes-vous prêt ?",
+      choices: [
+        {
+          id: 'c01-06-dice',
+          text: 'Je tente de convaincre le conseil !',
+          effects: [],
+          actionType: 'diceCheck',
+          diceCheck: {
+            stat: 'mentale',
+            difficulty: 50,
+            success: { nextDialogueId: 'd01-07' },
+            failure: { nextDialogueId: 'd01-08' },
+          },
+        },
+      ],
+      stageDirections: 'Le jet de dés détermine si le joueur convainc le conseil municipal.',
+    },
+    {
+      id: 'd01-07',
+      speaker: 'counsellor',
+      text: "Remarquable ! Votre discours a convaincu le conseil à l'unanimité. Le budget est accordé !",
+      choices: [],
+      speakerMood: 'happy',
+      nextDialogueId: 'd01-09',
+    },
+    {
+      id: 'd01-08',
+      speaker: 'counsellor',
+      text: 'Le conseil hésite encore. Revenez avec des données de terrain plus précises et nous reconsidérerons.',
+      choices: [],
+      speakerMood: 'neutral',
+      nextDialogueId: 'd01-09',
+    },
+    {
+      id: 'd01-09',
+      speaker: 'narrator',
+      text: "La rencontre s'est terminée. Votre aventure pour rendre la ville accessible à tous ne fait que commencer.",
+      choices: [],
+      stageDirections: 'Le joueur quitte la salle du conseil avec ses notes.',
+    },
   ],
   scenetest02: [
-    { id: 'd02-00', speaker: 'narrator', text: "Une nouvelle journée commence. Carnet en main, vous sortez recenser les obstacles à l'accessibilité.", choices: [] },
-    { id: 'd02-01', speaker: 'player', text: 'Par où commencer ? Le quartier est vaste...', choices: [] },
-    { id: 'd02-02', speaker: 'narrator', text: "Devant la pharmacie, une marche de 12 cm bloque les fauteuils roulants. C'est un bon point de départ.", choices: [] },
-    { id: 'd02-03', speaker: 'player', text: '...', choices: [
-      { id: 'c02-03-A', text: 'Je mesure et photographie le problème avec précision.', effects: [{ variable: 'mentale', value: 5, operation: 'add' }], actionType: 'continue' },
-      { id: 'c02-03-B', text: "Je note l'emplacement et continue rapidement.", effects: [{ variable: 'mentale', value: 2, operation: 'add' }], actionType: 'continue' }
-    ]}
-  ]
+    {
+      id: 'd02-00',
+      speaker: 'narrator',
+      text: "Une nouvelle journée commence. Carnet en main, vous sortez recenser les obstacles à l'accessibilité.",
+      choices: [],
+    },
+    {
+      id: 'd02-01',
+      speaker: 'player',
+      text: 'Par où commencer ? Le quartier est vaste...',
+      choices: [],
+    },
+    {
+      id: 'd02-02',
+      speaker: 'narrator',
+      text: "Devant la pharmacie, une marche de 12 cm bloque les fauteuils roulants. C'est un bon point de départ.",
+      choices: [],
+    },
+    {
+      id: 'd02-03',
+      speaker: 'player',
+      text: '...',
+      choices: [
+        {
+          id: 'c02-03-A',
+          text: 'Je mesure et photographie le problème avec précision.',
+          effects: [{ variable: 'mentale', value: 5, operation: 'add' }],
+          actionType: 'continue',
+        },
+        {
+          id: 'c02-03-B',
+          text: "Je note l'emplacement et continue rapidement.",
+          effects: [{ variable: 'mentale', value: 2, operation: 'add' }],
+          actionType: 'continue',
+        },
+      ],
+    },
+  ],
 };
 
 // ============================================================================
@@ -120,7 +234,7 @@ export const useDialoguesStore = create<DialoguesState>()(
           // ============================================================
 
           getDialoguesByScene: (sceneId) => {
-            return get().dialoguesByScene[sceneId] || [];
+            return get().dialoguesByScene[sceneId] ?? EMPTY_DIALOGUES;
           },
 
           getDialogueByIndex: (sceneId, index) => {
@@ -204,9 +318,7 @@ export const useDialoguesStore = create<DialoguesState>()(
                 return {
                   dialoguesByScene: {
                     ...state.dialoguesByScene,
-                    [sceneId]: dialogues.map((d, i) =>
-                      i === index ? { ...d, ...updates } : d
-                    ),
+                    [sceneId]: dialogues.map((d, i) => (i === index ? { ...d, ...updates } : d)),
                   },
                 };
               },
@@ -368,6 +480,9 @@ export const useDialoguesStore = create<DialoguesState>()(
               'dialogues/duplicateDialogue'
             );
           },
+          importDialoguesByScene: (data) => {
+            set(() => ({ dialoguesByScene: data }), false, 'dialogues/importDialoguesByScene');
+          },
         })),
         { name: 'DialoguesStore' }
       ),
@@ -379,7 +494,7 @@ export const useDialoguesStore = create<DialoguesState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

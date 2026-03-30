@@ -18,33 +18,33 @@
 
 .dialogue-graph-container {
   /* Backgrounds */
-  --graph-bg:          #0f172a;   /* Slate 900 — main canvas background */
-  --graph-surface:     #1e293b;   /* Slate 800 — controls, minimap panels */
+  --graph-bg: #0f172a; /* Slate 900 — main canvas background */
+  --graph-surface: #1e293b; /* Slate 800 — controls, minimap panels */
   --graph-surface-kbd: rgba(30, 41, 59, 0.9); /* Slate 800 at 90% — keyboard hints */
 
   /* Borders */
-  --graph-border:        #334155; /* Slate 700 */
+  --graph-border: #334155; /* Slate 700 */
   --graph-border-subtle: #475569; /* Slate 600 */
 
   /* Text */
-  --graph-text:       #e2e8f0;    /* Slate 200 — primary text */
-  --graph-text-muted: #94a3b8;    /* Slate 400 — muted text / icons */
+  --graph-text: #e2e8f0; /* Slate 200 — primary text */
+  --graph-text-muted: #94a3b8; /* Slate 400 — muted text / icons */
 
   /* Accents */
-  --graph-accent:       #06b6d4;  /* Cyan 500 — selection, focus, handles */
-  --graph-accent-green: #22c55e;  /* Green 500 — valid drop target */
-  --graph-node-default: #3b82f6;  /* Blue 500 — minimap nodes */
+  --graph-accent: #06b6d4; /* Cyan 500 — selection, focus, handles */
+  --graph-accent-green: #22c55e; /* Green 500 — valid drop target */
+  --graph-node-default: #3b82f6; /* Blue 500 — minimap nodes */
 
   /* Shadows */
-  --graph-shadow:       rgba(0, 0, 0, 0.4);
+  --graph-shadow: rgba(0, 0, 0, 0.4);
   --graph-shadow-hover: rgba(0, 0, 0, 0.5);
-  --graph-shadow-sm:    rgba(0, 0, 0, 0.2);
+  --graph-shadow-sm: rgba(0, 0, 0, 0.2);
 
   /* Overlays */
-  --graph-minimap-mask:    rgba(0, 0, 0, 0.6);
-  --graph-selection-fill:  rgba(6, 182, 212, 0.1);  /* Cyan 500 at 10% */
+  --graph-minimap-mask: rgba(0, 0, 0, 0.6);
+  --graph-selection-fill: rgba(6, 182, 212, 0.1); /* Cyan 500 at 10% */
   --graph-handle-valid-glow: rgba(34, 197, 94, 0.5); /* Green 500 at 50% */
-  --graph-handle-conn-glow:  rgba(6, 182, 212, 0.6); /* Cyan 500 at 60% */
+  --graph-handle-conn-glow: rgba(6, 182, 212, 0.6); /* Cyan 500 at 60% */
 }
 
 /* ============================================================================
@@ -63,16 +63,16 @@
 }
 
 /* Cosmos theme: transparent backgrounds to reveal animated starfield behind */
-.dialogue-graph-container[data-theme="cosmos"] {
+.dialogue-graph-container[data-theme='cosmos'] {
   background-color: transparent;
   z-index: 1;
 }
 
-.dialogue-graph-container[data-theme="cosmos"] .dialogue-reactflow {
+.dialogue-graph-container[data-theme='cosmos'] .dialogue-reactflow {
   background-color: transparent;
 }
 
-.dialogue-graph-container[data-theme="cosmos"] .react-flow__background {
+.dialogue-graph-container[data-theme='cosmos'] .react-flow__background {
   background-color: transparent;
 }
 
@@ -270,7 +270,9 @@
 .dialogue-node,
 .choice-node,
 .terminal-node {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 /* ============================================================================
@@ -310,7 +312,9 @@
 /* Handles semi-transparent by default for clean UI */
 .react-flow__handle-hover {
   opacity: 0.2 !important;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 /* Handles become fully visible when hovering over parent node */
@@ -330,8 +334,36 @@
   opacity: 1 !important;
 }
 
+/* Blender-style: always-visible handles (default theme + themed variants) */
+/* Sit on node border at full opacity — no hover-reveal needed */
+.react-flow__handle-visible {
+  opacity: 0.85 !important;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.react-flow__handle-visible:hover {
+  opacity: 1 !important;
+  transform: scale(1.25) !important;
+}
+
+/* Boost visibility on parent node hover */
+.dialogue-node:hover .react-flow__handle-visible,
+.choice-node:hover .react-flow__handle-visible,
+.terminal-node:hover .react-flow__handle-visible {
+  opacity: 1 !important;
+}
+
+/* Connecting & valid states override for visible handles */
+.react-flow__handle-visible.react-flow__handle-connecting,
+.react-flow__handle-visible.react-flow__handle-valid {
+  opacity: 1 !important;
+}
+
 /* VAGUE 4: Enhanced handle visibility in edit mode */
-.dialogue-graph-container[data-edit-mode="true"] .react-flow__handle {
+.dialogue-graph-container[data-edit-mode='true'] .react-flow__handle {
   opacity: 0.4;
 }
 
@@ -407,19 +439,17 @@
    DEFAULT THEME ANIMATIONS
    ============================================================================ */
 
-/* Default hover effect: subtle lift */
-.default-node-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
+/* Default hover effect: lift + zoom pour meilleure lisibilité au survol */
+/* transition géré par inline style (COSMOS_ANIMATIONS.transitionFast = 'all 0.2s') */
 .default-node-hover:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.06);
+  z-index: 100; /* premier plan pour éviter le clipping par les nœuds voisins */
 }
 
-/* Default selected state: cyan outline */
+/* Default selected state: glow driven by inline shadowSelected (theme-aware).
+   Outline removed — the theme's shadowSelected provides the accent ring + glow. */
 .default-node-selected {
-  outline: 3px solid var(--graph-accent);
-  outline-offset: 2px;
+  outline: none;
 }
 
 /* Default appear animation: fade in */
@@ -442,4 +472,11 @@
 .default-edge-animated {
   stroke-dasharray: 5;
   animation: dashdraw 0.5s linear infinite;
+}
+
+/* ── GraphSearch — cmdk hover state ─────────────────────────────────────────── */
+[cmdk-item][aria-selected='true'],
+[cmdk-item]:hover {
+  background: rgba(139, 92, 246, 0.14);
+  outline: none;
 }

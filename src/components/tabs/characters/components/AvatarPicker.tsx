@@ -147,15 +147,18 @@ export const AvatarPicker: React.FC<AvatarPickerProps> = ({ currentSprites = {},
           </div>
         )}
 
-        {filteredAssets.map((asset, idx) => (
-          <AssetThumbnail
-            key={idx}
-            path={asset.path}
-            name={asset.name}
-            isSelected={asset.path === currentSprite}
-            onClick={() => handleSelect(asset.path)}
-          />
-        ))}
+        {filteredAssets.map((asset, idx) => {
+          const assetUrl = asset.url ?? asset.path;
+          return (
+            <AssetThumbnail
+              key={idx}
+              path={assetUrl}
+              name={asset.name}
+              isSelected={assetUrl === currentSprite || asset.path === currentSprite}
+              onClick={() => handleSelect(assetUrl)}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -37,22 +37,6 @@ export function useGraphTheme(): GraphTheme {
 }
 
 /**
- * Hook to get just the theme ID and setter
- * Useful when you only need to change the theme
- *
- * @returns Object with themeId and setThemeId
- */
-export function useGraphThemeId(): {
-  themeId: string;
-  setThemeId: (id: string) => void;
-} {
-  const themeId = useUIStore((state) => state.graphThemeId);
-  const setThemeId = useUIStore((state) => state.setGraphThemeId);
-
-  return { themeId, setThemeId };
-}
-
-/**
  * Check if the current theme is the cosmos theme
  * Useful for conditionally rendering cosmos-specific components
  */

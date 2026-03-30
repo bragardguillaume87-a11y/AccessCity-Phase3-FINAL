@@ -135,6 +135,9 @@ export const CharacterSprite = React.memo(function CharacterSprite({
     onPositionChange?.(x, position.y);
   };
 
+  // Affiche la barre au-dessus si le personnage est dans la moitié basse du canvas
+  const showToolbarAbove = position.y > 50;
+
   return (
     <Rnd
       key={sceneChar.id}
@@ -221,18 +224,18 @@ export const CharacterSprite = React.memo(function CharacterSprite({
 
       {/* ── Barre de contrôles rapides ──────────────────────────────────────
           SIBLING du motion.div dans Rnd (PAS un child) :
-          - position: absolute top:100% → juste sous le Rnd
+          - Auto-positionnée AU-DESSUS si le personnage est dans la moitié basse du canvas
           - visible grâce à overflow:visible sur le Rnd
-          - clippée uniquement par le canvas outer (overflow:hidden), acceptable
       ─────────────────────────────────────────────────────────────────── */}
       {isSelected && (
         <div
           style={{
             position: 'absolute',
-            top: '100%',
+            ...(showToolbarAbove
+              ? { bottom: '100%', marginBottom: 10 }
+              : { top:    '100%', marginTop:    10 }),
             left: '50%',
             transform: 'translateX(-50%)',
-            marginTop: 6,
             zIndex: 105,
             whiteSpace: 'nowrap',
           }}
@@ -240,77 +243,87 @@ export const CharacterSprite = React.memo(function CharacterSprite({
           onMouseDown={e => e.stopPropagation()}
         >
           <div
-            className="flex items-center gap-0.5 px-1.5 py-1 rounded-full"
+            className="flex items-center gap-1 px-2 py-1.5 rounded-xl shadow-xl"
             style={{
-              background: 'rgba(10,10,20,0.88)',
-              backdropFilter: 'blur(6px)',
-              border: '1px solid rgba(168,85,247,0.45)',
+              background: 'rgba(8,8,18,0.92)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(168,85,247,0.55)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px rgba(168,85,247,0.2)',
             }}
           >
-            {/* Réduire */}
+            {/* ── Groupe Taille ── */}
             <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
-              title="Réduire"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
+              title="Réduire (−20%)"
               onClick={e => handleScaleStep(e, -0.2)}
             >
-              <Minus className="w-3 h-3" />
+              <Minus className="w-4 h-4" />
             </button>
 
-            {/* Gauche */}
-            <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
-              title="Positionner à gauche"
-              onClick={e => handlePosition(e, 15)}
+            <span
+              className="min-w-[40px] text-center text-[11px] font-mono font-semibold text-purple-300 select-none"
+              title="Taille actuelle"
             >
-              <AlignLeft className="w-3 h-3" />
-            </button>
+              {scale.toFixed(1)}×
+            </span>
 
-            {/* Centre */}
             <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
-              title="Centrer"
-              onClick={e => handlePosition(e, 50)}
-            >
-              <AlignCenter className="w-3 h-3" />
-            </button>
-
-            {/* Droite */}
-            <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
-              title="Positionner à droite"
-              onClick={e => handlePosition(e, 85)}
-            >
-              <AlignRight className="w-3 h-3" />
-            </button>
-
-            {/* Agrandir */}
-            <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
-              title="Agrandir"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
+              title="Agrandir (+20%)"
               onClick={e => handleScaleStep(e, +0.2)}
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="w-4 h-4" />
             </button>
 
             {/* Séparateur */}
-            <div className="w-px h-3 bg-white/20 mx-0.5" />
+            <div className="w-px h-5 bg-white/15 mx-0.5" />
 
-            {/* Flip */}
+            {/* ── Groupe Position ── */}
             <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
+              title="Positionner à gauche"
+              onClick={e => handlePosition(e, 15)}
+            >
+              <AlignLeft className="w-4 h-4" />
+            </button>
+
+            <button
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
+              title="Centrer horizontalement"
+              onClick={e => handlePosition(e, 50)}
+            >
+              <AlignCenter className="w-4 h-4" />
+            </button>
+
+            <button
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
+              title="Positionner à droite"
+              onClick={e => handlePosition(e, 85)}
+            >
+              <AlignRight className="w-4 h-4" />
+            </button>
+
+            {/* Séparateur */}
+            <div className="w-px h-5 bg-white/15 mx-0.5" />
+
+            {/* ── Groupe Actions ── */}
+            <button
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-500/30 text-white/70 hover:text-white transition-colors"
               title="Retourner horizontalement"
               onClick={e => stopAndCall(e, onFlipHorizontal)}
             >
-              <FlipHorizontal className="w-3 h-3" />
+              <FlipHorizontal className="w-4 h-4" />
             </button>
 
-            {/* Supprimer */}
+            {/* Séparateur danger */}
+            <div className="w-px h-5 bg-white/15 mx-0.5" />
+
             <button
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-500/30 text-white/50 hover:text-red-400 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/25 text-white/40 hover:text-red-400 transition-colors"
               title="Retirer de la scène"
               onClick={e => stopAndCall(e, onRemove)}
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>

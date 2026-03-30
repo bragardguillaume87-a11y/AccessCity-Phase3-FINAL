@@ -1,4 +1,3 @@
-
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +14,8 @@ export interface CharacterIdentityFormData {
   description?: string;
   /** Character ID (read-only, only for existing characters) */
   id?: string;
+  /** Narrator role — hides portrait in DialogueBox */
+  role?: string;
 }
 
 /**
@@ -61,9 +62,9 @@ export interface CharacterIdentitySectionProps {
 export default function CharacterIdentitySection({
   formData,
   errors,
-  onUpdateField
+  onUpdateField,
 }: CharacterIdentitySectionProps) {
-  const { name, description, id } = formData;
+  const { name, description, id, role } = formData;
   const descriptionLength = (description || '').length;
   const maxDescriptionLength = 500;
 
@@ -120,19 +121,70 @@ export default function CharacterIdentitySection({
         />
         <div className="flex justify-between items-center">
           {errors.description && (
-            <Alert variant="destructive" className="py-2 flex-1 mr-4 animate-in slide-in-from-top-1 duration-200">
+            <Alert
+              variant="destructive"
+              className="py-2 flex-1 mr-4 animate-in slide-in-from-top-1 duration-200"
+            >
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{errors.description[0]}</AlertDescription>
             </Alert>
           )}
-          <span className={`text-xs ml-auto transition-colors duration-200 ${
-            descriptionLength > maxDescriptionLength * 0.9
-              ? 'text-amber-500 font-semibold'
-              : 'text-muted-foreground'
-          }`}>
+          <span
+            className={`text-xs ml-auto transition-colors duration-200 ${
+              descriptionLength > maxDescriptionLength * 0.9
+                ? 'text-amber-500 font-semibold'
+                : 'text-muted-foreground'
+            }`}
+          >
             {descriptionLength} / {maxDescriptionLength}
           </span>
         </div>
+      </div>
+
+      {/* Role — Personnage / Narrateur */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Rôle</Label>
+        <div className="flex gap-3">
+          {(
+            [
+              { value: 'speaker', emoji: '🗣️', label: 'Personnage' },
+              { value: 'narrator', emoji: '📖', label: 'Narrateur' },
+            ] as const
+          ).map((opt) => {
+            const active = (role ?? 'speaker') === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onUpdateField('role', opt.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: `2px solid ${active ? 'var(--color-primary)' : 'var(--color-border-base)'}`,
+                  background: active ? 'var(--color-primary-subtle)' : 'transparent',
+                  color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: '1.25rem' }}>{opt.emoji}</span>
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        {role === 'narrator' && (
+          <p className="text-xs text-muted-foreground">
+            Les dialogues de ce personnage s'afficheront sans portrait, en pleine largeur.
+          </p>
+        )}
       </div>
 
       {/* Character ID (read-only) */}

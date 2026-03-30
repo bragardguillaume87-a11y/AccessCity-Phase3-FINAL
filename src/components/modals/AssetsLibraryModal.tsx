@@ -1,8 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useAssets } from '@/hooks/useAssets';
-import { useScenesStore, useCharactersStore } from '../../stores/index';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useAssets, getRecentAssets } from '@/hooks/useAssets';
+import { useScenesStore, useCharactersStore, useSettingsStore } from '../../stores/index';
 import { useFavorites } from './AssetsLibraryModal/hooks/useFavorites';
-import { LibraryTab, type SortOrder } from './AssetsLibraryModal/components/LibraryTab';
+import { useCollections } from './AssetsLibraryModal/hooks/useCollections';
+import {
+  LibraryTab,
+  type SortOrder,
+  type LibraryContext,
+} from './AssetsLibraryModal/components/LibraryTab';
+import type { SidebarSection } from './AssetsLibraryModal/components/AssetsLibrarySidebar';
 import { UploadTab } from './AssetsLibraryModal/components/UploadTab';
 import { ManagementTab } from './AssetsLibraryModal/components/ManagementTab';
 import {
@@ -35,6 +41,8 @@ export interface AssetsLibraryModalProps {
   selectionPurpose?: 'sceneAudio' | 'ambientTrack';
   /** Ambient track slot (0 or 1). Used when selectionPurpose === 'ambientTrack'. */
   selectionSlot?: 0 | 1;
+  /** Filtre les catégories affichées : 'vn' = visual novel, '2d' = éditeur carte */
+  context?: LibraryContext;
 }
 
 export default function AssetsLibraryModal({
@@ -44,97 +52,165 @@ export default function AssetsLibraryModal({
   targetSceneId,
   selectionPurpose,
   selectionSlot = 0,
+  context,
 }: AssetsLibraryModalProps) {
   const [activeTab, setActiveTab] = useState('library');
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeSection, setActiveSection] = useState<SidebarSection>('cat:all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('name-asc');
 
   const { assets: rawAssets, loading, deleteAssets, deleting, moveAsset, moving } = useAssets();
   const { favorites, isFavorite } = useFavorites();
-  const scenes = useScenesStore(state => state.scenes);
-  const updateScene = useScenesStore(state => state.updateScene);
-  const characters = useCharactersStore(state => state.characters);
+  const {
+    collections,
+    createCollection,
+    deleteCollection,
+    rename: renameCollection,
+    addAsset,
+  } = useCollections();
+  const scenes = useScenesStore((state) => state.scenes);
+  const updateScene = useScenesStore((state) => state.updateScene);
+  const assetDisplayNames = useSettingsStore((state) => state.assetDisplayNames);
+  const setAssetDisplayName = useSettingsStore((state) => state.setAssetDisplayName);
 
-  const getAssetUsage = (assetPath: string): { scenes: string[]; characters: string[] } => {
-    const usedInScenes = scenes
-      .filter(s => s.backgroundUrl === assetPath)
-      .map(s => s.title || s.id);
-    const usedByCharacters = characters
-      .filter(c => Object.values(c.sprites || {}).includes(assetPath))
-      .map(c => c.name);
-    return { scenes: usedInScenes, characters: usedByCharacters };
-  };
+  // Enrichir les assets avec les noms d'affichage personnalisés
+  const assets = useMemo(
+    () =>
+      rawAssets.map((a) => ({
+        ...a,
+        name: assetDisplayNames[a.path] ?? a.name,
+      })),
+    [rawAssets, assetDisplayNames]
+  );
+  // characters lu via getState() dans getAssetUsage (callback, pas render) — CLAUDE.md §6.7
 
-  const targetScene = targetSceneId ? scenes.find(s => s.id === targetSceneId) : null;
-  const isAudioSelectionMode   = selectionPurpose === 'sceneAudio'   && !!targetSceneId && !!targetScene;
-  const isAmbientSelectionMode = selectionPurpose === 'ambientTrack' && !!targetSceneId && !!targetScene;
+  const getAssetUsage = useCallback(
+    (assetPath: string): { scenes: string[]; characters: string[] } => {
+      const allCharacters = useCharactersStore.getState().characters;
+      const usedInScenes = scenes
+        .filter((s) => s.backgroundUrl === assetPath)
+        .map((s) => s.title || s.id);
+      const usedByCharacters = allCharacters
+        .filter((c) => Object.values(c.sprites || {}).includes(assetPath))
+        .map((c) => c.name);
+      return { scenes: usedInScenes, characters: usedByCharacters };
+    },
+    [scenes]
+  );
+
+  const targetScene = targetSceneId ? scenes.find((s) => s.id === targetSceneId) : null;
+  const isAudioSelectionMode =
+    selectionPurpose === 'sceneAudio' && !!targetSceneId && !!targetScene;
+  const isAmbientSelectionMode =
+    selectionPurpose === 'ambientTrack' && !!targetSceneId && !!targetScene;
   // Background mode : targetSceneId fourni SANS purpose audio/ambiance
-  const isBackgroundSelectionMode = !!targetSceneId && !!targetScene && !isAudioSelectionMode && !isAmbientSelectionMode;
+  const isBackgroundSelectionMode =
+    !!targetSceneId && !!targetScene && !isAudioSelectionMode && !isAmbientSelectionMode;
 
-  const assets = useMemo(() => {
-    return rawAssets.map(asset => ({
-      ...asset,
-      id: asset.path
-    }));
-  }, [rawAssets]);
+  // Smart collections calculées dynamiquement
+  const recentPaths = useMemo(() => new Set(getRecentAssets('all', 20)), []);
+  const unusedAssets = useMemo(() => {
+    return assets.filter((asset) => {
+      const usage = getAssetUsage(asset.path);
+      return usage.scenes.length === 0 && usage.characters.length === 0;
+    });
+  }, [assets, getAssetUsage]);
+  const protagonistAssets = useMemo(() => {
+    const chars = useCharactersStore.getState().characters;
+    const protagonist = chars.find((c) => c.isProtagonist);
+    if (!protagonist) return [];
+    const spritePaths = new Set(Object.values(protagonist.sprites || {}));
+    return assets.filter((a) => spritePaths.has(a.path));
+  }, [assets]);
 
   const filteredAssets = useMemo(() => {
-    const filtered = assets.filter(asset => {
-      if (searchQuery && !asset.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      if (activeCategory === 'favorites') {
-        return isFavorite(asset.path);
-      }
-      if (activeCategory !== 'all' && asset.category !== activeCategory) {
-        return false;
-      }
-      return true;
-    });
+    let filtered = assets;
 
-    return filtered.sort((a, b) => {
+    // Filtrage par section sidebar
+    if (activeSection.startsWith('cat:')) {
+      const cat = activeSection.slice(4);
+      if (cat !== 'all') filtered = filtered.filter((a) => a.category === cat);
+    } else if (activeSection === 'smart:favorites') {
+      filtered = filtered.filter((a) => isFavorite(a.path));
+    } else if (activeSection === 'smart:recents') {
+      filtered = filtered.filter((a) => recentPaths.has(a.path));
+    } else if (activeSection === 'smart:unused') {
+      filtered = unusedAssets;
+    } else if (activeSection === 'smart:protagonist') {
+      filtered = protagonistAssets;
+    } else if (activeSection.startsWith('folder:')) {
+      const colId = activeSection.slice(7);
+      const col = collections.find((c) => c.id === colId);
+      if (col) filtered = filtered.filter((a) => col.assetIds.includes(a.id));
+      else filtered = [];
+    }
+
+    // Recherche textuelle
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((a) => a.name.toLowerCase().includes(q));
+    }
+
+    // Tri
+    return [...filtered].sort((a, b) => {
       switch (sortOrder) {
         case 'name-asc':
           return a.name.localeCompare(b.name);
         case 'name-desc':
           return b.name.localeCompare(a.name);
-        case 'recent':
+        case 'recent': {
           const tsA = a.path.match(/-(\d+)\./)?.[1] || '0';
           const tsB = b.path.match(/-(\d+)\./)?.[1] || '0';
           return parseInt(tsB) - parseInt(tsA);
-        case 'oldest':
-          const tsA2 = a.path.match(/-(\d+)\./)?.[1] || '0';
-          const tsB2 = b.path.match(/-(\d+)\./)?.[1] || '0';
-          return parseInt(tsA2) - parseInt(tsB2);
+        }
+        case 'oldest': {
+          const tsA = a.path.match(/-(\d+)\./)?.[1] || '0';
+          const tsB = b.path.match(/-(\d+)\./)?.[1] || '0';
+          return parseInt(tsA) - parseInt(tsB);
+        }
         default:
           return 0;
       }
     });
-  }, [assets, searchQuery, activeCategory, isFavorite, sortOrder]);
+  }, [
+    assets,
+    activeSection,
+    searchQuery,
+    isFavorite,
+    recentPaths,
+    unusedAssets,
+    protagonistAssets,
+    collections,
+    sortOrder,
+  ]);
 
-  const categoryCount = useMemo(() => ({
-    all: assets.length,
-    backgrounds: assets.filter(a => a.category === 'backgrounds').length,
-    characters: assets.filter(a => a.category === 'characters').length,
-    illustrations: assets.filter(a => a.category === 'illustrations').length,
-    music: assets.filter(a => a.category === 'music').length,
-    sfx: assets.filter(a => a.category === 'sfx').length,
-    voices: assets.filter(a => a.category === 'voices').length,
-    atmosphere: assets.filter(a => a.category === 'atmosphere').length,
-  }), [assets]);
+  const categoryCount = useMemo(
+    () => ({
+      all: assets.length,
+      backgrounds: assets.filter((a) => a.category === 'backgrounds').length,
+      characters: assets.filter((a) => a.category === 'characters').length,
+      illustrations: assets.filter((a) => a.category === 'illustrations').length,
+      music: assets.filter((a) => a.category === 'music').length,
+      sfx: assets.filter((a) => a.category === 'sfx').length,
+      voices: assets.filter((a) => a.category === 'voices').length,
+      atmosphere: assets.filter((a) => a.category === 'atmosphere').length,
+      tilesets: assets.filter((a) => a.category === 'tilesets').length,
+      'sprites-2d': assets.filter((a) => a.category === 'sprites-2d').length,
+    }),
+    [assets]
+  );
 
   useEffect(() => {
     if (isOpen) {
       if (isBackgroundSelectionMode) {
-        setActiveCategory('backgrounds');
+        setActiveSection('cat:backgrounds');
         setActiveTab('library');
       } else if (isAmbientSelectionMode) {
-        setActiveCategory('atmosphere');
+        setActiveSection('cat:atmosphere');
         setActiveTab('library');
       } else if (initialCategory) {
-        setActiveCategory(initialCategory);
+        setActiveSection(`cat:${initialCategory}`);
       }
     }
   }, [isOpen, initialCategory, isBackgroundSelectionMode, isAmbientSelectionMode]);
@@ -143,7 +219,7 @@ export default function AssetsLibraryModal({
     if (!isOpen) {
       setSearchQuery('');
       setPreviewAsset(null);
-      setActiveCategory('all');
+      setActiveSection('cat:all');
       setSortOrder('name-asc');
       setActiveTab('library');
     }
@@ -198,8 +274,14 @@ export default function AssetsLibraryModal({
     if (result.success && result.count > 0) {
       alert(`${result.count} asset(s) supprimé(s) avec succès.`);
     } else if (result.errors && result.errors.length > 0) {
-      const errorMessages = result.errors.map(e => `${e.path}: ${e.error}`).join('\n');
+      const errorMessages = result.errors.map((e) => `${e.path}: ${e.error}`).join('\n');
       alert(`Erreur:\n${errorMessages}`);
+    }
+  };
+
+  const handleBulkMove = async (paths: string[], targetCategory: string) => {
+    for (const path of paths) {
+      await moveAsset(path, targetCategory);
     }
   };
 
@@ -215,7 +297,7 @@ export default function AssetsLibraryModal({
       setPreviewAsset({
         ...previewAsset,
         path: result.newPath,
-        category: newCategory
+        category: newCategory,
       });
     } else if (result.error) {
       alert(`Erreur: ${result.error}`);
@@ -224,11 +306,15 @@ export default function AssetsLibraryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
-      <DialogContent className="max-w-[1200px] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
+      <DialogContent className="max-w-[min(1200px,95vw)] h-[75vh] max-h-[800px] p-0 gap-0 flex flex-col !bg-slate-900 border-slate-700/50 shadow-2xl">
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-slate-700/50 bg-slate-900">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-              {isBackgroundSelectionMode ? <MapPin className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+              {isBackgroundSelectionMode ? (
+                <MapPin className="h-4 w-4" />
+              ) : (
+                <Package className="h-4 w-4" />
+              )}
             </div>
             <div>
               <DialogTitle className="text-base">
@@ -238,13 +324,12 @@ export default function AssetsLibraryModal({
                     ? 'Choisir une musique'
                     : isAmbientSelectionMode
                       ? `Choisir une ambiance — Piste ${selectionSlot + 1}`
-                      : 'Bibliothèque d\'Assets'}
+                      : "Bibliothèque d'Assets"}
               </DialogTitle>
               <DialogDescription className="text-xs">
                 {isBackgroundSelectionMode || isAudioSelectionMode || isAmbientSelectionMode
                   ? `Pour : "${targetScene?.title || targetScene?.id}"`
-                  : `${assets.length} assets disponibles`
-                }
+                  : `${assets.length} assets disponibles`}
               </DialogDescription>
             </div>
           </div>
@@ -256,21 +341,30 @@ export default function AssetsLibraryModal({
             onValueChange={setActiveTab}
             className="flex-1 flex flex-col min-h-0"
           >
-            <TabsList className="mx-4 mt-2 self-start shrink-0">
-              <TabsTrigger value="library" className="text-xs gap-1.5">
-                <Package className="h-3.5 w-3.5" />
+            <TabsList className="mx-4 mt-3 self-start shrink-0 bg-slate-800/60 border border-slate-700/40 h-auto p-1 gap-0.5 rounded-xl">
+              <TabsTrigger
+                value="library"
+                className="text-[13px] gap-1.5 py-1.5 px-4 h-auto rounded-lg transition-all duration-150 text-slate-400 hover:text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:font-medium"
+              >
+                <Package className="h-[15px] w-[15px]" />
                 Bibliothèque
               </TabsTrigger>
               {/* Upload visible sauf en mode sélection BGM et fond (pas pour ambiance) */}
               {!isBackgroundSelectionMode && !isAudioSelectionMode && (
                 <>
-                  <TabsTrigger value="upload" className="text-xs gap-1.5">
-                    <Upload className="h-3.5 w-3.5" />
+                  <TabsTrigger
+                    value="upload"
+                    className="text-[13px] gap-1.5 py-1.5 px-4 h-auto rounded-lg transition-all duration-150 text-slate-400 hover:text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:font-medium"
+                  >
+                    <Upload className="h-[15px] w-[15px]" />
                     Uploader
                   </TabsTrigger>
                   {!isAmbientSelectionMode && (
-                    <TabsTrigger value="management" className="text-xs gap-1.5">
-                      <Settings className="h-3.5 w-3.5" />
+                    <TabsTrigger
+                      value="management"
+                      className="text-[13px] gap-1.5 py-1.5 px-4 h-auto rounded-lg transition-all duration-150 text-slate-400 hover:text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:font-medium"
+                    >
+                      <Settings className="h-[15px] w-[15px]" />
                       Sélection multiple
                     </TabsTrigger>
                   )}
@@ -284,27 +378,45 @@ export default function AssetsLibraryModal({
                 loading={loading}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                activeCategory={activeCategory}
-                onCategoryChange={setActiveCategory}
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
                 categoryCount={categoryCount}
                 favoritesCount={favorites.length}
+                recentsCount={recentPaths.size}
+                unusedCount={unusedAssets.length}
+                protagonistCount={protagonistAssets.length}
+                collections={collections}
+                onCreateCollection={createCollection}
+                onDeleteCollection={deleteCollection}
+                onRenameCollection={renameCollection}
                 onAssetClick={handleAssetClick}
                 onAssetDelete={handleSingleDelete}
-                isSelectionMode={isBackgroundSelectionMode || isAudioSelectionMode || isAmbientSelectionMode}
+                onRenameAsset={setAssetDisplayName}
+                isSelectionMode={
+                  isBackgroundSelectionMode || isAudioSelectionMode || isAmbientSelectionMode
+                }
                 onSelectBackground={
-                  isBackgroundSelectionMode ? handleSelectBackground
-                  : isAudioSelectionMode    ? handleSelectAudio
-                  : isAmbientSelectionMode  ? handleSelectAmbient
-                  : undefined
+                  isBackgroundSelectionMode
+                    ? handleSelectBackground
+                    : isAudioSelectionMode
+                      ? handleSelectAudio
+                      : isAmbientSelectionMode
+                        ? handleSelectAmbient
+                        : undefined
                 }
                 sortOrder={sortOrder}
                 onSortChange={setSortOrder}
+                context={context}
               />
             </TabsContent>
 
             {!isBackgroundSelectionMode && !isAudioSelectionMode && (
               <TabsContent value="upload" className="flex-1 m-0 min-h-0">
-                <UploadTab initialCategory={activeCategory} />
+                <UploadTab
+                  initialCategory={
+                    activeSection.startsWith('cat:') ? activeSection.slice(4) : 'all'
+                  }
+                />
               </TabsContent>
             )}
 
@@ -315,6 +427,10 @@ export default function AssetsLibraryModal({
                   onBulkDelete={handleBulkDelete}
                   deleting={deleting}
                   getAssetUsage={getAssetUsage}
+                  collections={collections}
+                  onAddToCollection={(colId, ids) => ids.forEach((id) => addAsset(colId, id))}
+                  onBulkMove={handleBulkMove}
+                  moving={moving}
                 />
               </TabsContent>
             )}
@@ -325,14 +441,17 @@ export default function AssetsLibraryModal({
               <div className="space-y-4 overflow-y-auto flex-1">
                 <div className="relative rounded-lg overflow-hidden bg-black/30 border border-slate-600/30">
                   <img
-                    src={previewAsset.path}
+                    src={previewAsset.url ?? previewAsset.path}
                     alt={previewAsset.name}
                     className="w-full aspect-square object-contain"
                   />
                 </div>
 
                 <div className="bg-slate-800/80 rounded-lg p-3 border border-slate-600/30">
-                  <h4 className="font-semibold text-sm text-white truncate" title={previewAsset.name}>
+                  <h4
+                    className="font-semibold text-sm text-white truncate"
+                    title={previewAsset.name}
+                  >
                     {previewAsset.name}
                   </h4>
                   <p className="text-xs text-slate-400 mt-1">{previewAsset.category}</p>
@@ -366,6 +485,8 @@ export default function AssetsLibraryModal({
                       <SelectItem value="music">Musique</SelectItem>
                       <SelectItem value="sfx">Effets sonores</SelectItem>
                       <SelectItem value="voices">Voix</SelectItem>
+                      <SelectItem value="tilesets">Tilesets</SelectItem>
+                      <SelectItem value="sprites-2d">Sprites 2D</SelectItem>
                     </SelectContent>
                   </Select>
                   {moving && (

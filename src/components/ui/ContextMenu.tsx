@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * ContextMenu - Right-click context menu component
@@ -10,73 +10,73 @@ import { useEffect, useRef, useState } from 'react'
  */
 
 export interface ContextMenuItem {
-  label: string
-  icon?: string
-  onClick: () => void
-  disabled?: boolean
-  danger?: boolean
-  shortcut?: string
+  label: string;
+  icon?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  shortcut?: string;
 }
 
 export interface ContextMenuProps {
-  x: number
-  y: number
-  items: ContextMenuItem[]
-  onClose: () => void
+  x: number;
+  y: number;
+  items: ContextMenuItem[];
+  onClose: () => void;
 }
 
 export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ x, y })
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x, y });
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Auto-adjust position if menu would be off-screen
   useEffect(() => {
-    if (!menuRef.current) return
+    if (!menuRef.current) return;
 
-    const menu = menuRef.current
-    const rect = menu.getBoundingClientRect()
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
+    const menu = menuRef.current;
+    const rect = menu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
-    let adjustedX = x
-    let adjustedY = y
+    let adjustedX = x;
+    let adjustedY = y;
 
     // Adjust X if menu goes off right edge
     if (x + rect.width > viewportWidth) {
-      adjustedX = viewportWidth - rect.width - 10
+      adjustedX = viewportWidth - rect.width - 10;
     }
 
     // Adjust Y if menu goes off bottom edge
     if (y + rect.height > viewportHeight) {
-      adjustedY = viewportHeight - rect.height - 10
+      adjustedY = viewportHeight - rect.height - 10;
     }
 
     // Ensure menu doesn't go off left or top edge
-    adjustedX = Math.max(10, adjustedX)
-    adjustedY = Math.max(10, adjustedY)
+    adjustedX = Math.max(10, adjustedX);
+    adjustedY = Math.max(10, adjustedY);
 
-    setPosition({ x: adjustedX, y: adjustedY })
-  }, [x, y])
+    setPosition({ x: adjustedX, y: adjustedY });
+  }, [x, y]);
 
   // Close on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose()
+        onClose();
       }
     }
 
     // Small delay to prevent immediate closing from the right-click event
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
-    }, 100)
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
 
     return () => {
-      clearTimeout(timer)
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [onClose])
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -84,42 +84,43 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
       // Get enabled items only
       const enabledIndices = items
         .map((item, idx) => (!item.disabled ? idx : -1))
-        .filter(idx => idx !== -1)
+        .filter((idx) => idx !== -1);
 
       if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
-        onClose()
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
       } else if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        const currentEnabledIndex = enabledIndices.indexOf(selectedIndex)
-        const nextEnabledIndex = enabledIndices[(currentEnabledIndex + 1) % enabledIndices.length]
-        setSelectedIndex(nextEnabledIndex)
+        e.preventDefault();
+        const currentEnabledIndex = enabledIndices.indexOf(selectedIndex);
+        const nextEnabledIndex = enabledIndices[(currentEnabledIndex + 1) % enabledIndices.length];
+        setSelectedIndex(nextEnabledIndex);
       } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        const currentEnabledIndex = enabledIndices.indexOf(selectedIndex)
-        const prevEnabledIndex = enabledIndices[(currentEnabledIndex - 1 + enabledIndices.length) % enabledIndices.length]
-        setSelectedIndex(prevEnabledIndex)
+        e.preventDefault();
+        const currentEnabledIndex = enabledIndices.indexOf(selectedIndex);
+        const prevEnabledIndex =
+          enabledIndices[(currentEnabledIndex - 1 + enabledIndices.length) % enabledIndices.length];
+        setSelectedIndex(prevEnabledIndex);
       } else if (e.key === 'Enter') {
-        e.preventDefault()
-        const selectedItem = items[selectedIndex]
+        e.preventDefault();
+        const selectedItem = items[selectedIndex];
         if (selectedItem && !selectedItem.disabled) {
-          selectedItem.onClick()
-          onClose()
+          selectedItem.onClick();
+          onClose();
         }
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [items, selectedIndex, onClose])
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [items, selectedIndex, onClose]);
 
   // Focus menu on mount
   useEffect(() => {
     if (menuRef.current) {
-      menuRef.current.focus()
+      menuRef.current.focus();
     }
-  }, [])
+  }, []);
 
   return (
     <div
@@ -132,11 +133,11 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
     >
       {items.map((item, idx) => (
         <button
-          key={idx}
+          key={item.label}
           onClick={() => {
             if (!item.disabled) {
-              item.onClick()
-              onClose()
+              item.onClick();
+              onClose();
             }
           }}
           disabled={item.disabled}
@@ -152,9 +153,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           aria-disabled={item.disabled}
         >
           {/* Icon */}
-          {item.icon && (
-            <span className="text-base flex-shrink-0">{item.icon}</span>
-          )}
+          {item.icon && <span className="text-base flex-shrink-0">{item.icon}</span>}
 
           {/* Label */}
           <span className="flex-1">{item.label}</span>
@@ -166,5 +165,5 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         </button>
       ))}
     </div>
-  )
+  );
 }

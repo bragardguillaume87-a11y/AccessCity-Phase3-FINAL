@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      margin: 3cm 2.5cm;
+      color: #1a1a1a;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 18pt;
+      color: #1b4f8c;
+      border-bottom: 2px solid #1b4f8c;
+      padding-bottom: 6px;
+      margin-top: 40px;
+    }
+    h2 {
+      font-size: 14pt;
+      color: #1b4f8c;
+      margin-top: 28px;
+    }
+    h3 {
+      font-size: 12pt;
+      color: #2e6fad;
+      margin-top: 20px;
+    }
+    .header-block {
+      background: #eaf2fb;
+      border-left: 5px solid #1b4f8c;
+      padding: 12px 18px;
+      margin-bottom: 30px;
+    }
+    .header-block p { margin: 4px 0; }
+    .note-box {
+      background: #fff8e1;
+      border: 1px solid #f9a825;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 10pt;
+      border-radius: 3px;
+    }
+    .new-box {
+      background: #e8f5e9;
+      border: 1px solid #43a047;
+      padding: 10px 14px;
+      margin: 12px 0;
+      border-radius: 3px;
+    }
+    .new-box::before {
+      content: "✅ PRÉCISION / MISE À JOUR — ";
+      font-weight: bold;
+      color: #2e7d32;
+    }
+    .status-box {
+      background: #e3f2fd;
+      border: 1px solid #1565c0;
+      padding: 10px 14px;
+      margin: 12px 0;
+      border-radius: 3px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0;
+      font-size: 10.5pt;
+    }
+    th {
+      background: #1b4f8c;
+      color: white;
+      padding: 7px 10px;
+      text-align: left;
+    }
+    td {
+      border: 1px solid #bbb;
+      padding: 6px 10px;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #f4f8fd; }
+    ul { margin: 6px 0 10px 0; padding-left: 22px; }
+    li { margin-bottom: 4px; }
+    .phase-tag {
+      display: inline-block;
+      background: #1b4f8c;
+      color: white;
+      padding: 1px 8px;
+      border-radius: 3px;
+      font-size: 9pt;
+      margin-right: 6px;
+    }
+    .status-ok   { color: #2e7d32; font-weight: bold; }
+    .status-wip  { color: #e65100; font-weight: bold; }
+    .status-wait { color: #616161; }
+    hr { border: 0; border-top: 1px solid #ccc; margin: 30px 0; }
+    .footer {
+      font-size: 9pt;
+      color: #666;
+      margin-top: 50px;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     EN-TÊTE DU RAPPORT
+══════════════════════════════════════════════════════════════════════ -->
+<div class="header-block">
+  <p><strong>DOSSIER :</strong> KORO-4861</p>
+  <p><strong>Porteur :</strong> APF France handicap — Territoire Limousin</p>
+  <p><strong>Projet :</strong> AccessCity : le jeu du handicap</p>
+  <p><strong>Type de document :</strong> Rapport de suivi intermédiaire — Fondation Afnic</p>
+  <p><strong>Période couverte :</strong> Janvier — Mars 2026 (T1 2026)</p>
+  <p><strong>Contacts :</strong> Lucas Demaël (dd.19@apf.asso.fr) | Guillaume Bragard</p>
+</div>
+
+<div class="note-box">
+  <strong>Objet :</strong> Ce rapport de suivi fait le point sur l'avancement du projet AccessCity au premier trimestre 2026, conformément au calendrier prévisionnel soumis dans le dossier de candidature du 13/05/2025. Il apporte également des précisions techniques sur l'outil de développement retenu et les choix pédagogiques arrêtés depuis la candidature.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     1. RÉCAPITULATIF DU PROJET
+══════════════════════════════════════════════════════════════════════ -->
+<h1>1. Récapitulatif du projet</h1>
+
+<table>
+  <tr>
+    <th>Élément</th>
+    <th>Valeur</th>
+  </tr>
+  <tr><td>Nom du projet</td><td>AccessCity : le jeu du handicap</td></tr>
+  <tr><td>Porteur</td><td>APF France handicap — Territoire Limousin (Corrèze, Haute-Vienne, Creuse)</td></tr>
+  <tr><td>Durée totale</td><td>24 mois (05/01/2026 → 31/12/2027)</td></tr>
+  <tr><td>Budget total prévisionnel</td><td>57 854 €</td></tr>
+  <tr><td>Subvention sollicitée — Fondation Afnic</td><td>10 000 €</td></tr>
+  <tr><td>Phase en cours</td><td>Action 1 — Construction des supports pédagogiques (Jan–Déc 2026)</td></tr>
+  <tr><td>Ateliers tenus à ce jour</td><td>0 — Phase de préparation en cours (démarrage prévu T2 2026)</td></tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     2. AVANCEMENT ACTION 1 — T1 2026
+══════════════════════════════════════════════════════════════════════ -->
+<h1>2. Avancement — Action 1 (T1 2026)</h1>
+
+<h2>2.1 Calendrier des étapes</h2>
+
+<table>
+  <tr>
+    <th>Étape</th>
+    <th>Description</th>
+    <th>Date prévue</th>
+    <th>État</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Définition des objectifs pédagogiques et création du 1er scénario pilote</td>
+    <td>05/01/2026 — 2 mois</td>
+    <td class="status-wip">🟡 En cours</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Co-conception du kit graphique et des premiers mini-jeux avec les participants</td>
+    <td>16/03/2026 — 6 mois</td>
+    <td class="status-wip">🟡 Démarrage imminent</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Tests du scénario pilote auprès d'un petit groupe d'usagers</td>
+    <td>07/09/2026 — 1 mois</td>
+    <td class="status-wait">⚪ À venir</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Rédaction finale et mise en forme des supports (guides, fiches, livret)</td>
+    <td>05/10/2026 — 3 mois</td>
+    <td class="status-wait">⚪ À venir</td>
+  </tr>
+</table>
+
+<h2>2.2 Ateliers participants</h2>
+
+<div class="status-box">
+  <strong>État au 31 mars 2026 :</strong> Aucun atelier avec les bénéficiaires n'a encore eu lieu. Le premier trimestre a été consacré à la phase de préparation : définition du cadre pédagogique, choix et prise en main des outils, et conception du scénario pilote. Les premières sessions participatives sont planifiées pour le deuxième trimestre 2026, dans chacune des trois délégations du Limousin.
+</div>
+
+<h2>2.3 Travaux réalisés au T1 2026</h2>
+
+<ul>
+  <li>Définition du cadre narratif global du jeu (commune fictive AccessCity, arcs narratifs par type de handicap).</li>
+  <li>Choix et configuration de l'outil de développement retenu (voir section 3).</li>
+  <li>Rédaction du squelette du premier scénario pilote (personnage principal, situation d'accessibilité motrice, embranchements narratifs).</li>
+  <li>Recensement des assets graphiques libres de droits utilisables pour le kit de démarrage des ateliers.</li>
+  <li>Identification et planification des premières sessions participatives dans les trois délégations.</li>
+</ul>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     3. OUTIL DE DÉVELOPPEMENT — PRÉCISIONS TECHNIQUES
+══════════════════════════════════════════════════════════════════════ -->
+<h1>3. Outil de développement — Précisions techniques</h1>
+
+<h2>3.1 Approche pédagogique en deux temps</h2>
+
+<p>Le dossier de candidature mentionnait <strong>GDevelop</strong> comme outil de référence pour les ateliers. L'approche pédagogique retenue conserve GDevelop dans un premier temps comme <strong>outil de découverte</strong>, avant d'utiliser un outil dédié pour la production finale :</p>
+
+<table>
+  <tr>
+    <th>Temps</th>
+    <th>Outil</th>
+    <th>Objectif pédagogique</th>
+  </tr>
+  <tr>
+    <td><strong>Initiation</strong><br/>(séances 1–2 de chaque atelier)</td>
+    <td>GDevelop</td>
+    <td>Découvrir les notions de base du développement de jeu vidéo (scènes, événements, personnages) dans un environnement familier et documenté. Supports pédagogiques existants utilisables.</td>
+  </tr>
+  <tr>
+    <td><strong>Production</strong><br/>(séances suivantes)</td>
+    <td>AccessCity Studio</td>
+    <td>Créer le jeu AccessCity lui-même, avec un outil conçu spécifiquement pour le roman visuel interactif et les mini-jeux de déplacement topdown — sans ligne de code.</td>
+  </tr>
+</table>
+
+<h2>3.2 AccessCity Studio — Présentation</h2>
+
+<p>AccessCity Studio est un éditeur visuel no-code développé spécifiquement pour le projet. Il combine deux modules :</p>
+
+<ul>
+  <li>Un <strong>éditeur de visual novel</strong> : scènes, dialogues à choix multiples, personnages avec états émotionnels, graphe narratif visuel, jet de dé intégré.</li>
+  <li>Un <strong>éditeur de carte 2D topdown</strong> : déplacements vue du dessus (style anciens jeux d'aventure), entités NPC avec comportements configurables, zones de déclenchement de dialogues, effets atmosphériques.</li>
+</ul>
+
+<div class="new-box">
+  AccessCity Studio est conçu pour être utilisé directement par les participants des ateliers, y compris des personnes en situation de handicap moteur ou cognitif : interface entièrement visuelle (drag-and-drop), aucun code à écrire, annulation/rétablissement illimité, sauvegarde automatique, compatible avec les périphériques adaptés (trackball, joystick, clavier adapté). Disponible en version web (sans installation) et en application desktop Windows.
+</div>
+
+<h2>3.3 Correspondance mécaniques de jeu ↔ outil</h2>
+
+<table>
+  <tr>
+    <th>Mécanique décrite dans le dossier initial</th>
+    <th>Implémentation dans AccessCity Studio</th>
+  </tr>
+  <tr>
+    <td>Roman visuel interactif à choix multiples</td>
+    <td>Éditeur de dialogues avec branches conditionnelles et variables de jeu</td>
+  </tr>
+  <tr>
+    <td>Lancer de dé — taux de réussite aléatoire</td>
+    <td>Nœud "jet de dé" dans l'éditeur de dialogues — conditionne les branches narratives</td>
+  </tr>
+  <tr>
+    <td>Déplacements vu en hauteur (style anciens jeux d'aventure)</td>
+    <td>Module topdown 2D avec moteur de jeu intégré — déplacements au clavier, caméra suivante</td>
+  </tr>
+  <tr>
+    <td>Mini-jeux pédagogiques (braille, langue des signes, lecture labiale…)</td>
+    <td>Scènes de jeu 2D avec zones d'interaction et déclencheurs de séquences narratives</td>
+  </tr>
+  <tr>
+    <td>Un personnage / un type de handicap par chapitre</td>
+    <td>Système de personnages avec états émotionnels et caractéristiques configurables par personnage</td>
+  </tr>
+  <tr>
+    <td>Rencontres en explorant la carte → déclenchement d'un dialogue</td>
+    <td>Zones de collision sur la carte 2D → ouverture automatique d'une scène VN</td>
+  </tr>
+</table>
+
+<h2>3.4 État de développement de l'outil au T1 2026</h2>
+
+<table>
+  <tr>
+    <th>Fonctionnalité</th>
+    <th>Phase</th>
+    <th>Statut</th>
+  </tr>
+  <tr>
+    <td>Éditeur de scènes VN (personnages, décors, textboxes)</td>
+    <td><span class="phase-tag">Phase 1-2</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Éditeur de dialogues (simples, conditionnels, jet de dé)</td>
+    <td><span class="phase-tag">Phase 2</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Graphe narratif visuel (no-code)</td>
+    <td><span class="phase-tag">Phase 2</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Système de personnages (états émotionnels, animations)</td>
+    <td><span class="phase-tag">Phase 2-3</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Éditeur de cartes 2D topdown (tuiles, couches, NPC)</td>
+    <td><span class="phase-tag">Phase 3</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Moteur de jeu intégré + prévisualisation en temps réel</td>
+    <td><span class="phase-tag">Phase 3</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Effets atmosphériques (pluie, brouillard, neige)</td>
+    <td><span class="phase-tag">Phase 3</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+  <tr>
+    <td>Application desktop portable (Windows, sans installation)</td>
+    <td><span class="phase-tag">Phase 3</span></td>
+    <td class="status-ok">✅ Build disponible</td>
+  </tr>
+  <tr>
+    <td>Système d'objets interactifs modulaires (NPC, objets, sons)</td>
+    <td><span class="phase-tag">Phase 4</span></td>
+    <td class="status-wip">🟡 En cours de développement</td>
+  </tr>
+  <tr>
+    <td>Export/import complet du projet</td>
+    <td><span class="phase-tag">Phase 3</span></td>
+    <td class="status-ok">✅ Opérationnel</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     4. LIVRABLES PÉDAGOGIQUES — AVANCEMENT
+══════════════════════════════════════════════════════════════════════ -->
+<h1>4. Livrables pédagogiques — Avancement</h1>
+
+<table>
+  <tr>
+    <th>Livrable prévu</th>
+    <th>État T1 2026</th>
+    <th>Commentaire</th>
+  </tr>
+  <tr>
+    <td>1 guide pédagogique d'initiation à GDevelop (avec notions d'accessibilité)</td>
+    <td class="status-wip">🟡 En rédaction</td>
+    <td>Trame définie, contenu en cours de structuration</td>
+  </tr>
+  <tr>
+    <td>1 guide d'initiation à AccessCity Studio</td>
+    <td class="status-wip">🟡 En rédaction</td>
+    <td>Ajout par rapport au dossier initial — outil de production retenu</td>
+  </tr>
+  <tr>
+    <td>1 fiche par mini-jeu développé</td>
+    <td class="status-wait">⚪ À venir</td>
+    <td>Dépend de la co-conception avec les participants (T2–T3 2026)</td>
+  </tr>
+  <tr>
+    <td>1 livret d'accompagnement pour les animateurs</td>
+    <td class="status-wip">🟡 Structure définie</td>
+    <td>Cadre pédagogique et déroulé type des ateliers rédigés</td>
+  </tr>
+  <tr>
+    <td>1 guide "Écriture de scénarios" pour les participants</td>
+    <td class="status-wip">🟡 En rédaction</td>
+    <td>Adapté au format roman visuel interactif d'AccessCity</td>
+  </tr>
+  <tr>
+    <td>1 kit d'assets graphiques</td>
+    <td class="status-wip">🟡 En cours</td>
+    <td>Sélection de sprites libres de droits (format standard LPC) + modèles de personnages vierges</td>
+  </tr>
+  <tr>
+    <td>1 exemple de scénario complet</td>
+    <td class="status-wip">🟡 En cours</td>
+    <td>Scénario pilote (personnage avec handicap moteur) en co-conception avec l'équipe</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     5. ÉLÉMENTS FINANCIERS
+══════════════════════════════════════════════════════════════════════ -->
+<h1>5. Éléments financiers</h1>
+
+<h2>5.1 Budget global — Inchangé</h2>
+
+<table>
+  <tr>
+    <th>Poste</th>
+    <th>Montant</th>
+  </tr>
+  <tr>
+    <td>Budget total prévisionnel du projet (toutes années confondues)</td>
+    <td><strong>57 854 €</strong></td>
+  </tr>
+  <tr>
+    <td>Subvention sollicitée — Fondation Afnic</td>
+    <td><strong>10 000 €</strong></td>
+  </tr>
+</table>
+
+<h2>5.2 Plan de financement</h2>
+
+<table>
+  <tr>
+    <th>Financeur</th>
+    <th>Statut</th>
+    <th>Montant</th>
+  </tr>
+  <tr>
+    <td>Fondation Afnic</td>
+    <td>Sollicité</td>
+    <td>10 000 €</td>
+  </tr>
+  <tr>
+    <td>ANCT — Financement CnFS</td>
+    <td>Acquis</td>
+    <td>14 900 €</td>
+  </tr>
+  <tr>
+    <td>Autofinancement APF France handicap</td>
+    <td>Acquis</td>
+    <td>32 954 €</td>
+  </tr>
+  <tr>
+    <td><strong>Total</strong></td>
+    <td></td>
+    <td><strong>57 854 €</strong></td>
+  </tr>
+</table>
+
+<div class="new-box">
+  <strong>Apport en nature non valorisé dans le budget initial :</strong> le développement d'AccessCity Studio (l'outil de production du jeu) est réalisé par l'équipe projet dans le cadre de ses missions. Cet apport en développement logiciel — qui aurait représenté un coût significatif en cas d'externalisation — n'est pas comptabilisé dans le budget prévisionnel mais constitue un levier important pour la maîtrise des dépenses du projet.
+</div>
+
+<h2>5.3 Dépenses engagées au T1 2026</h2>
+
+<p>Aucune dépense significative n'a été engagée au premier trimestre 2026. Les acquisitions de matériel et d'outils sont prévues à partir du deuxième trimestre, en amont du démarrage des ateliers participatifs.</p>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     6. PROCHAINES ÉTAPES
+══════════════════════════════════════════════════════════════════════ -->
+<h1>6. Prochaines étapes — T2 2026</h1>
+
+<ul>
+  <li><strong>Démarrage des ateliers participatifs</strong> dans les trois délégations (Corrèze, Haute-Vienne, Creuse) — sessions de découverte avec GDevelop, puis premières séances de co-conception avec AccessCity Studio.</li>
+  <li><strong>Finalisation du scénario pilote</strong> et première mise en jeu dans AccessCity Studio.</li>
+  <li><strong>Production du kit graphique de démarrage</strong> — sprites de personnages et décors pour les ateliers.</li>
+  <li><strong>Acquisition du matériel informatique et adaptations</strong> nécessaires pour les ateliers (ordinateurs, périphériques adaptés).</li>
+  <li><strong>Livraison du guide d'initiation GDevelop et du guide AccessCity Studio</strong> — documents testés lors des premières sessions.</li>
+</ul>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PIED DE PAGE
+══════════════════════════════════════════════════════════════════════ -->
+<div class="footer">
+  <p><strong>Rapport de suivi T1 2026</strong> — Dossier KORO-4861 — APF France handicap, Territoire Limousin</p>
+  <p>Contacts : Lucas Demaël — dd.19@apf.asso.fr — 07 86 57 20 61 | Guillaume Bragard</p>
+  <p><em>Document transmis à la Fondation Afnic dans le cadre du suivi du projet AccessCity : le jeu du handicap.</em></p>
+</div>
+
+</body>
+</html>

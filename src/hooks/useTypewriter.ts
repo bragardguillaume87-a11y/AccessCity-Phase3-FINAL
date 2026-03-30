@@ -30,6 +30,16 @@ interface UseTypewriterOptions {
    * @default true
    */
   contextAware?: boolean;
+
+  /**
+   * Callback fired on each character reveal.
+   * Reçoit le caractère affiché — utile pour les sons typewriter.
+   *
+   * ⚠️ Implémenté via ref interne : changer la référence de cette fonction
+   * ne redémarre PAS l'animation. Passer une fonction stable ou en ligne,
+   * les deux sont sûrs.
+   */
+  onTick?: (char: string) => void;
 }
 
 /**
@@ -92,7 +102,8 @@ export function useTypewriter(
     speed = 40,
     cursor = true,
     onComplete,
-    contextAware = true
+    contextAware = true,
+    onTick,
   } = options;
 
   const [displayText, setDisplayText] = useState<string>('');
@@ -104,6 +115,10 @@ export function useTypewriter(
   const rafIdRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const accumulatedTimeRef = useRef<number>(0);
+
+  // Ref pour onTick — évite de redémarrer l'animation quand la référence change
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
 
   // Detect prefers-reduced-motion (WCAG 2.2 accessibility)
   useEffect(() => {
@@ -185,6 +200,8 @@ export function useTypewriter(
 
         if (indexRef.current < text.length) {
           indexRef.current++;
+          // Notifier le son typewriter (via ref — ne redémarre pas l'effet)
+          onTickRef.current?.(text[indexRef.current - 1]);
           setDisplayText(text.substring(0, indexRef.current));
         } else {
           // Animation complete

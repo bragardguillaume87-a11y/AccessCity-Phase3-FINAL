@@ -23,3 +23,4 @@ export type { GameSettingsSectionProps } from './GameSettingsSection';
 
 export { ShortcutsSection } from './ShortcutsSection';
 export { AccessibilitySection } from './AccessibilitySection';
+export { AudioSettingsSection } from './AudioSettingsSection';

@@ -16,21 +16,27 @@ interface TerminalNodeProps {
  * TerminalNode - Node representing a scene jump
  * Memoized to prevent unnecessary re-renders in ReactFlow.
  */
-export const TerminalNode = React.memo(function TerminalNode({ data, selected }: TerminalNodeProps): React.JSX.Element {
+export const TerminalNode = React.memo(function TerminalNode({
+  data,
+  selected,
+}: TerminalNodeProps): React.JSX.Element {
   const { label, choiceText } = data;
   const theme = useGraphTheme();
   const themeColors = theme.nodes.terminal;
   const sizes = theme.sizes;
 
   const shadow = selected ? themeColors.shadowSelected : themeColors.shadow;
+  const borderWidth = selected ? '3px' : '2px';
 
   const ariaLabel = `Saut vers scene: ${label}${choiceText ? ` (via "${choiceText}")` : ''}`;
 
   const nodeClasses = [
     'terminal-node',
     theme.animations.nodeHover,
-    selected && theme.animations.nodeSelected
-  ].filter(Boolean).join(' ');
+    selected && theme.animations.nodeSelected,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
@@ -40,9 +46,11 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
       aria-selected={selected}
       tabIndex={0}
       style={{
-        background: themeColors.bgGradient || themeColors.bg,
-        borderColor: selected ? COLORS.SELECTED : themeColors.border,
-        borderWidth: selected ? '3px' : '2px',
+        background: themeColors.headerBg
+          ? `linear-gradient(135deg, ${themeColors.headerBg}cc, ${themeColors.headerBg}88)`
+          : themeColors.bgGradient || themeColors.bg,
+        borderColor: selected ? COLORS.SELECTED : themeColors.headerBg || themeColors.border,
+        borderWidth,
         borderStyle: 'dashed',
         borderRadius: `${sizes.nodeBorderRadius}px`,
         padding: '12px',
@@ -53,7 +61,7 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '8px'
+        gap: '8px',
       }}
     >
       <NodeHandles
@@ -76,10 +84,11 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
             fontSize: `${sizes.fontSizeText}px`,
             fontWeight: '600',
             color: themeColors.text,
-            margin: '0'
+            margin: '0',
           }}
         >
-          {theme.icons?.useEmoji ? '🌟 ' : ''}{label}
+          {theme.icons?.useEmoji ? '🌟 ' : ''}
+          {label}
         </p>
         {choiceText && (
           <p
@@ -88,7 +97,7 @@ export const TerminalNode = React.memo(function TerminalNode({ data, selected }:
               color: themeColors.text,
               opacity: 0.8,
               margin: '4px 0 0 0',
-              fontStyle: 'italic'
+              fontStyle: 'italic',
             }}
           >
             "{truncateTerminalChoice(choiceText)}"

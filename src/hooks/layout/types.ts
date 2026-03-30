@@ -11,7 +11,7 @@ import { Position } from '@xyflow/react';
 // ─── Layout Result ──────────────────────────────────────────
 
 /** Side of a node element */
-export type LayoutSide = 'left' | 'right';
+type LayoutSide = 'left' | 'right';
 
 /**
  * NodeLayoutResult - Pre-computed positional values for all node decorations.
@@ -69,13 +69,13 @@ export interface LayoutConstants {
 }
 
 /** Theme sizes needed for layout calculations */
-export interface LayoutThemeSizes {
+interface LayoutThemeSizes {
   nodeWidth: number;
   handleSize: number;
 }
 
 /** Serpentine row colors from theme */
-export interface LayoutThemeColors {
+interface LayoutThemeColors {
   rowColors?: string[];
 }
 

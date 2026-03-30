@@ -1,11 +1,12 @@
 /**
  * Duplication utilities - Duplicate scenes, dialogues, characters
  * Auto-rename with "(copie)" suffix
- * Uses structuredClone for deep copy and crypto.randomUUID for secure IDs
+ * Uses structuredClone for deep copy and generateId for secure IDs
  * ASCII only - No fragments
  */
 
-import type { Scene, Dialogue, Character, DialogueChoice } from '@/types';
+import type { Scene, Dialogue, Character } from '@/types';
+import { generateId } from '@/utils/generateId';
 
 /**
  * Generate a unique copy name
@@ -26,32 +27,18 @@ function generateCopyName(originalName: string, existingNames: string[]): string
 }
 
 /**
- * Generate a unique ID using crypto.randomUUID (modern browsers)
- * Falls back to timestamp + performance.now + random for older environments
- * @param prefix - ID prefix
- * @returns Unique ID
- */
-function generateUniqueId(prefix = 'item'): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-
-  const timestamp = Date.now();
-  const perfNow = typeof performance !== 'undefined' ? performance.now() : 0;
-  const random = Math.random().toString(36).substr(2, 12);
-
-  return `${prefix}-${timestamp}-${perfNow.toFixed(0)}-${random}`;
-}
-
-/**
  * Duplicate a scene with all its dialogues
  * @param scene - Scene to duplicate
  * @param existingSceneIds - List of existing scene IDs
  * @param existingSceneTitles - List of existing scene titles
  * @returns Duplicated scene
  */
-export function duplicateScene(scene: Scene, _existingSceneIds: string[], existingSceneTitles: string[]): Scene {
-  const newSceneId = generateUniqueId('scene');
+export function duplicateScene(
+  scene: Scene,
+  _existingSceneIds: string[],
+  existingSceneTitles: string[]
+): Scene {
+  const newSceneId = generateId('scene');
   const newTitle = generateCopyName(scene.title || 'Scene sans titre', existingSceneTitles);
 
   const cloned = structuredClone(scene);
@@ -60,15 +47,15 @@ export function duplicateScene(scene: Scene, _existingSceneIds: string[], existi
     ...cloned,
     id: newSceneId,
     title: newTitle,
-    dialogues: (cloned.dialogues || []).map(dialogue => ({
+    dialogues: (cloned.dialogues || []).map((dialogue) => ({
       ...dialogue,
-      id: generateUniqueId('dialogue'),
-      choices: (dialogue.choices || []).map(choice => {
+      id: generateId('dialogue'),
+      choices: (dialogue.choices || []).map((choice) => {
         const clean = { ...choice };
         delete clean.diceCheck;
         return clean;
-      })
-    }))
+      }),
+    })),
   };
 }
 
@@ -82,25 +69,14 @@ export function duplicateDialogue(dialogue: Dialogue): Dialogue {
 
   return {
     ...cloned,
-    id: generateUniqueId('dialogue'),
+    id: generateId('dialogue'),
     text: cloned.text || 'Dialogue duplique',
-    choices: (cloned.choices || []).map(choice => {
+    choices: (cloned.choices || []).map((choice) => {
       const clean = { ...choice };
       delete clean.diceCheck;
       return clean;
-    })
+    }),
   };
-}
-
-/**
- * Duplicate a choice
- * @param choice - Choice to duplicate
- * @returns Duplicated choice without diceCheck
- */
-export function duplicateChoice(choice: DialogueChoice): Omit<DialogueChoice, 'diceCheck'> {
-  const cloned = structuredClone(choice);
-  delete cloned.diceCheck;
-  return cloned;
 }
 
 /**
@@ -110,8 +86,12 @@ export function duplicateChoice(choice: DialogueChoice): Omit<DialogueChoice, 'd
  * @param existingCharacterNames - List of existing character names
  * @returns Duplicated character
  */
-export function duplicateCharacter(character: Character, _existingCharacterIds: string[], existingCharacterNames: string[]): Character {
-  const newCharacterId = generateUniqueId('char');
+export function duplicateCharacter(
+  character: Character,
+  _existingCharacterIds: string[],
+  existingCharacterNames: string[]
+): Character {
+  const newCharacterId = generateId('char');
   const newName = generateCopyName(character.name || 'Personnage sans nom', existingCharacterNames);
 
   const cloned = structuredClone(character);
@@ -119,6 +99,6 @@ export function duplicateCharacter(character: Character, _existingCharacterIds: 
   return {
     ...cloned,
     id: newCharacterId,
-    name: newName
+    name: newName,
   };
 }

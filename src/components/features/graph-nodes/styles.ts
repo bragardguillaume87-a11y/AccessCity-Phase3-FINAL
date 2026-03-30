@@ -46,13 +46,16 @@ export const SPEAKER_NAME_GROUP_STYLE: React.CSSProperties = {
 
 export const INDEX_BADGE_BASE_STYLE: React.CSSProperties = {
   fontWeight: 800,
-  borderRadius: '12px',
+  fontSize: '11px',
+  letterSpacing: '0.03em',
+  borderRadius: '10px',
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
-  minWidth: '32px',
+  minWidth: '24px',
   justifyContent: 'center',
-  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+  border: '1px solid rgba(255,255,255,0.15)',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
 };
 
 export const STAGE_DIRECTIONS_BASE_STYLE: React.CSSProperties = {

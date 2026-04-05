@@ -255,7 +255,8 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   // Résout l'élément sélectionné vers un ID de dialogue pour PreviewPlayer.
   // Réactif : se recalcule si selectedElement ou les dialogues changent.
   // isDialogueSelection / isSceneSelection = type guards discriminés (selectionStore.types).
-  const dialoguesByScene = useDialoguesStore((s) => s.dialoguesByScene);
+  // s?.dialoguesByScene : guard défensif contre état undefined pendant HMR (Zustand+zundo)
+  const dialoguesByScene = useDialoguesStore((s) => s?.dialoguesByScene ?? {});
   const previewDialogueId = useMemo(() => {
     if (!isDialogueSelection(selectedElement)) return null;
     return dialoguesByScene[selectedElement.sceneId]?.[selectedElement.index]?.id ?? null;

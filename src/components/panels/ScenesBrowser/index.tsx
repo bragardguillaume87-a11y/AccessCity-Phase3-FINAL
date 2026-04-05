@@ -15,7 +15,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -28,12 +29,13 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { X, Plus, Copy, Trash2 } from 'lucide-react';
+import { X, Plus, Copy, Trash2, Check, GripVertical } from 'lucide-react';
 import type { SceneMetadata } from '@/types';
 import { useScenesStore } from '@/stores/index';
 import { useUIStore } from '@/stores/uiStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
+import { useSelectionStore } from '@/stores/selectionStore';
 
 // ── Gradients procéduraux pour les scènes sans background (Quilez §14.3) ─────
 const BG_GRADIENTS = [
@@ -72,9 +74,10 @@ interface FilmCardProps {
   scene: SceneMetadata;
   index: number;
   isSelected: boolean;
+  isLastScene: boolean;
   dialogueCount: number;
   charactersCount: number;
-  onSelect: () => void;
+  onSelect: (id: string) => void;
   onDuplicate: (sceneId: string) => void;
   onDelete: (sceneId: string) => void;
   onUpdateColor: (sceneId: string, color: string) => void;
@@ -84,6 +87,7 @@ function FilmCard({
   scene,
   index,
   isSelected,
+  isLastScene,
   dialogueCount,
   charactersCount,
   onSelect,
@@ -93,6 +97,7 @@ function FilmCard({
 }: FilmCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: scene.id,
@@ -112,11 +117,11 @@ function FilmCard({
         width: CARD_W,
       }}
       {...attributes}
-      {...listeners}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
         setPickerOpen(false);
+        setConfirmingDelete(false);
       }}
     >
       <motion.div
@@ -134,7 +139,7 @@ function FilmCard({
             : { y: -4, scale: 1.04, transition: { type: 'spring', stiffness: 400, damping: 22 } }
         }
         whileTap={isDragging ? {} : { scale: 0.96, y: 0 }}
-        onClick={onSelect}
+        onClick={() => onSelect(scene.id)}
         role="button"
         tabIndex={0}
         aria-label={`Scène ${index + 1}: ${scene.title}${isSelected ? ' (active)' : ''}`}
@@ -142,7 +147,7 @@ function FilmCard({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            onSelect();
+            onSelect(scene.id);
           }
         }}
         style={{
@@ -153,6 +158,27 @@ function FilmCard({
           position: 'relative',
         }}
       >
+        {/* ── Drag handle (GripVertical) — seul élément avec {...listeners} ── */}
+        <div
+          {...listeners}
+          title="Glisser pour réordonner"
+          style={{
+            position: 'absolute',
+            top: 3,
+            left: 3,
+            zIndex: 10,
+            opacity: isHovered ? 0.7 : 0,
+            transition: 'opacity 0.15s ease',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            color: 'var(--color-text-primary)',
+            lineHeight: 0,
+            padding: 2,
+            borderRadius: 3,
+          }}
+        >
+          <GripVertical size={12} />
+        </div>
+
         {/* ── Active glow ring ── */}
         {isSelected && (
           <motion.div
@@ -258,7 +284,6 @@ function FilmCard({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.1 }}
-                onClick={(e) => e.stopPropagation()}
                 style={{
                   position: 'absolute',
                   inset: 0,
@@ -366,32 +391,104 @@ function FilmCard({
                   <Copy size={9} />
                 </button>
 
-                {/* Delete */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(scene.id);
-                  }}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  title="Supprimer"
-                  aria-label="Supprimer la scène"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 18,
-                    height: 18,
-                    borderRadius: 4,
-                    padding: 0,
-                    background: 'rgba(239,68,68,0.2)',
-                    border: '1px solid rgba(239,68,68,0.45)',
-                    color: 'var(--color-danger)',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Trash2 size={9} />
-                </button>
+                {/* Delete — normal ou confirmation inline */}
+                {!isLastScene && (
+                  <AnimatePresence mode="wait" initial={false}>
+                    {!confirmingDelete ? (
+                      <motion.button
+                        key="trash"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.1 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmingDelete(true);
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        title="Supprimer"
+                        aria-label="Supprimer la scène"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          padding: 0,
+                          background: 'rgba(239,68,68,0.2)',
+                          border: '1px solid rgba(239,68,68,0.45)',
+                          color: 'var(--color-danger)',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Trash2 size={9} />
+                      </motion.button>
+                    ) : (
+                      <motion.div
+                        key="confirm"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.1 }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: 'flex', gap: 2, flexShrink: 0 }}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(scene.id);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          title="Confirmer la suppression"
+                          aria-label="Confirmer la suppression"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 18,
+                            height: 18,
+                            borderRadius: 4,
+                            padding: 0,
+                            background: 'rgba(239,68,68,0.5)',
+                            border: '1px solid rgba(239,68,68,0.8)',
+                            color: 'white',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Check size={9} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmingDelete(false);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          title="Annuler"
+                          aria-label="Annuler la suppression"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 18,
+                            height: 18,
+                            borderRadius: 4,
+                            padding: 0,
+                            background: 'rgba(255,255,255,0.12)',
+                            border: '1px solid rgba(255,255,255,0.25)',
+                            color: 'white',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <X size={9} />
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -429,35 +526,38 @@ function FilmCard({
   );
 }
 
-// ── Add scene button ──────────────────────────────────────────────────────────
+// ── Add scene button (filmstrip) ─────────────────────────────────────────────
 
 function AddSceneButton({ onClick }: { onClick: () => void }) {
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.08, y: -3 }}
-      whileTap={{ scale: 0.94 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+      whileHover={{
+        scale: 1.04,
+        y: -4,
+        transition: { type: 'spring', stiffness: 400, damping: 22 },
+      }}
+      whileTap={{ scale: 0.94, y: 0 }}
       aria-label="Ajouter une nouvelle scène"
       style={{
         flexShrink: 0,
-        width: 52,
+        width: CARD_W,
         height: THUMB_H,
         borderRadius: 7,
         border: '1.5px dashed var(--color-primary-40)',
-        background: '#8b5cf612',
+        background: 'var(--color-primary-subtle)',
         color: 'var(--color-primary)',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 3,
+        gap: 5,
         alignSelf: 'flex-start',
       }}
     >
-      <Plus size={16} />
-      <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.04em' }}>SCÈNE</span>
+      <Plus size={18} />
+      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.03em' }}>Nouvelle scène</span>
     </motion.button>
   );
 }
@@ -479,8 +579,12 @@ export function ScenesBrowser() {
   const elementsByScene = useSceneElementsStore((s) => s.elementsByScene);
   const dialoguesByScene = useDialoguesStore((s) => s.dialoguesByScene);
 
+  // MouseSensor + TouchSensor au lieu de PointerSensor :
+  // PointerSensor appelle preventDefault() sur pointerdown → bloque les clics sur les cartes.
+  // MouseSensor et TouchSensor ne bloquent pas les clics natifs.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -501,9 +605,9 @@ export function ScenesBrowser() {
   const handleSceneClick = useCallback(
     (sceneId: string) => {
       setSelectedSceneForEdit(sceneId);
-      setScenesBrowserOpen(false);
+      useSelectionStore.getState().selectScene(sceneId);
     },
-    [setSelectedSceneForEdit, setScenesBrowserOpen]
+    [setSelectedSceneForEdit]
   );
 
   const handleAddScene = useCallback(() => {
@@ -546,12 +650,10 @@ export function ScenesBrowser() {
     (sceneId: string) => {
       const currentScenes = useScenesStore.getState().scenes;
       if (currentScenes.length === 1) return;
-      if (window.confirm('Supprimer cette scène ?')) {
-        deleteScene(sceneId);
-        if (selectedSceneId === sceneId) {
-          const next = currentScenes.find((s) => s.id !== sceneId);
-          if (next) setSelectedSceneForEdit(next.id);
-        }
+      deleteScene(sceneId);
+      if (selectedSceneId === sceneId) {
+        const next = currentScenes.find((s) => s.id !== sceneId);
+        if (next) setSelectedSceneForEdit(next.id);
       }
     },
     [deleteScene, selectedSceneId, setSelectedSceneForEdit]
@@ -620,29 +722,6 @@ export function ScenesBrowser() {
             <div style={{ flex: 1 }} />
 
             <motion.button
-              onClick={handleAddScene}
-              whileHover={{ scale: 1.06, y: -1 }}
-              whileTap={{ scale: 0.94 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '3px 9px',
-                borderRadius: 5,
-                background: 'var(--color-primary)',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 10,
-                fontWeight: 600,
-              }}
-              aria-label="Ajouter une nouvelle scène"
-            >
-              <Plus size={10} /> Nouvelle scène
-            </motion.button>
-
-            <motion.button
               onClick={() => setScenesBrowserOpen(false)}
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
@@ -655,9 +734,9 @@ export function ScenesBrowser() {
                 height: 22,
                 borderRadius: 5,
                 padding: 0,
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--color-text-muted)',
+                background: 'rgba(185,28,28,0.18)',
+                border: '1px solid rgba(220,60,60,0.35)',
+                color: 'rgba(248,113,113,0.9)',
                 cursor: 'pointer',
               }}
               aria-label="Fermer (Échap)"
@@ -699,11 +778,12 @@ export function ScenesBrowser() {
                       scene={scene}
                       index={index}
                       isSelected={scene.id === selectedSceneId}
+                      isLastScene={scenes.length === 1}
                       dialogueCount={dialoguesByScene[scene.id]?.length ?? 0}
                       charactersCount={
                         elementsByScene[scene.id]?.characters?.length ?? EMPTY_CHARS.length
                       }
-                      onSelect={() => handleSceneClick(scene.id)}
+                      onSelect={handleSceneClick}
                       onDuplicate={handleDuplicate}
                       onDelete={handleDelete}
                       onUpdateColor={handleUpdateColor}
@@ -718,7 +798,6 @@ export function ScenesBrowser() {
                       background: 'rgba(255,255,255,0.06)',
                       flexShrink: 0,
                       alignSelf: 'flex-start',
-                      marginTop: 0,
                     }}
                   />
 

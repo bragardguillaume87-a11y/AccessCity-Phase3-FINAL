@@ -3,7 +3,7 @@
  * v3 : mode mot (pendu à 6 vies), intégration résultat dé, failurePenalty.
  * 6 points cliquables (grille 2×3), lookup table dans src/config/braillePatterns.ts.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Heart } from 'lucide-react';
 import { BRAILLE_PATTERNS, BRAILLE_LETTERS } from '@/config/braillePatterns';
@@ -92,14 +92,23 @@ function SingleLetterChallenge({
   const [revealState, setRevealState] = useState<DotReveal[]>(Array(6).fill('idle') as DotReveal[]);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Reset quand attemptKey change (nouvelle lettre)
-  const stableKey = attemptKey;
-  useMemo(() => {
+  // ⚠️ BUG FIX : useMemo avec setState = violation React (effets de bord pendant le render).
+  // Remplacé par useEffect — reset propre quand attemptKey change (nouvelle tentative).
+  // Note : le composant remonte déjà via la key du parent, ce reset est une sécurité.
+  useEffect(() => {
     setUserPattern([false, false, false, false, false, false]);
     setRevealState(Array(6).fill('idle') as DotReveal[]);
     setIsValidating(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stableKey]);
+  }, [attemptKey]);
+
+  // Cleanup de tous les setTimeout à la destruction du composant (évite setState sur composant démonté)
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+  }, []);
 
   const togglePoint = useCallback(
     (idx: number) => {
@@ -118,13 +127,15 @@ function SingleLetterChallenge({
     );
     const correct = results.every((r) => r === 'correct');
     results.forEach((result, i) => {
-      setTimeout(() => {
+      const t = setTimeout(() => {
         setRevealState((prev) => prev.map((s, j) => (j === i ? result : s)));
       }, i * 80);
+      timeoutsRef.current.push(t);
     });
     if (correct) uiSounds.minigameDing();
     else uiSounds.minigameFail();
-    setTimeout(() => onLetterResult(correct), 6 * 80 + 400);
+    const t = setTimeout(() => onLetterResult(correct), 6 * 80 + 400);
+    timeoutsRef.current.push(t);
   }, [isValidating, userPattern, targetPattern, onLetterResult]);
 
   return (
@@ -271,54 +282,39 @@ function SingleLetterChallenge({
         })}
       </div>
 
-      {/* Bouton valider */}
-      <AnimatePresence mode="wait">
-        {!isValidating ? (
-          <motion.button
-            key="validate-btn"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-            onClick={handleValidate}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            style={{
-              width: '100%',
-              padding: '14px',
-              borderRadius: 12,
-              border: 'none',
-              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-              color: 'white',
-              fontWeight: 800,
-              fontSize: 16,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            <CheckCircle size={18} /> Valider
-          </motion.button>
-        ) : (
-          <motion.div
-            key="validating"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{
-              color: 'rgba(255,255,255,0.45)',
-              fontSize: 14,
-              fontWeight: 600,
-              padding: '14px',
-            }}
-          >
-            Vérification…
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Bouton valider — toujours visible, désactivé pendant validation (Norman §9.1) */}
+      <motion.button
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18 }}
+        onClick={handleValidate}
+        disabled={isValidating}
+        whileHover={!isValidating ? { scale: 1.02 } : {}}
+        whileTap={!isValidating ? { scale: 0.97 } : {}}
+        style={{
+          width: '100%',
+          padding: '14px',
+          borderRadius: 12,
+          border: 'none',
+          background: isValidating
+            ? 'rgba(124,58,237,0.4)'
+            : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+          color: isValidating ? 'rgba(255,255,255,0.55)' : 'white',
+          fontWeight: 800,
+          fontSize: 16,
+          cursor: isValidating ? 'default' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          boxShadow: isValidating ? 'none' : '0 4px 20px rgba(139,92,246,0.5)',
+          letterSpacing: '0.02em',
+          transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
+        }}
+      >
+        <CheckCircle size={18} />
+        {isValidating ? 'Vérification…' : 'Valider'}
+      </motion.button>
     </>
   );
 }
@@ -339,10 +335,14 @@ export function MinigameBraille({ config, onResult }: MinigameBrailleProps) {
 
   // ── State mode lettre simple ─────────────────────────────────────────────
   const targetLetterSingle = useMemo(
-    () =>
-      !isWordMode
-        ? (BRAILLE_LETTERS[Math.floor(Math.random() * BRAILLE_LETTERS.length)] as string)
-        : 'A',
+    () => {
+      if (isWordMode) return 'A';
+      const pool =
+        config?.brailleLetters && config.brailleLetters.length > 0
+          ? config.brailleLetters
+          : (BRAILLE_LETTERS as string[]);
+      return pool[Math.floor(Math.random() * pool.length)];
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
@@ -358,6 +358,15 @@ export function MinigameBraille({ config, onResult }: MinigameBrailleProps) {
   const currentLetter = isWordMode ? wordLetters[currentLetterIdx] : targetLetterSingle;
   const currentPattern = BRAILLE_PATTERNS[currentLetter] ?? BRAILLE_PATTERNS['A'];
 
+  // Tracking des timers du composant parent — cleanup au démontage (§3 hallucination_patterns)
+  const parentTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const timers = parentTimersRef.current; // copie locale obligatoire (react-hooks/exhaustive-deps)
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
   const handleLetterResult = useCallback(
     (correct: boolean) => {
       if (!isWordMode) {
@@ -372,30 +381,36 @@ export function MinigameBraille({ config, onResult }: MinigameBrailleProps) {
 
         if (nextRevealed.length === wordLetters.length) {
           // Mot complet !
-          setTimeout(() => {
+          const t1 = setTimeout(() => {
             uiSounds.minigameSuccess();
             setWordComplete(true);
-            setTimeout(() => onResult(true), 1400);
+            const t2 = setTimeout(() => onResult(true), 1400);
+            parentTimersRef.current.push(t2);
           }, 300);
+          parentTimersRef.current.push(t1);
         } else {
           // Prochaine lettre
-          setTimeout(() => {
+          const t3 = setTimeout(() => {
             setCurrentLetterIdx((i) => i + 1);
             setAttemptKey((k) => k + 1);
           }, 600);
+          parentTimersRef.current.push(t3);
         }
       } else {
         const newLives = livesLeft - 1;
         setLivesLeft(newLives);
         if (newLives <= 0) {
           uiSounds.minigameFail();
-          setTimeout(() => {
+          const t4 = setTimeout(() => {
             setWordFailed(true);
-            setTimeout(() => onResult(false), 1200);
+            const t5 = setTimeout(() => onResult(false), 1200);
+            parentTimersRef.current.push(t5);
           }, 300);
+          parentTimersRef.current.push(t4);
         } else {
           // Réessayer la même lettre
-          setTimeout(() => setAttemptKey((k) => k + 1), 600);
+          const t6 = setTimeout(() => setAttemptKey((k) => k + 1), 600);
+          parentTimersRef.current.push(t6);
         }
       }
     },
@@ -523,8 +538,9 @@ export function MinigameBraille({ config, onResult }: MinigameBrailleProps) {
         })}
       </div>
 
-      {/* Zone de jeu */}
-      <AnimatePresence mode="wait">
+      {/* Zone de jeu — mode="sync" (défaut) : entrée et sortie simultanées.
+           mode="wait" bloquait en Tauri/WebView2 si l'animation de sortie ne se terminait pas. */}
+      <AnimatePresence>
         {wordComplete ? (
           <motion.div
             key="word-complete"

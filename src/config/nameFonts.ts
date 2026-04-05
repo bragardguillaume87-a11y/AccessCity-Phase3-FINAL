@@ -79,6 +79,13 @@ export const NAME_FONTS: NameFontDef[] = [
     fontFamily: "'Righteous', sans-serif",
     description: 'Action / énergie',
   },
+  {
+    id: 'crimson-pro',
+    label: 'Crimson',
+    emoji: '📜',
+    fontFamily: "'Crimson Pro', Georgia, 'Palatino Linotype', serif",
+    description: 'Narratif / littéraire',
+  },
 ];
 
 export const DEFAULT_NAME_FONT_ID = 'georgia';

@@ -84,6 +84,8 @@ export interface MinigameConfig {
   brailleMode?: 'letter' | 'word';
   /** Mots définis par l'auteur (mode mot). Sélection aléatoire ou selon diceResult. */
   brailleWords?: string[];
+  /** Lettres ciblées par l'auteur (mode lettre). Pool de sélection aléatoire. Vide = toutes les lettres. */
+  brailleLetters?: string[];
   /** Nombre de vies en mode pendu (défaut 6). */
   brailleLives?: number;
   /** Utiliser le résultat du dernier jet de dés pour choisir la difficulté du mot. */

@@ -187,21 +187,25 @@ export function MiniCanvasPreview({
             />
           </div>
         </div>
-      </div>
 
-      {/* Badge position */}
-      <p
-        style={{
-          fontSize: 9,
-          color: 'var(--color-text-muted)',
-          textAlign: 'center',
-          marginTop: 3,
-          fontFamily: 'var(--font-family-mono)',
-          letterSpacing: '0.03em',
-        }}
-      >
-        📍 {POSITION_LABELS[position]} · {boxWidth}%
-      </p>
+        {/* Badge position — overlay intégré, plus de ligne en dessous */}
+        <div
+          title={`${POSITION_LABELS[position]} · largeur ${boxWidth}%`}
+          style={{
+            position: 'absolute',
+            bottom: 4,
+            right: 5,
+            fontSize: 8,
+            color: 'rgba(255,255,255,0.45)',
+            fontFamily: 'var(--font-family-mono)',
+            letterSpacing: '0.02em',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        >
+          📍 {boxWidth}%
+        </div>
+      </div>
     </div>
   );
 }

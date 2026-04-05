@@ -76,6 +76,8 @@ interface UseGameStateReturn {
   minigameState: MinigameState;
   /** Ouvre l'overlay mini-jeu pour le dialogue courant. Appelé par PreviewPlayer. */
   triggerMinigame: (config: MinigameConfig) => void;
+  /** Ferme l'overlay mini-jeu sans résultat et revient au dialogue précédent. */
+  quitMinigame: () => void;
   goToScene: (sceneId: string, dialogueId?: string | null) => void;
   goToNextDialogue: () => void;
   chooseOption: (choice: DialogueChoice) => void;
@@ -483,6 +485,13 @@ export function useGameState({
     [goToNextDialogue, applyStatsDelta]
   );
 
+  /** Ferme l'overlay mini-jeu sans résultat et revient au dialogue précédent. */
+  const quitMinigame = useCallback(() => {
+    setMinigameState({ isOpen: false, config: null, onResult: null });
+    // Revenir au dialogue précédent si l'historique le permet
+    jumpToHistoryIndex(history.length - 1);
+  }, [history, jumpToHistoryIndex]);
+
   /** Execute the navigation stored during a dice check and close the modal. */
   const confirmDiceNavigation = useCallback(() => {
     const pending = pendingNavigationRef.current;
@@ -513,6 +522,7 @@ export function useGameState({
     isAtLastDialogue,
     minigameState,
     triggerMinigame,
+    quitMinigame,
     goToScene,
     goToNextDialogue,
     chooseOption,

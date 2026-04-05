@@ -1,9 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { useRigStore } from '@/stores/rigStore';
 import { DEFAULT_ANIMATION_FPS, DEFAULT_KEYFRAME_DURATION } from '@/types/bone';
 import type { KeyframeEntry } from '@/types/bone';
 import { EASING_LABELS, BEZIER_PRESETS } from '@/utils/animationEasing';
 import type { EasingType, BezierPoints } from '@/utils/animationEasing';
+import { Confetti } from '@/components/ui/confetti';
+import { POSE_TEMPLATES } from '@/config/poseTemplates';
+import type { PoseTemplate } from '@/config/poseTemplates';
 
 interface AnimationRightPanelProps {
   characterId: string;
@@ -14,6 +17,18 @@ interface AnimationRightPanelProps {
   onSelectClip: (id: string | null) => void;
   onSelectPose: (id: string | null) => void;
   onPlayToggle: () => void;
+  /** ID de la pose en cours d'édition (chargée dans le squelette pour modification) */
+  editingPoseId?: string | null;
+  /** Charger les rotations d'une pose dans le squelette + basculer vers l'onglet Squelette */
+  onLoadPose?: (poseId: string) => void;
+  /** Mettre à jour la pose éditée avec l'état actuel du squelette */
+  onUpdatePose?: () => void;
+  /** Annuler le mode édition sans sauvegarder */
+  onCancelEdit?: () => void;
+  /** Appliquer un template de pose au rig (charge les rotations dans le squelette et capture la pose) */
+  onApplyPoseTemplate?: (template: PoseTemplate) => void;
+  /** Preview de pose au survol dans le canvas Squelette (null = effacer la preview) */
+  onPoseHover?: (poseId: string | null) => void;
 }
 
 // Easing presets affichés en mode expert (hors bezier)
@@ -32,6 +47,12 @@ export function AnimationRightPanel({
   onSelectClip,
   onSelectPose,
   onPlayToggle,
+  editingPoseId = null,
+  onLoadPose,
+  onUpdatePose,
+  onCancelEdit,
+  onApplyPoseTemplate,
+  onPoseHover,
 }: AnimationRightPanelProps) {
   const rig = useRigStore((s) => s.rigs.find((r) => r.characterId === characterId));
   const addClip = useRigStore((s) => s.addClip);
@@ -44,8 +65,24 @@ export function AnimationRightPanel({
   const poses = rig?.poses ?? [];
   const selectedClip = clips.find((c) => c.id === selectedClipId);
 
+  // Confirmations de suppression deux-étapes (Norman §9.2 / Meier §10.3)
+  const [pendingDeleteClipId, setPendingDeleteClipId] = useState<string | null>(null);
+  const [pendingDeletePoseId, setPendingDeletePoseId] = useState<string | null>(null);
+
+  // Accordéon "Poses de base"
+  const [showPresets, setShowPresets] = useState(false);
+
   // Popover Bezier ouvert pour quel keyframe index
   const [bezierPopoverIdx, setBezierPopoverIdx] = useState<number | null>(null);
+
+  // Célébration après capture de pose (§3 : ref + cleanup)
+  const [showPoseConfetti, setShowPoseConfetti] = useState(false);
+  const poseConfettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (poseConfettiTimer.current) clearTimeout(poseConfettiTimer.current);
+    };
+  }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -64,19 +101,33 @@ export function AnimationRightPanel({
     if (!rig) return;
     const boneStates = Object.fromEntries(rig.bones.map((b) => [b.id, { rotation: b.rotation }]));
     addPose(rig.id, { name: `Pose ${poses.length + 1}`, boneStates });
+    // Célébration (Nijman §8.4 : reward loop) — §3 : ref + cleanup dans useEffect
+    setShowPoseConfetti(true);
+    if (poseConfettiTimer.current) clearTimeout(poseConfettiTimer.current);
+    poseConfettiTimer.current = setTimeout(() => setShowPoseConfetti(false), 1800);
   }, [rig, poses.length, addPose]);
 
   const handleDeleteClip = useCallback(() => {
     if (!rig || !selectedClipId) return;
+    if (pendingDeleteClipId !== selectedClipId) {
+      setPendingDeleteClipId(selectedClipId);
+      return;
+    }
     deleteClip(rig.id, selectedClipId);
     onSelectClip(null);
-  }, [rig, selectedClipId, deleteClip, onSelectClip]);
+    setPendingDeleteClipId(null);
+  }, [rig, selectedClipId, pendingDeleteClipId, deleteClip, onSelectClip]);
 
   const handleDeletePose = useCallback(() => {
     if (!rig || !selectedPoseId) return;
+    if (pendingDeletePoseId !== selectedPoseId) {
+      setPendingDeletePoseId(selectedPoseId);
+      return;
+    }
     deletePose(rig.id, selectedPoseId);
     onSelectPose(null);
-  }, [rig, selectedPoseId, deletePose, onSelectPose]);
+    setPendingDeletePoseId(null);
+  }, [rig, selectedPoseId, pendingDeletePoseId, deletePose, onSelectPose]);
 
   // Ajouter la pose sélectionnée à la fin de la séquence du clip
   const handleAddPoseToClip = useCallback(() => {
@@ -147,6 +198,7 @@ export function AnimationRightPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {showPoseConfetti && <Confetti />}
       {/* ── Clips ── */}
       <div
         style={{
@@ -171,10 +223,23 @@ export function AnimationRightPanel({
               <button
                 type="button"
                 onClick={handleDeleteClip}
-                title="Supprimer clip"
-                style={{ ...smallBtn, color: 'var(--color-danger)' }}
+                title={
+                  pendingDeleteClipId === selectedClipId
+                    ? 'Confirmer la suppression'
+                    : 'Supprimer clip'
+                }
+                style={{
+                  ...smallBtn,
+                  color: 'var(--color-danger)',
+                  opacity: pendingDeleteClipId === selectedClipId ? 1 : 0.7,
+                }}
               >
-                ✕
+                {pendingDeleteClipId === selectedClipId ? '⚠️ Confirmer' : '✕'}
+              </button>
+            )}
+            {pendingDeleteClipId && (
+              <button type="button" onClick={() => setPendingDeleteClipId(null)} style={smallBtn}>
+                Annuler
               </button>
             )}
           </div>
@@ -228,44 +293,263 @@ export function AnimationRightPanel({
             >
               📸 +
             </button>
-            {selectedPoseId && (
+            {selectedPoseId && !editingPoseId && (
               <button
                 type="button"
                 onClick={handleDeletePose}
-                title="Supprimer pose"
-                style={{ ...smallBtn, color: 'var(--color-danger)' }}
+                title={
+                  pendingDeletePoseId === selectedPoseId
+                    ? 'Confirmer la suppression'
+                    : 'Supprimer pose'
+                }
+                style={{
+                  ...smallBtn,
+                  color: 'var(--color-danger)',
+                  opacity: pendingDeletePoseId === selectedPoseId ? 1 : 0.7,
+                }}
               >
-                ✕
+                {pendingDeletePoseId === selectedPoseId ? '⚠️ Confirmer' : '✕'}
+              </button>
+            )}
+            {pendingDeletePoseId && (
+              <button type="button" onClick={() => setPendingDeletePoseId(null)} style={smallBtn}>
+                Annuler
               </button>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
-          {poses.map((pose) => (
-            <button
-              key={pose.id}
-              type="button"
-              onClick={() => onSelectPose(pose.id)}
-              style={clipRowStyle(pose.id === selectedPoseId)}
-            >
-              <span
+        {/* Bannière mode édition */}
+        {editingPoseId && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: '8px 10px',
+              borderRadius: 6,
+              background: 'rgba(139,92,246,0.12)',
+              border: '1px solid rgba(139,92,246,0.35)',
+              fontSize: 11,
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            <p style={{ fontWeight: 700, marginBottom: 4, color: 'var(--color-primary)' }}>
+              ✏️ Mode édition
+            </p>
+            <p style={{ marginBottom: 8, lineHeight: 1.4 }}>
+              Ajuste le squelette, puis sauvegarde.
+            </p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                type="button"
+                onClick={onUpdatePose}
                 style={{
+                  ...smallBtn,
+                  background: 'var(--color-primary)',
+                  color: '#fff',
+                  border: 'none',
                   flex: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  justifyContent: 'center',
                 }}
               >
-                {pose.name}
-              </span>
-              <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                {Object.keys(pose.boneStates).length}os
-              </span>
+                💾 Mettre à jour
+              </button>
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                style={{ ...smallBtn, color: 'var(--color-text-muted)' }}
+              >
+                ✕ Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Accordéon "Poses de base" — toujours visible si onApplyPoseTemplate fourni */}
+        {onApplyPoseTemplate && (
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => setShowPresets((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                width: '100%',
+                padding: '4px 6px',
+                borderRadius: 5,
+                border: '1px solid var(--color-border-base)',
+                background: showPresets ? 'var(--color-bg-hover)' : 'transparent',
+                cursor: 'pointer',
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--color-text-muted)',
+                textAlign: 'left',
+              }}
+            >
+              <span>{showPresets ? '▾' : '▸'}</span>
+              <span>🎯 Poses de base</span>
+              <span style={{ marginLeft: 'auto', opacity: 0.6 }}>clic pour appliquer</span>
             </button>
-          ))}
-          {poses.length === 0 && <p style={emptyText}>Aucune pose capturée.</p>}
-        </div>
+
+            {showPresets && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 4,
+                  marginTop: 4,
+                  padding: '6px',
+                  background: 'var(--color-bg-hover)',
+                  borderRadius: 5,
+                  border: '1px solid var(--color-border-base)',
+                }}
+              >
+                {POSE_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => {
+                      onApplyPoseTemplate(tpl);
+                      setShowPresets(false);
+                    }}
+                    title={tpl.description}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '5px 7px',
+                      borderRadius: 4,
+                      border: '1px solid var(--color-border-base)',
+                      background: 'var(--color-bg-elevated)',
+                      cursor: 'pointer',
+                      fontSize: 10,
+                      color: 'var(--color-text-secondary)',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, flexShrink: 0 }}>{tpl.emoji}</span>
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {tpl.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Guide débutant — affiché uniquement si aucune pose (Will Wright §4.1) */}
+        {poses.length === 0 ? (
+          <div
+            style={{
+              marginTop: 10,
+              padding: '10px 8px',
+              borderRadius: 6,
+              background: 'var(--color-bg-hover)',
+              border: '1px solid var(--color-border-base)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            {[
+              { emoji: '🦴', text: "Pose ton squelette dans l'onglet Squelette" },
+              { emoji: '📸', text: 'Reviens ici → 📸 + pour capturer la pose' },
+              { emoji: '🎬', text: 'Crée un Clip et ajoute ta pose avec 📸 + Séq.' },
+              { emoji: '▶', text: "Ajoute d'autres poses et appuie sur Play !" },
+            ].map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>{step.emoji}</span>
+                <p style={{ fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                  <strong style={{ color: 'var(--color-text-secondary)' }}>Étape {i + 1}</strong>{' '}
+                  {step.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
+            {poses.map((pose) => (
+              <div
+                key={pose.id}
+                onMouseEnter={() => onPoseHover?.(pose.id)}
+                onMouseLeave={() => onPoseHover?.(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  borderRadius: 5,
+                  border:
+                    pose.id === selectedPoseId
+                      ? '1.5px solid var(--color-primary)'
+                      : '1.5px solid transparent',
+                  background:
+                    pose.id === selectedPoseId ? 'var(--color-primary-subtle)' : 'transparent',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectPose(pose.id)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '5px 7px',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    textAlign: 'left',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--color-text-secondary)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <span
+                    style={{
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {editingPoseId === pose.id ? '✏️ ' : ''}
+                    {pose.name}
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
+                    {Object.keys(pose.boneStates).length}os
+                  </span>
+                </button>
+                {/* Bouton charger dans squelette */}
+                <button
+                  type="button"
+                  onClick={() => onLoadPose?.(pose.id)}
+                  title="Charger cette pose dans le squelette pour l'éditer"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    color:
+                      editingPoseId === pose.id
+                        ? 'var(--color-primary)'
+                        : 'var(--color-text-muted)',
+                    padding: '4px 6px',
+                    flexShrink: 0,
+                  }}
+                >
+                  📥
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Séquence (keyframes) ── */}
@@ -311,7 +595,7 @@ export function AnimationRightPanel({
                 const isBezierOpen = bezierPopoverIdx === idx;
                 return (
                   <div
-                    key={`kf-${idx}`}
+                    key={`${kf.poseId}-${idx}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

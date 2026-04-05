@@ -161,20 +161,21 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
-              fontSize: 10,
+              gap: 5,
+              fontSize: 11,
               fontWeight: 700,
-              color: 'var(--color-primary)',
-              background: 'rgba(139,92,246,0.12)',
-              border: '1.5px solid rgba(139,92,246,0.35)',
-              borderRadius: 7,
-              padding: '4px 9px',
+              color: '#ffffff',
+              background: 'var(--color-primary)',
+              border: '1.5px solid rgba(139,92,246,0.6)',
+              borderRadius: 8,
+              padding: '5px 11px',
               cursor: 'pointer',
               letterSpacing: '0.02em',
+              boxShadow: '0 2px 8px rgba(139,92,246,0.35)',
             }}
           >
-            <Plus size={10} aria-hidden="true" />
-            Nouveau
+            <Plus size={12} aria-hidden="true" />
+            Créer personnage
           </button>
         </div>
 
@@ -521,7 +522,10 @@ export function CharacterMoodPicker({ onDragStart }: CharacterMoodPickerProps) {
                             transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
                             style={{ overflow: 'hidden' }}
                           >
-                            <div className="px-2 pb-3 pt-1 border-b border-[var(--color-border-base)]">
+                            <div
+                              className="px-2 pb-3 pt-1 border-b border-[var(--color-border-base)]"
+                              style={{ maxHeight: 240, overflowY: 'auto', scrollbarWidth: 'thin' }}
+                            >
                               <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
                                 Humeur
                               </p>

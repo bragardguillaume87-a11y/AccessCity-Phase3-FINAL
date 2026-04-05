@@ -18,6 +18,8 @@ interface CharacterWizardProps {
   characters: Character[];
   onSave: (character: Character) => void;
   onClose: () => void;
+  /** Called when unsaved-changes status changes — used by parent to guard Dialog close */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /**
@@ -31,11 +33,18 @@ interface CharacterWizardProps {
  * Designed for children 8+ with large buttons, encouraging
  * feedback, and visual progress indicators.
  */
-export function CharacterWizard({ character, characters, onSave, onClose }: CharacterWizardProps) {
+export function CharacterWizard({
+  character,
+  characters,
+  onSave,
+  onClose,
+  onDirtyChange,
+}: CharacterWizardProps) {
   // Form state management (reuse existing hook)
   const {
     formData,
     errors,
+    hasChanges,
     updateField,
     addMood,
     removeMood,
@@ -44,6 +53,11 @@ export function CharacterWizard({ character, characters, onSave, onClose }: Char
     setInitialStat,
     handleSave,
   } = useCharacterForm(character as Character, characters, onSave);
+
+  // Notify parent when dirty state changes so Dialog close can be guarded
+  useEffect(() => {
+    onDirtyChange?.(hasChanges);
+  }, [hasChanges, onDirtyChange]);
 
   // Wizard state machine
   const [wizardState, wizardActions] = useWizardState();

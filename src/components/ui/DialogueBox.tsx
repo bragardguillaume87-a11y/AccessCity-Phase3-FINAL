@@ -55,6 +55,10 @@ export const DIALOGUE_BOX_DEFAULTS: Required<DialogueBoxStyle> = {
   narratorTextColor: '#ede8d5',
   narratorBorderColor: '#c9a84c',
   narratorBgOpacity: 0.93,
+  narratorFont: 'crimson-pro',
+  narratorItalic: true,
+  narratorAlign: 'center',
+  narratorShowSeparators: true,
   boxWidth: 76,
 };
 
@@ -199,6 +203,8 @@ export interface DialogueBoxProps {
   onRestart?: () => void;
   /** Fermer le PreviewPlayer (PreviewPlayer uniquement). */
   onClose?: () => void;
+  /** Passer à la scène suivante (PreviewPlayer uniquement — absent sur la dernière scène). */
+  onNextScene?: () => void;
 
   // ── Slot éditeur ──
   /** Élément optionnel rendu dans le coin supérieur droit de l'en-tête speaker.
@@ -240,6 +246,7 @@ export function DialogueBox({
   onChoose,
   onRestart,
   onClose,
+  onNextScene,
   navigationSlot,
   dialogueKey,
 }: DialogueBoxProps) {
@@ -363,38 +370,52 @@ export function DialogueBox({
             </motion.div>
           )}
         </AnimatePresence>
-        {isTypewriterDone && !hasChoices && isAtLastDialogue && (onRestart || onClose) && (
-          <div className="mt-3 flex flex-col items-center gap-2 pb-1">
-            <p className="text-white/40 text-xs tracking-widest uppercase">— Fin de la scène —</p>
-            <div className="flex gap-2">
-              {onRestart && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRestart();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
-                >
-                  <RotateCcw className="w-3 h-3" aria-hidden="true" />
-                  Recommencer
-                </button>
-              )}
-              {onClose && (
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                  }}
-                  variant="gaming-primary"
-                  size="sm"
-                  className="min-w-[120px] text-xs"
-                >
-                  Fermer
-                </Button>
-              )}
+        {isTypewriterDone &&
+          !hasChoices &&
+          isAtLastDialogue &&
+          (onRestart || onNextScene || onClose) && (
+            <div className="mt-3 flex flex-col items-center gap-2 pb-1">
+              <p className="text-white/40 text-xs tracking-widest uppercase">— Fin de la scène —</p>
+              <div className="flex gap-2">
+                {onRestart && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestart();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" aria-hidden="true" />
+                    Recommencer
+                  </button>
+                )}
+                {onNextScene && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNextScene();
+                    }}
+                    variant="gaming-primary"
+                    size="sm"
+                    className="min-w-[120px] text-xs"
+                  >
+                    Scène suivante →
+                  </Button>
+                )}
+                {onClose && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                  >
+                    Fermer
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     );
 
@@ -592,6 +613,11 @@ export function DialogueBox({
   const narratorGold = config.narratorBorderColor;
   const narratorOrnSize = Math.round(9 * sf);
   const narratorSepMt = Math.round(11 * sf);
+  // Police narrateur — résolue depuis NAME_FONTS (configurable)
+  const narratorFontDef =
+    NAME_FONTS.find((f) => f.id === (config.narratorFont ?? 'crimson-pro')) ??
+    NAME_FONTS[NAME_FONTS.length - 1];
+  const narratorFontFamily = narratorFontDef.fontFamily;
   return (
     <div
       className="border backdrop-blur-md shadow-2xl overflow-hidden relative"
@@ -663,7 +689,7 @@ export function DialogueBox({
       )}
 
       {/* ── Texte du dialogue ── */}
-      {isNarrator && (
+      {isNarrator && config.narratorShowSeparators && (
         <motion.div
           initial={{ scaleX: 0, opacity: 0 }}
           animate={{ scaleX: 1, opacity: 1 }}
@@ -726,13 +752,11 @@ export function DialogueBox({
                   fontSize: effectiveFontSize,
                   minHeight: textMinHeightPx || undefined,
                   color: isNarrator ? config.narratorTextColor : config.textColor,
-                  fontFamily: isNarrator
-                    ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
-                    : undefined,
-                  fontStyle: isNarrator ? 'italic' : undefined,
+                  fontFamily: isNarrator ? narratorFontFamily : undefined,
+                  fontStyle: isNarrator && config.narratorItalic ? 'italic' : undefined,
                   lineHeight: isNarrator ? 1.88 : undefined,
                   letterSpacing: isNarrator ? '0.022em' : undefined,
-                  textAlign: isNarrator ? 'center' : undefined,
+                  textAlign: isNarrator ? (config.narratorAlign ?? 'center') : undefined,
                 }}
                 dangerouslySetInnerHTML={{ __html: richText }}
               />
@@ -743,13 +767,11 @@ export function DialogueBox({
                   fontSize: effectiveFontSize,
                   minHeight: textMinHeightPx || undefined,
                   color: isNarrator ? config.narratorTextColor : config.textColor,
-                  fontFamily: isNarrator
-                    ? "'Crimson Pro', Georgia, 'Palatino Linotype', serif"
-                    : undefined,
-                  fontStyle: isNarrator ? 'italic' : undefined,
+                  fontFamily: isNarrator ? narratorFontFamily : undefined,
+                  fontStyle: isNarrator && config.narratorItalic ? 'italic' : undefined,
                   lineHeight: isNarrator ? 1.88 : undefined,
                   letterSpacing: isNarrator ? '0.022em' : undefined,
-                  textAlign: isNarrator ? 'center' : undefined,
+                  textAlign: isNarrator ? (config.narratorAlign ?? 'center') : undefined,
                 }}
               >
                 {/* B — Fondu par caractère : chaque nouveau char monte un nouveau nœud DOM */}
@@ -813,41 +835,55 @@ export function DialogueBox({
         </AnimatePresence>
 
         {/* ── Fin de scène (PreviewPlayer uniquement) ── */}
-        {isTypewriterDone && !hasChoices && isAtLastDialogue && (onRestart || onClose) && (
-          <div className="mt-3 flex flex-col items-center gap-2 pb-1">
-            <p className="text-white/40 text-xs tracking-widest uppercase">— Fin de la scène —</p>
-            <div className="flex gap-2">
-              {onRestart && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRestart();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
-                >
-                  <RotateCcw className="w-3 h-3" aria-hidden="true" />
-                  Recommencer
-                </button>
-              )}
-              {onClose && (
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                  }}
-                  variant="gaming-primary"
-                  size="sm"
-                  className="min-w-[120px] text-xs"
-                >
-                  Fermer
-                </Button>
-              )}
+        {isTypewriterDone &&
+          !hasChoices &&
+          isAtLastDialogue &&
+          (onRestart || onNextScene || onClose) && (
+            <div className="mt-3 flex flex-col items-center gap-2 pb-1">
+              <p className="text-white/40 text-xs tracking-widest uppercase">— Fin de la scène —</p>
+              <div className="flex gap-2">
+                {onRestart && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestart();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" aria-hidden="true" />
+                    Recommencer
+                  </button>
+                )}
+                {onNextScene && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNextScene();
+                    }}
+                    variant="gaming-primary"
+                    size="sm"
+                    className="min-w-[120px] text-xs"
+                  >
+                    Scène suivante →
+                  </Button>
+                )}
+                {onClose && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                  >
+                    Fermer
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
-      {isNarrator && (
+      {isNarrator && config.narratorShowSeparators && (
         <motion.div
           initial={{ scaleX: 0, opacity: 0 }}
           animate={{ scaleX: 1, opacity: 1 }}

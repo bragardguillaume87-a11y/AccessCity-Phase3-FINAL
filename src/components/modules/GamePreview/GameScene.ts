@@ -1148,39 +1148,56 @@ export class TopdownScene extends ex.Scene {
           const { amplitude, frequency } = windComp;
           // Per-instance phase offset so sibling trees don't sway in sync
           const phase = instance.overrides?.windPhaseOffset ?? windComp.phaseOffset ?? 0;
+          // stiffness: exposant de la courbe d'influence verticale (shader-style)
+          // 2 = tronc rigide (défaut), 3+ = seule la cime bouge
+          const stiffness = windComp.stiffness ?? 2;
           const dW = spriteComp.srcW * scaleX;
           const dH = spriteComp.srcH * scaleY;
           // Horizontal padding prevents clipping at extreme sway positions
           const pad = Math.ceil(Math.abs(amplitude)) + 2;
-          const SLICES = 10; // horizontal strips — more = smoother gradient
+          const canvasW = dW + pad * 2;
+          // 20 slices = déformation nettement plus fluide que 10
+          const SLICES = 20;
 
           const windGraphic = new ex.Canvas({
-            width: dW + pad * 2,
+            width: canvasW,
             height: dH,
             cache: false, // re-draw each frame
             draw: (ctx) => {
-              ctx.clearRect(0, 0, dW + pad * 2, dH);
+              ctx.clearRect(0, 0, canvasW, dH);
               const t = Date.now() / 1000;
               const swayMax = amplitude * Math.sin(t * frequency * Math.PI * 2 + phase);
-              const sliceH = dH / SLICES;
-              const srcSliceH = spriteComp.srcH / SLICES;
 
               for (let s = 0; s < SLICES; s++) {
-                // tNorm: 0 at bottom slice (anchored), 1 at top slice (full sway)
+                // tNorm: 0 au bas (ancré), 1 au sommet (balancement maximal)
                 const tNorm = (SLICES - 1 - s) / (SLICES - 1);
-                // Quadratic ease: subtle at base, pronounced at crown
-                const swayX = swayMax * tNorm * tNorm;
+                // Courbe d'influence configurable — équivalent shader: pow(uv.y, stiffness)
+                const swayX = swayMax * Math.pow(tNorm, stiffness);
+
+                // Approche clip : chaque tranche définit une zone de découpe.
+                // On dessine le sprite ENTIER décalé horizontalement dans chaque tranche.
+                // Le canvas API gère l'isolation pixel-perfect — aucun calcul de source,
+                // aucun overlap, aucune déchirure possible.
+                const clipY = Math.floor((s * dH) / SLICES);
+                const clipH = Math.floor(((s + 1) * dH) / SLICES) - clipY;
+                if (clipH <= 0) continue;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, clipY, canvasW, clipH);
+                ctx.clip();
                 ctx.drawImage(
                   windImgSrc.image,
                   spriteComp.srcX,
-                  spriteComp.srcY + s * srcSliceH,
+                  spriteComp.srcY,
                   spriteComp.srcW,
-                  srcSliceH,
+                  spriteComp.srcH,
                   pad + swayX,
-                  s * sliceH,
+                  0,
                   dW,
-                  sliceH
+                  dH
                 );
+                ctx.restore();
               }
             },
           });
@@ -1199,22 +1216,20 @@ export class TopdownScene extends ex.Scene {
 
       if (animComp || spriteComp) {
         let shadowDW = tileSize * scaleX;
-        let shadowDH = tileSize * scaleY;
         if (spriteComp) {
           shadowDW = spriteComp.srcW * scaleX;
-          shadowDH = spriteComp.srcH * scaleY;
         } else if (animComp) {
           const shadowCfg =
             this.spriteSheetConfigs[animComp.spriteSheetConfigUrl ?? animComp.spriteAssetUrl];
           if (shadowCfg) {
             shadowDW = shadowCfg.frameW * scaleX;
-            shadowDH = shadowCfg.frameH * scaleY;
           }
         }
-        const sRx = Math.max(6, shadowDW * 0.42);
-        const sRy = Math.max(3, sRx * 0.35);
-        const sW = Math.ceil(sRx * 2 + 2);
-        const sH = Math.ceil(sRy * 2 + 2);
+        // Ellipse dimensionnée sur la largeur du sprite (canopée / silhouette)
+        const sRx = Math.max(10, shadowDW * 0.48);
+        const sRy = Math.max(4, sRx * 0.28); // aplatie = ombre au sol crédible
+        const sW = Math.ceil(sRx * 2 + 4);
+        const sH = Math.ceil(sRy * 2 + 4);
 
         const shadowGraphic = new ex.Canvas({
           width: sW,
@@ -1223,8 +1238,19 @@ export class TopdownScene extends ex.Scene {
           draw: (ctx) => {
             ctx.clearRect(0, 0, sW, sH);
             ctx.save();
-            ctx.globalAlpha = 0.4;
-            ctx.fillStyle = '#0d0d1a';
+            // Dégradé radial : centre opaque → bord transparent (ombre douce)
+            const grad = ctx.createRadialGradient(
+              sW / 2,
+              sH / 2,
+              0,
+              sW / 2,
+              sH / 2,
+              Math.max(sRx, sRy)
+            );
+            grad.addColorStop(0, 'rgba(10, 10, 20, 0.55)');
+            grad.addColorStop(0.6, 'rgba(10, 10, 20, 0.30)');
+            grad.addColorStop(1, 'rgba(10, 10, 20, 0)');
+            ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.ellipse(sW / 2, sH / 2, sRx, sRy, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -1232,7 +1258,11 @@ export class TopdownScene extends ex.Scene {
           },
         });
 
-        shadowOffsetY = shadowDH * 0.5 - sRy;
+        // Position : base visuelle du sprite (indépendant de originYPct).
+        // L'acteur est centré en py = cy*tileSize + anchorOffY.
+        // Le bas visuel du sprite = py + objH/2.
+        // → shadowOffsetY = objH/2 place l'ombre au sol sous le sprite.
+        shadowOffsetY = objH / 2;
         shadowActor = new ex.Actor({
           pos: ex.vec(px, py + shadowOffsetY),
           z: 1,

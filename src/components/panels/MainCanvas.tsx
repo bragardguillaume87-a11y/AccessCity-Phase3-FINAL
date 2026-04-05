@@ -35,7 +35,6 @@ import { useCanvasDragDrop } from './MainCanvas/hooks/useCanvasDragDrop';
 import { useContextMenu } from './MainCanvas/hooks/useContextMenu';
 import { useCanvasActions } from './MainCanvas/hooks/useCanvasActions';
 import { EmptySceneState } from './MainCanvas/components/EmptySceneState';
-import { SceneHeader } from './MainCanvas/components/SceneHeader';
 import { CanvasGridOverlay } from './MainCanvas/components/CanvasGridOverlay';
 import { NoBackgroundPlaceholder } from './MainCanvas/components/NoBackgroundPlaceholder';
 import { DropZoneIndicator } from './MainCanvas/components/DropZoneIndicator';
@@ -397,202 +396,192 @@ export default function MainCanvas({
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <SceneHeader
-        scene={selectedScene}
-        fullscreenMode={fullscreenMode}
-        onFullscreenChange={setFullscreenMode}
-      />
-
-      {/* Zone canvas + lecteur — flex-col simple, pas de librairie tierce */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {/* Canvas — flex-1 prend tout l'espace vertical disponible */}
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Canvas — flex-1 prend tout l'espace vertical disponible */}
+      <div
+        ref={centerDivRef}
+        className="flex-1 min-h-0 p-6 flex items-center justify-center overflow-hidden"
+        style={{ backgroundColor: CANVAS_PRESENTATION.SURROUND_COLOR }}
+      >
         <div
-          ref={centerDivRef}
-          className="flex-1 min-h-0 p-6 flex items-center justify-center overflow-hidden"
-          style={{ backgroundColor: CANVAS_PRESENTATION.SURROUND_COLOR }}
+          className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
+          style={{
+            width: `${canvasSize.width}px`,
+            height: `${canvasSize.height}px`,
+            minWidth: '320px',
+          }}
         >
           <div
-            className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
-            style={{
-              width: `${canvasSize.width}px`,
-              height: `${canvasSize.height}px`,
-              minWidth: '320px',
-            }}
+            ref={composedCanvasRef}
+            className={`relative w-full h-full bg-background transition-all ${
+              dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
+            } ${dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''}`}
+            onDragOver={dragDrop.handleDragOver}
+            onDragLeave={dragDrop.handleDragLeave}
+            onDrop={dragDrop.handleDrop}
           >
-            <div
-              ref={composedCanvasRef}
-              className={`relative w-full h-full bg-background transition-all ${
-                dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
-              } ${
-                dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''
-              }`}
-              onDragOver={dragDrop.handleDragOver}
-              onDragLeave={dragDrop.handleDragLeave}
-              onDrop={dragDrop.handleDrop}
-            >
-              {/* ── Fond — div séparée pour que le filtre n'affecte PAS les personnages ── */}
-              {selectedScene.backgroundUrl && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundImage: `url(${selectedScene.backgroundUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    filter: buildFilterCSS(selectedScene.backgroundFilter),
-                  }}
-                />
-              )}
-
-              {/* Effet atmosphérique — overlay canvas entre le fond et les personnages */}
-              <SceneEffectCanvas effect={selectedScene.sceneEffect} />
-
-              <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
-
-              <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
-
-              {!selectedScene.backgroundUrl && (
-                <NoBackgroundPlaceholder onSetBackground={actions.handleSetBackground} />
-              )}
-
-              {canvasDimensions.width > 0 &&
-                sceneCharacters.map((sceneChar) => {
-                  const character = actions.characters.find((c) => c.id === sceneChar.characterId);
-                  if (!character) return null;
-
-                  return (
-                    <CharacterSprite
-                      key={sceneChar.id}
-                      sceneChar={sceneChar}
-                      character={character}
-                      canvasDimensions={canvasDimensions}
-                      gridEnabled={viewState.gridEnabled}
-                      selectedCharacterId={selection.selectedCharacterId ?? undefined}
-                      activeMoodOverride={activeMoodOverrides[sceneChar.id]}
-                      isSpeaking={speakingSceneCharId === sceneChar.id}
-                      onCharacterClick={selection.handleCharacterClick}
-                      onContextMenu={contextMenu.handleCharacterRightClick}
-                      onUpdatePosition={handleUpdateCharacterPosition}
-                      onFlipHorizontal={() => contextMenu.handleFlipHorizontal(sceneChar.id)}
-                      onRemove={() => contextMenu.handleRemove(sceneChar.id)}
-                      onPositionChange={(x, y) =>
-                        selectedScene?.id &&
-                        actions.updateSceneCharacter(selectedScene.id, sceneChar.id, {
-                          position: { x, y },
-                        })
-                      }
-                      onScaleChange={(scale) =>
-                        selectedScene?.id &&
-                        actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { scale })
-                      }
-                    />
-                  );
-                })}
-
-              {canvasDimensions.width > 0 &&
-                sceneProps.map((prop) => {
-                  const canvasProp: CanvasProp = {
-                    id: prop.id,
-                    emoji: prop.assetUrl,
-                    position: prop.position,
-                    size: prop.size,
-                  };
-                  return (
-                    <PropElement
-                      key={prop.id}
-                      prop={canvasProp}
-                      canvasDimensions={canvasDimensions}
-                      gridEnabled={viewState.gridEnabled}
-                      onUpdateProp={handleUpdateProp}
-                      onRemoveProp={handleRemoveProp}
-                    />
-                  );
-                })}
-
-              {canvasDimensions.width > 0 &&
-                sceneTextBoxes.map((textBox) => {
-                  const canvasTextBox: CanvasTextBox = {
-                    id: textBox.id,
-                    text: textBox.content,
-                    fontSize: textBox.style?.fontSize as number | undefined,
-                    fontWeight: textBox.style?.fontWeight as string | undefined,
-                    color: textBox.style?.color as string | undefined,
-                    textAlign: textBox.style?.textAlign as string | undefined,
-                    position: textBox.position,
-                    size: textBox.size,
-                  };
-                  return (
-                    <TextBoxElement
-                      key={textBox.id}
-                      textBox={canvasTextBox}
-                      canvasDimensions={canvasDimensions}
-                      gridEnabled={viewState.gridEnabled}
-                      onUpdateTextBox={handleUpdateTextBox}
-                      onRemoveTextBox={handleRemoveTextBox}
-                    />
-                  );
-                })}
-
-              <CanvasFloatingControls
-                gridEnabled={viewState.gridEnabled}
-                onToggleGrid={viewState.setGridEnabled}
+            {/* ── Fond — div séparée pour que le filtre n'affecte PAS les personnages ── */}
+            {selectedScene.backgroundUrl && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: `url(${selectedScene.backgroundUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: buildFilterCSS(selectedScene.backgroundFilter),
+                }}
               />
+            )}
 
-              {enableStatsHUD && (
-                <div className="absolute top-4 left-4 z-10">
-                  <CompactStatHUD
-                    physique={variables[GAME_STATS.PHYSIQUE] ?? 100}
-                    mentale={variables[GAME_STATS.MENTALE] ?? 100}
-                    scaleFactor={
-                      canvasSize.width > 0 ? canvasSize.width / REFERENCE_CANVAS_WIDTH : 1
+            {/* Effet atmosphérique — overlay canvas entre le fond et les personnages */}
+            <SceneEffectCanvas effect={selectedScene.sceneEffect} />
+
+            <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
+
+            <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
+
+            {!selectedScene.backgroundUrl && (
+              <NoBackgroundPlaceholder onSetBackground={actions.handleSetBackground} />
+            )}
+
+            {canvasDimensions.width > 0 &&
+              sceneCharacters.map((sceneChar) => {
+                const character = actions.characters.find((c) => c.id === sceneChar.characterId);
+                if (!character) return null;
+
+                return (
+                  <CharacterSprite
+                    key={sceneChar.id}
+                    sceneChar={sceneChar}
+                    character={character}
+                    canvasDimensions={canvasDimensions}
+                    gridEnabled={viewState.gridEnabled}
+                    selectedCharacterId={selection.selectedCharacterId ?? undefined}
+                    activeMoodOverride={activeMoodOverrides[sceneChar.id]}
+                    isSpeaking={speakingSceneCharId === sceneChar.id}
+                    onCharacterClick={selection.handleCharacterClick}
+                    onContextMenu={contextMenu.handleCharacterRightClick}
+                    onUpdatePosition={handleUpdateCharacterPosition}
+                    onFlipHorizontal={() => contextMenu.handleFlipHorizontal(sceneChar.id)}
+                    onRemove={() => contextMenu.handleRemove(sceneChar.id)}
+                    onPositionChange={(x, y) =>
+                      selectedScene?.id &&
+                      actions.updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                        position: { x, y },
+                      })
+                    }
+                    onScaleChange={(scale) =>
+                      selectedScene?.id &&
+                      actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { scale })
                     }
                   />
-                </div>
-              )}
+                );
+              })}
 
-              {selectedElement?.type === 'dialogue' &&
-                selectedElement?.sceneId === selectedScene.id &&
-                (() => {
-                  const dialogue = sceneDialogues[selectedElement.index];
-                  if (!dialogue) return null;
+            {canvasDimensions.width > 0 &&
+              sceneProps.map((prop) => {
+                const canvasProp: CanvasProp = {
+                  id: prop.id,
+                  emoji: prop.assetUrl,
+                  position: prop.position,
+                  size: prop.size,
+                };
+                return (
+                  <PropElement
+                    key={prop.id}
+                    prop={canvasProp}
+                    canvasDimensions={canvasDimensions}
+                    gridEnabled={viewState.gridEnabled}
+                    onUpdateProp={handleUpdateProp}
+                    onRemoveProp={handleRemoveProp}
+                  />
+                );
+              })}
 
-                  const speaker = actions.characters.find((c) => c.id === dialogue.speaker);
-                  const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
+            {canvasDimensions.width > 0 &&
+              sceneTextBoxes.map((textBox) => {
+                const canvasTextBox: CanvasTextBox = {
+                  id: textBox.id,
+                  text: textBox.content,
+                  fontSize: textBox.style?.fontSize as number | undefined,
+                  fontWeight: textBox.style?.fontWeight as string | undefined,
+                  color: textBox.style?.color as string | undefined,
+                  textAlign: textBox.style?.textAlign as string | undefined,
+                  position: textBox.position,
+                  size: textBox.size,
+                };
+                return (
+                  <TextBoxElement
+                    key={textBox.id}
+                    textBox={canvasTextBox}
+                    canvasDimensions={canvasDimensions}
+                    gridEnabled={viewState.gridEnabled}
+                    onUpdateTextBox={handleUpdateTextBox}
+                    onRemoveTextBox={handleRemoveTextBox}
+                  />
+                );
+              })}
 
-                  return (
-                    <DialoguePreviewOverlay
-                      dialogue={dialogue}
-                      dialogueIndex={selectedElement.index}
-                      totalDialogues={sceneDialogues.length}
-                      speakerName={speakerName}
-                      currentDialogueText={currentDialogueText}
-                      onNavigate={selection.handleDialogueNavigate}
-                      onChoose={handleChoiceNavigation}
-                      isAutoPlaying={viewState.isPlaying}
-                      onAutoPlayComplete={() => viewState.setIsPlaying(false)}
-                      canvasWidth={canvasSize.width}
-                    />
-                  );
-                })()}
-            </div>
+            <CanvasFloatingControls
+              gridEnabled={viewState.gridEnabled}
+              onToggleGrid={viewState.setGridEnabled}
+              fullscreenMode={fullscreenMode}
+              onFullscreenChange={setFullscreenMode}
+            />
+
+            {enableStatsHUD && (
+              <div className="absolute top-4 left-4 z-10">
+                <CompactStatHUD
+                  physique={variables[GAME_STATS.PHYSIQUE] ?? 100}
+                  mentale={variables[GAME_STATS.MENTALE] ?? 100}
+                  scaleFactor={canvasSize.width > 0 ? canvasSize.width / REFERENCE_CANVAS_WIDTH : 1}
+                />
+              </div>
+            )}
+
+            {selectedElement?.type === 'dialogue' &&
+              selectedElement?.sceneId === selectedScene.id &&
+              (() => {
+                const dialogue = sceneDialogues[selectedElement.index];
+                if (!dialogue) return null;
+
+                const speaker = actions.characters.find((c) => c.id === dialogue.speaker);
+                const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
+
+                return (
+                  <DialoguePreviewOverlay
+                    dialogue={dialogue}
+                    dialogueIndex={selectedElement.index}
+                    totalDialogues={sceneDialogues.length}
+                    speakerName={speakerName}
+                    currentDialogueText={currentDialogueText}
+                    onNavigate={selection.handleDialogueNavigate}
+                    onChoose={handleChoiceNavigation}
+                    isAutoPlaying={viewState.isPlaying}
+                    onAutoPlayComplete={() => viewState.setIsPlaying(false)}
+                    canvasWidth={canvasSize.width}
+                  />
+                );
+              })()}
           </div>
         </div>
+      </div>
 
-        {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
-        <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
-          <TimelinePlayhead
-            currentTime={currentTime}
-            duration={sceneDuration}
-            dialogues={sceneDialogues}
-            onSeek={handleSeek}
-            onPlayPause={handlePlayPause}
-            isPlaying={viewState.isPlaying}
-            canvasZoom={viewState.canvasZoom}
-            onZoomIn={viewState.zoomIn}
-            onZoomOut={viewState.zoomOut}
-            onResetZoom={viewState.resetZoom}
-          />
-          {/* DialogueFlowVisualization masquée — doublon avec le graphe de dialogues (Panel 3)
+      {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
+      <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
+        <TimelinePlayhead
+          currentTime={currentTime}
+          duration={sceneDuration}
+          dialogues={sceneDialogues}
+          onSeek={handleSeek}
+          onPlayPause={handlePlayPause}
+          isPlaying={viewState.isPlaying}
+          canvasZoom={viewState.canvasZoom}
+          onZoomIn={viewState.zoomIn}
+          onZoomOut={viewState.zoomOut}
+          onResetZoom={viewState.resetZoom}
+        />
+        {/* DialogueFlowVisualization masquée — doublon avec le graphe de dialogues (Panel 3)
           {dialoguesCount > 0 && (
             <div className="max-h-48 overflow-y-auto border-t border-border">
               <DialogueFlowVisualization
@@ -606,11 +595,10 @@ export default function MainCanvas({
             </div>
           )}
           */}
-        </div>
-
-        {/* Zone réservée — espace pour futur widget sous la timeline */}
-        <div className="flex-shrink-0 h-[72px] bg-background border-t border-border/50" />
       </div>
+
+      {/* Zone réservée — espace pour futur widget sous la timeline */}
+      <div className="flex-shrink-0 h-[72px] bg-background border-t border-border/50" />
 
       {contextMenu.contextMenuData && (
         <CharacterContextMenu

@@ -302,6 +302,12 @@ export interface WindComponent {
   frequency: number;
   /** Décalage de phase pour varier entre les instances d'un même type */
   phaseOffset?: number;
+  /**
+   * Rigidité du tronc — exposant de la courbe d'influence verticale.
+   * 1 = linéaire (tout bouge pareil), 2 = quadratique (défaut, tronc rigide),
+   * 3+ = tronc très rigide, seule la cime oscille.
+   */
+  stiffness?: number;
 }
 
 // ── Son de proximité ────────────────────────────────────────────────────────

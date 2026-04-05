@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import type { KeyframeEntry } from '@/types/bone';
 import { EASING_LABELS } from '@/utils/animationEasing';
 
@@ -47,6 +47,7 @@ export function AnimationTimeline({
   onSpeedChange,
 }: AnimationTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Durées individuelles en frames
   const kfFrames = keyframes.map((kf) => Math.max(1, Math.round(kf.duration * fps)));
@@ -63,16 +64,24 @@ export function AnimationTimeline({
     [totalFrames, onSeek]
   );
 
+  // Listeners window attachés/détachés via useEffect — garantit le cleanup même si mouseup
+  // se produit hors de la fenêtre (drag sorti du navigateur)
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (ev: MouseEvent) => seekFromPointer(ev.clientX);
+    const onUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging, seekFromPointer]);
+
   const handleTrackMouseDown = useCallback(
     (e: React.MouseEvent) => {
       seekFromPointer(e.clientX);
-      const onMove = (ev: MouseEvent) => seekFromPointer(ev.clientX);
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+      setIsDragging(true);
     },
     [seekFromPointer]
   );
@@ -113,7 +122,7 @@ export function AnimationTimeline({
           const widthPct = totalFrames > 0 ? (kfLen / totalFrames) * 100 : 0;
           return (
             <div
-              key={`kf-${idx}`}
+              key={`${kf.poseId}-${kf.easing}-${kf.duration}-${idx}`}
               title={`${kf.poseId.slice(0, 6)} — ${kf.duration}s — ${EASING_LABELS[kf.easing]}`}
               style={{
                 width: `${widthPct}%`,

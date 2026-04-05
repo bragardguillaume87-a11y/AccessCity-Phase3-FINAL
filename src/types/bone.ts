@@ -42,6 +42,10 @@ export interface SpritePart {
    * Champ optionnel : absent/undefined = false (backward compat automatique).
    */
   flipX?: boolean;
+  /** Opacité du sprite 0–1 (défaut : 1). */
+  opacity?: number;
+  /** Rotation locale du sprite en degrés dans l'espace de l'os (défaut : 0). */
+  spriteRotation?: number;
 }
 
 /** FK : seule la rotation locale est nécessaire par os dans une pose */

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Stage, Layer, Group } from 'react-konva';
 import { useRigStore } from '@/stores/rigStore';
 import type { CharacterRig, KeyframeEntry } from '@/types/bone';
@@ -14,6 +14,10 @@ const EMPTY_BONES: CharacterRig['bones'] = [];
 const EMPTY_PARTS: CharacterRig['parts'] = [];
 const EMPTY_POSES: CharacterRig['poses'] = [];
 const EMPTY_KEYFRAMES: KeyframeEntry[] = [];
+
+// NOOP stables pour BoneGroup preview (module-level → référence stable → mémo non brisé)
+const NOOP_SELECT = () => {};
+const NOOP_ROTATE = () => {};
 
 interface AnimationPreviewViewProps {
   characterId: string;
@@ -44,7 +48,8 @@ export function AnimationPreviewView({
   const poses = rig?.poses ?? EMPTY_POSES;
 
   const imageCache = useBoneImageCache(parts);
-  const rootBones = getRootBones(bones);
+  // useMemo : évite une nouvelle référence array à chaque render → stabilise les props BoneGroup
+  const rootBones = useMemo(() => getRootBones(bones), [bones]);
 
   // ── Stage responsive (ResizeObserver) ────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -197,8 +202,8 @@ export function AnimationPreviewView({
                     selectedBoneId={null}
                     overridesMap={prevOverrides}
                     rotationOverride={prevOverrides[bone.id]?.rotation}
-                    onSelectBone={() => {}}
-                    onRotateBone={() => {}}
+                    onSelectBone={NOOP_SELECT}
+                    onRotateBone={NOOP_ROTATE}
                   />
                 ))}
               </Group>
@@ -219,8 +224,8 @@ export function AnimationPreviewView({
                   selectedBoneId={null}
                   overridesMap={overridesMap}
                   rotationOverride={overridesMap[bone.id]?.rotation}
-                  onSelectBone={() => {}}
-                  onRotateBone={() => {}}
+                  onSelectBone={NOOP_SELECT}
+                  onRotateBone={NOOP_ROTATE}
                 />
               ))}
             </Group>
@@ -241,8 +246,8 @@ export function AnimationPreviewView({
                     selectedBoneId={null}
                     overridesMap={nextOverrides}
                     rotationOverride={nextOverrides[bone.id]?.rotation}
-                    onSelectBone={() => {}}
-                    onRotateBone={() => {}}
+                    onSelectBone={NOOP_SELECT}
+                    onRotateBone={NOOP_ROTATE}
                   />
                 ))}
               </Group>

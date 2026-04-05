@@ -7,7 +7,7 @@ import { COLORS } from '@/config/colors';
 import type { DialogueNodeData, DialogueChoice, ValidationProblem } from '@/types';
 import { truncateNodeText, truncateStageDirections, getIssueStatus } from '@/utils/textHelpers';
 import { useUIStore } from '@/stores';
-import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
+import { COSMOS_ANIMATIONS, NODE_FONT, TRUNCATION } from '@/config/cosmosConstants';
 import { SerpentineBadge } from '../SerpentineBadge';
 import { FlowDirectionIndicator } from '../FlowDirectionIndicator';
 import { NodeHandles } from '../NodeHandles';
@@ -323,6 +323,11 @@ export const BaseNode = React.memo(function BaseNode({
             color: textColor,
             borderLeft: `3px solid ${borderColor}`,
           }}
+          title={
+            stageDirections && stageDirections.length > TRUNCATION.stageDirections
+              ? stageDirections
+              : undefined
+          }
         >
           {theme.icons?.useEmoji ? '🎬 ' : ''}
           {displayStageDirections}
@@ -338,6 +343,7 @@ export const BaseNode = React.memo(function BaseNode({
           wordWrap: 'break-word',
           opacity: 0.88,
         }}
+        title={text && text.length > TRUNCATION.nodeText ? text : undefined}
       >
         {displayText}
       </p>

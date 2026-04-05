@@ -63,11 +63,14 @@ export default function CharacterEditorModal({
   defaultMode = 'wizard',
 }: CharacterEditorModalProps) {
   const [mode, setMode] = useState<EditorMode>(defaultMode);
+  const [wizardDirty, setWizardDirty] = useState(false);
 
-  // Reset mode when modal opens
+  // Reset mode and dirty flag when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setMode(defaultMode);
+    } else {
+      setWizardDirty(false);
     }
   }, [isOpen, defaultMode]);
 
@@ -75,8 +78,18 @@ export default function CharacterEditorModal({
     setMode((prev) => (prev === 'wizard' ? 'expert' : 'wizard'));
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open && wizardDirty && mode === 'wizard') {
+      const confirmClose = window.confirm(
+        'Vous avez des modifications non sauvegardées. Voulez-vous vraiment fermer ?'
+      );
+      if (!confirmClose) return;
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange} modal={true}>
       <DialogContent
         className="max-w-7xl h-[90vh] p-0 gap-0 bg-background text-foreground"
         onPointerDownOutside={(e) => e.preventDefault()}
@@ -111,6 +124,7 @@ export default function CharacterEditorModal({
             characters={characters}
             onSave={onSave}
             onClose={onClose}
+            onDirtyChange={setWizardDirty}
           />
         ) : (
           <ExpertModeContent

@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useRigStore } from '@/stores/rigStore';
 import type { Bone, BoneTool, IKChain } from '@/types/bone';
 import { BONE_DEFAULT_COLORS, DEFAULT_BONE_LENGTH } from '@/types/bone';
 import { SliderRow } from '@/components/ui/SliderRow';
 import { TemplatePicker } from './TemplatePicker';
 import { findMirrorBone } from '../utils/boneUtils';
+import { generateId } from '@/utils/generateId';
 
 interface BoneEditorRightPanelProps {
   characterId: string;
@@ -19,6 +21,8 @@ interface BoneEditorRightPanelProps {
   refOpacity?: number;
   onRefScaleChange?: (v: number) => void;
   onRefOpacityChange?: (v: number) => void;
+  canUndo?: boolean;
+  onUndo?: () => void;
 }
 
 // ⑤ Emoji par type d'os — détection depuis le nom (Miyamoto §1.2 : symboles universels)
@@ -47,8 +51,99 @@ const EXPERT_TOOLS: { id: BoneTool; label: string; emoji: string; title: string 
   { id: 'rotate', emoji: '↻', label: 'Pivoter', title: 'Faire pivoter un os' },
   { id: 'add-bone', emoji: '🦴', label: '+ Os', title: 'Ajouter un os (clic sur canvas)' },
   { id: 'add-part', emoji: '🖼', label: '+ Part', title: 'Ajouter une partie sprite' },
-  { id: 'ik', emoji: '🎯', label: 'IK', title: 'Inverse Kinematics — déplacer end effector' },
+  {
+    id: 'ik',
+    emoji: '🎯',
+    label: 'IK',
+    title: 'Tirer le bout du bras — les os suivent tout seuls !',
+  },
 ];
+
+/** Ligne de propriété : slider + input numérique clavier + bouton ↺ reset. */
+function BonePropertyRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  defaultValue,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit?: string;
+  defaultValue: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+      <span style={{ fontSize: 11, color: 'var(--color-text-muted)', flexShrink: 0, minWidth: 52 }}>
+        {label}
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => {
+          const v = parseFloat(e.target.value);
+          if (!isNaN(v)) onChange(v);
+        }}
+        style={{ flex: 1, height: 4, cursor: 'pointer', accentColor: 'var(--color-primary)' }}
+        aria-label={label}
+      />
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => {
+          const v = parseFloat(e.target.value);
+          if (!isNaN(v)) onChange(Math.max(min, Math.min(max, v)));
+        }}
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: 'var(--color-text-primary)',
+          background: 'var(--color-bg-base)',
+          border: '1px solid var(--color-border-base)',
+          borderRadius: 4,
+          padding: '1px 4px',
+          width: 52,
+          textAlign: 'right',
+          outline: 'none',
+        }}
+        aria-label={`${label} valeur`}
+      />
+      {unit && (
+        <span style={{ fontSize: 10, color: 'var(--color-text-muted)', minWidth: 14 }}>{unit}</span>
+      )}
+      <button
+        type="button"
+        title={`Réinitialiser ${label}`}
+        onClick={() => onChange(defaultValue)}
+        style={{
+          flexShrink: 0,
+          padding: '2px 4px',
+          borderRadius: 3,
+          cursor: 'pointer',
+          fontSize: 10,
+          border: '1px solid var(--color-border-base)',
+          background: 'transparent',
+          color: 'var(--color-text-muted)',
+        }}
+      >
+        ↺
+      </button>
+    </div>
+  );
+}
 
 /**
  * BoneEditorRightPanel — Outils, hiérarchie des os, propriétés et chaînes IK.
@@ -68,6 +163,8 @@ export function BoneEditorRightPanel({
   refOpacity = 0.45,
   onRefScaleChange,
   onRefOpacityChange,
+  canUndo = false,
+  onUndo,
 }: BoneEditorRightPanelProps) {
   const rig = useRigStore((s) => s.rigs.find((r) => r.characterId === characterId));
   const deleteBone = useRigStore((s) => s.deleteBone);
@@ -86,6 +183,9 @@ export function BoneEditorRightPanel({
 
   // ── Confirmation suppression (mode débutant) ──────────────────────────────
   const [pendingDelete, setPendingDelete] = useState(false);
+
+  // ── Sprite section — collapsed par défaut, expand pour réglages fins ───────
+  const [spriteExpanded, setSpriteExpanded] = useState(false);
 
   // ── Template picker ───────────────────────────────────────────────────────
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -133,6 +233,7 @@ export function BoneEditorRightPanel({
 
   // ── Édition propriétés os (getState() dans handler — CLAUDE.md §3) ────────
   const selectedBone = bones.find((b) => b.id === selectedBoneId);
+  const selectedBonePart = parts.find((p) => p.boneId === selectedBoneId);
 
   const handleBoneName = useCallback(
     (name: string) => {
@@ -171,7 +272,7 @@ export function BoneEditorRightPanel({
     if (!rig || !ikForm || !ikForm.rootId || !ikForm.endId) return;
     if (ikForm.rootId === ikForm.endId) return;
     const chain: IKChain = {
-      id: `ik-${Date.now()}`,
+      id: generateId('ik'),
       name: ikForm.name || `Chaîne ${ikChains.length + 1}`,
       rootBoneId: ikForm.rootId,
       endBoneId: ikForm.endId,
@@ -276,6 +377,35 @@ export function BoneEditorRightPanel({
               <span>{t.label}</span>
             </button>
           ))}
+
+          {/* Bouton Undo — toujours visible, grisé quand rien à annuler (Meier §10.3) */}
+          {onUndo && (
+            <button
+              type="button"
+              onClick={canUndo ? onUndo : undefined}
+              disabled={!canUndo}
+              title={canUndo ? 'Annuler la dernière action (Ctrl+Z)' : 'Rien à annuler'}
+              style={{
+                gridColumn: '1 / -1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                padding: '5px 7px',
+                borderRadius: 6,
+                cursor: canUndo ? 'pointer' : 'not-allowed',
+                fontSize: 11,
+                border: '1.5px solid var(--color-border-hover)',
+                background: 'transparent',
+                color: 'var(--color-text-muted)',
+                opacity: canUndo ? 1 : 0.38,
+                transition: 'opacity 0.15s, border-color 0.1s',
+              }}
+            >
+              <span>↩</span>
+              <span>Annuler</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -297,7 +427,7 @@ export function BoneEditorRightPanel({
             marginBottom: 8,
           }}
         >
-          <p style={sectionLabel}>Os ({bones.length})</p>
+          <p style={sectionLabel}>🦴 Os ({bones.length})</p>
           <div style={{ display: 'flex', gap: 4 }}>
             {/* Bouton template — toujours présent (cible tutoriel étape 2) */}
             <button
@@ -318,20 +448,36 @@ export function BoneEditorRightPanel({
               <button
                 type="button"
                 onClick={() => addRigFromTemplate(characterId, 'personnage-simple')}
-                title="Réinitialiser les os depuis le modèle Personnage simple (poses et clips conservés)"
-                style={smallBtnStyle}
+                title={
+                  isBeginnerMode
+                    ? 'Remettre le squelette à zéro — tes poses et clips sont conservés !'
+                    : 'Réinitialiser les os depuis le modèle Personnage simple (poses et clips conservés)'
+                }
+                style={{
+                  ...smallBtnStyle,
+                  ...(isBeginnerMode && {
+                    border: '1.5px solid var(--color-warning)',
+                    color: 'var(--color-warning)',
+                  }),
+                }}
               >
-                🔄
+                {isBeginnerMode ? '↺ Refaire' : '🔄'}
               </button>
             )}
-            <button
+            {/* Pulse quand aucun os — guide le débutant vers la première action (Nijman §8.1) */}
+            <motion.button
               type="button"
+              data-tutorial-id="add-bone-button"
               onClick={handleAddRootBone}
               title="Ajouter os racine"
+              animate={bones.length === 0 ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+              transition={
+                bones.length === 0 ? { repeat: Infinity, duration: 2.2, ease: 'easeInOut' } : {}
+              }
               style={smallBtnStyle}
             >
               🦴 +
-            </button>
+            </motion.button>
             {selectedBoneId && !pendingDelete && (
               <button
                 type="button"
@@ -549,34 +695,50 @@ export function BoneEditorRightPanel({
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file || !rig) return;
-                            const url = URL.createObjectURL(file);
-                            // Lire les dimensions naturelles avant d'ajouter la part
-                            const img = new window.Image();
-                            img.onload = () => {
-                              const w = img.naturalWidth || 64;
-                              const h = img.naturalHeight || 88;
-                              addPart(rig.id, {
-                                boneId: b.id,
-                                assetUrl: url,
-                                offsetX: 0,
-                                offsetY: -Math.round(h / 2),
-                                width: w,
-                                height: h,
-                                zOrder: parts.filter((p) => p.boneId === b.id).length,
-                                flipX: false,
-                              });
-                              // Auto-détection de l'os symétrique
-                              const mirror = findMirrorBone(b.name, bones);
-                              if (mirror) {
-                                setMirrorPrompt({
-                                  mirrorBone: mirror,
-                                  assetUrl: url,
+                            // Capture IDs stables avant la chaîne async (rig peut changer avant img.onload)
+                            const rigId = rig.id;
+                            const boneId = b.id;
+                            const boneName = b.name;
+                            // FileReader → Data URL persistable (blob URLs expirent au refresh)
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const dataUrl = ev.target?.result as string;
+                              if (!dataUrl) return;
+                              // Lire les dimensions naturelles avant d'ajouter la part
+                              const img = new window.Image();
+                              img.onload = () => {
+                                // Guard : vérifier que le rig existe toujours (stale closure)
+                                const currentRig = useRigStore
+                                  .getState()
+                                  .rigs.find((r) => r.id === rigId);
+                                if (!currentRig) return;
+                                const w = img.naturalWidth || 64;
+                                const h = img.naturalHeight || 88;
+                                addPart(rigId, {
+                                  boneId,
+                                  assetUrl: dataUrl,
+                                  offsetX: 0,
+                                  offsetY: -Math.round(h / 2),
                                   width: w,
                                   height: h,
+                                  zOrder: currentRig.parts.filter((p) => p.boneId === boneId)
+                                    .length,
+                                  flipX: false,
                                 });
-                              }
+                                // Auto-détection de l'os symétrique
+                                const mirror = findMirrorBone(boneName, currentRig.bones);
+                                if (mirror) {
+                                  setMirrorPrompt({
+                                    mirrorBone: mirror,
+                                    assetUrl: dataUrl,
+                                    width: w,
+                                    height: h,
+                                  });
+                                }
+                              };
+                              img.src = dataUrl;
                             };
-                            img.src = url;
+                            reader.readAsDataURL(file);
                             e.target.value = '';
                           }}
                         />
@@ -650,7 +812,7 @@ export function BoneEditorRightPanel({
       {/* ── Propriétés de l'os sélectionné ── */}
       {selectedBone && (
         <div style={{ padding: '10px', borderBottom: '1px solid var(--color-border-base)' }}>
-          <p style={{ ...sectionLabel, marginBottom: 8 }}>Os sélectionné</p>
+          <p style={{ ...sectionLabel, marginBottom: 8 }}>🦴 Os sélectionné</p>
 
           {/* Nom — toujours visible */}
           <div style={{ ...propRowStyle, marginBottom: 6 }}>
@@ -666,57 +828,161 @@ export function BoneEditorRightPanel({
             />
           </div>
 
-          {/* Mode Débutant : sliders (§6b) */}
-          {isBeginnerMode ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <SliderRow
+          <BonePropertyRow
+            label="Rotation"
+            value={Math.round(selectedBone.rotation)}
+            min={-180}
+            max={180}
+            step={1}
+            unit="°"
+            defaultValue={0}
+            onChange={(v) => handleBoneRotation(v)}
+          />
+          <BonePropertyRow
+            label="Longueur"
+            value={selectedBone.length}
+            min={4}
+            max={200}
+            step={4}
+            unit="px"
+            defaultValue={DEFAULT_BONE_LENGTH}
+            onChange={(v) => handleBoneLength(v)}
+          />
+        </div>
+      )}
+
+      {/* ── Sprite — header compact toujours visible, détails expandables ── */}
+      {selectedBone && selectedBonePart && (
+        <div style={{ borderBottom: '1px solid var(--color-border-base)' }}>
+          {/* Header cliquable — vignette + label + flip + flèche */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setSpriteExpanded((v) => !v)}
+            onKeyDown={(e) => e.key === 'Enter' && setSpriteExpanded((v) => !v)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 10px',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <img
+              src={selectedBonePart.assetUrl}
+              alt=""
+              style={{
+                width: 22,
+                height: 30,
+                objectFit: 'contain',
+                borderRadius: 3,
+                border: '1px solid var(--color-border-base)',
+                flexShrink: 0,
+                transform: selectedBonePart.flipX ? 'scaleX(-1)' : undefined,
+              }}
+            />
+            <span style={{ ...sectionLabel, flex: 1 }}>🖼 Sprite</span>
+            <button
+              type="button"
+              title={selectedBonePart.flipX ? 'Retirer le miroir' : 'Miroir horizontal'}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (rig)
+                  updatePart(rig.id, selectedBonePart.id, { flipX: !selectedBonePart.flipX });
+              }}
+              style={{
+                ...smallBtnStyle,
+                padding: '2px 5px',
+                ...(selectedBonePart.flipX && {
+                  color: 'var(--color-primary)',
+                  borderColor: 'var(--color-primary)',
+                  background: 'var(--color-primary-subtle)',
+                }),
+              }}
+            >
+              ⇄
+            </button>
+            <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+              {spriteExpanded ? '▾' : '▸'}
+            </span>
+          </div>
+
+          {/* Réglages fins — expandables (position et taille = canvas drag/poignées) */}
+          {spriteExpanded && (
+            <div style={{ padding: '2px 10px 10px' }}>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: 'var(--color-text-muted)',
+                  marginBottom: 8,
+                  lineHeight: 1.4,
+                }}
+              >
+                🖱 Déplacer sur le canvas · Poignées ↕↔ pour la taille
+              </p>
+              <BonePropertyRow
                 label="Rotation"
-                value={Math.round(selectedBone.rotation)}
+                value={selectedBonePart.spriteRotation ?? 0}
                 min={-180}
                 max={180}
                 step={1}
                 unit="°"
-                onChange={(v) => handleBoneRotation(v)}
+                defaultValue={0}
+                onChange={(v) =>
+                  rig && updatePart(rig.id, selectedBonePart.id, { spriteRotation: v })
+                }
               />
-              <SliderRow
-                label="Longueur"
-                value={selectedBone.length}
-                min={4}
-                max={200}
-                step={4}
-                unit="px"
-                onChange={(v) => handleBoneLength(v)}
+              <BonePropertyRow
+                label="Opacité"
+                value={Math.round((selectedBonePart.opacity ?? 1) * 100)}
+                min={0}
+                max={100}
+                step={5}
+                unit="%"
+                defaultValue={100}
+                onChange={(v) =>
+                  rig && updatePart(rig.id, selectedBonePart.id, { opacity: v / 100 })
+                }
               />
-            </div>
-          ) : (
-            /* Mode Expert : inputs texte */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={propRowStyle}>
-                <label style={propLabelStyle} htmlFor="bone-rotation">
-                  Rotation °
-                </label>
+              {/* Calque (zOrder) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--color-text-muted)',
+                    flexShrink: 0,
+                    minWidth: 52,
+                  }}
+                >
+                  Calque
+                </span>
                 <input
-                  id="bone-rotation"
                   type="number"
-                  value={selectedBone.rotation.toFixed(1)}
+                  min={0}
+                  max={20}
                   step={1}
-                  onChange={(e) => handleBoneRotation(e.target.value)}
-                  style={{ ...inputStyle, width: 70 }}
+                  value={selectedBonePart.zOrder}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 0 && rig)
+                      updatePart(rig.id, selectedBonePart.id, { zOrder: v });
+                  }}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    background: 'var(--color-bg-base)',
+                    border: '1px solid var(--color-border-base)',
+                    borderRadius: 4,
+                    padding: '1px 4px',
+                    width: 52,
+                    textAlign: 'right',
+                    outline: 'none',
+                  }}
+                  title="0 = derrière, plus grand = devant"
                 />
-              </div>
-              <div style={propRowStyle}>
-                <label style={propLabelStyle} htmlFor="bone-length">
-                  Longueur px
-                </label>
-                <input
-                  id="bone-length"
-                  type="number"
-                  value={selectedBone.length}
-                  min={4}
-                  step={4}
-                  onChange={(e) => handleBoneLength(e.target.value)}
-                  style={{ ...inputStyle, width: 70 }}
-                />
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>(ordre)</span>
               </div>
             </div>
           )}
@@ -786,7 +1052,7 @@ export function BoneEditorRightPanel({
               marginBottom: 6,
             }}
           >
-            <p style={sectionLabel}>Chaînes IK ({ikChains.length})</p>
+            <p style={sectionLabel}>🎯 Chaînes IK ({ikChains.length})</p>
             {!ikForm && bones.length >= 2 && (
               <button
                 type="button"

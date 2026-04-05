@@ -6,9 +6,9 @@
  * Résultat : effet Balatro-style (gold flash → punch-scale → rayons radiaux → fermeture).
  * Fond : voie lactée CSS box-shadow (3 couches blanc/violet/bleu) + 2 nébuleuses pulsantes.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gamepad2 } from 'lucide-react';
+import { Gamepad2, X } from 'lucide-react';
 import type { MinigameConfig } from '@/types';
 import { uiSounds } from '@/utils/uiSounds';
 import { MinigameFalc } from './MinigameFalc';
@@ -46,6 +46,8 @@ export interface MinigameOverlayProps {
   isOpen: boolean;
   config: MinigameConfig | null;
   onResult: ((success: boolean) => void) | null;
+  /** Quitter le mini-jeu et revenir à la séquence précédente. */
+  onQuit?: () => void;
 }
 
 const TYPE_LABELS: Record<string, { emoji: string; label: string }> = {
@@ -59,39 +61,69 @@ const RAY_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
 
 type ResultPhase = 'idle' | 'flash' | 'reveal' | 'done';
 
-export function MinigameOverlay({ isOpen, config, onResult }: MinigameOverlayProps) {
+export function MinigameOverlay({ isOpen, config, onResult, onQuit }: MinigameOverlayProps) {
   const [resultPhase, setResultPhase] = useState<ResultPhase>('idle');
   const [lastSuccess, setLastSuccess] = useState<boolean>(false);
   const committedRef = useRef(false);
+  // Tracking des timers de séquence résultat — cleanup au démontage (§3 hallucination_patterns)
+  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // ⚠️ BUG FIX : committedRef n'était jamais réinitialisé après fermeture de l'overlay
+  // (onAnimationComplete exit ne se déclenche pas en Tauri car le composant retourne null directement).
+  // → Reset à chaque nouvelle ouverture pour que le prochain mini-jeu soit jouable.
+  useEffect(() => {
+    if (isOpen) {
+      setResultPhase('idle');
+      committedRef.current = false;
+    }
+  }, [isOpen]);
+
+  // Cleanup des timers au démontage — évite setState sur composant démonté
+  useEffect(() => {
+    return () => {
+      timerRefs.current.forEach(clearTimeout);
+    };
+  }, []);
 
   const handleResult = useCallback(
     (success: boolean) => {
       if (committedRef.current) return;
       committedRef.current = true;
       setLastSuccess(success);
+      // Annuler les timers précédents avant d'en créer de nouveaux
+      timerRefs.current.forEach(clearTimeout);
+      timerRefs.current = [];
 
       if (success) {
         // Séquence Balatro : flash (80ms) → reveal + fanfare → rayons → fermeture
         setResultPhase('flash');
-        setTimeout(() => {
-          setResultPhase('reveal');
-          uiSounds.overlayVictoryFanfare(); // ← fanfare héroïque synchro reveal
-        }, 80);
-        setTimeout(() => {
-          setResultPhase('done');
-          onResult?.(true);
-        }, 1600);
+        timerRefs.current.push(
+          setTimeout(() => {
+            setResultPhase('reveal');
+            uiSounds.overlayVictoryFanfare(); // ← fanfare héroïque synchro reveal
+          }, 80)
+        );
+        timerRefs.current.push(
+          setTimeout(() => {
+            setResultPhase('done');
+            onResult?.(true);
+          }, 1600)
+        );
       } else {
         // Échec : flash rouge court → mélodie mélancolique → fermeture
         setResultPhase('flash');
-        setTimeout(() => {
-          setResultPhase('reveal');
-          uiSounds.overlayDefeatTheme(); // ← thème triste synchro reveal
-        }, 80);
-        setTimeout(() => {
-          setResultPhase('done');
-          onResult?.(false);
-        }, 900);
+        timerRefs.current.push(
+          setTimeout(() => {
+            setResultPhase('reveal');
+            uiSounds.overlayDefeatTheme(); // ← thème triste synchro reveal
+          }, 80)
+        );
+        timerRefs.current.push(
+          setTimeout(() => {
+            setResultPhase('done');
+            onResult?.(false);
+          }, 900)
+        );
       }
     },
     [onResult]
@@ -133,7 +165,6 @@ export function MinigameOverlay({ isOpen, config, onResult }: MinigameOverlayPro
             justifyContent: 'center',
             padding: '24px 20px',
             gap: 20,
-            overflow: 'hidden',
           }}
         >
           {/* ── Keyframes étoiles + parallaxe + nébuleuse + étoiles filantes ── */}
@@ -471,6 +502,41 @@ export function MinigameOverlay({ isOpen, config, onResult }: MinigameOverlayPro
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* ── Bouton quitter (croix rouge) ── */}
+          {onQuit && resultPhase === 'idle' && (
+            <button
+              type="button"
+              onClick={onQuit}
+              aria-label="Quitter le mini-jeu"
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                zIndex: 70,
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: '2px solid #ef4444',
+                background: 'rgba(239,68,68,0.25)',
+                color: '#fca5a5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+                boxShadow: '0 0 14px rgba(239,68,68,0.5)',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.5)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.25)';
+              }}
+            >
+              <X size={20} strokeWidth={2.5} />
+            </button>
+          )}
 
           {/* ── Header ── */}
           <motion.div

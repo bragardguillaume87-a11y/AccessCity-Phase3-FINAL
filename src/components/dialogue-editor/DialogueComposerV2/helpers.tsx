@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { T, FONTS } from './constants';
+import { DIALOGUE_MAX_TEXT_LENGTH } from '@/config/dialogueValidation';
 
 // ── Styles Octopath Traveler — partagés entre MinigameFormPanel et ComposerFormPanel ──
 const OCTOPATH_CARD: CSSProperties = {
@@ -39,7 +40,7 @@ export function DialogueTextareaCard({
   value,
   onChange,
   placeholder = 'Écris le dialogue…',
-  maxLength = 550,
+  maxLength = DIALOGUE_MAX_TEXT_LENGTH,
 }: {
   value: string;
   onChange: (text: string) => void;
@@ -47,6 +48,11 @@ export function DialogueTextareaCard({
   maxLength?: number;
 }) {
   const charCount = value.length;
+  const wordCount = value.trim() === '' ? 0 : value.trim().split(/\s+/).length;
+  const readingTimeSec = Math.ceil(wordCount / 2.5); // ~150 mots/min pour enfants 10-12
+  const isLong = wordCount > 80;
+  const charWarning = charCount > 300;
+  const showFooter = charWarning || wordCount > 0;
   return (
     <div style={OCTOPATH_CARD}>
       <textarea
@@ -74,30 +80,49 @@ export function DialogueTextareaCard({
           display: 'block',
         }}
       />
-      {charCount > 300 && (
+      {showFooter && (
         <div
           style={{
             padding: '5px 14px',
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             alignItems: 'center',
             background: 'rgba(139,92,246,0.06)',
             borderTop: '1px solid rgba(139,92,246,0.15)',
+            gap: 8,
           }}
         >
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: charCount > 450 ? '#dc2626' : '#d97706',
-              background: charCount > 450 ? 'rgba(239,68,68,0.10)' : 'rgba(217,119,6,0.10)',
-              border: `1.5px solid ${charCount > 450 ? 'rgba(239,68,68,0.30)' : 'rgba(217,119,6,0.30)'}`,
-              padding: '2px 8px',
-              borderRadius: 6,
-            }}
-          >
-            ⚠ {charCount} / 500
-          </span>
+          {wordCount > 0 && (
+            <span
+              title="Nombre de mots et temps de lecture estimé pour enfants 10-12 ans"
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: isLong ? '#d97706' : 'rgba(139,92,246,0.7)',
+                background: isLong ? 'rgba(217,119,6,0.10)' : 'rgba(139,92,246,0.08)',
+                border: `1.5px solid ${isLong ? 'rgba(217,119,6,0.30)' : 'rgba(139,92,246,0.20)'}`,
+                padding: '2px 8px',
+                borderRadius: 6,
+              }}
+            >
+              💬 {wordCount} mot{wordCount > 1 ? 's' : ''} · ~{readingTimeSec}s
+            </span>
+          )}
+          {charWarning && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: charCount > 450 ? '#dc2626' : '#d97706',
+                background: charCount > 450 ? 'rgba(239,68,68,0.10)' : 'rgba(217,119,6,0.10)',
+                border: `1.5px solid ${charCount > 450 ? 'rgba(239,68,68,0.30)' : 'rgba(217,119,6,0.30)'}`,
+                padding: '2px 8px',
+                borderRadius: 6,
+              }}
+            >
+              ⚠ {charCount} / {maxLength}
+            </span>
+          )}
         </div>
       )}
     </div>

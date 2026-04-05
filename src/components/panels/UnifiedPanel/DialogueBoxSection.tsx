@@ -576,7 +576,15 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
   return (
     <>
       {/* Personnage */}
-      <div className="mb-3">
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: '10px 12px',
+        }}
+      >
         <div className="sp-row mb-1">
           <span className="flex items-center gap-1">
             <User className="w-3 h-3 text-blue-400" aria-hidden="true" />
@@ -599,16 +607,46 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
 
       {/* Humeurs — cartes Nintendo style (remontées ici : proximité sémantique avec Personnage) */}
       {sceneChars.length > 0 && (
-        <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+        <div
+          style={{
+            marginBottom: 8,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12,
+            overflow: 'hidden',
+          }}
+        >
           <button
             type="button"
             onClick={() => setMoodsOpen((v) => !v)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
           >
-            <span className="text-xs" aria-hidden="true">
+            <span
+              aria-hidden="true"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 6,
+                background: 'rgba(16,185,129,0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 12,
+                flexShrink: 0,
+              }}
+            >
               😊
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex-1">
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+                color: 'var(--color-text-primary)',
+                flex: 1,
+              }}
+            >
               Humeurs ({sceneChars.length})
             </span>
             <ChevronDown
@@ -702,7 +740,15 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
       )}
 
       {/* Texte */}
-      <div className="mb-3">
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: '10px 12px',
+        }}
+      >
         <div className="sp-row mb-1">
           <span className="flex items-center gap-1">
             <MessageSquare className="w-3 h-3 text-violet-400" aria-hidden="true" />
@@ -1006,14 +1052,44 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
       </div>
 
       {/* Choix */}
-      <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}
+      >
         <button
           type="button"
           onClick={() => setChoicesOpen((v) => !v)}
           className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
         >
-          <GitBranch className="w-3 h-3 text-purple-400 flex-shrink-0" aria-hidden="true" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-400 flex-1">
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              background: 'rgba(139,92,246,0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <GitBranch className="w-3 h-3 text-purple-400" aria-hidden="true" />
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px',
+              color: 'var(--color-text-primary)',
+              flex: 1,
+            }}
+          >
             Choix {choiceCount > 0 ? `(${choiceCount})` : ''}
           </span>
           <ChevronDown
@@ -1065,14 +1141,44 @@ function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: numbe
       </div>
 
       {/* SFX + Voix procédurale */}
-      <div className="mb-1 rounded-lg border border-[var(--color-border-base)] overflow-hidden">
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}
+      >
         <button
           type="button"
           onClick={() => setSfxOpen((v) => !v)}
           className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
         >
-          <Volume2 className="w-3 h-3 text-amber-400 flex-shrink-0" aria-hidden="true" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex-1">
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              background: 'rgba(245,158,11,0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Volume2 className="w-3 h-3 text-amber-400" aria-hidden="true" />
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px',
+              color: 'var(--color-text-primary)',
+              flex: 1,
+            }}
+          >
             Effet sonore {dialogue.voicePreset ? '· 🎙️' : dialogue.sfx?.url ? '· 1 son' : ''}
           </span>
           <ChevronDown

@@ -3,7 +3,7 @@ import { Film } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DialoguesPanel from './DialoguesPanel';
 import { LeftPanelJumpBar } from './LeftPanelJumpBar';
-import { useScenesStore, useUIStore } from '../../stores/index';
+import { useUIStore } from '../../stores/index';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
 import { useSceneWithElements } from '@/stores/selectors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -38,7 +38,6 @@ export interface LeftPanelProps {
 
 export default function LeftPanel({ onDialogueSelect, onSceneSelect }: LeftPanelProps) {
   // Zustand stores
-  const scenes = useScenesStore((state) => state.scenes);
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
   const setScenesBrowserOpen = useUIStore((state) => state.setScenesBrowserOpen);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
@@ -97,8 +96,6 @@ export default function LeftPanel({ onDialogueSelect, onSceneSelect }: LeftPanel
     setEditDialogueIndex(undefined);
   };
 
-  const sceneIndex = scenes.findIndex((s) => s.id === selectedSceneForEdit);
-
   return (
     <>
       <div className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]">
@@ -141,34 +138,6 @@ export default function LeftPanel({ onDialogueSelect, onSceneSelect }: LeftPanel
                   background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
                 }}
               />
-            )}
-          </div>
-
-          {/* Scene title + number */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--color-text-primary)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                lineHeight: 1.3,
-              }}
-            >
-              {selectedScene?.title ?? 'Aucune scène'}
-            </div>
-            {sceneIndex >= 0 && (
-              <div
-                style={{
-                  fontSize: 10,
-                  color: 'var(--color-text-muted)',
-                  fontFamily: 'var(--font-family-mono)',
-                }}
-              >
-                {String(sceneIndex + 1).padStart(2, '0')} / {String(scenes.length).padStart(2, '0')}
-              </div>
             )}
           </div>
 

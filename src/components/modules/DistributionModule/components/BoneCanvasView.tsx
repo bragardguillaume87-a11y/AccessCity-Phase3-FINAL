@@ -62,6 +62,12 @@ interface BoneCanvasViewProps {
   refScale?: number;
   /** Opacité de l'image de référence (0.1 → 0.8, défaut 0.45) */
   refOpacity?: number;
+  /** Overrides de rotation boneId→{rotation} à appliquer aux os (preview de pose au survol) */
+  overridesMap?: Record<string, { rotation: number }>;
+  /** Nom du personnage actif — affiché dans le nameplate en-tête (UX-6) */
+  characterName?: string;
+  /** Avatar URL du personnage actif — affiché dans le nameplate en-tête (UX-6) */
+  characterAvatarUrl?: string;
 }
 
 /**
@@ -93,6 +99,9 @@ export function BoneCanvasView({
   showRefImage = false,
   refScale = 0.6,
   refOpacity = 0.45,
+  overridesMap,
+  characterName,
+  characterAvatarUrl,
 }: BoneCanvasViewProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -142,6 +151,20 @@ export function BoneCanvasView({
       cancelled = true;
     };
   }, [referenceImageUrl, showRefImage]);
+
+  // ── Auto-centrage au premier rendu (stagePos initial = {0,0}) ───────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const originX = rig?.originX ?? 300;
+    const originY = rig?.originY ?? 100;
+    onStagePosChange({
+      x: width / 2 - originX,
+      y: height / 2 - originY,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionnel : centrage unique au montage
 
   // ── Grille de fond (Konva Lines, listening=false) ─────────────────────────
   const gridKonvaLines = useMemo(() => {
@@ -270,6 +293,32 @@ export function BoneCanvasView({
     [onZoomChange, onStagePosChange]
   );
 
+  // ── Curseur poignées resize ────────────────────────────────────────────────
+  const [resizeCursor, setResizeCursor] = useState<string | null>(null);
+
+  // ── Guard konva §4 : désactiver Stage drag quand RefImage est hovered ────
+  const [refImageHovered, setRefImageHovered] = useState(false);
+
+  /** Mise à jour de la taille d'un SpritePart via les poignées canvas (getState() dans handler) */
+  const handleResizePart = useCallback(
+    (partId: string, patch: { width?: number; height?: number }) => {
+      const r = useRigStore.getState().rigs.find((r) => r.characterId === characterId);
+      if (!r) return;
+      useRigStore.getState().updatePart(r.id, partId, patch);
+    },
+    [characterId]
+  );
+
+  /** Mise à jour de la position d'un SpritePart via drag direct sur le canvas */
+  const handleMovePart = useCallback(
+    (partId: string, patch: { offsetX: number; offsetY: number }) => {
+      const r = useRigStore.getState().rigs.find((r) => r.characterId === characterId);
+      if (!r) return;
+      useRigStore.getState().updatePart(r.id, partId, patch);
+    },
+    [characterId]
+  );
+
   // ── Add-part picker (Fix #3) ──────────────────────────────────────────────
   const [showPartPicker, setShowPartPicker] = useState(false);
 
@@ -349,9 +398,10 @@ export function BoneCanvasView({
     [characterId]
   );
 
-  // ── Curseur selon outil (§17 — CSS sur wrapper, pas prop style Konva) ─────
+  // ── Curseur selon outil — resizeCursor prioritaire (§17 — CSS sur wrapper) ─
   const cursorStyle =
-    activeTool === 'rotate'
+    resizeCursor ??
+    (activeTool === 'rotate'
       ? 'crosshair'
       : activeTool === 'add-bone'
         ? 'cell'
@@ -359,276 +409,322 @@ export function BoneCanvasView({
           ? 'copy'
           : activeTool === 'ik'
             ? 'grab'
-            : 'default';
+            : 'default');
 
   return (
-    // §8 touchAction: 'none' sur le wrapper div
-    <div
-      ref={containerRef}
-      style={{
-        flex: 1,
-        overflow: 'hidden',
-        cursor: cursorStyle,
-        touchAction: 'none',
-        position: 'relative',
-      }}
-    >
-      <Stage
-        ref={stageRef}
-        width={canvasSize.w}
-        height={canvasSize.h}
-        x={stagePos.x}
-        y={stagePos.y}
-        scaleX={zoom}
-        scaleY={zoom}
-        draggable={activeTool === 'select'}
-        onDragEnd={handleStageDragEnd}
-        onWheel={handleWheel}
-        onClick={handleStageClick}
-      >
-        {/* Layer 1 : fond + grille + sprite de référence */}
-        <Layer listening={showRefImage && !!refImgElement}>
-          {gridKonvaLines}
-          {showRefImage && refImgElement && (
-            <RefImage
-              image={refImgElement}
-              originX={rig?.originX ?? 300}
-              originY={rig?.originY ?? 280}
-              offset={refImgOffset}
-              onOffsetChange={setRefImgOffset}
-              scale={refScale}
-              opacity={refOpacity}
-            />
-          )}
-        </Layer>
-
-        {/* Layer 2 : rig (FK via Groups imbriqués) */}
-        <Layer>
-          <Group x={rig?.originX ?? 300} y={rig?.originY ?? 100}>
-            {rootBones.map((bone) => (
-              <BoneGroup
-                key={bone.id}
-                bone={bone}
-                allBones={bones}
-                allParts={parts}
-                imageCache={imageCache}
-                activeTool={activeTool}
-                selectedBoneId={selectedBoneId}
-                onSelectBone={onSelectBone}
-                onRotateBone={handleRotateBone}
-              />
-            ))}
-          </Group>
-        </Layer>
-
-        {/* Layer 3 : overlay sélection + end effectors IK */}
-        <Layer listening={activeTool === 'ik'}>
-          {/* Anneau de sélection */}
-          {overlayPos && activeTool !== 'ik' && (
-            <Circle
-              x={overlayPos.x}
-              y={overlayPos.y}
-              radius={14}
-              stroke="#c4b5fd"
-              strokeWidth={2}
-              fill="rgba(196,181,253,0.12)"
-              listening={false}
-            />
-          )}
-
-          {/* Diamants IK — end effectors draggables */}
-          {activeTool === 'ik' &&
-            ikEndEffectors.map(({ chainId, x, y }) => (
-              <IkHandle
-                key={`ik-${chainId}`}
-                x={x}
-                y={y}
-                chainId={chainId}
-                zoom={zoom}
-                onDragMove={handleIkDragMove}
-              />
-            ))}
-        </Layer>
-      </Stage>
-
-      {/* Overlay sélecteur de sprite — outil add-part (Fix #3) */}
-      {showPartPicker && (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      {/* Nameplate en-tête — identité du personnage en cours d'édition (UX-6 Norman §9.4) */}
+      {characterName && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.6)',
+            height: 28,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowPartPicker(false);
+            gap: 8,
+            padding: '0 10px',
+            background: 'var(--color-bg-elevated)',
+            borderBottom: '1px solid var(--color-border-base)',
+            flexShrink: 0,
           }}
         >
+          {characterAvatarUrl && (
+            <img
+              src={characterAvatarUrl}
+              alt={characterName}
+              style={{ width: 20, height: 20, objectFit: 'contain', borderRadius: '50%' }}
+            />
+          )}
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+            ✏️ Édition :{' '}
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{characterName}</strong>
+          </span>
+        </div>
+      )}
+
+      {/* §8 touchAction: 'none' sur le wrapper div */}
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          overflow: 'hidden',
+          cursor: cursorStyle,
+          touchAction: 'none',
+          position: 'relative',
+        }}
+      >
+        <Stage
+          ref={stageRef}
+          width={canvasSize.w}
+          height={canvasSize.h}
+          x={stagePos.x}
+          y={stagePos.y}
+          scaleX={zoom}
+          scaleY={zoom}
+          draggable={activeTool === 'select' && !refImageHovered}
+          onDragEnd={handleStageDragEnd}
+          onWheel={handleWheel}
+          onClick={handleStageClick}
+        >
+          {/* Layer 1 : fond + grille + sprite de référence */}
+          <Layer listening={showRefImage && !!refImgElement}>
+            {gridKonvaLines}
+            {showRefImage && refImgElement && (
+              <RefImage
+                image={refImgElement}
+                originX={rig?.originX ?? 300}
+                originY={rig?.originY ?? 280}
+                offset={refImgOffset}
+                onOffsetChange={setRefImgOffset}
+                scale={refScale}
+                opacity={refOpacity}
+                onMouseEnter={() => setRefImageHovered(true)}
+                onMouseLeave={() => setRefImageHovered(false)}
+              />
+            )}
+          </Layer>
+
+          {/* Layer 2 : rig (FK via Groups imbriqués) */}
+          <Layer>
+            <Group x={rig?.originX ?? 300} y={rig?.originY ?? 100}>
+              {rootBones.map((bone) => (
+                <BoneGroup
+                  key={bone.id}
+                  bone={bone}
+                  allBones={bones}
+                  allParts={parts}
+                  imageCache={imageCache}
+                  activeTool={activeTool}
+                  selectedBoneId={selectedBoneId}
+                  overridesMap={overridesMap}
+                  rotationOverride={overridesMap?.[bone.id]?.rotation}
+                  onSelectBone={onSelectBone}
+                  onRotateBone={handleRotateBone}
+                  zoom={zoom}
+                  onResizePart={handleResizePart}
+                  onMovePart={handleMovePart}
+                  onCursorChange={setResizeCursor}
+                />
+              ))}
+            </Group>
+          </Layer>
+
+          {/* Layer 3 : overlay sélection + end effectors IK */}
+          <Layer listening={activeTool === 'ik'}>
+            {/* Anneau de sélection */}
+            {overlayPos && activeTool !== 'ik' && (
+              <Circle
+                x={overlayPos.x}
+                y={overlayPos.y}
+                radius={14}
+                stroke="#c4b5fd"
+                strokeWidth={2}
+                fill="rgba(196,181,253,0.12)"
+                listening={false}
+              />
+            )}
+
+            {/* Diamants IK — end effectors draggables */}
+            {activeTool === 'ik' &&
+              ikEndEffectors.map(({ chainId, x, y }) => (
+                <IkHandle
+                  key={`ik-${chainId}`}
+                  x={x}
+                  y={y}
+                  chainId={chainId}
+                  zoom={zoom}
+                  onDragMove={handleIkDragMove}
+                />
+              ))}
+          </Layer>
+        </Stage>
+
+        {/* Overlay sélecteur de sprite — outil add-part (Fix #3) */}
+        {showPartPicker && (
           <div
             style={{
-              background: 'var(--color-bg-elevated)',
-              borderRadius: 10,
-              padding: 16,
-              width: 320,
-              maxHeight: 480,
-              overflowY: 'auto',
-              border: '1px solid var(--color-border-base)',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.65)',
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowPartPicker(false);
             }}
           >
             <div
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 10,
+                background: 'var(--color-bg-elevated)',
+                borderRadius: 10,
+                padding: 16,
+                width: 320,
+                maxHeight: 480,
+                overflowY: 'auto',
+                border: '1px solid var(--color-border-base)',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.65)',
               }}
             >
-              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                🖼 Sprite pour l'os sélectionné
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowPartPicker(false)}
+              <div
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                  color: 'var(--color-text-muted)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 10,
                 }}
               >
-                ✕
-              </button>
-            </div>
-            {/* Import depuis l'ordinateur — Bug 3 */}
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                marginBottom: 8,
-                borderRadius: 6,
-                border: '1px dashed var(--color-border-hover)',
-                cursor: 'pointer',
-                fontSize: 12,
-                color: 'var(--color-text-secondary)',
-                transition: 'border-color 150ms, color 150ms',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary)';
-                (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-hover)';
-                (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)';
-              }}
-            >
-              📂 Depuis l'ordinateur
-              <input
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const url = URL.createObjectURL(file);
-                  handleAddPart(url);
-                  e.target.value = '';
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  🖼 Sprite pour l'os sélectionné
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowPartPicker(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    color: 'var(--color-text-muted)',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              {/* Import depuis l'ordinateur — Bug 3 */}
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  marginBottom: 8,
+                  borderRadius: 6,
+                  border: '1px dashed var(--color-border-hover)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  color: 'var(--color-text-secondary)',
+                  transition: 'border-color 150ms, color 150ms',
                 }}
-              />
-            </label>
-            <AvatarPicker mood="default" onSelect={(_mood, url) => handleAddPart(url)} />
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary)';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-hover)';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)';
+                }}
+              >
+                📂 Depuis l'ordinateur
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    // FileReader → Data URL (base64) persistable dans localStorage.
+                    // URL.createObjectURL() produit des blob: URLs éphémères (session uniquement)
+                    // → l'image disparaît après un refresh (tauri-patterns §1).
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      const dataUrl = ev.target?.result as string;
+                      if (dataUrl) handleAddPart(dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              <AvatarPicker mood="default" onSelect={(_mood, url) => handleAddPart(url)} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Toolbar zoom — overlay bas-droit (Nijman §8.1 : feedback < 100ms) */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 12,
-          right: 12,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          background: 'rgba(17,19,24,0.88)',
-          border: '1px solid var(--color-border-base)',
-          borderRadius: 8,
-          padding: '3px 5px',
-        }}
-      >
-        <button
-          type="button"
-          title="Recentrer la vue"
-          onClick={() => {
-            onZoomChange(1);
-            onStagePosChange({
-              x: canvasSize.w / 2 - (rig?.originX ?? 300),
-              y: canvasSize.h / 2 - (rig?.originY ?? 100),
-            });
-          }}
-          style={ZOOM_BTN}
-        >
-          ⊡
-        </button>
-        <button
-          type="button"
-          title="Dézoom"
-          onClick={() => onZoomChange(Math.max(0.1, zoom * 0.85))}
-          style={ZOOM_BTN}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          title="Reset 100%"
-          onClick={() => {
-            onZoomChange(1);
-            onStagePosChange({
-              x: canvasSize.w / 2 - (rig?.originX ?? 300),
-              y: canvasSize.h / 2 - (rig?.originY ?? 100),
-            });
-          }}
-          style={{ ...ZOOM_BTN, minWidth: 38, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-        <button
-          type="button"
-          title="Zoom"
-          onClick={() => onZoomChange(Math.min(8, zoom * 1.18))}
-          style={ZOOM_BTN}
-        >
-          +
-        </button>
-      </div>
-
-      {/* Message vide */}
-      {bones.length === 0 && (
+        {/* Toolbar zoom — overlay bas-droit (Nijman §8.1 : feedback < 100ms) */}
         <div
           style={{
             position: 'absolute',
-            inset: 0,
+            bottom: 12,
+            right: 12,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
+            gap: 2,
+            background: 'rgba(17,19,24,0.88)',
+            border: '1px solid var(--color-border-base)',
+            borderRadius: 8,
+            padding: '3px 5px',
           }}
         >
-          <div style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
-            <p style={{ fontSize: 32, marginBottom: 8 }}>🦴</p>
-            <p style={{ fontSize: 13, fontWeight: 600 }}>Aucun os</p>
-            <p style={{ fontSize: 11, marginTop: 4 }}>
-              Sélectionne <strong>+ Os</strong> et clique sur le canvas
-            </p>
-          </div>
+          <button
+            type="button"
+            title="Recentrer la vue"
+            onClick={() => {
+              onZoomChange(1);
+              onStagePosChange({
+                x: canvasSize.w / 2 - (rig?.originX ?? 300),
+                y: canvasSize.h / 2 - (rig?.originY ?? 100),
+              });
+            }}
+            style={ZOOM_BTN}
+          >
+            ⊡
+          </button>
+          <button
+            type="button"
+            title="Dézoom"
+            onClick={() => onZoomChange(Math.max(0.1, zoom * 0.85))}
+            style={ZOOM_BTN}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            title="Reset 100%"
+            onClick={() => {
+              onZoomChange(1);
+              onStagePosChange({
+                x: canvasSize.w / 2 - (rig?.originX ?? 300),
+                y: canvasSize.h / 2 - (rig?.originY ?? 100),
+              });
+            }}
+            style={{ ...ZOOM_BTN, minWidth: 38, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            title="Zoom"
+            onClick={() => onZoomChange(Math.min(8, zoom * 1.18))}
+            style={ZOOM_BTN}
+          >
+            +
+          </button>
         </div>
-      )}
+
+        {/* Message vide */}
+        {bones.length === 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <div style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              <p style={{ fontSize: 32, marginBottom: 8 }}>🦴</p>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>Aucun os</p>
+              <p style={{ fontSize: 11, marginTop: 4 }}>
+                Sélectionne <strong>+ Os</strong> et clique sur le canvas
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* end canvas wrapper */}
     </div>
   );
 }
@@ -643,6 +739,9 @@ interface RefImageProps {
   onOffsetChange: (offset: { x: number; y: number }) => void;
   scale: number;
   opacity: number;
+  /** konva §4 — guard Stage drag quand RefImage hovered */
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 /**
@@ -658,6 +757,8 @@ function RefImage({
   onOffsetChange,
   scale,
   opacity,
+  onMouseEnter,
+  onMouseLeave,
 }: RefImageProps) {
   const w = image.width * scale;
   const h = image.height * scale;
@@ -674,6 +775,8 @@ function RefImage({
       opacity={opacity}
       draggable
       imageSmoothingEnabled={false}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       onDragEnd={(e) => {
         onOffsetChange({
           x: e.target.x() - baseX,

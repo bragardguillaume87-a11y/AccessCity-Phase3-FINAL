@@ -21,6 +21,7 @@ import { nodeTypes } from './graph-nodes';
 import { useValidation } from '../../hooks/useValidation';
 import { dialogueNodeId, CHOICE_HANDLE_PREFIX } from '@/config/handleConfig';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
+import { useGraphKeyboardNav, GraphLiveRegion } from '@/hooks/useGraphKeyboardNav';
 import { COSMOS_THEME_ID, GRAPH_VIEW } from '@/config/layoutConfig';
 import { getEdgeTypes } from '@/config/edgeRegistry';
 import { adaptValidation } from '@/utils/validationAdapter';
@@ -248,92 +249,75 @@ function DialogueGraphInner({
     [localNodes]
   );
 
-  // Keyboard navigation (scoped to graph container)
-  const handleKeyDown = useCallback(
+  // Callbacks wired to useGraphKeyboardNav
+  const handleSelectNode = useCallback(
+    (nodeId: string | null) => {
+      setSelectedNodeId(nodeId);
+      if (nodeId) {
+        const node = localNodes.find((n: GraphNode) => n.id === nodeId);
+        const idx = node ? (node.data as DialogueNodeData).index : undefined;
+        if (idx !== undefined) onSelectDialogue(sceneId, idx);
+      } else {
+        onSelectDialogue(sceneId, -1);
+      }
+    },
+    [localNodes, sceneId, onSelectDialogue]
+  );
+
+  const handleEditNode = useCallback(
+    (nodeId: string) => {
+      if (editMode) actions.handleNodeDoubleClick(nodeId);
+    },
+    [editMode, actions]
+  );
+
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      if (!editMode) return;
+      actions.handleDeleteNode(nodeId);
+      setSelectedNodeId(null);
+      const selectedEdges = localEdges.filter((e) => e.selected);
+      if (selectedEdges.length > 0) actions.handleDeleteEdge(selectedEdges);
+    },
+    [editMode, actions, localEdges]
+  );
+
+  const handleDuplicateNode = useCallback(
+    (nodeId: string) => {
+      if (editMode) actions.handleDuplicateNode(nodeId);
+    },
+    [editMode, actions]
+  );
+
+  const handleCloseNav = useCallback(() => setSelectedNodeId(null), []);
+
+  // Keyboard navigation via hook (Tab, arrows spatial, E, Delete, Ctrl+D, Escape)
+  // Disabled while GraphSearch is open to avoid conflict
+  const { announcements } = useGraphKeyboardNav({
+    nodes: localNodes,
+    selectedNodeId,
+    onSelectNode: handleSelectNode,
+    onEditNode: handleEditNode,
+    onDeleteNode: handleDeleteNode,
+    onDuplicateNode: handleDuplicateNode,
+    onClose: handleCloseNav,
+    isEnabled: !searchOpen,
+  });
+
+  // Container key handler: search open/close only (node nav delegated to hook)
+  const handleContainerKeyDown = useCallback(
     (event: React.KeyboardEvent): void => {
-      // Ctrl+G — ouvrir la recherche (avant le guard selectedNodeId)
       if (event.ctrlKey && event.key === 'g') {
         event.preventDefault();
         setSearchOpen(true);
         return;
       }
-      // Escape — fermer la recherche si ouverte
       if (event.key === 'Escape' && searchOpen) {
         event.preventDefault();
         setSearchOpen(false);
-        return;
-      }
-
-      if (!selectedNodeId) return;
-
-      const currentIndex = localNodes.findIndex((n: GraphNode) => n.id === selectedNodeId);
-      if (currentIndex === -1) return;
-
-      let targetIndex = currentIndex;
-
-      switch (event.key) {
-        case 'ArrowUp':
-          event.preventDefault();
-          targetIndex = Math.max(0, currentIndex - 1);
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          targetIndex = Math.min(localNodes.length - 1, currentIndex + 1);
-          break;
-        case 'Enter': {
-          event.preventDefault();
-          const node = localNodes[currentIndex];
-          const nodeIndex = (node.data as DialogueNodeData).index;
-          if (nodeIndex !== undefined) onSelectDialogue(sceneId, nodeIndex);
-          break;
-        }
-        case 'Escape':
-          event.preventDefault();
-          setSelectedNodeId(null);
-          onSelectDialogue(sceneId, -1);
-          break;
-        case 'Delete':
-          if (editMode) {
-            event.preventDefault();
-            // Delete selected node
-            if (selectedNodeId) {
-              actions.handleDeleteNode(selectedNodeId);
-              setSelectedNodeId(null);
-            }
-            // Delete selected edges (click on edge → Delete)
-            const selectedEdges = localEdges.filter((e) => e.selected);
-            if (selectedEdges.length > 0) {
-              actions.handleDeleteEdge(selectedEdges);
-            }
-          }
-          break;
-        case 'd':
-          if (editMode && event.ctrlKey && selectedNodeId) {
-            event.preventDefault();
-            actions.handleDuplicateNode(selectedNodeId);
-          }
-          break;
-        default:
-          return;
-      }
-
-      if (targetIndex !== currentIndex) {
-        const targetNode = localNodes[targetIndex];
-        setSelectedNodeId(targetNode.id);
-        const targetNodeIndex = (targetNode.data as DialogueNodeData).index;
-        if (targetNodeIndex !== undefined) onSelectDialogue(sceneId, targetNodeIndex);
       }
     },
-    [
-      selectedNodeId,
-      searchOpen,
-      localNodes,
-      localEdges,
-      sceneId,
-      onSelectDialogue,
-      editMode,
-      actions,
-    ]
+    [searchOpen]
   );
 
   const nodesWithSelection = useMemo(
@@ -352,11 +336,12 @@ function DialogueGraphInner({
   return (
     <div
       className="dialogue-graph-container"
-      onKeyDown={handleKeyDown}
+      onKeyDown={handleContainerKeyDown}
       tabIndex={-1}
       data-edit-mode={editMode}
       data-theme={theme.id}
     >
+      <GraphLiveRegion announcements={announcements} />
       {theme.id === COSMOS_THEME_ID && <CosmosEdgeGradients />}
 
       <ReactFlow

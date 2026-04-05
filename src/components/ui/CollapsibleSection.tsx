@@ -1,5 +1,10 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
+
+// Valeur résolue pour la particle (motion.span ne supporte pas les CSS var())
+const PARTICLE_COLOR = '#8b5cf6';
+const PARTICLE_GLOW = 'rgba(139,92,246,0.6)';
 import { cn } from '@/lib/utils';
 
 /**
@@ -262,6 +267,121 @@ export function CollapsibleGroup({
  *   ...
  * </PanelSection>
  */
+/**
+ * PanelSectionHeader — Header animé premium pour PanelSection.
+ *
+ * Animation séquencée à l'ouverture :
+ * 1. Particle lumineuse qui parcourt le trait de gauche à droite
+ * 2. Trait qui reste allumé (violet + glow via --shadow-game-glow)
+ * 3. Titre qui monte en luminosité + text-shadow violet
+ *
+ * À la fermeture : extinction douce, asymétrique (pas de particle).
+ * Toutes les couleurs viennent des CSS variables tokens.css.
+ */
+function PanelSectionHeader({
+  title,
+  id,
+  badge,
+  open,
+  onToggle,
+}: {
+  title: string;
+  id: string;
+  badge?: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const [firing, setFiring] = useState(false);
+  const particleKey = useRef(0);
+
+  const handleClick = useCallback(() => {
+    onToggle();
+    if (!open) {
+      particleKey.current += 1;
+      setFiring(true);
+      setTimeout(() => setFiring(false), 500);
+    }
+  }, [open, onToggle]);
+
+  return (
+    <button
+      type="button"
+      className={`sp-lbl sp-lbl--animated w-full${open ? ' is-open' : ''}`}
+      onClick={handleClick}
+      aria-expanded={open}
+      aria-controls={`${id}-panel`}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px' }}
+    >
+      {/* Titre — transitions via CSS classes .sp-lbl-title / .is-open */}
+      <span className="sp-lbl-title">{title}</span>
+
+      {badge && (
+        <span
+          style={{ flexShrink: 0 }}
+          className="text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-10)] px-2 py-0.5 rounded-full normal-case tracking-normal"
+        >
+          {badge}
+        </span>
+      )}
+
+      {/* Pill +/− — entre le titre et la ligne pour que la ligne aille jusqu'au bord */}
+      <motion.span
+        aria-hidden="true"
+        animate={{ rotate: open ? 45 : 0 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+        style={{
+          flexShrink: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          border: `1.5px solid ${open ? PARTICLE_COLOR : 'rgba(255,255,255,0.18)'}`,
+          background: open ? 'rgba(139,92,246,0.15)' : 'transparent',
+          color: open ? PARTICLE_COLOR : 'rgba(255,255,255,0.45)',
+          fontSize: 13,
+          fontWeight: 700,
+          lineHeight: 1,
+          transition: 'border-color 0.25s ease, background 0.25s ease, color 0.25s ease',
+          userSelect: 'none',
+        }}
+      >
+        +
+      </motion.span>
+
+      {/* Trait + particle — position relative pour la particle absolue */}
+      <span
+        style={{ position: 'relative', flex: 1, height: 2, overflow: 'visible' }}
+        aria-hidden="true"
+      >
+        {/* Ligne — transitions via CSS classes .sp-lbl-line / .is-open */}
+        <span className="sp-lbl-line" />
+        {/* Particle one-shot — seul élément piloté par React */}
+        {firing && (
+          <motion.span
+            key={particleKey.current}
+            initial={{ left: '-2%', opacity: 1, scale: 1 }}
+            animate={{ left: '102%', opacity: [1, 1, 0], scale: [1, 1.5, 0.5] }}
+            transition={{ duration: 0.44, ease: [0.4, 0, 0.2, 1] }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              y: '-50%',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, #fff 0%, ${PARTICLE_COLOR} 55%, transparent 100%)`,
+              boxShadow: `0 0 8px 3px ${PARTICLE_GLOW}`,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+      </span>
+    </button>
+  );
+}
+
 export function PanelSection({
   title,
   id,
@@ -276,39 +396,11 @@ export function PanelSection({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const handleToggle = useCallback(() => setOpen((o) => !o), []);
+
   return (
     <section className="sp-sec">
-      <button
-        type="button"
-        className="sp-lbl w-full flex items-center"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-controls={`${id}-panel`}
-      >
-        <span className="flex-1">{title}</span>
-        {badge && (
-          <span className="ml-2 text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-10)] px-2 py-0.5 rounded-full normal-case tracking-normal">
-            {badge}
-          </span>
-        )}
-        <svg
-          aria-hidden="true"
-          style={{
-            width: 12,
-            height: 12,
-            flexShrink: 0,
-            marginLeft: badge ? 4 : 'auto',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.18s ease',
-          }}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+      <PanelSectionHeader title={title} id={id} badge={badge} open={open} onToggle={handleToggle} />
       <div
         id={`${id}-panel`}
         className="grid transition-[grid-template-rows] duration-200 ease-in-out"

@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { DialogueFormData } from '../../DialogueWizard/hooks/useDialogueForm';
 import type { MinigameType } from '@/types/game';
 import { T, FONTS, MINIGAME_CARDS, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '../constants';
 import { SectionLabel, DialogueTextareaCard } from '../helpers';
 import { SpeakerCard } from './SpeakerCard';
+import { uiSounds } from '@/utils/uiSounds';
 
 // ── Constantes locales ──────────────────────────────────────────────────────
+const EMPTY_STRINGS: string[] = [];
 const CUSTOM_TIMER_VALUES = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120];
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const DRUM_SLOT_H = 42; // hauteur d'un slot dans les roulettes
 
 const BRAILLE_TABS = [
@@ -33,7 +36,14 @@ const BRAILLE_TABS = [
 ] as const;
 
 // ── Styles communs ──────────────────────────────────────────────────────────
-const rouletteArrowStyle = (enabled: boolean, color: string, bg: string, bd: string) =>
+const rouletteArrowStyle = (
+  enabled: boolean,
+  color: string,
+  bg: string,
+  bd: string,
+  hovered = false,
+  pressed = false
+) =>
   ({
     background: enabled ? bg : 'transparent',
     border: `1.5px solid ${enabled ? bd : T.border}`,
@@ -43,9 +53,12 @@ const rouletteArrowStyle = (enabled: boolean, color: string, bg: string, bd: str
     fontWeight: 900,
     cursor: enabled ? 'pointer' : 'default',
     padding: '4px 0',
-    transition: 'all 0.15s',
+    transition: pressed ? 'none' : 'all 0.12s',
     width: '100%',
-  }) as const;
+    transform: pressed && enabled ? 'scale(0.93)' : 'scale(1)',
+    opacity: enabled ? 1 : 0.35,
+    boxShadow: hovered && enabled ? `0 0 0 1.5px ${color}88, 0 2px 8px ${color}33` : 'none',
+  }) as CSSProperties;
 
 interface MinigameFormPanelProps {
   formData: DialogueFormData;
@@ -56,6 +69,8 @@ interface MinigameFormPanelProps {
   onDifficultyChange: (val: number) => void;
   onTimerChip: (seconds: number) => void;
   onBrailleModeChange: (mode: 'letter' | 'word') => void;
+  onBrailleWordsChange: (words: string[]) => void;
+  onBrailleLettersChange: (letters: string[]) => void;
   onVoicePresetChange?: (preset: string | undefined) => void;
   onUpdateSubtype?: (subtype: 'normal' | 'phonecall') => void;
 }
@@ -69,6 +84,8 @@ export function MinigameFormPanel({
   onDifficultyChange,
   onTimerChip,
   onBrailleModeChange,
+  onBrailleWordsChange,
+  onBrailleLettersChange,
   onVoicePresetChange,
   onUpdateSubtype,
 }: MinigameFormPanelProps) {
@@ -76,6 +93,8 @@ export function MinigameFormPanel({
   const mgDifficulty = formData.minigame?.difficulty ?? 3;
   const mgTimeout = formData.minigame?.timeout ?? 0;
   const mgBrailleMode = formData.minigame?.brailleMode ?? 'letter';
+  const mgBrailleWords = formData.minigame?.brailleWords ?? EMPTY_STRINGS;
+  const mgBrailleLetters = formData.minigame?.brailleLetters ?? EMPTY_STRINGS;
   const mgHasTimer = mgTimeout > 0;
 
   // Mode d'affichage du timer : standard (∞/15s) ou personnalisé (roulette)
@@ -90,6 +109,11 @@ export function MinigameFormPanel({
     return idx >= 0 ? idx : 2; // fallback sur 15s (index 2)
   });
 
+  // Feedback hover/press sur les boutons ▲▼ (inline styles ne supportent pas :hover)
+  type ArrowId = 'diffUp' | 'diffDown' | 'timerUp' | 'timerDown';
+  const [hoveredArrow, setHoveredArrow] = useState<ArrowId | null>(null);
+  const [pressedArrow, setPressedArrow] = useState<ArrowId | null>(null);
+
   // ── Difficulté — calculs odometer ───────────────────────────────────────
   const diffColor = DIFFICULTY_COLORS[mgDifficulty];
   const drumDiffY = -(mgDifficulty - 1) * DRUM_SLOT_H;
@@ -100,12 +124,14 @@ export function MinigameFormPanel({
   const handleCustomTimerUp = () => {
     const newIdx = Math.min(CUSTOM_TIMER_VALUES.length - 1, customTimerIdx + 1);
     setCustomTimerIdx(newIdx);
+    uiSounds.minigameTick();
     onTimerChip(CUSTOM_TIMER_VALUES[newIdx]);
   };
 
   const handleCustomTimerDown = () => {
     const newIdx = Math.max(0, customTimerIdx - 1);
     setCustomTimerIdx(newIdx);
+    uiSounds.minigameTick();
     onTimerChip(CUSTOM_TIMER_VALUES[newIdx]);
   };
 
@@ -325,6 +351,177 @@ export function MinigameFormPanel({
             </div>
           )}
 
+          {/* ── Lettres ciblées — mode Lettre uniquement ─────────────── */}
+          {mgType === 'braille' && mgBrailleMode === 'letter' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: T.t3,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  ⣿ Lettres ciblées
+                </span>
+                {mgBrailleLetters.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onBrailleLettersChange([])}
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: 6,
+                      border: `1.5px solid ${T.border}`,
+                      background: 'transparent',
+                      color: T.t3,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Toutes
+                  </button>
+                )}
+              </div>
+              <p style={{ fontSize: '0.6rem', color: T.t3, margin: 0 }}>
+                Laisse vide pour utiliser toutes les lettres. Clique pour cibler une lettre.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {ALPHABET.map((letter) => {
+                  const isSelected = mgBrailleLetters.includes(letter);
+                  return (
+                    <button
+                      key={letter}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        uiSounds.choiceSelect();
+                        onBrailleLettersChange(
+                          isSelected
+                            ? mgBrailleLetters.filter((l) => l !== letter)
+                            : [...mgBrailleLetters, letter]
+                        );
+                      }}
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 6,
+                        border: `1.5px solid ${isSelected ? T.tealBd : T.border}`,
+                        background: isSelected ? T.tealBg : 'rgba(255,255,255,0.04)',
+                        color: isSelected ? T.teal : T.t3,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                        fontFamily: FONTS.display,
+                      }}
+                    >
+                      {letter}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Mots à deviner — mode Mot uniquement ─────────────────── */}
+          {mgType === 'braille' && mgBrailleMode === 'word' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: T.t3,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  📝 Mots à deviner
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onBrailleWordsChange([...mgBrailleWords, ''])}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    border: `1.5px solid ${T.purpleBd}`,
+                    background: T.purpleBg,
+                    color: T.purple,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  + Ajouter
+                </button>
+              </div>
+              <p style={{ fontSize: '0.6rem', color: T.t3, margin: 0 }}>
+                Laisse vide pour utiliser les mots intégrés selon la difficulté.
+              </p>
+              {mgBrailleWords.map((word, idx) => (
+                <div
+                  key={`bword-${idx}-${word}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                >
+                  <span
+                    style={{ fontSize: '0.7rem', color: T.t3, width: '1rem', textAlign: 'center' }}
+                  >
+                    {idx + 1}.
+                  </span>
+                  <input
+                    type="text"
+                    value={word}
+                    placeholder="ex: CHAT"
+                    onChange={(e) => {
+                      const next = [...mgBrailleWords];
+                      next[idx] = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+                      onBrailleWordsChange(next);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '4px 8px',
+                      height: '1.75rem',
+                      background: 'rgba(0,0,0,0.25)',
+                      border: `1px solid ${T.border}`,
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: T.t1,
+                      outline: 'none',
+                      fontFamily: 'monospace',
+                      letterSpacing: '0.1em',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onBrailleWordsChange(mgBrailleWords.filter((_, i) => i !== idx))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#f87171',
+                      fontSize: 14,
+                      lineHeight: 1,
+                      padding: '2px 4px',
+                    }}
+                    aria-label="Supprimer ce mot"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* ── 2 & 3. DIFFICULTÉ + DURÉE — côte à côte ──────────────────
                Norman §9.1 : fond teinté distinct par colonne → appartenance
                avant le clic, évite la confusion entre les ▲▼ adjacents       */}
@@ -346,14 +543,26 @@ export function MinigameFormPanel({
                 {/* ▲ */}
                 <button
                   type="button"
-                  onClick={() => onDifficultyChange(Math.min(5, mgDifficulty + 1))}
+                  onClick={() => {
+                    uiSounds.minigameTick();
+                    onDifficultyChange(Math.min(5, mgDifficulty + 1));
+                  }}
                   disabled={mgDifficulty >= 5}
                   aria-label="Augmenter la difficulté"
+                  onMouseEnter={() => setHoveredArrow('diffUp')}
+                  onMouseLeave={() => {
+                    setHoveredArrow(null);
+                    setPressedArrow(null);
+                  }}
+                  onMouseDown={() => setPressedArrow('diffUp')}
+                  onMouseUp={() => setPressedArrow(null)}
                   style={rouletteArrowStyle(
                     mgDifficulty < 5,
                     diffColor,
                     `${diffColor}18`,
-                    `${diffColor}44`
+                    `${diffColor}44`,
+                    hoveredArrow === 'diffUp',
+                    pressedArrow === 'diffUp'
                   )}
                 >
                   ▲
@@ -428,14 +637,26 @@ export function MinigameFormPanel({
                 {/* ▼ */}
                 <button
                   type="button"
-                  onClick={() => onDifficultyChange(Math.max(1, mgDifficulty - 1))}
+                  onClick={() => {
+                    uiSounds.minigameTick();
+                    onDifficultyChange(Math.max(1, mgDifficulty - 1));
+                  }}
                   disabled={mgDifficulty <= 1}
                   aria-label="Diminuer la difficulté"
+                  onMouseEnter={() => setHoveredArrow('diffDown')}
+                  onMouseLeave={() => {
+                    setHoveredArrow(null);
+                    setPressedArrow(null);
+                  }}
+                  onMouseDown={() => setPressedArrow('diffDown')}
+                  onMouseUp={() => setPressedArrow(null)}
                   style={rouletteArrowStyle(
                     mgDifficulty > 1,
                     diffColor,
                     `${diffColor}18`,
-                    `${diffColor}44`
+                    `${diffColor}44`,
+                    hoveredArrow === 'diffDown',
+                    pressedArrow === 'diffDown'
                   )}
                 >
                   ▼
@@ -555,11 +776,20 @@ export function MinigameFormPanel({
                     onClick={handleCustomTimerUp}
                     disabled={customTimerIdx >= CUSTOM_TIMER_VALUES.length - 1}
                     aria-label="Augmenter la durée"
+                    onMouseEnter={() => setHoveredArrow('timerUp')}
+                    onMouseLeave={() => {
+                      setHoveredArrow(null);
+                      setPressedArrow(null);
+                    }}
+                    onMouseDown={() => setPressedArrow('timerUp')}
+                    onMouseUp={() => setPressedArrow(null)}
                     style={rouletteArrowStyle(
                       customTimerIdx < CUSTOM_TIMER_VALUES.length - 1,
                       T.teal,
                       T.tealBg,
-                      T.tealBd
+                      T.tealBd,
+                      hoveredArrow === 'timerUp',
+                      pressedArrow === 'timerUp'
                     )}
                   >
                     ▲
@@ -614,7 +844,21 @@ export function MinigameFormPanel({
                     onClick={handleCustomTimerDown}
                     disabled={customTimerIdx <= 0}
                     aria-label="Diminuer la durée"
-                    style={rouletteArrowStyle(customTimerIdx > 0, T.teal, T.tealBg, T.tealBd)}
+                    onMouseEnter={() => setHoveredArrow('timerDown')}
+                    onMouseLeave={() => {
+                      setHoveredArrow(null);
+                      setPressedArrow(null);
+                    }}
+                    onMouseDown={() => setPressedArrow('timerDown')}
+                    onMouseUp={() => setPressedArrow(null)}
+                    style={rouletteArrowStyle(
+                      customTimerIdx > 0,
+                      T.teal,
+                      T.tealBg,
+                      T.tealBd,
+                      hoveredArrow === 'timerDown',
+                      pressedArrow === 'timerDown'
+                    )}
                   >
                     ▼
                   </button>

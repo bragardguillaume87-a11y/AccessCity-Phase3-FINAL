@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { DialogueFactory } from '@/factories/DialogueFactory';
 import { logger } from '@/utils/logger';
@@ -47,8 +47,14 @@ export function DialogueComposerV2({
   const [formData, formActions] = useDialogueForm(dialogue, initialComplexity);
   const [isSaved, setIsSaved] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => clearInitialCompl(), [clearInitialCompl]);
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   // ── Dérivés ───────────────────────────────────────────────────────────────
   const currentScene = useMemo(() => scenes.find((s) => s.id === sceneId), [scenes, sceneId]);
@@ -147,6 +153,26 @@ export function DialogueComposerV2({
     [formActions, formData.minigame]
   );
 
+  const handleBrailleWordsChange = useCallback(
+    (words: string[]) => {
+      formActions.updateMinigame({
+        ...(formData.minigame ?? { type: 'braille', difficulty: 3 }),
+        brailleWords: words,
+      });
+    },
+    [formActions, formData.minigame]
+  );
+
+  const handleBrailleLettersChange = useCallback(
+    (letters: string[]) => {
+      formActions.updateMinigame({
+        ...(formData.minigame ?? { type: 'braille', difficulty: 3 }),
+        brailleLetters: letters,
+      });
+    },
+    [formActions, formData.minigame]
+  );
+
   const handleTestMinigame = useCallback(() => {
     uiSounds.diceRollStart();
     setOverlayOpen(true);
@@ -208,7 +234,8 @@ export function DialogueComposerV2({
         onSave([newDialogue]);
       }
       setIsSaved(true);
-      setTimeout(() => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = setTimeout(() => {
         clearInitialCompl();
         onClose();
       }, 800);
@@ -334,6 +361,8 @@ export function DialogueComposerV2({
                     onDifficultyChange={handleDifficultyChange}
                     onTimerChip={handleTimerChip}
                     onBrailleModeChange={handleBrailleModeChange}
+                    onBrailleWordsChange={handleBrailleWordsChange}
+                    onBrailleLettersChange={handleBrailleLettersChange}
                     onVoicePresetChange={(p) => formActions.updateField('voicePreset', p)}
                     onUpdateSubtype={(sub) => formActions.updateField('dialogueSubtype', sub)}
                   />
@@ -416,6 +445,7 @@ export function DialogueComposerV2({
         isOpen={overlayOpen}
         config={formData.minigame ?? null}
         onResult={handleOverlayResult}
+        onQuit={() => setOverlayOpen(false)}
       />
     </div>
   );

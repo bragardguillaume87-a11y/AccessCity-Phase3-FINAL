@@ -110,6 +110,8 @@ export function computeChainWorldState(
     const parentRot = cumRot(parent); // rotation cumulée du parent
     const cos = Math.cos(parentRot);
     const sin = Math.sin(parentRot);
+    // Guard: données corrompues (NaN/Infinity) → retourner le pivot parent sans propager
+    if (!isFinite(bone.localX) || !isFinite(bone.localY)) return parentPos;
     return {
       x: parentPos.x + bone.localX * cos - bone.localY * sin,
       y: parentPos.y + bone.localX * sin + bone.localY * cos,
@@ -158,6 +160,8 @@ export function fabrikToRotations(fabrikJoints: FabrikJoint[], chain: Bone[]): M
     // angle monde du segment de ce joint vers le suivant
     const dx = fabrikJoints[i + 1].x - fabrikJoints[i].x;
     const dy = fabrikJoints[i + 1].y - fabrikJoints[i].y;
+    // Guard: joints coincidents (FABRIK dégénéré, cible hors portée) → conserver rotation
+    if (dx === 0 && dy === 0) continue;
     const angleWorld = Math.atan2(dy, dx) * (180 / Math.PI);
 
     // Si c'est le root bone, son parent n'a pas de rotation propre (rig origin fixe)

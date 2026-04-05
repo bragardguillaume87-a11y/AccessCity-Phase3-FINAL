@@ -153,6 +153,7 @@ export default function PreviewPlayer({
     confirmDiceNavigation,
     minigameState,
     triggerMinigame,
+    quitMinigame,
     pendingScreenEffect,
     clearScreenEffect,
   } = useGameState({
@@ -162,6 +163,17 @@ export default function PreviewPlayer({
     // Priorité : standalone > protagoniste > variables globales > vide
     initialStats: standaloneInitialVariables ?? protagonistStats ?? (variables as GameStats) ?? {},
   });
+
+  // ── Scène suivante — undefined sur la dernière scène (bouton masqué) ────────
+  const nextScene = useMemo(() => {
+    if (!currentScene || !scenes) return undefined;
+    const idx = scenes.findIndex((s) => s.id === currentScene.id);
+    return idx >= 0 && idx < scenes.length - 1 ? scenes[idx + 1] : undefined;
+  }, [scenes, currentScene]);
+
+  const handleNextScene = useCallback(() => {
+    if (nextScene) goToScene(nextScene.id, null);
+  }, [nextScene, goToScene]);
 
   // ── Hitboxes personnages — bounding boxes en pixels canvas pour la pluie ──
   // Même formule que le positionnement CSS des sprites (960×540 référence).
@@ -778,6 +790,7 @@ export default function PreviewPlayer({
                       dialogueKey={currentDialogue?.id}
                       onChoose={handleChoose}
                       onRestart={() => goToScene(currentScene.id, null)}
+                      onNextScene={nextScene ? handleNextScene : undefined}
                       onClose={onClose}
                     />
                   </motion.div>
@@ -812,6 +825,7 @@ export default function PreviewPlayer({
                 isOpen={minigameState.isOpen}
                 config={minigameState.config}
                 onResult={minigameState.onResult}
+                onQuit={quitMinigame}
               />
             </div>
           </VisualFilterLayer>

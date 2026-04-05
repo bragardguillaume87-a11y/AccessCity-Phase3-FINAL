@@ -1216,21 +1216,63 @@
 }
 
 .sp-lbl {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--color-text-muted);
+  letter-spacing: 1px;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 5px 8px;
+  border-radius: 5px;
   margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
+/* ── sp-lbl--animated : ligne animée gérée par CSS + particle React ─────────
+   Supprime le ::after CSS (remplacé par .sp-lbl-line dans le JSX).
+   Tout l'état visuel est dans .is-open — pas de JS pour les transitions. */
+
+/* Double classe = spécificité (0,2,1) > .sp-lbl::after (0,1,1) — ordre du fichier sans importance */
+.sp-lbl.sp-lbl--animated::after {
+  content: none;
+}
+
+/* Titre : text-shadow violet quand ouvert */
+.sp-lbl--animated.is-open .sp-lbl-title {
+  text-shadow:
+    0 0 14px var(--color-primary-glow),
+    0 0 4px var(--color-primary-glow);
+}
+.sp-lbl-title {
+  flex-shrink: 0;
+  transition: text-shadow 0.35s ease;
+}
+
+/* Ligne : glow violet quand ouvert, gris discret quand fermé */
+.sp-lbl-line {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--color-border-hover);
+  opacity: 0.45;
+  box-shadow: none;
+  transition:
+    background 0.35s ease,
+    box-shadow 0.35s ease,
+    opacity 0.35s ease;
+}
+.sp-lbl--animated.is-open .sp-lbl-line {
+  background: var(--color-primary);
+  box-shadow: var(--shadow-game-glow);
+  opacity: 1;
+}
+
 .sp-lbl::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--color-border-base);
+  background: var(--color-border-hover);
 }
 
 .sp-dia-preview {
@@ -1252,7 +1294,7 @@
 }
 .sp-row span {
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 .sp-row span:last-child {
   color: var(--color-primary);

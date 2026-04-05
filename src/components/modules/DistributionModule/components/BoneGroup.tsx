@@ -1,12 +1,11 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Group, Line, Circle, Rect, Text, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
 import type { Bone, SpritePart, BoneTool } from '@/types/bone';
 import { getBoneChildren } from '../utils/boneUtils';
 
-// Fallbacks stables — évite les [] inline dans les props (konva-patterns §16)
-const EMPTY_PARTS: SpritePart[] = [];
-const EMPTY_CHILDREN: Bone[] = [];
+/** Taille minimale d'un sprite redimensionné en pixels */
+const MIN_SPRITE_SIZE = 8;
 
 interface BoneGroupProps {
   bone: Bone;
@@ -22,6 +21,166 @@ interface BoneGroupProps {
   onRotateBone: (boneId: string, angleDeg: number) => void;
   /** Rotation monde accumulée depuis la racine — pour contre-rotation du label (toujours horizontal) */
   parentWorldRotation?: number;
+  /** Zoom courant du Stage — pour maintenir les handles à taille constante à l'écran */
+  zoom?: number;
+  /** Callback appelé quand l'utilisateur redimensionne le sprite via les poignées */
+  onResizePart?: (partId: string, patch: { width?: number; height?: number }) => void;
+  /** Callback pour piloter le curseur CSS du wrapper depuis les poignées */
+  onCursorChange?: (cursor: string | null) => void;
+  /** Callback appelé quand l'utilisateur déplace le sprite par drag sur le canvas */
+  onMovePart?: (partId: string, patch: { offsetX: number; offsetY: number }) => void;
+}
+
+/**
+ * Poignées de redimensionnement du sprite de l'os sélectionné.
+ * Placées dans l'espace LOCAL de l'os → e.target.x()/y() = coords os-local directement.
+ * 3 cercles : droit (largeur), bas (hauteur), coin bas-droit (les deux).
+ *
+ * L'état previewW/H est géré par le parent (BoneGroupInner) pour que le KonvaImage
+ * se redimensionne aussi en temps réel — même source de vérité (konva-patterns §5).
+ */
+function SpriteResizeHandles({
+  part,
+  zoom,
+  previewW,
+  previewH,
+  onPreviewChange,
+  onResizePart,
+  onCursorChange,
+}: {
+  part: SpritePart;
+  zoom: number;
+  previewW: number | null;
+  previewH: number | null;
+  onPreviewChange: (w: number | null, h: number | null) => void;
+  onResizePart?: (partId: string, patch: { width?: number; height?: number }) => void;
+  onCursorChange?: (cursor: string | null) => void;
+}) {
+  const bboxW = previewW ?? part.width;
+  const bboxH = previewH ?? part.height;
+
+  const r = 7 / zoom;
+  const sw = 1.5 / zoom;
+  const rx = part.offsetX + bboxW; // bord droit (live)
+  const by = part.offsetY + bboxH; // bord bas (live)
+  const cy = part.offsetY + bboxH / 2; // centre vertical (live)
+  const cx = part.offsetX + bboxW / 2; // centre horizontal (live)
+
+  return (
+    <>
+      {/* Bounding box en pointillés — dimensions live depuis preview */}
+      <Rect
+        x={part.offsetX}
+        y={part.offsetY}
+        width={bboxW}
+        height={bboxH}
+        fill="transparent"
+        stroke="rgba(196,181,253,0.45)"
+        strokeWidth={1 / zoom}
+        dash={[4 / zoom, 3 / zoom]}
+        listening={false}
+      />
+
+      {/* Handle droit — redimensionne la largeur */}
+      <Circle
+        x={rx}
+        y={cy}
+        radius={r}
+        fill="white"
+        stroke="rgba(139,92,246,0.9)"
+        strokeWidth={sw}
+        draggable
+        onMouseDown={(e) => {
+          e.cancelBubble = true;
+        }}
+        onMouseEnter={() => onCursorChange?.('ew-resize')}
+        onMouseLeave={() => onCursorChange?.(null)}
+        onDragMove={(e) => {
+          e.cancelBubble = true;
+          onPreviewChange(
+            Math.max(MIN_SPRITE_SIZE, Math.round(e.target.x() - part.offsetX)),
+            previewH
+          );
+        }}
+        onDragEnd={(e) => {
+          e.cancelBubble = true;
+          const newW = Math.max(MIN_SPRITE_SIZE, Math.round(e.target.x() - part.offsetX));
+          onResizePart?.(part.id, { width: newW });
+          onPreviewChange(null, null);
+          e.target.x(part.offsetX + newW);
+          e.target.y(part.offsetY + bboxH / 2);
+          onCursorChange?.(null);
+        }}
+      />
+
+      {/* Handle bas — redimensionne la hauteur */}
+      <Circle
+        x={cx}
+        y={by}
+        radius={r}
+        fill="white"
+        stroke="rgba(139,92,246,0.9)"
+        strokeWidth={sw}
+        draggable
+        onMouseDown={(e) => {
+          e.cancelBubble = true;
+        }}
+        onMouseEnter={() => onCursorChange?.('ns-resize')}
+        onMouseLeave={() => onCursorChange?.(null)}
+        onDragMove={(e) => {
+          e.cancelBubble = true;
+          onPreviewChange(
+            previewW,
+            Math.max(MIN_SPRITE_SIZE, Math.round(e.target.y() - part.offsetY))
+          );
+        }}
+        onDragEnd={(e) => {
+          e.cancelBubble = true;
+          const newH = Math.max(MIN_SPRITE_SIZE, Math.round(e.target.y() - part.offsetY));
+          onResizePart?.(part.id, { height: newH });
+          onPreviewChange(null, null);
+          e.target.x(part.offsetX + bboxW / 2);
+          e.target.y(part.offsetY + newH);
+          onCursorChange?.(null);
+        }}
+      />
+
+      {/* Handle coin bas-droit — redimensionne les deux (légèrement plus grand, §MapCanvas SE) */}
+      <Circle
+        x={rx}
+        y={by}
+        radius={r * 1.3}
+        fill="white"
+        stroke="rgba(139,92,246,0.9)"
+        strokeWidth={sw}
+        shadowColor="rgba(139,92,246,0.4)"
+        shadowBlur={6 / zoom}
+        draggable
+        onMouseDown={(e) => {
+          e.cancelBubble = true;
+        }}
+        onMouseEnter={() => onCursorChange?.('nwse-resize')}
+        onMouseLeave={() => onCursorChange?.(null)}
+        onDragMove={(e) => {
+          e.cancelBubble = true;
+          onPreviewChange(
+            Math.max(MIN_SPRITE_SIZE, Math.round(e.target.x() - part.offsetX)),
+            Math.max(MIN_SPRITE_SIZE, Math.round(e.target.y() - part.offsetY))
+          );
+        }}
+        onDragEnd={(e) => {
+          e.cancelBubble = true;
+          const newW = Math.max(MIN_SPRITE_SIZE, Math.round(e.target.x() - part.offsetX));
+          const newH = Math.max(MIN_SPRITE_SIZE, Math.round(e.target.y() - part.offsetY));
+          onResizePart?.(part.id, { width: newW, height: newH });
+          onPreviewChange(null, null);
+          e.target.x(part.offsetX + newW);
+          e.target.y(part.offsetY + newH);
+          onCursorChange?.(null);
+        }}
+      />
+    </>
+  );
 }
 
 /**
@@ -53,17 +212,36 @@ const BoneGroupInner = ({
   onSelectBone,
   onRotateBone,
   parentWorldRotation = 0,
+  zoom = 1,
+  onResizePart,
+  onCursorChange,
+  onMovePart,
 }: BoneGroupProps) => {
   const isSelected = bone.id === selectedBoneId;
   const rotation = rotationOverride ?? bone.rotation;
   // Rotation monde = somme de toutes les rotations parentes + rotation locale
   // Contre-rotation appliquée au <Text> pour qu'il reste toujours horizontal (lisible)
   const worldRotation = parentWorldRotation + rotation;
-  const children = getBoneChildren(allBones, bone.id) ?? EMPTY_CHILDREN;
-  const parts = allParts.filter((p) => p.boneId === bone.id) ?? EMPTY_PARTS;
+  // useMemo : allBones/allParts stables depuis le store → ref stable entre frames d'animation
+  const children = useMemo(() => getBoneChildren(allBones, bone.id), [allBones, bone.id]);
+  // Filtre + tri fusionnés en une seule passe memoïsée (évite le double .sort() au render)
+  const sortedParts = useMemo(
+    () => allParts.filter((p) => p.boneId === bone.id).sort((a, b) => a.zOrder - b.zOrder),
+    [allParts, bone.id]
+  );
+  // Premier sprite (zOrder le plus bas) — cible des poignées de redimensionnement
+  const firstPart = sortedParts[0] ?? null;
 
   // Capsule cartoon — largeur proportionnelle à la longueur de l'os (Will Wright §4.1)
   const capsuleH = Math.max(10, Math.min(24, bone.length * 0.35));
+
+  // Preview dimensions live partagées avec SpriteResizeHandles → KonvaImage se redimensionne aussi
+  const [previewW, setPreviewW] = useState<number | null>(null);
+  const [previewH, setPreviewH] = useState<number | null>(null);
+  const handlePreviewChange = useCallback((w: number | null, h: number | null) => {
+    setPreviewW(w);
+    setPreviewH(h);
+  }, []);
 
   // Fix #4 : pivot abs pos capturé à dragStart pour éviter drift si dragBoundFunc
   // réinitialise la position à chaque frame (konva-patterns §5 étendu).
@@ -96,33 +274,70 @@ const BoneGroupInner = ({
 
   return (
     <Group x={bone.localX} y={bone.localY} rotation={rotation}>
-      {/* Parts de cet os — triées par zOrder, rendues derrière le stick */}
-      {parts
-        .slice()
-        .sort((a, b) => a.zOrder - b.zOrder)
-        .map((part) => {
-          const img = imageCache.get(part.assetUrl);
-          if (!img) return null;
-          return (
-            <KonvaImage
-              key={part.id}
-              // Flip en place : décaler x d'une largeur, puis scaleX=-1 dessine vers la gauche
-              // → l'image occupe [offsetX, offsetX+width] dans les deux cas (konva-patterns §17)
-              x={part.flipX ? part.offsetX + part.width : part.offsetX}
-              y={part.offsetY}
-              width={part.width}
-              height={part.height}
-              scaleX={part.flipX ? -1 : 1}
-              image={img}
-              imageSmoothingEnabled={false}
-              listening={false}
-            />
-          );
-        })}
+      {/* Parts de cet os — triées par zOrder (sortedParts memoïsé) */}
+      {sortedParts.map((part) => {
+        const img = imageCache.get(part.assetUrl);
+        if (!img) return null;
+        const isFirstPart = part.id === firstPart?.id;
+        // Le sprite de base (firstPart) est draggable en mode Sélect pour repositionnement
+        const isDraggable = isSelected && activeTool === 'select' && isFirstPart;
+        // Dimensions live : preview pendant le drag des poignées, sinon valeurs store
+        const renderW = isSelected && isFirstPart && previewW !== null ? previewW : part.width;
+        const renderH = isSelected && isFirstPart && previewH !== null ? previewH : part.height;
+        return (
+          <KonvaImage
+            key={part.id}
+            // Flip en place : décaler x d'une largeur, puis scaleX=-1 dessine vers la gauche
+            // → l'image occupe [offsetX, offsetX+renderW] dans les deux cas (konva-patterns §17)
+            x={part.flipX ? part.offsetX + renderW : part.offsetX}
+            y={part.offsetY}
+            width={renderW}
+            height={renderH}
+            scaleX={part.flipX ? -1 : 1}
+            opacity={part.opacity ?? 1}
+            rotation={part.spriteRotation ?? 0}
+            image={img}
+            imageSmoothingEnabled={false}
+            listening={isDraggable}
+            draggable={isDraggable}
+            onMouseDown={
+              isDraggable
+                ? (e) => {
+                    e.cancelBubble = true;
+                  }
+                : undefined
+            }
+            onMouseEnter={isDraggable ? () => onCursorChange?.('grab') : undefined}
+            onMouseLeave={isDraggable ? () => onCursorChange?.(null) : undefined}
+            onDragStart={
+              isDraggable
+                ? (e) => {
+                    e.cancelBubble = true;
+                    onCursorChange?.('grabbing');
+                  }
+                : undefined
+            }
+            onDragEnd={
+              isDraggable
+                ? (e) => {
+                    e.cancelBubble = true;
+                    // e.target.x()/y() = coords locales dans le Group de l'os (konva-patterns §2)
+                    const newOffsetX = part.flipX
+                      ? Math.round(e.target.x() - renderW)
+                      : Math.round(e.target.x());
+                    const newOffsetY = Math.round(e.target.y());
+                    onMovePart?.(part.id, { offsetX: newOffsetX, offsetY: newOffsetY });
+                    onCursorChange?.('grab');
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
 
       {/* Capsule cartoon — visible quand aucune SpritePart n'est assignée.
           Donne une silhouette lisible sans image (Will Wright §4.1). */}
-      {parts.length === 0 && (
+      {sortedParts.length === 0 && (
         <Rect
           x={0}
           y={-capsuleH / 2}
@@ -171,6 +386,19 @@ const BoneGroupInner = ({
       {/* Tip (extrémité de l'os) */}
       <Circle x={bone.length} radius={3} fill={bone.color} listening={false} />
 
+      {/* Poignées de redimensionnement — outil sélect + sprite assigné (MapCanvas pattern) */}
+      {isSelected && activeTool === 'select' && firstPart && (
+        <SpriteResizeHandles
+          part={firstPart}
+          zoom={zoom}
+          previewW={previewW}
+          previewH={previewH}
+          onPreviewChange={handlePreviewChange}
+          onResizePart={onResizePart}
+          onCursorChange={onCursorChange}
+        />
+      )}
+
       {/* Enfants — positionnés au tip (x=bone.length dans le Group local) */}
       <Group x={bone.length}>
         {children.map((child) => (
@@ -187,6 +415,10 @@ const BoneGroupInner = ({
             onSelectBone={onSelectBone}
             onRotateBone={onRotateBone}
             parentWorldRotation={worldRotation}
+            zoom={zoom}
+            onResizePart={onResizePart}
+            onCursorChange={onCursorChange}
+            onMovePart={onMovePart}
           />
         ))}
       </Group>

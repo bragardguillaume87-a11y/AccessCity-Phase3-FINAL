@@ -302,6 +302,16 @@ export default function EditorShell({ onBack = null }: EditorShellProps) {
   // Panel refs (Panel 1 uniquement — Panel 3 et 4 sont des divs CSS)
   const leftPanelRef = usePanelRef();
 
+  // Applique la bonne largeur au montage et à chaque changement d'onglet
+  useEffect(() => {
+    const targetWidth =
+      leftPanelActiveTab === 'dialogues' ? PANEL_WIDTHS.LEFT_DIALOGUES : PANEL_WIDTHS.LEFT_DEFAULT;
+    const raf = requestAnimationFrame(() => {
+      leftPanelRef.current?.resize(targetWidth);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [leftPanelActiveTab, leftPanelRef]);
+
   // Graph modal state
   const setGraphModalOpen = useUIStore((state) => state.setDialogueGraphModalOpen);
   const setGraphSelectedScene = useUIStore((state) => state.setDialogueGraphSelectedScene);

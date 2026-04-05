@@ -110,7 +110,7 @@ describe('VariableManager', () => {
     expect(vm.get('physique')).toBe(40);
   });
 
-  it('getAll() retourne une copie (la mutation du résultat ne change pas l\'état interne)', () => {
+  it("getAll() retourne une copie (la mutation du résultat ne change pas l'état interne)", () => {
     const vm = new VariableManager({ physique: 50 });
     const all = vm.getAll();
     all['physique'] = 999; // muter la copie
@@ -173,7 +173,7 @@ describe('ConditionEvaluator', () => {
     vm.set('mentale', 30);
     const conditions: Condition[] = [
       { variable: 'physique', operator: '>=', value: 40 }, // passe (50 >= 40)
-      { variable: 'mentale', operator: '>=', value: 40 },  // échoue (30 < 40)
+      { variable: 'mentale', operator: '>=', value: 40 }, // échoue (30 < 40)
     ];
     expect(ce.evaluate(conditions)).toBe(false);
   });
@@ -238,7 +238,7 @@ describe('EventBus', () => {
     expect(() => bus.emit('scene:complete', { sceneId: 's' })).not.toThrow();
   });
 
-  it('les listeners d\'un événement ne sont pas déclenchés par un autre', () => {
+  it("les listeners d'un événement ne sont pas déclenchés par un autre", () => {
     const completeFn = vi.fn();
     bus.on('scene:complete', completeFn);
     // Émet un événement différent
@@ -288,13 +288,13 @@ describe('DialogueEngine', () => {
     );
   });
 
-  it('loadScene(null) ne plante pas et n\'émet rien', () => {
+  it("loadScene(null) ne plante pas et n'émet rien", () => {
     expect(() => engine.loadScene(null)).not.toThrow();
     expect(showFn).not.toHaveBeenCalled();
     expect(completeFn).not.toHaveBeenCalled();
   });
 
-  it('loadScene() remet l\'index à 0 (rechargement de scène)', () => {
+  it("loadScene() remet l'index à 0 (rechargement de scène)", () => {
     const d1 = makeDialogue({ speaker: 'Alice' });
     const d2 = makeDialogue({ speaker: 'Bob' });
     engine.loadScene(makeScene({ dialogues: [d1, d2] }));
@@ -331,9 +331,7 @@ describe('DialogueEngine', () => {
     const choice = { id: 'c1', text: 'Option A', effects: [] } as unknown as DialogueChoice;
     const d = makeDialogue({ choices: [choice] });
     engine.loadScene(makeScene({ dialogues: [d] }));
-    expect(showFn).toHaveBeenCalledWith(
-      expect.objectContaining({ choices: [choice] })
-    );
+    expect(showFn).toHaveBeenCalledWith(expect.objectContaining({ choices: [choice] }));
   });
 
   // — next() —
@@ -388,7 +386,7 @@ describe('DialogueEngine', () => {
     expect(showFn).toHaveBeenCalledWith(expect.objectContaining({ speaker: 'Bob' }));
   });
 
-  it('handleChoice() sans tableau effects appelle juste next() (pas d\'émission variables)', () => {
+  it("handleChoice() sans tableau effects appelle juste next() (pas d'émission variables)", () => {
     const deltaFn = vi.fn();
     bus.on('variables:delta', deltaFn);
 
@@ -494,7 +492,71 @@ describe('DialogueEngine', () => {
     engine.handleChoice(choice);
 
     expect(vm.get('physique')).toBe(60); // 50 + 10
-    expect(vm.get('mentale')).toBe(40);  // 60 - 20
+    expect(vm.get('mentale')).toBe(40); // 60 - 20
+  });
+
+  // — handleChoice() — effets écran (screenShake / colorFilter) —
+  // Couvre DialogueEngine.ts lignes 70-71 (branche non couverte avant ce test)
+
+  it('handleChoice() effect "screenShake" émet effect:screen et NE modifie PAS les stats', () => {
+    engine.loadScene(makeScene({ dialogues: [makeDialogue(), makeDialogue()] }));
+    const screenFn = vi.fn();
+    bus.on('effect:screen', screenFn);
+
+    const choice = {
+      id: 'c-shake',
+      text: 'tremblement',
+      effects: [{ operation: 'screenShake', variable: '', value: 1 }],
+    } as unknown as DialogueChoice;
+
+    engine.handleChoice(choice);
+
+    expect(screenFn).toHaveBeenCalledTimes(1);
+    expect(screenFn).toHaveBeenCalledWith(expect.objectContaining({ operation: 'screenShake' }));
+    // Les stats ne doivent PAS changer (l'effet est visuel, pas RPG)
+    // beforeEach initialise physique=50 — la valeur doit rester inchangée
+    expect(vm.get('physique')).toBe(50);
+  });
+
+  it('handleChoice() effect "colorFilter" émet effect:screen et NE modifie PAS les stats', () => {
+    engine.loadScene(makeScene({ dialogues: [makeDialogue(), makeDialogue()] }));
+    const screenFn = vi.fn();
+    bus.on('effect:screen', screenFn);
+
+    const choice = {
+      id: 'c-filter',
+      text: 'filtre couleur',
+      effects: [{ operation: 'colorFilter', variable: '', value: 0.5 }],
+    } as unknown as DialogueChoice;
+
+    engine.handleChoice(choice);
+
+    expect(screenFn).toHaveBeenCalledTimes(1);
+    expect(screenFn).toHaveBeenCalledWith(expect.objectContaining({ operation: 'colorFilter' }));
+    expect(vm.get('physique')).toBe(50); // physique inchangé — effet purement visuel
+  });
+
+  it("handleChoice() mélange effet écran + effet RPG : les deux s'appliquent indépendamment", () => {
+    engine.loadScene(makeScene({ dialogues: [makeDialogue(), makeDialogue()] }));
+    const screenFn = vi.fn();
+    bus.on('effect:screen', screenFn);
+
+    vm.set('physique', 50);
+    const choice = {
+      id: 'c-mixed',
+      text: 'mixte',
+      effects: [
+        { operation: 'screenShake', variable: '', value: 1 },
+        { variable: 'physique', operation: 'add', value: -10 },
+      ],
+    } as unknown as DialogueChoice;
+
+    engine.handleChoice(choice);
+
+    // Effet écran émis
+    expect(screenFn).toHaveBeenCalledTimes(1);
+    // Effet RPG appliqué
+    expect(vm.get('physique')).toBe(40); // 50 - 10
   });
 });
 

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useStore } from 'zustand';
 import { Panel, Group as PanelGroup, Separator } from 'react-resizable-panels';
 import type { DistributionView } from '@/types/bone';
 import { useBoneEditor } from './hooks/useBoneEditor';
@@ -12,9 +13,11 @@ import { TutorialPathChooser } from './components/TutorialPathChooser';
 import { TutorialHelpButton } from './components/TutorialHelpButton';
 import { IosToggle } from '@/components/ui/IosToggle';
 import { useCharactersStore } from '@/stores';
+import { useRigStore } from '@/stores/rigStore';
 import { resolveCharacterSprite } from '@/utils/characterSprite';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { getTutorial } from '@/config/tutorials';
+import type { PoseTemplate } from '@/config/poseTemplates';
 
 const TAB_ITEMS: { id: DistributionView; emoji: string; label: string }[] = [
   { id: 'bone-editor', emoji: '🦴', label: 'Squelette' },
@@ -52,12 +55,88 @@ export function DistributionModule() {
   const [selectedPoseId, setSelectedPoseId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBeginnerMode, setIsBeginnerMode] = useState(true); // débutant par défaut (§6a)
-  const [showRefSprite, setShowRefSprite] = useState(false);
+  const [showRefSprite, setShowRefSprite] = useState(true);
   const [refScale, setRefScale] = useState(0.6);
   const [refOpacity, setRefOpacity] = useState(0.45);
 
   const boneEditor = useBoneEditor();
   const characters = useCharactersStore((s) => s.characters);
+
+  // ── Pose edition state ───────────────────────────────────────────────────
+  const [editingPoseId, setEditingPoseId] = useState<string | null>(null);
+  const rig = useRigStore((s) => s.rigs.find((r) => r.characterId === selectedCharId));
+
+  /** Charge les rotations d'une pose dans les os du squelette + bascule sur Squelette */
+  const handleLoadPose = (poseId: string) => {
+    if (!rig) return;
+    const pose = rig.poses.find((p) => p.id === poseId);
+    if (!pose) return;
+    const state = useRigStore.getState();
+    Object.entries(pose.boneStates).forEach(([boneId, bs]) => {
+      state.updateBone(rig.id, boneId, { rotation: bs.rotation });
+    });
+    setEditingPoseId(poseId);
+    setActiveView('bone-editor');
+  };
+
+  /** Met à jour la pose éditée avec l'état courant du squelette */
+  const handleUpdatePose = () => {
+    if (!rig || !editingPoseId) return;
+    const boneStates = Object.fromEntries(rig.bones.map((b) => [b.id, { rotation: b.rotation }]));
+    useRigStore.getState().updatePose(rig.id, editingPoseId, { boneStates });
+    setEditingPoseId(null);
+  };
+
+  const handleCancelEdit = () => setEditingPoseId(null);
+
+  // ── Pose hover preview (UX-3) ────────────────────────────────────────────
+  const [previewPoseId, setPreviewPoseId] = useState<string | null>(null);
+  const previewOverridesMap = useMemo(() => {
+    if (!previewPoseId || !rig) return undefined;
+    const pose = rig.poses.find((p) => p.id === previewPoseId);
+    if (!pose) return undefined;
+    return Object.fromEntries(
+      Object.entries(pose.boneStates).map(([boneId, bs]) => [boneId, { rotation: bs.rotation }])
+    );
+  }, [previewPoseId, rig]);
+
+  /** Guard UX-4 : si une pose est en cours d'édition, forcer le retour sur animation-preview */
+  const handleSetActiveView = (view: DistributionView) => {
+    if (editingPoseId !== null && view !== 'animation-preview') {
+      setActiveView('animation-preview');
+      return;
+    }
+    setActiveView(view);
+  };
+
+  /** Applique un template de pose : charge les rotations dans le squelette, capture la pose, bascule sur Squelette */
+  const handleApplyPoseTemplate = (template: PoseTemplate) => {
+    if (!rig) return;
+    const state = useRigStore.getState();
+    // Construire boneStates : rotation template si le nom correspond, sinon rotation actuelle
+    const boneStates: Record<string, { rotation: number }> = {};
+    for (const bone of rig.bones) {
+      const templateRot = template.boneRotations[bone.name];
+      const rotation = templateRot !== undefined ? templateRot : bone.rotation;
+      boneStates[bone.id] = { rotation };
+    }
+    // Appliquer au squelette
+    for (const [boneId, { rotation }] of Object.entries(boneStates)) {
+      state.updateBone(rig.id, boneId, { rotation });
+    }
+    // Capturer comme pose nommée
+    state.addPose(rig.id, { name: template.name, boneStates });
+    // Basculer sur l'onglet Squelette pour voir le résultat
+    setActiveView('bone-editor');
+  };
+
+  // Undo rigStore — même pattern que useUndoRedo.ts mais ciblé sur rigStore.temporal
+  const rigPastStates = useStore(useRigStore.temporal, (s) => s?.pastStates ?? []);
+  const canRigUndo = rigPastStates.length > 0;
+  const handleRigUndo = () => {
+    const state = useRigStore.temporal.getState?.();
+    if ((state?.pastStates?.length ?? 0) > 0) state?.undo?.();
+  };
 
   // URL du sprite du personnage sélectionné — pour l'overlay de référence
   const selectedChar = characters.find((c) => c.id === selectedCharId);
@@ -108,7 +187,7 @@ export function DistributionModule() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveView(tab.id)}
+            onClick={() => handleSetActiveView(tab.id)}
             data-tutorial-id={tab.id === 'animation-preview' ? 'animation-tab' : undefined}
             style={{
               display: 'flex',
@@ -200,6 +279,9 @@ export function DistributionModule() {
               showRefImage={showRefSprite}
               refScale={refScale}
               refOpacity={refOpacity}
+              overridesMap={previewOverridesMap}
+              characterName={selectedChar?.name}
+              characterAvatarUrl={refImageUrl}
             />
           )}
 
@@ -233,6 +315,8 @@ export function DistributionModule() {
               refOpacity={refOpacity}
               onRefScaleChange={setRefScale}
               onRefOpacityChange={setRefOpacity}
+              canUndo={canRigUndo}
+              onUndo={handleRigUndo}
             />
           )}
           {activeView === 'animation-preview' && (
@@ -245,6 +329,12 @@ export function DistributionModule() {
               onSelectPose={setSelectedPoseId}
               onPlayToggle={() => setIsPlaying((p) => !p)}
               isBeginnerMode={isBeginnerMode}
+              editingPoseId={editingPoseId}
+              onLoadPose={handleLoadPose}
+              onUpdatePose={handleUpdatePose}
+              onCancelEdit={handleCancelEdit}
+              onApplyPoseTemplate={handleApplyPoseTemplate}
+              onPoseHover={setPreviewPoseId}
             />
           )}
         </Panel>

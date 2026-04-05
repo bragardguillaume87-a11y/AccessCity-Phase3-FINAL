@@ -59,17 +59,17 @@ export function applyEasing(t: number, type: EasingType, bezierPoints?: BezierPo
 
 /** Labels affichables pour chaque preset — utilisés dans l'UI. */
 export const EASING_LABELS: Record<EasingType, string> = {
-  linear: '─ Linéaire',
-  'ease-in': '↗ Ease In',
-  'ease-out': '↘ Ease Out',
-  'ease-in-out': '⤴ Ease In-Out',
-  bezier: '◠ Bézier custom',
+  linear: '─ Régulier',
+  'ease-in': '🚀 Départ lent',
+  'ease-out': '🛬 Arrivée douce',
+  'ease-in-out': '🌊 Fluide',
+  bezier: '✏️ Personnalisé',
 };
 
-/** Presets Bézier communs (nommés pour l'UI Expert). */
+/** Presets Bézier communs — noms français + emoji pour l'UI. */
 export const BEZIER_PRESETS: Record<string, BezierPoints> = {
-  Smooth: [0.25, 0.1, 0.25, 1.0],
-  Bouncy: [0.34, 1.56, 0.64, 1.0],
-  Snappy: [0.17, 0.67, 0.83, 0.67],
-  Anticipate: [0.36, 0, 0.66, -0.56],
+  '🌊 Fluide': [0.25, 0.1, 0.25, 1.0],
+  '🏀 Rebond': [0.34, 1.56, 0.64, 1.0],
+  '⚡ Vif': [0.17, 0.67, 0.83, 0.67],
+  '🏃 Élan': [0.36, 0, 0.66, -0.56],
 };

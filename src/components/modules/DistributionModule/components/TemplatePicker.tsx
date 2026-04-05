@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRigStore } from '@/stores/rigStore';
@@ -18,13 +18,20 @@ interface TemplatePickerProps {
 export function TemplatePicker({ characterId, open, onClose }: TemplatePickerProps) {
   const addRigFromTemplate = useRigStore((s) => s.addRigFromTemplate);
   const [applying, setApplying] = useState(false);
+  // Ref cleanup — §3 hallucination_patterns : setTimeout sans cleanup
+  const applyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (applyTimerRef.current) clearTimeout(applyTimerRef.current);
+    };
+  }, []);
 
   const handlePick = (templateId: string) => {
     if (applying) return;
     setApplying(true);
     addRigFromTemplate(characterId, templateId);
     // Fermer après un bref délai (feedback de création)
-    setTimeout(() => {
+    applyTimerRef.current = setTimeout(() => {
       setApplying(false);
       onClose();
     }, 180);

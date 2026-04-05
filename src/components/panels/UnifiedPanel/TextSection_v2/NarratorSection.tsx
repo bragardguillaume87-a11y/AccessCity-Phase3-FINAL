@@ -6,6 +6,7 @@
 
 import { SliderRow } from '@/components/ui/SliderRow';
 import { ColorRow } from './shared';
+import { NAME_FONTS } from '@/config/nameFonts';
 import type { DialogueBoxStyle } from '@/types/scenes';
 
 // Coins décoratifs réutilisés dans la preview narrateur
@@ -38,10 +39,17 @@ export function NarratorSection({ cfg, onUpdate }: NarratorSectionProps) {
   const textColor = cfg.narratorTextColor ?? '#ede8d5';
   const borderColor = cfg.narratorBorderColor ?? '#c9a84c';
   const bgOpacity = cfg.narratorBgOpacity ?? 0.93;
+  const narratorFont = cfg.narratorFont ?? 'crimson-pro';
+  const narratorItalic = cfg.narratorItalic ?? true;
+  const narratorAlign = cfg.narratorAlign ?? 'center';
+  const narratorShowSeparators = cfg.narratorShowSeparators ?? true;
 
   const opacityHex = Math.round(bgOpacity * 255)
     .toString(16)
     .padStart(2, '0');
+
+  const activeFontDef =
+    NAME_FONTS.find((f) => f.id === narratorFont) ?? NAME_FONTS[NAME_FONTS.length - 1];
 
   const handleReset = () => {
     onUpdate({
@@ -49,6 +57,10 @@ export function NarratorSection({ cfg, onUpdate }: NarratorSectionProps) {
       narratorTextColor: '#ede8d5',
       narratorBorderColor: '#c9a84c',
       narratorBgOpacity: 0.93,
+      narratorFont: 'crimson-pro',
+      narratorItalic: true,
+      narratorAlign: 'center',
+      narratorShowSeparators: true,
     });
   };
 
@@ -75,32 +87,34 @@ export function NarratorSection({ cfg, onUpdate }: NarratorSectionProps) {
         ))}
 
         {/* Séparateur ornemental haut */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-          <div
-            style={{
-              flex: 1,
-              height: 1,
-              background: `linear-gradient(to right, transparent, ${borderColor}55)`,
-            }}
-          />
-          <span style={{ color: borderColor, fontSize: 7, lineHeight: 1 }}>✦</span>
-          <div
-            style={{
-              flex: 1,
-              height: 1,
-              background: `linear-gradient(to left, transparent, ${borderColor}55)`,
-            }}
-          />
-        </div>
+        {narratorShowSeparators && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to right, transparent, ${borderColor}55)`,
+              }}
+            />
+            <span style={{ color: borderColor, fontSize: 7, lineHeight: 1 }}>✦</span>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to left, transparent, ${borderColor}55)`,
+              }}
+            />
+          </div>
+        )}
 
         <p
           style={{
-            fontFamily: "'Crimson Pro', Georgia, serif",
-            fontStyle: 'italic',
+            fontFamily: activeFontDef.fontFamily,
+            fontStyle: narratorItalic ? 'italic' : 'normal',
             fontSize: 11,
             color: textColor,
             lineHeight: 1.7,
-            textAlign: 'center',
+            textAlign: narratorAlign,
             margin: 0,
           }}
         >
@@ -108,23 +122,25 @@ export function NarratorSection({ cfg, onUpdate }: NarratorSectionProps) {
         </p>
 
         {/* Séparateur ornemental bas */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
-          <div
-            style={{
-              flex: 1,
-              height: 1,
-              background: `linear-gradient(to right, transparent, ${borderColor}55)`,
-            }}
-          />
-          <span style={{ color: borderColor, fontSize: 7, lineHeight: 1 }}>✦</span>
-          <div
-            style={{
-              flex: 1,
-              height: 1,
-              background: `linear-gradient(to left, transparent, ${borderColor}55)`,
-            }}
-          />
-        </div>
+        {narratorShowSeparators && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to right, transparent, ${borderColor}55)`,
+              }}
+            />
+            <span style={{ color: borderColor, fontSize: 7, lineHeight: 1 }}>✦</span>
+            <div
+              style={{
+                flex: 1,
+                height: 1,
+                background: `linear-gradient(to left, transparent, ${borderColor}55)`,
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Couleurs */}
@@ -151,6 +167,97 @@ export function NarratorSection({ cfg, onUpdate }: NarratorSectionProps) {
         ariaLabel={`Opacité fond narrateur : ${Math.round(bgOpacity * 100)} %`}
         className="mb-3"
       />
+
+      {/* Police du texte narrateur */}
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] mt-3 mb-1.5">
+        Police du texte
+      </p>
+      <div className="grid grid-cols-3 gap-1 mb-3">
+        {NAME_FONTS.map((f) => {
+          const isActive = f.id === narratorFont;
+          return (
+            <button
+              key={f.id}
+              onClick={() => onUpdate({ narratorFont: f.id })}
+              title={f.description}
+              className="flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg border transition-colors"
+              style={{
+                borderColor: isActive ? 'var(--color-primary)' : 'var(--color-border-base)',
+                background: isActive ? 'var(--color-primary-subtle)' : 'transparent',
+                color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}
+            >
+              <span style={{ fontSize: 11 }}>{f.emoji}</span>
+              <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 400, lineHeight: 1 }}>
+                {f.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Options typographiques */}
+      <div className="flex gap-1.5 mb-3">
+        {/* Italique */}
+        <button
+          onClick={() => onUpdate({ narratorItalic: !narratorItalic })}
+          title="Texte en italique"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors"
+          style={{
+            borderColor: narratorItalic ? 'var(--color-primary)' : 'var(--color-border-base)',
+            background: narratorItalic ? 'var(--color-primary-subtle)' : 'transparent',
+            color: narratorItalic ? 'var(--color-primary)' : 'var(--color-text-muted)',
+            fontStyle: 'italic',
+          }}
+        >
+          <span>I</span>
+          <span style={{ fontStyle: 'normal', fontSize: 9 }}>Italique</span>
+        </button>
+
+        {/* Alignement gauche */}
+        <button
+          onClick={() => onUpdate({ narratorAlign: 'left' })}
+          title="Alignement gauche"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[11px] transition-colors"
+          style={{
+            borderColor:
+              narratorAlign === 'left' ? 'var(--color-primary)' : 'var(--color-border-base)',
+            background: narratorAlign === 'left' ? 'var(--color-primary-subtle)' : 'transparent',
+            color: narratorAlign === 'left' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          }}
+        >
+          ☰ Gauche
+        </button>
+
+        {/* Alignement centré */}
+        <button
+          onClick={() => onUpdate({ narratorAlign: 'center' })}
+          title="Alignement centré"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[11px] transition-colors"
+          style={{
+            borderColor:
+              narratorAlign === 'center' ? 'var(--color-primary)' : 'var(--color-border-base)',
+            background: narratorAlign === 'center' ? 'var(--color-primary-subtle)' : 'transparent',
+            color: narratorAlign === 'center' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          }}
+        >
+          ≡ Centré
+        </button>
+      </div>
+
+      {/* Séparateurs ✦ */}
+      <button
+        onClick={() => onUpdate({ narratorShowSeparators: !narratorShowSeparators })}
+        className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] mb-3 transition-colors"
+        style={{
+          borderColor: narratorShowSeparators ? 'var(--color-primary)' : 'var(--color-border-base)',
+          background: narratorShowSeparators ? 'var(--color-primary-subtle)' : 'transparent',
+          color: narratorShowSeparators ? 'var(--color-primary)' : 'var(--color-text-muted)',
+        }}
+      >
+        <span>✦ Séparateurs ornementaux</span>
+        <span style={{ fontSize: 10 }}>{narratorShowSeparators ? 'Activés' : 'Désactivés'}</span>
+      </button>
 
       {/* Reset Octopath */}
       <button

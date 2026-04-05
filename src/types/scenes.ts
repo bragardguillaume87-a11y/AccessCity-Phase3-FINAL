@@ -161,6 +161,14 @@ export interface DialogueBoxStyle {
   narratorBorderColor?: string;
   /** Opacité du fond narrateur 0–1 (défaut : 0.93). */
   narratorBgOpacity?: number;
+  /** Police du texte narrateur (ID parmi NAME_FONTS — défaut : 'crimson-pro'). */
+  narratorFont?: string;
+  /** Texte narrateur en italique (défaut : true). */
+  narratorItalic?: boolean;
+  /** Alignement du texte narrateur (défaut : 'center'). */
+  narratorAlign?: 'left' | 'center';
+  /** Afficher les séparateurs ornementaux ✦ haut et bas (défaut : true). */
+  narratorShowSeparators?: boolean;
   // ── Dimensionnement de la boîte ──────────────────────────────────────────────
   /** Largeur de la boîte en % du canvas (défaut : 76). Plage : 40–100. */
   boxWidth?: number;

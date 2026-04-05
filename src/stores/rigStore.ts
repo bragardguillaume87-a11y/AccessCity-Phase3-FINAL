@@ -13,6 +13,7 @@ import type {
   IKChain,
 } from '../types/bone';
 import { DEFAULT_KEYFRAME_DURATION } from '../types/bone';
+import { generateId } from '../utils/generateId';
 import { RIG_TEMPLATES } from '../config/rigTemplates';
 import type { RigTemplate } from '../config/rigTemplates';
 
@@ -92,7 +93,7 @@ export const useRigStore = create<RigState>()(
 
           // ── Rig ──────────────────────────────────────────────────────────────
           addRig: (characterId) => {
-            const id = `rig-${Date.now()}`;
+            const id = generateId('rig');
             const newRig: CharacterRig = {
               id,
               characterId,
@@ -130,7 +131,7 @@ export const useRigStore = create<RigState>()(
 
           // ── Bone ─────────────────────────────────────────────────────────────
           addBone: (rigId, bone) => {
-            const id = `bone-${Date.now()}`;
+            const id = generateId('bone');
             set(
               (state) => ({
                 rigs: state.rigs.map((r) =>
@@ -174,7 +175,7 @@ export const useRigStore = create<RigState>()(
 
           // ── SpritePart ───────────────────────────────────────────────────────
           addPart: (rigId, part) => {
-            const id = `part-${Date.now()}`;
+            const id = generateId('part');
             set(
               (state) => ({
                 rigs: state.rigs.map((r) =>
@@ -218,7 +219,7 @@ export const useRigStore = create<RigState>()(
 
           // ── BonePose ─────────────────────────────────────────────────────────
           addPose: (rigId, pose) => {
-            const id = `pose-${Date.now()}`;
+            const id = generateId('pose');
             set(
               (state) => ({
                 rigs: state.rigs.map((r) =>
@@ -262,7 +263,7 @@ export const useRigStore = create<RigState>()(
 
           // ── AnimationClip ────────────────────────────────────────────────────
           addClip: (rigId, clip) => {
-            const id = `clip-${Date.now()}`;
+            const id = generateId('clip');
             // Garantit que keyframes est toujours en phase avec poseIds
             const keyframes = clip.keyframes?.length
               ? clip.keyframes
@@ -325,7 +326,7 @@ export const useRigStore = create<RigState>()(
 
           // ── IKChain ──────────────────────────────────────────────────────────
           addIKChain: (rigId, chain) => {
-            const id = `ikchain-${Date.now()}`;
+            const id = generateId('ikchain');
             set(
               (state) => ({
                 rigs: state.rigs.map((r) =>
@@ -361,9 +362,8 @@ export const useRigStore = create<RigState>()(
 
             // Résout les parentKey → IDs réels, dans l'ordre topologique
             const keyToId: Record<string, string> = {};
-            const ts = Date.now();
-            const bones: Bone[] = template.bones.map((node, i) => {
-              const id = `bone-${ts}-${i}`;
+            const bones: Bone[] = template.bones.map((node) => {
+              const id = generateId('bone');
               keyToId[node.key] = id;
               return {
                 id,
@@ -390,7 +390,7 @@ export const useRigStore = create<RigState>()(
               return existingRig.id;
             }
 
-            const rigId = `rig-${ts}`;
+            const rigId = generateId('rig');
             const newRig: CharacterRig = {
               id: rigId,
               characterId,

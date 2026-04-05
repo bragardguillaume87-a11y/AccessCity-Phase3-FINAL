@@ -23,6 +23,8 @@ interface BoneEditorRightPanelProps {
   onRefOpacityChange?: (v: number) => void;
   canUndo?: boolean;
   onUndo?: () => void;
+  /** ID de la pose en cours d'édition (depuis DistributionModule) — active la section sprite variant */
+  editingPoseId?: string | null;
 }
 
 // ⑤ Emoji par type d'os — détection depuis le nom (Miyamoto §1.2 : symboles universels)
@@ -165,6 +167,7 @@ export function BoneEditorRightPanel({
   onRefOpacityChange,
   canUndo = false,
   onUndo,
+  editingPoseId = null,
 }: BoneEditorRightPanelProps) {
   const rig = useRigStore((s) => s.rigs.find((r) => r.characterId === characterId));
   const deleteBone = useRigStore((s) => s.deleteBone);
@@ -172,10 +175,15 @@ export function BoneEditorRightPanel({
   const addBone = useRigStore((s) => s.addBone);
   const addPart = useRigStore((s) => s.addPart);
   const updatePart = useRigStore((s) => s.updatePart);
+  const updatePose = useRigStore((s) => s.updatePose);
   const deletePart = useRigStore((s) => s.deletePart);
   const addIKChain = useRigStore((s) => s.addIKChain);
   const removeIKChain = useRigStore((s) => s.removeIKChain);
   const addRigFromTemplate = useRigStore((s) => s.addRigFromTemplate);
+
+  const editingPose = editingPoseId
+    ? (rig?.poses.find((p) => p.id === editingPoseId) ?? null)
+    : null;
 
   const bones = rig?.bones ?? [];
   const parts = rig?.parts ?? [];
@@ -986,6 +994,100 @@ export function BoneEditorRightPanel({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Sprite variant par pose — Expert + mode édition de pose uniquement ── */}
+      {editingPose && selectedBone && selectedBonePart && !isBeginnerMode && (
+        <div
+          style={{
+            borderBottom: '1px solid var(--color-border-base)',
+            padding: '8px 10px',
+            background: 'var(--color-primary-subtle)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              color: 'var(--color-primary)',
+              marginBottom: 6,
+              fontWeight: 600,
+            }}
+          >
+            🎭 Variante — pose &ldquo;{editingPose.name}&rdquo;
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <img
+              src={editingPose.spriteVariants?.[selectedBone.id] ?? selectedBonePart.assetUrl}
+              alt=""
+              style={{
+                width: 36,
+                height: 36,
+                objectFit: 'contain',
+                borderRadius: 4,
+                border: editingPose.spriteVariants?.[selectedBone.id]
+                  ? '1.5px solid var(--color-primary)'
+                  : '1px solid var(--color-border-base)',
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  fontSize: 10,
+                  color: 'var(--color-text-muted)',
+                  display: 'block',
+                  cursor: 'pointer',
+                  marginBottom: 2,
+                }}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !rig) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      const dataUrl = ev.target?.result as string;
+                      if (!dataUrl) return;
+                      const current = editingPose.spriteVariants ?? {};
+                      updatePose(rig.id, editingPose.id, {
+                        spriteVariants: { ...current, [selectedBone.id]: dataUrl },
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                📁 Sprite pour cette pose
+              </label>
+              {editingPose.spriteVariants?.[selectedBone.id] && (
+                <button
+                  type="button"
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--color-danger)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                  onClick={() => {
+                    if (!rig) return;
+                    const { [selectedBone.id]: _removed, ...rest } =
+                      editingPose.spriteVariants ?? {};
+                    updatePose(rig.id, editingPose.id, { spriteVariants: rest });
+                  }}
+                >
+                  ✕ Retirer la variante
+                </button>
+              )}
+            </div>
+          </div>
+          <p style={{ fontSize: 9, color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
+            Remplace le sprite de base uniquement quand cette pose est active.
+          </p>
         </div>
       )}
 

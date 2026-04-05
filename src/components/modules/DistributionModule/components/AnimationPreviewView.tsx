@@ -47,7 +47,7 @@ export function AnimationPreviewView({
   const fps = clip?.fps ?? 24;
   const poses = rig?.poses ?? EMPTY_POSES;
 
-  const imageCache = useBoneImageCache(parts);
+  const imageCache = useBoneImageCache(parts, poses);
   // useMemo : évite une nouvelle référence array à chaque render → stabilise les props BoneGroup
   const rootBones = useMemo(() => getRootBones(bones), [bones]);
 

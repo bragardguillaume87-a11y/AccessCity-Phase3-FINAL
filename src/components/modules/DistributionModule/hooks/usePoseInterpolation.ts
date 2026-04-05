@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { BonePose, BonePoseState, KeyframeEntry } from '@/types/bone';
+import type { BoneFrameState, BonePose, BonePoseState, KeyframeEntry } from '@/types/bone';
 import { applyEasing } from '@/utils/animationEasing';
 
 /**
@@ -44,12 +44,28 @@ export function interpolatePoses(
  * @param frame     - Frame courante (0-based, incrémentée à fps/s)
  * @param fps       - FPS du clip (utilisé pour convertir durées secondes → frames)
  */
+/** Promeut un Record<boneId, BonePoseState> + spriteVariants d'une pose vers BoneFrameState. */
+function toFrameResult(
+  rotations: Record<string, BonePoseState>,
+  poseA: BonePose
+): Record<string, BoneFrameState> {
+  const result: Record<string, BoneFrameState> = {};
+  for (const [boneId, bs] of Object.entries(rotations)) {
+    result[boneId] = { rotation: bs.rotation };
+  }
+  // Sprite = snap sur poseA (début du keyframe actif, pas interpolé)
+  for (const [boneId, url] of Object.entries(poseA.spriteVariants ?? {})) {
+    result[boneId] = { ...(result[boneId] ?? { rotation: 0 }), spriteUrl: url };
+  }
+  return result;
+}
+
 export function usePoseInterpolation(
   poses: BonePose[],
   keyframes: KeyframeEntry[],
   frame: number,
   fps: number
-): Record<string, BonePoseState> {
+): Record<string, BoneFrameState> {
   return useMemo(() => {
     if (keyframes.length === 0) return {};
 
@@ -84,8 +100,8 @@ export function usePoseInterpolation(
     const poseB = poses.find((p) => p.id === keyframes[nextKfIndex].poseId);
 
     if (!poseA) return {};
-    if (!poseB || poseA.id === poseB.id) return { ...poseA.boneStates };
+    if (!poseB || poseA.id === poseB.id) return toFrameResult({ ...poseA.boneStates }, poseA);
 
-    return interpolatePoses(poseA, poseB, t);
+    return toFrameResult(interpolatePoses(poseA, poseB, t), poseA);
   }, [poses, keyframes, frame, fps]);
 }

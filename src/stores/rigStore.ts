@@ -416,7 +416,7 @@ export const useRigStore = create<RigState>()(
       {
         name: 'rigs-storage',
         storage: createJSONStorage(() => localStorage),
-        version: 2,
+        version: 3,
         migrate: (persisted: unknown, version: number) => {
           const state = persisted as { rigs?: CharacterRig[] };
           if (version < 2 && state.rigs) {
@@ -426,6 +426,7 @@ export const useRigStore = create<RigState>()(
               ikChains: r.ikChains ?? [],
             }));
           }
+          // v2→v3 : spriteVariants ajouté à BonePose (champ optionnel, pas de migration nécessaire)
           return state;
         },
       }

@@ -4,17 +4,21 @@
  * Flag cancelled dans cleanup (konva-patterns §15).
  */
 import { useState, useEffect, useRef } from 'react';
-import type { SpritePart } from '@/types/bone';
+import type { BonePose, SpritePart } from '@/types/bone';
 
-export function useBoneImageCache(parts: SpritePart[]): Map<string, HTMLImageElement> {
+export function useBoneImageCache(
+  parts: SpritePart[],
+  poses?: BonePose[]
+): Map<string, HTMLImageElement> {
   const [cache, setCache] = useState<Map<string, HTMLImageElement>>(new Map());
   // Référence stable pour la liste des URLs — évite de relancer l'effect si la référence change
   // mais le contenu est identique (konva-patterns §16)
   const urlsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    // Dédupliquer les URLs
-    const urls = [...new Set(parts.map((p) => p.assetUrl).filter(Boolean))];
+    // Dédupliquer les URLs (parts + variants de poses)
+    const variantUrls = poses ? poses.flatMap((p) => Object.values(p.spriteVariants ?? {})) : [];
+    const urls = [...new Set([...parts.map((p) => p.assetUrl), ...variantUrls].filter(Boolean))];
 
     // Vérification stabilité : ne recharger que si les URLs ont vraiment changé
     const prev = urlsRef.current;
@@ -53,7 +57,7 @@ export function useBoneImageCache(parts: SpritePart[]): Map<string, HTMLImageEle
     return () => {
       cancelled = true;
     };
-  }, [parts]);
+  }, [parts, poses]);
 
   return cache;
 }

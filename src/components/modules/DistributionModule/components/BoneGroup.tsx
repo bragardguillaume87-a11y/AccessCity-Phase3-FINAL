@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Group, Line, Circle, Rect, Text, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
-import type { Bone, SpritePart, BoneTool } from '@/types/bone';
+import type { Bone, BoneFrameState, SpritePart, BoneTool } from '@/types/bone';
 import { getBoneChildren } from '../utils/boneUtils';
 
 /** Taille minimale d'un sprite redimensionné en pixels */
@@ -16,7 +16,7 @@ interface BoneGroupProps {
   selectedBoneId: string | null;
   /** Rotation override depuis une pose — undefined = utiliser bone.rotation */
   rotationOverride?: number;
-  overridesMap?: Record<string, { rotation: number }>;
+  overridesMap?: Record<string, BoneFrameState>;
   onSelectBone: (boneId: string) => void;
   onRotateBone: (boneId: string, angleDeg: number) => void;
   /** Rotation monde accumulée depuis la racine — pour contre-rotation du label (toujours horizontal) */
@@ -276,7 +276,9 @@ const BoneGroupInner = ({
     <Group x={bone.localX} y={bone.localY} rotation={rotation}>
       {/* Parts de cet os — triées par zOrder (sortedParts memoïsé) */}
       {sortedParts.map((part) => {
-        const img = imageCache.get(part.assetUrl);
+        // Sprite variant par pose — override si une variante est définie pour cet os dans la pose active
+        const overrideUrl = overridesMap?.[bone.id]?.spriteUrl;
+        const img = imageCache.get(overrideUrl ?? part.assetUrl);
         if (!img) return null;
         const isFirstPart = part.id === firstPart?.id;
         // Le sprite de base (firstPart) est draggable en mode Sélect pour repositionnement

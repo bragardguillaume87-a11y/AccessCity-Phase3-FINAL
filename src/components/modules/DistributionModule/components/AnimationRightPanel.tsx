@@ -525,6 +525,14 @@ export function AnimationRightPanel({
                   <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
                     {Object.keys(pose.boneStates).length}os
                   </span>
+                  {Object.keys(pose.spriteVariants ?? {}).length > 0 && (
+                    <span
+                      title={`${Object.keys(pose.spriteVariants!).length} variante(s) sprite`}
+                      style={{ fontSize: 9, color: 'var(--color-primary)', flexShrink: 0 }}
+                    >
+                      🖼
+                    </span>
+                  )}
                 </button>
                 {/* Bouton charger dans squelette */}
                 <button

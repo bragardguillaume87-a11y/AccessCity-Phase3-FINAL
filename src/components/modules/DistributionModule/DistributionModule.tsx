@@ -95,9 +95,15 @@ export function DistributionModule() {
     if (!previewPoseId || !rig) return undefined;
     const pose = rig.poses.find((p) => p.id === previewPoseId);
     if (!pose) return undefined;
-    return Object.fromEntries(
-      Object.entries(pose.boneStates).map(([boneId, bs]) => [boneId, { rotation: bs.rotation }])
-    );
+    const result: Record<string, { rotation: number; spriteUrl?: string }> = {};
+    for (const [boneId, bs] of Object.entries(pose.boneStates)) {
+      result[boneId] = { rotation: bs.rotation, spriteUrl: pose.spriteVariants?.[boneId] };
+    }
+    // Bones avec un variant mais sans rotation dans boneStates (ex: os bouche rotation fixe)
+    for (const [boneId, url] of Object.entries(pose.spriteVariants ?? {})) {
+      if (!result[boneId]) result[boneId] = { rotation: 0, spriteUrl: url };
+    }
+    return result;
   }, [previewPoseId, rig]);
 
   /** Guard UX-4 : si une pose est en cours d'édition, forcer le retour sur animation-preview */
@@ -280,6 +286,7 @@ export function DistributionModule() {
               refScale={refScale}
               refOpacity={refOpacity}
               overridesMap={previewOverridesMap}
+              poses={rig?.poses}
               characterName={selectedChar?.name}
               characterAvatarUrl={refImageUrl}
             />
@@ -317,6 +324,7 @@ export function DistributionModule() {
               onRefOpacityChange={setRefOpacity}
               canUndo={canRigUndo}
               onUndo={handleRigUndo}
+              editingPoseId={editingPoseId}
             />
           )}
           {activeView === 'animation-preview' && (

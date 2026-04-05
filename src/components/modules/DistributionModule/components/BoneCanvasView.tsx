@@ -10,7 +10,7 @@ import {
 } from 'react-konva';
 import type Konva from 'konva';
 import { useRigStore } from '@/stores/rigStore';
-import type { BoneTool, CharacterRig } from '@/types/bone';
+import type { BoneFrameState, BonePose, BoneTool, CharacterRig } from '@/types/bone';
 import { BONE_DEFAULT_COLORS, DEFAULT_BONE_LENGTH } from '@/types/bone';
 import {
   getRootBones,
@@ -62,8 +62,10 @@ interface BoneCanvasViewProps {
   refScale?: number;
   /** Opacité de l'image de référence (0.1 → 0.8, défaut 0.45) */
   refOpacity?: number;
-  /** Overrides de rotation boneId→{rotation} à appliquer aux os (preview de pose au survol) */
-  overridesMap?: Record<string, { rotation: number }>;
+  /** Overrides boneId→{rotation, spriteUrl?} — preview de pose au survol + sprite variants */
+  overridesMap?: Record<string, BoneFrameState>;
+  /** Poses du rig — utilisées pour précharger les URLs de sprite variants dans le cache image */
+  poses?: BonePose[];
   /** Nom du personnage actif — affiché dans le nameplate en-tête (UX-6) */
   characterName?: string;
   /** Avatar URL du personnage actif — affiché dans le nameplate en-tête (UX-6) */
@@ -100,6 +102,7 @@ export function BoneCanvasView({
   refScale = 0.6,
   refOpacity = 0.45,
   overridesMap,
+  poses,
   characterName,
   characterAvatarUrl,
 }: BoneCanvasViewProps) {
@@ -113,7 +116,7 @@ export function BoneCanvasView({
   const ikChains = rig?.ikChains ?? EMPTY_IK_CHAINS;
 
   // ── Image cache (konva-patterns §15) ──────────────────────────────────────
-  const imageCache = useBoneImageCache(parts);
+  const imageCache = useBoneImageCache(parts, poses);
 
   // ── Root bones (points d'entrée récursion) ────────────────────────────────
   const rootBones = useMemo(() => getRootBones(bones), [bones]);

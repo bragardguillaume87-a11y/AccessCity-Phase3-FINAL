@@ -58,6 +58,23 @@ export interface BonePose {
   name: string;
   /** Clé = boneId */
   boneStates: Record<string, BonePoseState>;
+  /**
+   * Sprites alternatifs par os pour cette pose.
+   * Clé = boneId, valeur = assetUrl (data URL).
+   * Absent → utilise SpritePart.assetUrl global.
+   * Optionnel pour rétrocompatibilité avec les rigs existants.
+   */
+  spriteVariants?: Record<string, string>;
+}
+
+/**
+ * État runtime d'un os à une frame donnée.
+ * Rotation interpolée (FK) + URL de sprite override si une variante est définie pour la pose active.
+ * Distinct de BonePoseState (stockage) — utilisé uniquement dans le pipeline de rendu.
+ */
+export interface BoneFrameState {
+  rotation: number;
+  spriteUrl?: string;
 }
 
 /**

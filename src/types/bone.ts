@@ -131,6 +131,10 @@ export interface CharacterRig {
   animationClips: AnimationClip[];
   /** Chaînes IK définies sur ce rig (mode Expert) */
   ikChains: IKChain[];
+  /** Clip joué en continu quand le personnage est inactif (idle breathing…). */
+  idleClipId?: string;
+  /** Clip joué quand le personnage est le speaker actif du dialogue. */
+  speakClipId?: string;
 }
 
 export type BoneTool = 'select' | 'rotate' | 'add-bone' | 'add-part' | 'ik';

@@ -16,6 +16,7 @@ import { DEFAULT_KEYFRAME_DURATION } from '../types/bone';
 import { generateId } from '../utils/generateId';
 import { RIG_TEMPLATES } from '../config/rigTemplates';
 import type { RigTemplate } from '../config/rigTemplates';
+import { generateIdleClip } from '../utils/generateIdleClip';
 
 /** Génère un tableau de KeyframeEntry depuis un tableau de poseIds (migration / défaut). */
 function poseIdsToKeyframes(poseIds: string[]): KeyframeEntry[] {
@@ -72,6 +73,12 @@ interface RigState {
 
   // Template
   addRigFromTemplate: (characterId: string, templateId: string) => string | null;
+
+  // Clip assignment
+  setIdleClip: (rigId: string, clipId: string | null) => void;
+  setSpeakClip: (rigId: string, clipId: string | null) => void;
+  /** Génère et ajoute un clip idle breathing. Retourne le clipId créé, ou null si impossible. */
+  generateAndAddIdleClip: (characterId: string) => string | null;
 
   // Import (restauration de projet)
   importRigs: (rigs: CharacterRig[]) => void;
@@ -406,6 +413,93 @@ export const useRigStore = create<RigState>()(
             return rigId;
           },
 
+          // ── Clip assignment ──────────────────────────────────────────────────
+          setIdleClip: (rigId, clipId) => {
+            set(
+              (state) => ({
+                rigs: state.rigs.map((r) =>
+                  r.id === rigId ? { ...r, idleClipId: clipId ?? undefined } : r
+                ),
+              }),
+              false,
+              'rigs/setIdleClip'
+            );
+          },
+
+          setSpeakClip: (rigId, clipId) => {
+            set(
+              (state) => ({
+                rigs: state.rigs.map((r) =>
+                  r.id === rigId ? { ...r, speakClipId: clipId ?? undefined } : r
+                ),
+              }),
+              false,
+              'rigs/setSpeakClip'
+            );
+          },
+
+          // ── Génération automatique idle breathing ────────────────────────────
+          generateAndAddIdleClip: (characterId) => {
+            const rig = get().rigs.find((r) => r.characterId === characterId);
+            if (!rig) return null;
+
+            const generated = generateIdleClip(rig);
+            if (!generated) return null;
+
+            // Ajouter les poses et récupérer leurs IDs
+            const poseIds: string[] = [];
+            let updatedRig = rig;
+
+            for (const pose of generated.poses) {
+              const poseId = generateId('pose');
+              updatedRig = {
+                ...updatedRig,
+                poses: [...updatedRig.poses, { id: poseId, ...pose }],
+              };
+              poseIds.push(poseId);
+            }
+
+            // Sentinelles → vrais IDs : [neutral, inhale, exhale, neutral]
+            const [neutralId, inhaleId, exhaleId] = poseIds;
+            const keyframes = generated.clip.keyframes.map((kf) => ({
+              ...kf,
+              poseId:
+                kf.poseId === '__idle_neutral__'
+                  ? neutralId
+                  : kf.poseId === '__idle_inhale__'
+                    ? inhaleId
+                    : kf.poseId === '__idle_exhale__'
+                      ? exhaleId
+                      : kf.poseId,
+            }));
+
+            const clipId = generateId('clip');
+            const clip = {
+              id: clipId,
+              ...generated.clip,
+              poseIds: [neutralId, inhaleId, exhaleId, neutralId],
+              keyframes,
+            };
+
+            set(
+              (state) => ({
+                rigs: state.rigs.map((r) =>
+                  r.id === rig.id
+                    ? {
+                        ...updatedRig,
+                        animationClips: [...updatedRig.animationClips, clip],
+                        idleClipId: clipId,
+                      }
+                    : r
+                ),
+              }),
+              false,
+              'rigs/generateAndAddIdleClip'
+            );
+
+            return clipId;
+          },
+
           // ── Import ───────────────────────────────────────────────────────────
           importRigs: (rigs) => {
             set(() => ({ rigs }), false, 'rigs/importRigs');
@@ -416,17 +510,14 @@ export const useRigStore = create<RigState>()(
       {
         name: 'rigs-storage',
         storage: createJSONStorage(() => localStorage),
-        version: 3,
+        version: 4,
         migrate: (persisted: unknown, version: number) => {
           const state = persisted as { rigs?: CharacterRig[] };
           if (version < 2 && state.rigs) {
-            // Migration v1→v2 : ajouter ikChains: [] sur les rigs existants
-            state.rigs = state.rigs.map((r) => ({
-              ...r,
-              ikChains: r.ikChains ?? [],
-            }));
+            state.rigs = state.rigs.map((r) => ({ ...r, ikChains: r.ikChains ?? [] }));
           }
-          // v2→v3 : spriteVariants ajouté à BonePose (champ optionnel, pas de migration nécessaire)
+          // v2→v3 : spriteVariants sur BonePose (optionnel, pas de migration)
+          // v3→v4 : idleClipId + speakClipId sur CharacterRig (optionnel, pas de migration)
           return state;
         },
       }

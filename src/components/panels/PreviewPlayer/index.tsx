@@ -20,6 +20,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { AnimatedCharacterSprite } from '@/components/ui/AnimatedCharacterSprite';
+import { CharacterRigCanvas } from '@/components/ui/CharacterRigCanvas';
+import { useRigStore } from '@/stores/rigStore';
 import { CHARACTER_ANIMATION_VARIANTS } from '@/constants/animations';
 import type { CharacterAnimationVariantName } from '@/constants/animations';
 import type { GameStats, DialogueChoice, Scene } from '@/types';
@@ -96,6 +98,8 @@ export default function PreviewPlayer({
   const uiSoundsTickInterval = useSettingsStore((state) => state.uiSoundsTickInterval);
   const storeCharacterLibrary = useCharactersStore((state) => state.characters);
   const characterLibrary: Character[] = standaloneCharacters ?? storeCharacterLibrary;
+  // Rigs FK — pour les personnages avec rig Marionette (vide en standalone)
+  const rigs = useRigStore((s) => s.rigs);
 
   // Protagoniste → stats initiales (fallback sur variables globales si non trouvé).
   // useMemo évite de re-traverser la liste à chaque render ; se met à jour uniquement
@@ -652,6 +656,12 @@ export default function PreviewPlayer({
                   const leftPct = sc.position.x - widthPct / 2;
                   const topPct = sc.position.y - heightPct / 2;
 
+                  // Personnage avec rig FK actif → rendu via CharacterRigCanvas (section séparée ci-dessous)
+                  const activeRig = rigs.find(
+                    (r) => r.characterId === sc.characterId && (r.idleClipId || r.speakClipId)
+                  );
+                  if (activeRig) return null;
+
                   return (
                     // key inclut currentScene.id → remontage sur changement de scène
                     // → animation d'entrée rejouée à chaque transition de scène
@@ -685,6 +695,40 @@ export default function PreviewPlayer({
                   );
                 })}
               </AnimatePresence>
+
+              {/* ── FK Rigs (personnages Marionette avec idleClipId ou speakClipId) ── */}
+              {canvasSize.width > 0 &&
+                currentScene.characters.map((sc) => {
+                  const rig = rigs.find(
+                    (r) => r.characterId === sc.characterId && (r.idleClipId || r.speakClipId)
+                  );
+                  if (!rig) return null;
+                  const isSpeaking = speakingSceneCharId === sc.id;
+                  const clipId = isSpeaking
+                    ? (rig.speakClipId ?? rig.idleClipId ?? null)
+                    : (rig.idleClipId ?? null);
+                  return (
+                    <div
+                      key={`rig-${sc.id}`}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: (sc.zIndex ?? 1) + 1,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <CharacterRigCanvas
+                        characterId={sc.characterId}
+                        clipId={clipId}
+                        isPlaying={true}
+                        width={canvasSize.width}
+                        height={canvasSize.height}
+                        originX={(sc.position.x / 100) * canvasSize.width}
+                        originY={(sc.position.y / 100) * canvasSize.height}
+                      />
+                    </div>
+                  );
+                })}
 
               {/* ── Effet atmosphérique (au-dessus des sprites, sous le dégradé UI) ── */}
               <SceneEffectCanvas

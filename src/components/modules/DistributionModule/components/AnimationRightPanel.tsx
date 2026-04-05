@@ -60,6 +60,9 @@ export function AnimationRightPanel({
   const deleteClip = useRigStore((s) => s.deleteClip);
   const deletePose = useRigStore((s) => s.deletePose);
   const updateClip = useRigStore((s) => s.updateClip);
+  const generateAndAddIdleClip = useRigStore((s) => s.generateAndAddIdleClip);
+  const setIdleClipAction = useRigStore((s) => s.setIdleClip);
+  const setSpeakClipAction = useRigStore((s) => s.setSpeakClip);
 
   const clips = rig?.animationClips ?? [];
   const poses = rig?.poses ?? [];
@@ -106,6 +109,11 @@ export function AnimationRightPanel({
     if (poseConfettiTimer.current) clearTimeout(poseConfettiTimer.current);
     poseConfettiTimer.current = setTimeout(() => setShowPoseConfetti(false), 1800);
   }, [rig, poses.length, addPose]);
+
+  const handleGenerateIdle = useCallback(() => {
+    if (!rig) return;
+    generateAndAddIdleClip(characterId);
+  }, [rig, characterId, generateAndAddIdleClip]);
 
   const handleDeleteClip = useCallback(() => {
     if (!rig || !selectedClipId) return;
@@ -218,6 +226,14 @@ export function AnimationRightPanel({
               data-tutorial-id="add-clip-button"
             >
               + Clip
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateIdle}
+              title="Générer automatiquement un clip de respiration idle à partir de la pose Repos"
+              style={smallBtn}
+            >
+              ✨ Idle
             </button>
             {selectedClipId && (
               <button
@@ -840,6 +856,59 @@ export function AnimationRightPanel({
           </div>
         </div>
       )}
+
+      {/* ── Assignation idle / speak ── */}
+      <div
+        style={{
+          padding: '8px 10px',
+          borderTop: '1px solid var(--color-border-base)',
+          flexShrink: 0,
+        }}
+      >
+        <p style={{ ...sectionLabel, marginBottom: 6 }}>🔗 Clips auto</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 42, flexShrink: 0 }}
+            >
+              😴 Idle
+            </span>
+            <select
+              value={rig.idleClipId ?? ''}
+              onChange={(e) => setIdleClipAction(rig.id, e.target.value || null)}
+              style={selectStyle}
+              title="Clip joué en boucle quand le personnage est inactif"
+            >
+              <option value="">— aucun —</option>
+              {clips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 42, flexShrink: 0 }}
+            >
+              🗣 Parle
+            </span>
+            <select
+              value={rig.speakClipId ?? ''}
+              onChange={(e) => setSpeakClipAction(rig.id, e.target.value || null)}
+              style={selectStyle}
+              title="Clip joué quand ce personnage est le speaker actif"
+            >
+              <option value="">— aucun —</option>
+              {clips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -877,6 +946,17 @@ const smallBtn: React.CSSProperties = {
   border: '1px solid var(--color-border-base)',
   background: 'transparent',
   color: 'var(--color-text-secondary)',
+};
+
+const selectStyle: React.CSSProperties = {
+  flex: 1,
+  fontSize: 10,
+  padding: '2px 4px',
+  borderRadius: 4,
+  border: '1px solid var(--color-border-base)',
+  background: 'var(--color-bg-base)',
+  color: 'var(--color-text-secondary)',
+  cursor: 'pointer',
 };
 
 function clipRowStyle(active: boolean): React.CSSProperties {

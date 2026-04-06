@@ -12,7 +12,7 @@ import { Stage, Layer, Group } from 'react-konva';
 import { useRigStore } from '@/stores/rigStore';
 import { useCharacterAnimationPlayer } from '@/hooks/useCharacterAnimationPlayer';
 import { useBoneImageCache } from '../modules/DistributionModule/hooks/useBoneImageCache';
-import { getRootBones } from '../modules/DistributionModule/utils/boneUtils';
+import { getRootBones, computeRigBounds } from '../modules/DistributionModule/utils/boneUtils';
 import { BoneGroup } from '../modules/DistributionModule/components/BoneGroup';
 import type { Bone, SpritePart, BonePose } from '@/types/bone';
 
@@ -73,10 +73,22 @@ export function CharacterRigCanvas({
   // ── Playback FK ──────────────────────────────────────────────────────────────
   const { overridesMap } = useCharacterAnimationPlayer(characterId, clipId, isPlaying, speed);
 
-  if (!rig) return null;
+  // ── Centrage automatique (plan P0c) ─────────────────────────────────────────
+  // Si originX/Y explicites (PreviewPlayer sait où placer) → les utiliser tels quels.
+  // Sinon → centrer le rig dans le canvas via bounding box FK.
+  const { rigX, rigY } = useMemo(() => {
+    if (originX !== undefined && originY !== undefined) {
+      return { rigX: originX, rigY: originY };
+    }
+    if (!rig || bones.length === 0) return { rigX: width / 2, rigY: height / 2 };
+    const bounds = computeRigBounds(bones);
+    return {
+      rigX: width / 2 - bounds.centerX,
+      rigY: height / 2 - bounds.centerY,
+    };
+  }, [bones, width, height, originX, originY, rig]);
 
-  const rigX = originX ?? rig.originX;
-  const rigY = originY ?? rig.originY;
+  if (!rig) return null;
 
   // ── Rendu ────────────────────────────────────────────────────────────────────
   return (

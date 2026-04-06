@@ -1,6 +1,103 @@
 import type { Bone } from '@/types/bone';
 import type { FabrikJoint } from '@/utils/fabrik';
 
+// ── computeRigBounds ─────────────────────────────────────────────────────────
+
+export interface RigBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  /** Centre X du bounding box = (minX + maxX) / 2 */
+  centerX: number;
+  /** Centre Y du bounding box = (minY + maxY) / 2 */
+  centerY: number;
+}
+
+/**
+ * Calcule le bounding box world-space de l'ensemble des os d'un rig,
+ * avec une origine de rig à (0,0).
+ *
+ * Reproduit la hiérarchie FK des <Group> Konva sans Konva :
+ *   worldPos(bone) = worldPos(parent) + rotate(localX, localY, cumRot_parent)
+ *   tip(bone)      = pivot + (bone.length, 0) rotaté par cumRot(bone)
+ *
+ * Usage : centrer le rig dans le canvas de preview —
+ *   offsetX = canvasW / 2 - bounds.centerX
+ *   offsetY = canvasH / 2 - bounds.centerY
+ */
+export function computeRigBounds(bones: Bone[]): RigBounds {
+  const EMPTY: RigBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0, centerY: 0 };
+  if (bones.length === 0) return EMPTY;
+
+  const boneById = new Map(bones.map((b) => [b.id, b]));
+  // Cache pivot world pour éviter O(n²) sur des rigs profonds
+  const pivotCache = new Map<string, { x: number; y: number }>();
+
+  function cumRot(bone: Bone): number {
+    let r = bone.rotation * (Math.PI / 180);
+    let b: Bone | undefined = bone.parentId ? boneById.get(bone.parentId) : undefined;
+    while (b) {
+      r += b.rotation * (Math.PI / 180);
+      b = b.parentId ? boneById.get(b.parentId) : undefined;
+    }
+    return r;
+  }
+
+  function worldPivot(bone: Bone): { x: number; y: number } {
+    const cached = pivotCache.get(bone.id);
+    if (cached) return cached;
+
+    let result: { x: number; y: number };
+    if (!bone.parentId) {
+      result = { x: bone.localX, y: bone.localY };
+    } else {
+      const parent = boneById.get(bone.parentId);
+      if (!parent) {
+        result = { x: bone.localX, y: bone.localY };
+      } else {
+        const parentPos = worldPivot(parent);
+        const parentRot = cumRot(parent);
+        const cos = Math.cos(parentRot);
+        const sin = Math.sin(parentRot);
+        // Guard données corrompues (konva-patterns §2)
+        if (!isFinite(bone.localX) || !isFinite(bone.localY)) {
+          result = parentPos;
+        } else {
+          result = {
+            x: parentPos.x + bone.localX * cos - bone.localY * sin,
+            y: parentPos.y + bone.localX * sin + bone.localY * cos,
+          };
+        }
+      }
+    }
+    pivotCache.set(bone.id, result);
+    return result;
+  }
+
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
+  for (const bone of bones) {
+    const pivot = worldPivot(bone);
+    const rot = cumRot(bone);
+    const tip = {
+      x: pivot.x + bone.length * Math.cos(rot),
+      y: pivot.y + bone.length * Math.sin(rot),
+    };
+    minX = Math.min(minX, pivot.x, tip.x);
+    minY = Math.min(minY, pivot.y, tip.y);
+    maxX = Math.max(maxX, pivot.x, tip.x);
+    maxY = Math.max(maxY, pivot.y, tip.y);
+  }
+
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  return { minX, minY, maxX, maxY, centerX, centerY };
+}
+
 /**
  * Détecte l'os symétrique d'un os donné par convention de nommage.
  *

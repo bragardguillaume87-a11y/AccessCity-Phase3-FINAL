@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Stage, Layer, Group } from 'react-konva';
 import { useRigStore } from '@/stores/rigStore';
 import type { CharacterRig, KeyframeEntry } from '@/types/bone';
-import { getRootBones } from '../utils/boneUtils';
+import { getRootBones, computeRigBounds } from '../utils/boneUtils';
 import { useBoneImageCache } from '../hooks/useBoneImageCache';
 import { usePoseInterpolation } from '../hooks/usePoseInterpolation';
 import { BoneGroup } from './BoneGroup';
@@ -134,6 +134,17 @@ export function AnimationPreviewView({
     fps
   );
 
+  // ── Centrage automatique — bounding box FK → offset canvas (plan P0b) ───────
+  // useMemo avant la garde conditionnelle (règle hooks React — react-patterns §5)
+  const { rigOffsetX, rigOffsetY } = useMemo(() => {
+    if (bones.length === 0) return { rigOffsetX: canvasSize.w / 2, rigOffsetY: canvasSize.h / 2 };
+    const bounds = computeRigBounds(bones);
+    return {
+      rigOffsetX: canvasSize.w / 2 - bounds.centerX,
+      rigOffsetY: canvasSize.h / 2 - bounds.centerY,
+    };
+  }, [bones, canvasSize]);
+
   if (!rig || bones.length === 0) {
     return (
       <div
@@ -152,9 +163,6 @@ export function AnimationPreviewView({
       </div>
     );
   }
-
-  const rigOriginX = rig.originX;
-  const rigOriginY = rig.originY;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -190,7 +198,7 @@ export function AnimationPreviewView({
           {/* Onion skin — frame précédente (opacity 0.2, §6 konva-patterns listening=false) */}
           {showOnionSkin && (
             <Layer listening={false} opacity={0.2}>
-              <Group x={rigOriginX} y={rigOriginY}>
+              <Group x={rigOffsetX} y={rigOffsetY}>
                 {rootBones.map((bone) => (
                   <BoneGroup
                     key={bone.id}
@@ -212,7 +220,7 @@ export function AnimationPreviewView({
 
           {/* Layer principal */}
           <Layer>
-            <Group x={rigOriginX} y={rigOriginY}>
+            <Group x={rigOffsetX} y={rigOffsetY}>
               {rootBones.map((bone) => (
                 <BoneGroup
                   key={bone.id}
@@ -234,7 +242,7 @@ export function AnimationPreviewView({
           {/* Onion skin — frame suivante (opacity 0.15, §6 konva-patterns listening=false) */}
           {showOnionSkin && (
             <Layer listening={false} opacity={0.15}>
-              <Group x={rigOriginX} y={rigOriginY}>
+              <Group x={rigOffsetX} y={rigOffsetY}>
                 {rootBones.map((bone) => (
                   <BoneGroup
                     key={bone.id}

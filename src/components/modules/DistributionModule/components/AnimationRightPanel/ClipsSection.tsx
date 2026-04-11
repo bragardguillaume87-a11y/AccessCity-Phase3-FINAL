@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import type { AnimationClip } from '@/types/bone';
 import { sectionLabel, rowBetween, emptyText, smallBtn, clipRowStyle } from './styles';
 
@@ -10,6 +11,7 @@ interface ClipsSectionProps {
   onGenerateIdle: () => void;
   onDeleteClip: () => void;
   onCancelDelete: () => void;
+  onRenameClip?: (id: string, name: string) => void;
 }
 
 export function ClipsSection({
@@ -21,7 +23,26 @@ export function ClipsSection({
   onGenerateIdle,
   onDeleteClip,
   onCancelDelete,
+  onRenameClip,
 }: ClipsSectionProps) {
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const startRename = (clip: AnimationClip) => {
+    setEditingNameId(clip.id);
+    setEditingName(clip.name);
+    // focus handled by autoFocus on input
+  };
+
+  const commitRename = (id: string) => {
+    const trimmed = editingName.trim();
+    if (trimmed && onRenameClip) onRenameClip(id, trimmed);
+    setEditingNameId(null);
+  };
+
+  const cancelRename = () => setEditingNameId(null);
+
   return (
     <div
       style={{
@@ -40,7 +61,7 @@ export function ClipsSection({
             style={smallBtn}
             data-tutorial-id="add-clip-button"
           >
-            + Clip
+            🎬 +
           </button>
           <button
             type="button"
@@ -77,28 +98,75 @@ export function ClipsSection({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
-        {clips.map((clip) => (
-          <button
-            key={clip.id}
-            type="button"
-            onClick={() => onSelectClip(clip.id)}
-            style={clipRowStyle(clip.id === selectedClipId)}
-          >
-            <span
-              style={{
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
+        {clips.map((clip) => {
+          const isEditing = editingNameId === clip.id;
+          const isSelected = clip.id === selectedClipId;
+          if (isEditing) {
+            return (
+              <div key={clip.id} style={clipRowStyle(isSelected)}>
+                <input
+                  ref={inputRef}
+                  autoFocus
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={() => commitRename(clip.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitRename(clip.id);
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelRename();
+                    }
+                    e.stopPropagation();
+                  }}
+                  style={{
+                    flex: 1,
+                    fontSize: 11,
+                    padding: '0 2px',
+                    background: 'var(--color-bg-base)',
+                    border: '1px solid var(--color-primary)',
+                    borderRadius: 3,
+                    color: 'var(--color-text-primary)',
+                    outline: 'none',
+                    minWidth: 0,
+                  }}
+                />
+                <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
+                  {(clip.keyframes ?? []).length}kf
+                </span>
+              </div>
+            );
+          }
+          return (
+            <button
+              key={clip.id}
+              type="button"
+              onClick={() => onSelectClip(clip.id)}
+              style={clipRowStyle(isSelected)}
             >
-              {clip.name}
-            </span>
-            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
-              {(clip.keyframes ?? []).length}kf
-            </span>
-          </button>
-        ))}
+              <span
+                style={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  startRename(clip);
+                }}
+                title="Double-clic pour renommer"
+              >
+                {clip.name}
+              </span>
+              <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
+                {(clip.keyframes ?? []).length}kf
+              </span>
+            </button>
+          );
+        })}
         {clips.length === 0 && (
           <p style={emptyText}>Aucun clip — crée-en un ou génère un idle ✨</p>
         )}

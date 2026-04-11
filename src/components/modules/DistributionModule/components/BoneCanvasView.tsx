@@ -6,6 +6,7 @@ import {
   Group,
   Circle,
   RegularPolygon,
+  Text as KonvaText,
   Image as KonvaImage,
 } from 'react-konva';
 import type Konva from 'konva';
@@ -70,6 +71,10 @@ interface BoneCanvasViewProps {
   characterName?: string;
   /** Avatar URL du personnage actif — affiché dans le nameplate en-tête (UX-6) */
   characterAvatarUrl?: string;
+  /** Undo — Ctrl+Z dans le canvas (Meier §10.3 : affordance premier ordre) */
+  onUndo?: () => void;
+  /** Redo — Ctrl+Shift+Z dans le canvas */
+  onRedo?: () => void;
 }
 
 /**
@@ -105,6 +110,8 @@ export function BoneCanvasView({
   poses,
   characterName,
   characterAvatarUrl,
+  onUndo,
+  onRedo,
 }: BoneCanvasViewProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -221,14 +228,14 @@ export function BoneCanvasView({
   // ── IK — positions monde des end effectors ────────────────────────────────
   const ikEndEffectors = useMemo(() => {
     if (!rig || activeTool !== 'ik') return [];
-    const result: { chainId: string; x: number; y: number }[] = [];
+    const result: { chainId: string; chainName: string; x: number; y: number }[] = [];
     for (const chain of ikChains) {
       const boneChain = getBoneChain(chain.rootBoneId, chain.endBoneId, bones);
       if (!boneChain) continue;
       const { joints } = computeChainWorldState(boneChain, bones, rig.originX, rig.originY);
       // joints[last] = tip du dernier os = end effector
       const tip = joints[joints.length - 1];
-      result.push({ chainId: chain.id, x: tip.x, y: tip.y });
+      result.push({ chainId: chain.id, chainName: chain.name, x: tip.x, y: tip.y });
     }
     return result;
   }, [rig, bones, ikChains, activeTool]);
@@ -298,6 +305,25 @@ export function BoneCanvasView({
 
   // ── Curseur poignées resize ────────────────────────────────────────────────
   const [resizeCursor, setResizeCursor] = useState<string | null>(null);
+
+  // ── Pan curseur : 'grab' au repos, 'grabbing' pendant le drag (Fix curseur §P1-3) ──
+  const [stageDragging, setStageDragging] = useState(false);
+
+  // ── Ctrl+Z / Ctrl+Shift+Z — undo/redo (Meier §10.3 : affordance premier ordre) ──
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        onUndo?.();
+      }
+      if (e.ctrlKey && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        onRedo?.();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onUndo, onRedo]);
 
   // ── Guard konva §4 : désactiver Stage drag quand RefImage est hovered ────
   const [refImageHovered, setRefImageHovered] = useState(false);
@@ -402,6 +428,7 @@ export function BoneCanvasView({
   );
 
   // ── Curseur selon outil — resizeCursor prioritaire (§17 — CSS sur wrapper) ─
+  // select = 'grab' / 'grabbing' (indique le pan du canvas, Nijman §8.1)
   const cursorStyle =
     resizeCursor ??
     (activeTool === 'rotate'
@@ -412,7 +439,9 @@ export function BoneCanvasView({
           ? 'copy'
           : activeTool === 'ik'
             ? 'grab'
-            : 'default');
+            : stageDragging
+              ? 'grabbing'
+              : 'grab');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -464,7 +493,13 @@ export function BoneCanvasView({
           scaleX={zoom}
           scaleY={zoom}
           draggable={activeTool === 'select' && !refImageHovered}
-          onDragEnd={handleStageDragEnd}
+          onDragStart={(e) => {
+            if (e.target === stageRef.current) setStageDragging(true);
+          }}
+          onDragEnd={(e) => {
+            setStageDragging(false);
+            handleStageDragEnd(e);
+          }}
           onWheel={handleWheel}
           onClick={handleStageClick}
         >
@@ -509,6 +544,42 @@ export function BoneCanvasView({
                 />
               ))}
             </Group>
+
+            {/* Handle repositionnement origine rig — visible en mode select (Fix P0-2).
+                Draggable indépendant du Group rig — met à jour originX/Y en temps réel.
+                konva-patterns §4 : cancelBubble sur mousedown évite le drag Stage concurrent. */}
+            {activeTool === 'select' && rig && (
+              <Group
+                x={rig.originX}
+                y={rig.originY}
+                draggable
+                onMouseDown={(e) => {
+                  e.cancelBubble = true;
+                }}
+                onDragMove={(e) => {
+                  useRigStore.getState().updateRig(rig.id, {
+                    originX: Math.round(e.target.x()),
+                    originY: Math.round(e.target.y()),
+                  });
+                }}
+                onDragEnd={(e) => {
+                  e.cancelBubble = true;
+                }}
+                onMouseEnter={() => setResizeCursor('move')}
+                onMouseLeave={() => setResizeCursor(null)}
+              >
+                {/* Losange violet = handle de déplacement (✥) */}
+                <RegularPolygon
+                  sides={4}
+                  radius={9}
+                  fill="rgba(139,92,246,0.7)"
+                  stroke="rgba(196,181,253,0.8)"
+                  strokeWidth={1.5}
+                  rotation={45}
+                />
+                <Circle radius={3} fill="white" listening={false} />
+              </Group>
+            )}
           </Layer>
 
           {/* Layer 3 : overlay sélection + end effectors IK */}
@@ -528,12 +599,13 @@ export function BoneCanvasView({
 
             {/* Diamants IK — end effectors draggables */}
             {activeTool === 'ik' &&
-              ikEndEffectors.map(({ chainId, x, y }) => (
+              ikEndEffectors.map(({ chainId, chainName, x, y }) => (
                 <IkHandle
                   key={`ik-${chainId}`}
                   x={x}
                   y={y}
                   chainId={chainId}
+                  chainName={chainName}
                   zoom={zoom}
                   onDragMove={handleIkDragMove}
                 />
@@ -796,36 +868,51 @@ interface IkHandleProps {
   x: number;
   y: number;
   chainId: string;
+  chainName: string;
   zoom: number;
   onDragMove: (chainId: string, worldX: number, worldY: number) => void;
 }
 
 /**
- * Diamant IK draggable.
- * Placé directement dans un Layer → x/y = coordonnées monde (§2 konva-patterns).
- * e.target.x()/y() retourne déjà les coords monde après drag — pas de conversion.
+ * Diamant IK draggable + label du nom de chaîne.
+ * Placé dans un Group → x/y = coordonnées monde (§2 konva-patterns).
+ * Le Group est draggable ; e.target.x()/y() retourne coords monde après drag.
+ * Konva §17 : pas de style CSS sur nœuds canvas — curseur géré via wrapper div.
  */
-function IkHandle({ x, y, chainId, zoom, onDragMove }: IkHandleProps) {
+function IkHandle({ x, y, chainId, chainName, zoom, onDragMove }: IkHandleProps) {
   const handleDragMove = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      // e.target.x()/y() = position monde (Layer hérite du Stage transform)
       onDragMove(chainId, e.target.x(), e.target.y());
     },
     [chainId, onDragMove]
   );
 
+  const r = 10 / zoom;
+  const fontSize = Math.max(8, 10 / zoom);
+
   return (
-    <RegularPolygon
-      x={x}
-      y={y}
-      sides={4}
-      radius={10 / zoom}
-      fill="rgba(251,191,36,0.9)"
-      stroke="#fbbf24"
-      strokeWidth={1.5 / zoom}
-      rotation={45}
-      draggable
-      onDragMove={handleDragMove}
-    />
+    <Group x={x} y={y} draggable onDragMove={handleDragMove}>
+      <RegularPolygon
+        sides={4}
+        radius={r}
+        fill="rgba(251,191,36,0.9)"
+        stroke="#fbbf24"
+        strokeWidth={1.5 / zoom}
+        rotation={45}
+      />
+      <KonvaText
+        text={chainName}
+        x={r + 3 / zoom}
+        y={-fontSize / 2}
+        fontSize={fontSize}
+        fontStyle="bold"
+        fill="#fbbf24"
+        shadowColor="rgba(0,0,0,0.7)"
+        shadowBlur={3}
+        shadowOffsetX={0}
+        shadowOffsetY={1}
+        listening={false}
+      />
+    </Group>
   );
 }

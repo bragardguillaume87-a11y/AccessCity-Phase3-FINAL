@@ -64,9 +64,14 @@ export function computeRigBounds(bones: Bone[]): RigBounds {
         if (!isFinite(bone.localX) || !isFinite(bone.localY)) {
           result = parentPos;
         } else {
+          // Le pivot enfant est au TIP du parent (x = parent.length dans l'espace local)
+          // + offset supplémentaire localX/localY (BoneGroup §189).
+          // Avant : on oubliait parent.length → enfants collés au pivot parent (bounds faux).
+          const offsetX = parent.length + bone.localX;
+          const offsetY = bone.localY;
           result = {
-            x: parentPos.x + bone.localX * cos - bone.localY * sin,
-            y: parentPos.y + bone.localX * sin + bone.localY * cos,
+            x: parentPos.x + offsetX * cos - offsetY * sin,
+            y: parentPos.y + offsetX * sin + offsetY * cos,
           };
         }
       }
@@ -278,4 +283,33 @@ export function fabrikToRotations(fabrikJoints: FabrikJoint[], chain: Bone[]): M
   }
 
   return result;
+}
+
+/**
+ * Calcule la profondeur d'un os dans la hiérarchie (root = 0).
+ * Utilisé pour l'indentation de la liste des os dans BoneEditorRightPanel.
+ */
+export function getBoneDepth(bone: Bone, allBones: Bone[]): number {
+  let depth = 0;
+  let current = bone;
+  while (current.parentId) {
+    const parent = allBones.find((b) => b.id === current.parentId);
+    if (!parent) break;
+    depth++;
+    current = parent;
+  }
+  return depth;
+}
+
+/**
+ * Trie les os par profondeur croissante puis par ordre d'apparition dans le tableau d'origine.
+ * Garantit que les parents sont toujours affichés avant leurs enfants.
+ */
+export function sortBonesByHierarchy(bones: Bone[]): Bone[] {
+  return [...bones].sort((a, b) => {
+    const da = getBoneDepth(a, bones);
+    const db = getBoneDepth(b, bones);
+    if (da !== db) return da - db;
+    return bones.indexOf(a) - bones.indexOf(b);
+  });
 }

@@ -57,11 +57,12 @@ export const TUTORIAL_SQUELETTE: TutorialDefinition = {
       position: 'below',
     },
     {
-      targetId: 'pose-capture-button',
-      emoji: '📸',
-      title: 'Capture ta pose',
-      description: 'Quand tu es satisfait(e), clique ici pour sauvegarder la position.',
-      position: 'above',
+      targetId: 'animation-tab',
+      emoji: '🎬',
+      title: 'Va dans Animation !',
+      description:
+        'Bravo, ton squelette est prêt ! Clique sur "Animation" pour capturer ta pose et créer ton premier clip.',
+      position: 'below',
     },
   ],
 };
@@ -94,17 +95,19 @@ export const TUTORIAL_ANIMATION: TutorialDefinition = {
       position: 'below',
     },
     {
-      targetId: 'keyframe-section',
-      emoji: '🖼️',
-      title: 'Ajoute des poses',
-      description: "Clique sur une pose pour l'ajouter à ton clip. Ajoutes-en au moins 2 !",
+      targetId: 'pose-capture-button',
+      emoji: '📸',
+      title: 'Capture et ajoute des poses',
+      description:
+        'Clique sur 📸 + pour capturer la pose du squelette. Capture-en au moins 2, puis ajoute-les à la séquence avec 📸 + Séq.',
       position: 'left',
     },
     {
       targetId: 'play-button',
       emoji: '▶️',
       title: "Lance l'animation !",
-      description: "Appuie sur Play pour voir ton personnage s'animer.",
+      description:
+        "Quand tu as ≥ 2 poses dans la séquence, appuie sur Play pour voir ton personnage s'animer.",
       position: 'above',
     },
   ],

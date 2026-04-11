@@ -5,8 +5,14 @@ import type { Bone, BoneTool, IKChain } from '@/types/bone';
 import { BONE_DEFAULT_COLORS, DEFAULT_BONE_LENGTH } from '@/types/bone';
 import { SliderRow } from '@/components/ui/SliderRow';
 import { TemplatePicker } from './TemplatePicker';
-import { findMirrorBone } from '../utils/boneUtils';
+import {
+  findMirrorBone,
+  getBoneChain,
+  getBoneDepth,
+  sortBonesByHierarchy,
+} from '../utils/boneUtils';
 import { generateId } from '@/utils/generateId';
+import { uiSounds } from '@/utils/uiSounds';
 
 interface BoneEditorRightPanelProps {
   characterId: string;
@@ -23,6 +29,8 @@ interface BoneEditorRightPanelProps {
   onRefOpacityChange?: (v: number) => void;
   canUndo?: boolean;
   onUndo?: () => void;
+  canRedo?: boolean;
+  onRedo?: () => void;
   /** ID de la pose en cours d'édition (depuis DistributionModule) — active la section sprite variant */
   editingPoseId?: string | null;
 }
@@ -167,6 +175,8 @@ export function BoneEditorRightPanel({
   onRefOpacityChange,
   canUndo = false,
   onUndo,
+  canRedo = false,
+  onRedo,
   editingPoseId = null,
 }: BoneEditorRightPanelProps) {
   const rig = useRigStore((s) => s.rigs.find((r) => r.characterId === characterId));
@@ -191,6 +201,10 @@ export function BoneEditorRightPanel({
 
   // ── Confirmation suppression (mode débutant) ──────────────────────────────
   const [pendingDelete, setPendingDelete] = useState(false);
+
+  // ── Reparenting os par drag (P3-C) ────────────────────────────────────────
+  const [dragBoneId, setDragBoneId] = useState<string | null>(null);
+  const [dragOverBoneId, setDragOverBoneId] = useState<string | null>(null);
 
   // ── Sprite section — collapsed par défaut, expand pour réglages fins ───────
   const [spriteExpanded, setSpriteExpanded] = useState(false);
@@ -271,14 +285,46 @@ export function BoneEditorRightPanel({
     [rig, selectedBoneId]
   );
 
+  const handleBoneLocalX = useCallback(
+    (value: number | string) => {
+      if (!rig || !selectedBoneId) return;
+      const localX = typeof value === 'number' ? value : parseFloat(value as string);
+      if (isNaN(localX)) return;
+      useRigStore.getState().updateBone(rig.id, selectedBoneId, { localX });
+    },
+    [rig, selectedBoneId]
+  );
+
+  const handleBoneLocalY = useCallback(
+    (value: number | string) => {
+      if (!rig || !selectedBoneId) return;
+      const localY = typeof value === 'number' ? value : parseFloat(value as string);
+      if (isNaN(localY)) return;
+      useRigStore.getState().updateBone(rig.id, selectedBoneId, { localY });
+    },
+    [rig, selectedBoneId]
+  );
+
   // ── IK chain creator ──────────────────────────────────────────────────────
   const [ikForm, setIkForm] = useState<{ name: string; rootId: string; endId: string } | null>(
     null
   );
 
+  const [ikFormError, setIkFormError] = useState<string | null>(null);
+
   const handleAddIkChain = () => {
     if (!rig || !ikForm || !ikForm.rootId || !ikForm.endId) return;
-    if (ikForm.rootId === ikForm.endId) return;
+    if (ikForm.rootId === ikForm.endId) {
+      setIkFormError("L'os racine et l'os effecteur doivent être différents.");
+      return;
+    }
+    // Validate that endBoneId is a descendant of rootBoneId
+    const chain_path = getBoneChain(ikForm.rootId, ikForm.endId, rig.bones);
+    if (!chain_path) {
+      setIkFormError("L'effecteur doit être un descendant de l'os racine.");
+      return;
+    }
+    setIkFormError(null);
     const chain: IKChain = {
       id: generateId('ik'),
       name: ikForm.name || `Chaîne ${ikChains.length + 1}`,
@@ -386,33 +432,74 @@ export function BoneEditorRightPanel({
             </button>
           ))}
 
-          {/* Bouton Undo — toujours visible, grisé quand rien à annuler (Meier §10.3) */}
+          {/* Boutons Undo/Redo — côte à côte (Meier §10.3 : affordance premier ordre) */}
           {onUndo && (
-            <button
-              type="button"
-              onClick={canUndo ? onUndo : undefined}
-              disabled={!canUndo}
-              title={canUndo ? 'Annuler la dernière action (Ctrl+Z)' : 'Rien à annuler'}
-              style={{
-                gridColumn: '1 / -1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 5,
-                padding: '5px 7px',
-                borderRadius: 6,
-                cursor: canUndo ? 'pointer' : 'not-allowed',
-                fontSize: 11,
-                border: '1.5px solid var(--color-border-hover)',
-                background: 'transparent',
-                color: 'var(--color-text-muted)',
-                opacity: canUndo ? 1 : 0.38,
-                transition: 'opacity 0.15s, border-color 0.1s',
-              }}
-            >
-              <span>↩</span>
-              <span>Annuler</span>
-            </button>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 4 }}>
+              <button
+                type="button"
+                onClick={
+                  canUndo
+                    ? () => {
+                        onUndo?.();
+                        uiSounds.advance();
+                      }
+                    : undefined
+                }
+                disabled={!canUndo}
+                title={canUndo ? 'Annuler (Ctrl+Z)' : 'Rien à annuler'}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '5px 7px',
+                  borderRadius: 6,
+                  cursor: canUndo ? 'pointer' : 'not-allowed',
+                  fontSize: 11,
+                  border: '1.5px solid var(--color-border-hover)',
+                  background: 'transparent',
+                  color: 'var(--color-text-muted)',
+                  opacity: canUndo ? 1 : 0.38,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                <span>↩</span>
+                <span>Annuler</span>
+              </button>
+              <button
+                type="button"
+                onClick={
+                  canRedo
+                    ? () => {
+                        onRedo?.();
+                        uiSounds.advance();
+                      }
+                    : undefined
+                }
+                disabled={!canRedo}
+                title={canRedo ? 'Rétablir (Ctrl+Shift+Z)' : 'Rien à rétablir'}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '5px 7px',
+                  borderRadius: 6,
+                  cursor: canRedo ? 'pointer' : 'not-allowed',
+                  fontSize: 11,
+                  border: '1.5px solid var(--color-border-hover)',
+                  background: 'transparent',
+                  color: 'var(--color-text-muted)',
+                  opacity: canRedo ? 1 : 0.38,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                <span>↪</span>
+                <span>Rétablir</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -538,15 +625,68 @@ export function BoneEditorRightPanel({
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {bones.map((b) => {
+            {sortBonesByHierarchy(bones).map((b) => {
               const boneFirstPart = parts.find((p) => p.boneId === b.id);
+              const depth = getBoneDepth(b, bones);
               return (
-                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <div
+                  key={b.id}
+                  draggable={!isBeginnerMode}
+                  onDragStart={() => {
+                    setDragBoneId(b.id);
+                    setDragOverBoneId(b.id);
+                  }}
+                  onDragEnter={() => setDragOverBoneId(b.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragEnd={() => {
+                    if (rig && dragBoneId && dragOverBoneId && dragBoneId !== dragOverBoneId) {
+                      // Guard anti-cycle : interdire si dragOverBoneId est un descendant de dragBoneId
+                      const wouldCycle = getBoneChain(dragBoneId, dragOverBoneId, bones) !== null;
+                      if (!wouldCycle) {
+                        useRigStore
+                          .getState()
+                          .updateBone(rig.id, dragBoneId, { parentId: dragOverBoneId });
+                        uiSounds.choiceSelect();
+                      }
+                    }
+                    setDragBoneId(null);
+                    setDragOverBoneId(null);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    paddingLeft: depth * 12,
+                    borderRadius: 5,
+                    boxShadow:
+                      dragOverBoneId === b.id && dragBoneId !== b.id
+                        ? '0 0 0 1.5px var(--color-primary)'
+                        : 'none',
+                    opacity: dragBoneId === b.id ? 0.4 : 1,
+                    transition: 'box-shadow 0.1s, opacity 0.1s',
+                    cursor: !isBeginnerMode ? 'grab' : 'default',
+                  }}
+                >
+                  {/* Indicateur de parenté — trait vertical gauche pour os enfants */}
+                  {depth > 0 && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        color: 'var(--color-text-muted)',
+                        flexShrink: 0,
+                        lineHeight: 1,
+                        marginRight: 1,
+                      }}
+                    >
+                      └
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       onSelectBone(b.id);
                       setPendingDelete(false);
+                      uiSounds.choiceSelect();
                     }}
                     style={{
                       flex: 1,
@@ -856,6 +996,30 @@ export function BoneEditorRightPanel({
             defaultValue={DEFAULT_BONE_LENGTH}
             onChange={(v) => handleBoneLength(v)}
           />
+          {selectedBone.parentId && (
+            <>
+              <BonePropertyRow
+                label="Offset X"
+                value={Math.round(selectedBone.localX)}
+                min={-500}
+                max={500}
+                step={1}
+                unit="px"
+                defaultValue={0}
+                onChange={(v) => handleBoneLocalX(v)}
+              />
+              <BonePropertyRow
+                label="Offset Y"
+                value={Math.round(selectedBone.localY)}
+                min={-500}
+                max={500}
+                step={1}
+                unit="px"
+                defaultValue={0}
+                onChange={(v) => handleBoneLocalY(v)}
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -1193,7 +1357,10 @@ export function BoneEditorRightPanel({
               <div style={{ display: 'flex', gap: 4 }}>
                 <select
                   value={ikForm.rootId}
-                  onChange={(e) => setIkForm((f) => (f ? { ...f, rootId: e.target.value } : f))}
+                  onChange={(e) => {
+                    setIkFormError(null);
+                    setIkForm((f) => (f ? { ...f, rootId: e.target.value } : f));
+                  }}
                   style={{ ...inputStyle, flex: 1 }}
                   aria-label="Os racine"
                 >
@@ -1206,7 +1373,10 @@ export function BoneEditorRightPanel({
                 </select>
                 <select
                   value={ikForm.endId}
-                  onChange={(e) => setIkForm((f) => (f ? { ...f, endId: e.target.value } : f))}
+                  onChange={(e) => {
+                    setIkFormError(null);
+                    setIkForm((f) => (f ? { ...f, endId: e.target.value } : f));
+                  }}
                   style={{ ...inputStyle, flex: 1 }}
                   aria-label="Os extrémité"
                 >
@@ -1218,6 +1388,11 @@ export function BoneEditorRightPanel({
                   ))}
                 </select>
               </div>
+              {ikFormError && (
+                <p style={{ fontSize: 10, color: 'var(--color-danger)', margin: '2px 0' }}>
+                  ⚠️ {ikFormError}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: 4 }}>
                 <button
                   type="button"
@@ -1230,7 +1405,14 @@ export function BoneEditorRightPanel({
                 >
                   ✓ Créer
                 </button>
-                <button type="button" onClick={() => setIkForm(null)} style={smallBtnStyle}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIkForm(null);
+                    setIkFormError(null);
+                  }}
+                  style={smallBtnStyle}
+                >
                   Annuler
                 </button>
               </div>

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { BonePose } from '@/types/bone';
 import { Confetti } from '@/components/ui/confetti';
 import { POSE_TEMPLATES } from '@/config/poseTemplates';
 import type { PoseTemplate } from '@/config/poseTemplates';
 import { sectionLabel, rowBetween, emptyText, smallBtn } from './styles';
+import { uiSounds } from '@/utils/uiSounds';
 
 interface PosesSectionProps {
   poses: BonePose[];
@@ -21,6 +22,7 @@ interface PosesSectionProps {
   onCancelEdit?: () => void;
   onApplyPoseTemplate?: (tpl: PoseTemplate) => void;
   onPoseHover?: (id: string | null) => void;
+  onRenamePose?: (id: string, name: string) => void;
 }
 
 export function PosesSection({
@@ -39,8 +41,46 @@ export function PosesSection({
   onCancelEdit,
   onApplyPoseTemplate,
   onPoseHover,
+  onRenamePose,
 }: PosesSectionProps) {
   const [showPresets, setShowPresets] = useState(false);
+
+  // Flash vert 800ms sur "Mettre à jour" — feedback localisé (Norman §9.3)
+  const [poseFlash, setPoseFlash] = useState(false);
+  const poseFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (poseFlashTimer.current) clearTimeout(poseFlashTimer.current);
+    };
+  }, []);
+
+  // Rename inline
+  const [renamingPoseId, setRenamingPoseId] = useState<string | null>(null);
+  const [renamingName, setRenamingName] = useState('');
+
+  const startRenamePose = useCallback((pose: BonePose) => {
+    setRenamingPoseId(pose.id);
+    setRenamingName(pose.name);
+  }, []);
+
+  const commitRenamePose = useCallback(
+    (id: string) => {
+      const trimmed = renamingName.trim();
+      if (trimmed && onRenamePose) onRenamePose(id, trimmed);
+      setRenamingPoseId(null);
+    },
+    [renamingName, onRenamePose]
+  );
+
+  const cancelRenamePose = useCallback(() => setRenamingPoseId(null), []);
+
+  const handleUpdatePose = () => {
+    onUpdatePose?.();
+    uiSounds.minigameDing();
+    setPoseFlash(true);
+    if (poseFlashTimer.current) clearTimeout(poseFlashTimer.current);
+    poseFlashTimer.current = setTimeout(() => setPoseFlash(false), 800);
+  };
 
   return (
     <div
@@ -112,14 +152,15 @@ export function PosesSection({
           <div style={{ display: 'flex', gap: 6 }}>
             <button
               type="button"
-              onClick={onUpdatePose}
+              onClick={handleUpdatePose}
               style={{
                 ...smallBtn,
-                background: 'var(--color-primary)',
+                background: poseFlash ? 'var(--color-success)' : 'var(--color-primary)',
                 color: '#fff',
                 border: 'none',
                 flex: 1,
                 justifyContent: 'center',
+                transition: 'background 0.2s ease',
               }}
             >
               💾 Mettre à jour
@@ -244,84 +285,124 @@ export function PosesSection({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
-          {poses.map((pose) => (
-            <div
-              key={pose.id}
-              onMouseEnter={() => onPoseHover?.(pose.id)}
-              onMouseLeave={() => onPoseHover?.(null)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                borderRadius: 5,
-                border:
-                  pose.id === selectedPoseId
-                    ? '1.5px solid var(--color-primary)'
-                    : '1.5px solid transparent',
-                background:
-                  pose.id === selectedPoseId ? 'var(--color-primary-subtle)' : 'transparent',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => onSelectPose(pose.id)}
+          {poses.map((pose) => {
+            const isRenaming = renamingPoseId === pose.id;
+            const isSelected = pose.id === selectedPoseId;
+            return (
+              <div
+                key={pose.id}
+                onMouseEnter={() => onPoseHover?.(pose.id)}
+                onMouseLeave={() => onPoseHover?.(null)}
                 style={{
-                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 7px',
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  textAlign: 'left',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-secondary)',
-                  overflow: 'hidden',
+                  gap: 4,
+                  borderRadius: 5,
+                  border: isSelected
+                    ? '1.5px solid var(--color-primary)'
+                    : '1.5px solid transparent',
+                  background: isSelected ? 'var(--color-primary-subtle)' : 'transparent',
                 }}
               >
-                <span
+                {isRenaming ? (
+                  <input
+                    autoFocus
+                    value={renamingName}
+                    onChange={(e) => setRenamingName(e.target.value)}
+                    onBlur={() => commitRenamePose(pose.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitRenamePose(pose.id);
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelRenamePose();
+                      }
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      flex: 1,
+                      fontSize: 11,
+                      padding: '4px 7px',
+                      background: 'var(--color-bg-base)',
+                      border: '1px solid var(--color-primary)',
+                      borderRadius: 3,
+                      color: 'var(--color-text-primary)',
+                      outline: 'none',
+                      minWidth: 0,
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSelectPose(pose.id)}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '5px 7px',
+                      cursor: 'pointer',
+                      fontSize: 11,
+                      textAlign: 'left',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--color-text-secondary)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <span
+                      style={{
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startRenamePose(pose);
+                      }}
+                      title="Double-clic pour renommer"
+                    >
+                      {editingPoseId === pose.id ? '✏️ ' : ''}
+                      {pose.name}
+                    </span>
+                    <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
+                      {Object.keys(pose.boneStates).length}os
+                    </span>
+                    {Object.keys(pose.spriteVariants ?? {}).length > 0 && (
+                      <span
+                        title={`${Object.keys(pose.spriteVariants!).length} variante(s) sprite`}
+                        style={{ fontSize: 9, color: 'var(--color-primary)', flexShrink: 0 }}
+                      >
+                        🖼
+                      </span>
+                    )}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onLoadPose?.(pose.id)}
+                  title="Charger cette pose dans le squelette pour l'éditer"
                   style={{
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    color:
+                      editingPoseId === pose.id
+                        ? 'var(--color-primary)'
+                        : 'var(--color-text-muted)',
+                    padding: '4px 6px',
+                    flexShrink: 0,
                   }}
                 >
-                  {editingPoseId === pose.id ? '✏️ ' : ''}
-                  {pose.name}
-                </span>
-                <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                  {Object.keys(pose.boneStates).length}os
-                </span>
-                {Object.keys(pose.spriteVariants ?? {}).length > 0 && (
-                  <span
-                    title={`${Object.keys(pose.spriteVariants!).length} variante(s) sprite`}
-                    style={{ fontSize: 9, color: 'var(--color-primary)', flexShrink: 0 }}
-                  >
-                    🖼
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => onLoadPose?.(pose.id)}
-                title="Charger cette pose dans le squelette pour l'éditer"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                  color:
-                    editingPoseId === pose.id ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                  padding: '4px 6px',
-                  flexShrink: 0,
-                }}
-              >
-                📥
-              </button>
-            </div>
-          ))}
+                  📥
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

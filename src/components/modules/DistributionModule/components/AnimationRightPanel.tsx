@@ -15,6 +15,7 @@ import type { KeyframeEntry } from '@/types/bone';
 import type { EasingType, BezierPoints } from '@/utils/animationEasing';
 import type { PoseTemplate } from '@/config/poseTemplates';
 
+import { uiSounds } from '@/utils/uiSounds';
 import { ClipsSection } from './AnimationRightPanel/ClipsSection';
 import { PosesSection } from './AnimationRightPanel/PosesSection';
 import { SequenceSection } from './AnimationRightPanel/SequenceSection';
@@ -60,6 +61,7 @@ export function AnimationRightPanel({
   const deleteClip = useRigStore((s) => s.deleteClip);
   const deletePose = useRigStore((s) => s.deletePose);
   const updateClip = useRigStore((s) => s.updateClip);
+  const updatePose = useRigStore((s) => s.updatePose);
   const generateAndAddIdle = useRigStore((s) => s.generateAndAddIdleClip);
   const setIdleClip = useRigStore((s) => s.setIdleClip);
   const setSpeakClip = useRigStore((s) => s.setSpeakClip);
@@ -83,14 +85,16 @@ export function AnimationRightPanel({
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleAddClip = useCallback(() => {
     if (!rig) return;
-    addClip(rig.id, {
+    const newId = addClip(rig.id, {
       name: `Clip ${clips.length + 1}`,
       fps: DEFAULT_ANIMATION_FPS,
       poseIds: [],
       keyframes: [],
       loop: true,
     });
-  }, [rig, clips.length, addClip]);
+    // Auto-sélectionner le clip créé → SequenceSection devient visible immédiatement
+    onSelectClip(newId);
+  }, [rig, clips.length, addClip, onSelectClip]);
 
   const handleGenerateIdle = useCallback(() => {
     if (!rig) return;
@@ -102,6 +106,7 @@ export function AnimationRightPanel({
     const boneStates = Object.fromEntries(rig.bones.map((b) => [b.id, { rotation: b.rotation }]));
     addPose(rig.id, { name: `Pose ${poses.length + 1}`, boneStates });
     setShowPoseConfetti(true);
+    uiSounds.minigameSuccess();
     if (poseConfettiTimer.current) clearTimeout(poseConfettiTimer.current);
     poseConfettiTimer.current = setTimeout(() => setShowPoseConfetti(false), 1800);
   }, [rig, poses.length, addPose]);
@@ -127,6 +132,35 @@ export function AnimationRightPanel({
     onSelectPose(null);
     setPendingDeletePoseId(null);
   }, [rig, selectedPoseId, pendingDeletePoseId, deletePose, onSelectPose]);
+
+  const handleReorderKeyframes = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      if (!rig || !selectedClipId) return;
+      const clip = rig.animationClips.find((c) => c.id === selectedClipId);
+      if (!clip) return;
+      const kfs = [...(clip.keyframes ?? [])];
+      const [moved] = kfs.splice(fromIdx, 1);
+      kfs.splice(toIdx, 0, moved);
+      updateClip(rig.id, selectedClipId, { keyframes: kfs });
+    },
+    [rig, selectedClipId, updateClip]
+  );
+
+  const handleRenameClip = useCallback(
+    (id: string, name: string) => {
+      if (!rig) return;
+      updateClip(rig.id, id, { name });
+    },
+    [rig, updateClip]
+  );
+
+  const handleRenamePose = useCallback(
+    (id: string, name: string) => {
+      if (!rig) return;
+      updatePose(rig.id, id, { name });
+    },
+    [rig, updatePose]
+  );
 
   const handleAddPoseToClip = useCallback(() => {
     if (!rig || !selectedClipId || !selectedPoseId) return;
@@ -259,6 +293,7 @@ export function AnimationRightPanel({
         onGenerateIdle={handleGenerateIdle}
         onDeleteClip={handleDeleteClip}
         onCancelDelete={() => setPendingDeleteClipId(null)}
+        onRenameClip={handleRenameClip}
       />
 
       {/* Hint étape 1 → 2 (mode débutant) */}
@@ -293,6 +328,7 @@ export function AnimationRightPanel({
           onCancelEdit={onCancelEdit}
           onApplyPoseTemplate={onApplyPoseTemplate}
           onPoseHover={onPoseHover}
+          onRenamePose={handleRenamePose}
         />
       )}
 
@@ -326,6 +362,7 @@ export function AnimationRightPanel({
           onKeyframeDuration={handleKeyframeDuration}
           onKeyframeEasing={handleKeyframeEasing}
           onPlayToggle={onPlayToggle}
+          onReorderKeyframes={handleReorderKeyframes}
         />
       )}
 

@@ -40,7 +40,8 @@ function exhaleOffsets(): Record<string, number> {
 
 const REPOS_DEFAULTS: Record<string, number> = {
   Corps: -90,
-  Torse: -90,
+  // Torse : rotation LOCALE 0 (enfant de Corps, continue dans la même direction)
+  Torse: 0,
   Cou: 0,
   Tête: 5,
   'Épaule G': -70,
@@ -53,8 +54,11 @@ const REPOS_DEFAULTS: Record<string, number> = {
   'Patte D': 70,
   'Av. bras D': -15,
   'Pince D': 0,
-  'Cuisse G': 90,
-  'Cuisse D': 90,
+  // Bassin : rotation=90 = position neutre (pointe vers le bas)
+  Bassin: 90,
+  // Cuisses : rotation LOCALE 0 (héritent la direction du Bassin = vers le bas)
+  'Cuisse G': 0,
+  'Cuisse D': 0,
   'Jambe G': 0,
   'Jambe D': 0,
   'Pied G': 0,

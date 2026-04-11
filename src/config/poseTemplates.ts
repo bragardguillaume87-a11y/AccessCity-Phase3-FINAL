@@ -10,10 +10,10 @@
  *
  * Noms de bones par template :
  *   personnage-simple / personnage-grand :
- *     Corps, Cou, Tête, Épaule G, Av. bras G, Épaule D, Av. bras D,
- *     Cuisse G, Jambe G, Cuisse D, Jambe D
+ *     Corps, Torse, Cou, Tête, Épaule G, Av. bras G, Épaule D, Av. bras D,
+ *     Bassin, Cuisse G, Jambe G, Cuisse D, Jambe D
  *   robot :
- *     Torse, Cou, Tête, Bras G, Pince G, Bras D, Pince D,
+ *     Corps, Cou, Tête, Bras G, Pince G, Bras D, Pince D,
  *     Jambe G (racine), Pied G, Jambe D (racine), Pied D
  *   créature :
  *     Corps, Cou, Tête, Patte G, Griffe G, Patte D, Griffe D,
@@ -41,7 +41,8 @@ const T_POSE: PoseTemplate = {
   boneRotations: {
     // Tronc supérieur — personnage-simple/grand + robot
     Corps: -90,
-    Torse: -90,
+    // Torse : os intermédiaire (enfant de Corps) — rotation LOCALE 0 = continue vers le haut
+    Torse: 0,
     Cou: 0,
     Tête: 0,
     // Bras gauche
@@ -59,8 +60,11 @@ const T_POSE: PoseTemplate = {
     'Pince D': 0,
     'Griffe D': -20,
     // Jambes personnage-simple/grand
-    'Cuisse G': 90,
-    'Cuisse D': 90,
+    // Bassin : racine pelvienne (rotation=90 = pointe vers le bas, position neutre)
+    Bassin: 90,
+    // Cuisses : rotation LOCALE 0 = héritent la direction du Bassin (vers le bas)
+    'Cuisse G': 0,
+    'Cuisse D': 0,
     'Jambe G': 0,
     'Jambe D': 0,
     // Pattes arrière créature
@@ -85,7 +89,7 @@ const REPOS: PoseTemplate = {
   description: 'Bras détendus, posture naturelle',
   boneRotations: {
     Corps: -90,
-    Torse: -90,
+    Torse: 0,
     Cou: 0,
     Tête: 5,
     'Épaule G': -70,
@@ -98,8 +102,9 @@ const REPOS: PoseTemplate = {
     'Patte D': 70,
     'Av. bras D': -15,
     'Pince D': 0,
-    'Cuisse G': 90,
-    'Cuisse D': 90,
+    Bassin: 90,
+    'Cuisse G': 0,
+    'Cuisse D': 0,
     'Jambe G': 0,
     'Jambe D': 0,
     'Pied G': 0,
@@ -118,7 +123,7 @@ const SALUT: PoseTemplate = {
   description: 'Bras droit levé, geste de bienvenue',
   boneRotations: {
     Corps: -90,
-    Torse: -90,
+    Torse: 0,
     Cou: 0,
     Tête: -10,
     'Épaule G': -70,
@@ -129,8 +134,9 @@ const SALUT: PoseTemplate = {
     'Bras D': 140,
     'Av. bras D': 25,
     'Pince D': 0,
-    'Cuisse G': 90,
-    'Cuisse D': 90,
+    Bassin: 90,
+    'Cuisse G': 0,
+    'Cuisse D': 0,
     'Jambe G': 0,
     'Jambe D': 0,
     'Pied G': 0,
@@ -149,7 +155,7 @@ const VICTOIRE: PoseTemplate = {
   description: 'Bras levés, joie ou triomphe',
   boneRotations: {
     Corps: -85,
-    Torse: -85,
+    Torse: 0,
     Cou: 0,
     Tête: -20,
     'Épaule G': -145,
@@ -164,8 +170,9 @@ const VICTOIRE: PoseTemplate = {
     'Av. bras D': 20,
     'Pince D': 0,
     'Griffe D': 10,
-    'Cuisse G': 92,
-    'Cuisse D': 88,
+    Bassin: 90,
+    'Cuisse G': 2,
+    'Cuisse D': -2,
     'Jambe G': 0,
     'Jambe D': 0,
     'Pied G': 0,
@@ -184,7 +191,7 @@ const ABATTEMENT: PoseTemplate = {
   description: 'Tête baissée, épaules tombantes',
   boneRotations: {
     Corps: -80,
-    Torse: -80,
+    Torse: 5,
     Cou: 20,
     Tête: 30,
     'Épaule G': -55,
@@ -197,8 +204,9 @@ const ABATTEMENT: PoseTemplate = {
     'Patte D': 55,
     'Av. bras D': -20,
     'Pince D': 0,
-    'Cuisse G': 90,
-    'Cuisse D': 90,
+    Bassin: 90,
+    'Cuisse G': 0,
+    'Cuisse D': 0,
     'Jambe G': 0,
     'Jambe D': 0,
     'Pied G': 0,
@@ -217,7 +225,7 @@ const PARLER: PoseTemplate = {
   description: 'Bras droit tendu, geste de conversation',
   boneRotations: {
     Corps: -88,
-    Torse: -88,
+    Torse: 0,
     Cou: 0,
     Tête: 0,
     'Épaule G': -70,
@@ -228,8 +236,9 @@ const PARLER: PoseTemplate = {
     'Bras D': 110,
     'Av. bras D': 35,
     'Pince D': 0,
-    'Cuisse G': 90,
-    'Cuisse D': 90,
+    Bassin: 90,
+    'Cuisse G': 0,
+    'Cuisse D': 0,
     'Jambe G': 0,
     'Jambe D': 0,
     'Pied G': 0,

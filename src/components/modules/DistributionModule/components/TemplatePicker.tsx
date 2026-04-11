@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRigStore } from '@/stores/rigStore';
 import { RIG_TEMPLATES } from '@/config/rigTemplates';
+import { uiSounds } from '@/utils/uiSounds';
 
 interface TemplatePickerProps {
   characterId: string;
@@ -30,6 +31,7 @@ export function TemplatePicker({ characterId, open, onClose }: TemplatePickerPro
     if (applying) return;
     setApplying(true);
     addRigFromTemplate(characterId, templateId);
+    uiSounds.minigameDing();
     // Fermer après un bref délai (feedback de création)
     applyTimerRef.current = setTimeout(() => {
       setApplying(false);

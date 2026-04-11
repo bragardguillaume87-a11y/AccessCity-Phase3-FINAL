@@ -26,43 +26,60 @@ export interface RigTemplate {
 }
 
 /**
- * Template "Personnage simple" — 7 os pré-connectés en T-pose.
+ * Template "Personnage simple" — 13 os pré-connectés en T-pose.
  *
  * Hiérarchie :
  *   corps (racine, pointe vers le HAUT)
- *     ├── cou    (continue vers le haut)
- *     │     └── tête   (continue vers le haut)
- *     ├── épaule_g  (pointe à GAUCHE)
- *     │     └── avant_bras_g (continue à gauche)
- *     └── épaule_d  (pointe à DROITE)
- *           └── avant_bras_d (continue à droite)
+ *     └── torse  (continue vers le haut — relie cou ET épaules)
+ *           ├── cou    (continue vers le haut)
+ *           │     └── tête   (continue vers le haut)
+ *           ├── épaule_g  (pointe à GAUCHE)
+ *           │     └── avant_bras_g (continue à gauche)
+ *           └── épaule_d  (pointe à DROITE)
+ *                 └── avant_bras_d (continue à droite)
+ *   bassin (racine indépendante, pointe vers le BAS)
+ *     ├── cuisse_g  (localY=+20 dans l'espace bassin = monde GAUCHE)
+ *     │     └── jambe_g
+ *     └── cuisse_d  (localY=-20 dans l'espace bassin = monde DROITE)
+ *           └── jambe_d
+ *
+ * Pourquoi Torse + Bassin ?
+ *   Sans ces os intermédiaires, cou et épaules partent tous du même pivot (tip du corps),
+ *   créant un aspect "patte d'oie" visuel. Torse distribue les bras depuis un tronc commun.
+ *   Bassin unit les deux cuisses en un seul pivot pelvien, éliminant les deux racines indépendantes.
  *
  * Règle FK :
  *   - BoneGroup place les enfants à la POINTE du parent (<Group x={bone.length}>).
- *   - localX/localY des enfants = offset SUPPLÉMENTAIRE au-delà de la pointe.
- *   - → Tous les os enfants ont localX=0, localY=0 pour s'attacher exactement à la pointe.
+ *   - localX/localY des enfants = offset SUPPLÉMENTAIRE dans l'espace LOCAL du parent.
+ *   - Pour bassin (rotation=90) : local +Y → monde GAUCHE, local -Y → monde DROITE.
  *
  * Rotations (Konva, degrés, sens horaire, Y vers le bas) :
- *   - corps   : rotation=-90 → pointe VERS LE HAUT  (axe X local = direction monde UP)
- *   - cou     : rotation=0   → continue dans même sens que corps (UP)
- *   - tête    : rotation=0   → continue vers le haut
- *   - epaule_g: rotation=-90 → dans l'espace du corps (local X=UP), -90° = monde GAUCHE ✓
- *   - epaule_d: rotation=+90 → dans l'espace du corps, +90° = monde DROITE ✓
- *   - avant-bras: rotation=0 → continue dans le même sens que l'épaule
+ *   - corps   : rotation=-90 → pointe VERS LE HAUT
+ *   - torse   : rotation=0   → continue dans même sens (UP)
+ *   - cou     : rotation=0   → continue vers le haut
+ *   - epaule_g: rotation=-90 → monde GAUCHE (dans l'espace du torse)
+ *   - epaule_d: rotation=+90 → monde DROITE
+ *   - bassin  : rotation=+90 → pointe VERS LE BAS (racine indépendante)
+ *   - cuisses : rotation=0   → héritent la direction du bassin (BAS)
  *
  * Résultat visuel (T-pose) :
  *        O ← head tip
- *        |  30px
+ *        |  30px (tete)
  *        O ← neck tip
- *        |  20px
- *   O----O----O ← shoulder level (corps tip)
+ *        |  20px (cou)
+ *   O----O----O ← torse tip (epaule_g | epaule_d)
  *   45px | 45px
  *   O    |    O ← forearm tips
- *        |  70px
- *        O ← hips (rig origin, canvas center)
+ *        |  20px (torse)
+ *        O ← corps tip → torse root
+ *        |  70px (corps)
+ *        O ← rig origin = bassin root
+ *        |  15px (bassin)
+ *       /O\
+ *   O--O   O--O ← cuisses (localY=±20 depuis tip du bassin)
  */
 const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
-  // Torse — racine, pointe vers le HAUT
+  // Corps — racine, pointe vers le HAUT
   {
     key: 'corps',
     name: 'Corps',
@@ -73,11 +90,23 @@ const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
     rotation: -90,
     color: '#6366f1',
   },
+  // Torse — à la pointe du corps, continue vers le haut.
+  // Relie cou et épaules en un pivot commun (évite la "patte d'oie").
+  {
+    key: 'torse',
+    name: 'Torse',
+    parentKey: 'corps',
+    localX: 0,
+    localY: 0,
+    length: 35,
+    rotation: 0,
+    color: '#7c3aed',
+  },
   // Cou — à la pointe du torse, continue vers le haut
   {
     key: 'cou',
     name: 'Cou',
-    parentKey: 'corps',
+    parentKey: 'torse',
     localX: 0,
     localY: 0,
     length: 20,
@@ -99,7 +128,7 @@ const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
   {
     key: 'epaule_g',
     name: 'Épaule G',
-    parentKey: 'corps',
+    parentKey: 'torse',
     localX: 0,
     localY: 0,
     length: 45,
@@ -121,7 +150,7 @@ const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
   {
     key: 'epaule_d',
     name: 'Épaule D',
-    parentKey: 'corps',
+    parentKey: 'torse',
     localX: 0,
     localY: 0,
     length: 45,
@@ -139,17 +168,30 @@ const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
     rotation: 0,
     color: '#fbbf24',
   },
-  // Jambes — os racines indépendants positionnés aux hanches (rig origin).
-  // rotation=90 (Konva clockwise, Y bas) = pointer vers le BAS.
-  // localX ±20 = écart horizontal gauche/droite depuis le centre des hanches.
+  // Bassin — racine indépendante à l'origine du rig, pointe vers le BAS.
+  // rotation=90 (Konva, sens horaire) = direction monde BAS.
+  // Unification des deux cuisses en un pivot pelvien commun (élimine la "patte d'oie" jambes).
+  {
+    key: 'bassin',
+    name: 'Bassin',
+    parentKey: null,
+    localX: 0,
+    localY: 0,
+    length: 25,
+    rotation: 90,
+    color: '#4f46e5',
+  },
+  // Cuisse G — enfant du bassin, offset latéral gauche.
+  // Dans l'espace local du bassin (rotation=90) : local +Y = monde GAUCHE.
+  // rotation=0 → hérite la direction du bassin (BAS). ✓
   {
     key: 'cuisse_g',
     name: 'Cuisse G',
-    parentKey: null,
-    localX: -20,
-    localY: 0,
+    parentKey: 'bassin',
+    localX: 0,
+    localY: 20,
     length: 55,
-    rotation: 90,
+    rotation: 0,
     color: '#6366f1',
   },
   {
@@ -162,14 +204,16 @@ const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
     rotation: 0,
     color: '#818cf8',
   },
+  // Cuisse D — enfant du bassin, offset latéral droit.
+  // Dans l'espace local du bassin (rotation=90) : local -Y = monde DROITE.
   {
     key: 'cuisse_d',
     name: 'Cuisse D',
-    parentKey: null,
-    localX: 20,
-    localY: 0,
+    parentKey: 'bassin',
+    localX: 0,
+    localY: -20,
     length: 55,
-    rotation: 90,
+    rotation: 0,
     color: '#6366f1',
   },
   {
@@ -186,7 +230,7 @@ const SIMPLE_CHARACTER_BONES: RigTemplateNode[] = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Template "Grand héros" — proportions allongées (adulte / héros)
-// Même hiérarchie que SIMPLE_CHARACTER_BONES, dimensions agrandies.
+// Même hiérarchie que SIMPLE_CHARACTER_BONES avec Torse + Bassin, dimensions agrandies.
 // ─────────────────────────────────────────────────────────────────────────────
 const TALL_CHARACTER_BONES: RigTemplateNode[] = [
   {
@@ -199,10 +243,21 @@ const TALL_CHARACTER_BONES: RigTemplateNode[] = [
     rotation: -90,
     color: '#3b82f6',
   },
+  // Torse — relie cou et épaules en un pivot commun (évite la "patte d'oie")
+  {
+    key: 'torse',
+    name: 'Torse',
+    parentKey: 'corps',
+    localX: 0,
+    localY: 0,
+    length: 40,
+    rotation: 0,
+    color: '#2563eb',
+  },
   {
     key: 'cou',
     name: 'Cou',
-    parentKey: 'corps',
+    parentKey: 'torse',
     localX: 0,
     localY: 0,
     length: 25,
@@ -222,7 +277,7 @@ const TALL_CHARACTER_BONES: RigTemplateNode[] = [
   {
     key: 'epaule_g',
     name: 'Épaule G',
-    parentKey: 'corps',
+    parentKey: 'torse',
     localX: 0,
     localY: 0,
     length: 55,
@@ -242,7 +297,7 @@ const TALL_CHARACTER_BONES: RigTemplateNode[] = [
   {
     key: 'epaule_d',
     name: 'Épaule D',
-    parentKey: 'corps',
+    parentKey: 'torse',
     localX: 0,
     localY: 0,
     length: 55,
@@ -259,15 +314,27 @@ const TALL_CHARACTER_BONES: RigTemplateNode[] = [
     rotation: 0,
     color: '#fbbf24',
   },
+  // Bassin — racine indépendante à l'origine du rig, pointe vers le BAS.
+  // Proportions grand héros : écart latéral légèrement plus grand (±22).
+  {
+    key: 'bassin',
+    name: 'Bassin',
+    parentKey: null,
+    localX: 0,
+    localY: 0,
+    length: 25,
+    rotation: 90,
+    color: '#1d4ed8',
+  },
   // Jambes — plus longues que Personnage simple (proportions grand héros)
   {
     key: 'cuisse_g',
     name: 'Cuisse G',
-    parentKey: null,
-    localX: -22,
-    localY: 0,
+    parentKey: 'bassin',
+    localX: 0,
+    localY: 22,
     length: 65,
-    rotation: 90,
+    rotation: 0,
     color: '#3b82f6',
   },
   {
@@ -283,11 +350,11 @@ const TALL_CHARACTER_BONES: RigTemplateNode[] = [
   {
     key: 'cuisse_d',
     name: 'Cuisse D',
-    parentKey: null,
-    localX: 22,
-    localY: 0,
+    parentKey: 'bassin',
+    localX: 0,
+    localY: -22,
     length: 65,
-    rotation: 90,
+    rotation: 0,
     color: '#3b82f6',
   },
   {
@@ -308,7 +375,7 @@ const TALL_CHARACTER_BONES: RigTemplateNode[] = [
 const ROBOT_BONES: RigTemplateNode[] = [
   {
     key: 'corps',
-    name: 'Torse',
+    name: 'Corps',
     parentKey: null,
     localX: 0,
     localY: 0,
@@ -542,14 +609,14 @@ export const RIG_TEMPLATES: RigTemplate[] = [
     id: 'personnage-simple',
     name: 'Personnage simple',
     emoji: '🧍',
-    description: '11 os déjà connectés — bras et jambes prêts !',
+    description: '13 os déjà connectés — torse, bassin, bras et jambes !',
     bones: SIMPLE_CHARACTER_BONES,
   },
   {
     id: 'personnage-grand',
     name: 'Grand héros',
     emoji: '🦸',
-    description: '11 os grands — bras longs et jambes solides !',
+    description: '13 os grands — torse, bassin, bras longs et jambes solides !',
     bones: TALL_CHARACTER_BONES,
   },
   {

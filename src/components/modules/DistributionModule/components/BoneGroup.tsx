@@ -235,6 +235,9 @@ const BoneGroupInner = ({
   // Capsule cartoon — largeur proportionnelle à la longueur de l'os (Will Wright §4.1)
   const capsuleH = Math.max(10, Math.min(24, bone.length * 0.35));
 
+  // Feedback survol — highlight léger quand la souris passe sur l'os (Norman §9.1 affordance)
+  const [isHovered, setIsHovered] = useState(false);
+
   // Preview dimensions live partagées avec SpriteResizeHandles → KonvaImage se redimensionne aussi
   const [previewW, setPreviewW] = useState<number | null>(null);
   const [previewH, setPreviewH] = useState<number | null>(null);
@@ -254,17 +257,21 @@ const BoneGroupInner = ({
 
   const handleDragMove = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (activeTool !== 'rotate') return;
+      // Manipulation directe : toujours actif sauf en mode IK (géré par les diamants overlay)
+      if (activeTool === 'ik') return;
       const stage = e.target.getStage();
       if (!stage) return;
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
       // Utiliser la pos capturée (même système de coords que getPointerPosition — §2)
       const pivot = pivotAbsRef.current ?? e.target.getAbsolutePosition();
-      const angle = Math.atan2(pointer.y - pivot.y, pointer.x - pivot.x) * (180 / Math.PI);
-      onRotateBone(bone.id, angle);
+      const angleWorld = Math.atan2(pointer.y - pivot.y, pointer.x - pivot.x) * (180 / Math.PI);
+      // Konva accumule les rotations des Groups imbriqués → bone.rotation est LOCAL.
+      // Soustraire la rotation cumulée du parent pour convertir world → local.
+      const angleLocal = angleWorld - parentWorldRotation;
+      onRotateBone(bone.id, angleLocal);
     },
-    [activeTool, bone.id, onRotateBone]
+    [activeTool, bone.id, onRotateBone, parentWorldRotation]
   );
 
   // dragBoundFunc : lock la Line sur la position pivot — pas de déplacement visuel (§5)
@@ -368,21 +375,41 @@ const BoneGroupInner = ({
       <Line
         points={[0, 0, bone.length, 0]}
         stroke={isSelected ? '#c4b5fd' : bone.color}
-        strokeWidth={isSelected ? 3 : 2}
+        strokeWidth={isSelected ? 3 : isHovered ? 2.5 : 2}
         hitStrokeWidth={12}
-        onClick={() => onSelectBone(bone.id)}
-        draggable={activeTool === 'rotate'}
+        onClick={() => {
+          onSelectBone(bone.id);
+        }}
+        draggable={activeTool !== 'ik'}
         dragBoundFunc={handleDragBound}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          onCursorChange?.('pointer');
+        }}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          onCursorChange?.(null);
+        }}
       />
 
       {/* Pivot (origine de l'os) — id identifiable par BoneCanvasView OverlayLayer (Fix #1) */}
       <Circle
         id={`bone-pivot-${bone.id}`}
-        radius={6}
+        radius={isHovered && !isSelected ? 7 : 6}
         fill={isSelected ? '#c4b5fd' : bone.color}
-        onClick={() => onSelectBone(bone.id)}
+        onClick={() => {
+          onSelectBone(bone.id);
+        }}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          onCursorChange?.('pointer');
+        }}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          onCursorChange?.(null);
+        }}
       />
 
       {/* Tip (extrémité de l'os) */}

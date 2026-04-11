@@ -24,6 +24,17 @@ const TAB_ITEMS: { id: DistributionView; emoji: string; label: string }[] = [
   { id: 'animation-preview', emoji: '🎬', label: 'Animation' },
 ];
 
+/** targetIds appartenant à l'onglet Animation — déclenchent un basculement auto (tutorial) */
+const ANIMATION_TUTORIAL_TARGETS = new Set([
+  'animation-tab',
+  'add-clip-button',
+  'keyframe-section',
+  'play-button',
+  'pose-capture-button',
+]);
+/** targetIds appartenant à l'onglet Squelette — déclenchent un basculement auto (tutorial) */
+const BONE_TUTORIAL_TARGETS = new Set(['bone-list', 'tool-rotate', 'template-picker-button']);
+
 const SEP_STYLE: React.CSSProperties = {
   width: 4,
   cursor: 'col-resize',
@@ -136,13 +147,60 @@ export function DistributionModule() {
     setActiveView('bone-editor');
   };
 
-  // Undo rigStore — même pattern que useUndoRedo.ts mais ciblé sur rigStore.temporal
+  // Undo/Redo rigStore — même pattern que useUndoRedo.ts mais ciblé sur rigStore.temporal
   const rigPastStates = useStore(useRigStore.temporal, (s) => s?.pastStates ?? []);
+  const rigFutureStates = useStore(useRigStore.temporal, (s) => s?.futureStates ?? []);
   const canRigUndo = rigPastStates.length > 0;
+  const canRigRedo = rigFutureStates.length > 0;
   const handleRigUndo = () => {
     const state = useRigStore.temporal.getState?.();
     if ((state?.pastStates?.length ?? 0) > 0) state?.undo?.();
   };
+  const handleRigRedo = () => {
+    const state = useRigStore.temporal.getState?.();
+    if ((state?.futureStates?.length ?? 0) > 0) state?.redo?.();
+  };
+
+  // Raccourcis clavier outils — standards Spine/DragonBones (Fix D, WebSearch 2026-04-10)
+  // Q=select · E=rotate · B=add-bone · P=add-part · I=IK · Space=play/pause
+  useEffect(() => {
+    const handleToolKey = (e: KeyboardEvent) => {
+      // Ignorer si focus dans un input/textarea (renommage inline)
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      switch (e.key) {
+        case 'q':
+        case 'Q':
+          boneEditor.setActiveTool('select');
+          break;
+        case 'e':
+        case 'E':
+          boneEditor.setActiveTool('rotate');
+          break;
+        case 'b':
+        case 'B':
+          boneEditor.setActiveTool('add-bone');
+          break;
+        case 'p':
+        case 'P':
+          boneEditor.setActiveTool('add-part');
+          break;
+        case 'i':
+        case 'I':
+          boneEditor.setActiveTool('ik');
+          break;
+        case ' ':
+          if (activeView === 'animation-preview') {
+            e.preventDefault();
+            setIsPlaying((v) => !v);
+          }
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleToolKey);
+    return () => window.removeEventListener('keydown', handleToolKey);
+  }, [boneEditor, activeView, setIsPlaying]);
 
   // URL du sprite du personnage sélectionné — pour l'overlay de référence
   const selectedChar = characters.find((c) => c.id === selectedCharId);
@@ -174,7 +232,29 @@ export function DistributionModule() {
   const tutorialDef = activeTutorialId ? getTutorial(activeTutorialId) : null;
   const currentStep = tutorialDef?.steps[activeTutorialStep] ?? null;
 
+  // Auto-basculement d'onglet selon l'étape du tutoriel (Bret Victor §7.2)
+  useEffect(() => {
+    if (!currentStep) return;
+    if (
+      ANIMATION_TUTORIAL_TARGETS.has(currentStep.targetId) &&
+      activeView !== 'animation-preview'
+    ) {
+      setActiveView('animation-preview');
+    } else if (BONE_TUTORIAL_TARGETS.has(currentStep.targetId) && activeView !== 'bone-editor') {
+      setActiveView('bone-editor');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep?.targetId]);
+
   // ── Barre d'onglets ─────────────────────────────────────────────────────
+  // Couleur de mode : violet (Setup squelette) ↔ orange (Animation) — DragonBones pattern
+  const modeAccent =
+    activeView === 'bone-editor'
+      ? 'rgba(139,92,246,0.18)' // violet — mode Setup
+      : 'rgba(249,115,22,0.15)'; // orange — mode Animate
+  const modeAccentBorder =
+    activeView === 'bone-editor' ? 'rgba(139,92,246,0.5)' : 'rgba(249,115,22,0.5)';
+
   const TabBar = (
     <div
       style={{
@@ -182,9 +262,10 @@ export function DistributionModule() {
         alignItems: 'center',
         gap: 4,
         padding: '6px 12px',
-        borderBottom: '1px solid var(--color-border-base)',
-        background: 'var(--color-bg-elevated)',
+        borderBottom: `2px solid ${modeAccentBorder}`,
+        background: modeAccent,
         flexShrink: 0,
+        transition: 'background 0.25s ease, border-color 0.25s ease',
       }}
     >
       {TAB_ITEMS.map((tab) => {
@@ -240,10 +321,7 @@ export function DistributionModule() {
 
   // ── Empty state — aucun personnage sélectionné ──────────────────────────
   const EmptyState = (
-    <div
-      data-tutorial-id="character-picker"
-      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>← Sélectionne un personnage</p>
     </div>
   );
@@ -255,7 +333,13 @@ export function DistributionModule() {
 
       <PanelGroup orientation="horizontal" style={{ flex: 1, overflow: 'hidden' }}>
         {/* Roster toujours visible */}
-        <Panel defaultSize="18%" minSize="15%" maxSize="28%" style={ROSTER_PANEL_STYLE}>
+        <Panel
+          defaultSize="18%"
+          minSize="15%"
+          maxSize="28%"
+          style={ROSTER_PANEL_STYLE}
+          data-tutorial-id="character-picker"
+        >
           <CharacterRoster
             selectedCharacterId={selectedCharId}
             onSelect={(id) => {
@@ -289,6 +373,8 @@ export function DistributionModule() {
               poses={rig?.poses}
               characterName={selectedChar?.name}
               characterAvatarUrl={refImageUrl}
+              onUndo={handleRigUndo}
+              onRedo={handleRigRedo}
             />
           )}
 
@@ -324,6 +410,8 @@ export function DistributionModule() {
               onRefOpacityChange={setRefOpacity}
               canUndo={canRigUndo}
               onUndo={handleRigUndo}
+              canRedo={canRigRedo}
+              onRedo={handleRigRedo}
               editingPoseId={editingPoseId}
             />
           )}

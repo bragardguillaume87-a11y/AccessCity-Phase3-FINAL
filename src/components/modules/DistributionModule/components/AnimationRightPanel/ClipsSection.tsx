@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import type { AnimationClip } from '@/types/bone';
 import { sectionLabel, rowBetween, emptyText, smallBtn, clipRowStyle } from './styles';
 
@@ -43,6 +44,21 @@ export function ClipsSection({
 
   const cancelRename = () => setEditingNameId(null);
 
+  // F2 → renommer l'animation sélectionnée (standard Spine/DragonBones)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (selectedClipId && editingNameId !== selectedClipId) {
+        const clip = clips.find((c) => c.id === selectedClipId);
+        if (clip) startRename(clip);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedClipId, clips, editingNameId]);
+
   return (
     <div
       style={{
@@ -52,12 +68,12 @@ export function ClipsSection({
       }}
     >
       <div style={rowBetween}>
-        <p style={sectionLabel}>🎬 Clips ({clips.length})</p>
+        <p style={sectionLabel}>🎬 Animations ({clips.length})</p>
         <div style={{ display: 'flex', gap: 4 }}>
           <button
             type="button"
             onClick={onAddClip}
-            title="Nouveau clip vide"
+            title="Créer une nouvelle animation vide"
             style={smallBtn}
             data-tutorial-id="add-clip-button"
           >
@@ -66,10 +82,10 @@ export function ClipsSection({
           <button
             type="button"
             onClick={onGenerateIdle}
-            title="Générer automatiquement un clip de respiration idle à partir de la pose Repos"
+            title="Génère automatiquement : 3 poses de respiration + 1 animation 'Repos' en boucle + l'assigne comme idle du personnage"
             style={smallBtn}
           >
-            ✨ Idle
+            ✨ Repos
           </button>
           {selectedClipId && (
             <button
@@ -97,7 +113,11 @@ export function ClipsSection({
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
+      {/* layoutRoot isole les animations layout — évite les reflows sur le panneau parent */}
+      <motion.div
+        layoutRoot
+        style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}
+      >
         {clips.map((clip) => {
           const isEditing = editingNameId === clip.id;
           const isSelected = clip.id === selectedClipId;
@@ -134,14 +154,20 @@ export function ClipsSection({
                   }}
                 />
                 <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                  {(clip.keyframes ?? []).length}kf
+                  {(clip.keyframes ?? []).length} étape
+                  {(clip.keyframes ?? []).length !== 1 ? 's' : ''}
                 </span>
               </div>
             );
           }
           return (
-            <button
+            /* layout + initial/animate : apparition fluide du nouveau clip (Nijman §8.1) */
+            <motion.button
               key={clip.id}
+              layout
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
               type="button"
               onClick={() => onSelectClip(clip.id)}
               style={clipRowStyle(isSelected)}
@@ -157,20 +183,21 @@ export function ClipsSection({
                   e.stopPropagation();
                   startRename(clip);
                 }}
-                title="Double-clic pour renommer"
+                title="Double-clic ou F2 pour renommer"
               >
                 {clip.name}
               </span>
               <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                {(clip.keyframes ?? []).length}kf
+                {(clip.keyframes ?? []).length} étape
+                {(clip.keyframes ?? []).length !== 1 ? 's' : ''}
               </span>
-            </button>
+            </motion.button>
           );
         })}
         {clips.length === 0 && (
-          <p style={emptyText}>Aucun clip — crée-en un ou génère un idle ✨</p>
+          <p style={emptyText}>Aucune animation — crée-en une avec 🎬 + ou génère un repos ✨</p>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

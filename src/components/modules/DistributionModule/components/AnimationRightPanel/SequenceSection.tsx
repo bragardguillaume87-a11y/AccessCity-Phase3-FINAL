@@ -3,6 +3,7 @@ import type { AnimationClip, BonePose, KeyframeEntry } from '@/types/bone';
 import { EASING_LABELS, BEZIER_PRESETS } from '@/utils/animationEasing';
 import type { EasingType, BezierPoints } from '@/utils/animationEasing';
 import { sectionLabel, rowBetween, emptyText, smallBtn } from './styles';
+import { GlossaryTip } from './GlossaryTip';
 
 // Presets easing affichés (hors bezier)
 const EASING_PRESET_IDS: EasingType[] = ['linear', 'ease-in', 'ease-out', 'ease-in-out'];
@@ -159,7 +160,8 @@ export function SequenceSection({
       >
         <div style={rowBetween}>
           <p style={sectionLabel}>
-            ⏱ Séquence — {keyframes.length}kf · {totalDuration}s
+            📋 Séquence — {keyframes.length} étape{keyframes.length !== 1 ? 's' : ''} ·{' '}
+            {totalDuration}s
             {orphanCount > 0 && (
               <span
                 title={`${orphanCount} étape(s) pointent vers des poses supprimées`}
@@ -194,26 +196,51 @@ export function SequenceSection({
                 🧹 Nettoyer
               </button>
             )}
-            {selectedPoseId && (
+            {isBeginnerMode ? (
+              /* Mode débutant : bouton toujours visible — disabled si aucune pose sélectionnée (Norman §9.2) */
               <button
                 type="button"
-                onClick={onAddPoseToClip}
-                title="Ajouter la pose sélectionnée à la séquence"
+                onClick={selectedPoseId ? onAddPoseToClip : undefined}
+                disabled={!selectedPoseId}
+                title={
+                  selectedPoseId
+                    ? 'Ajouter la position sélectionnée à la séquence'
+                    : "Sélectionne d'abord une position dans la liste ci-dessus"
+                }
                 style={{
                   ...smallBtn,
-                  color: 'var(--color-primary)',
-                  borderColor: 'var(--color-primary-40)',
+                  color: selectedPoseId ? 'var(--color-primary)' : 'var(--color-text-disabled)',
+                  borderColor: selectedPoseId
+                    ? 'var(--color-primary-40)'
+                    : 'var(--color-border-base)',
+                  opacity: selectedPoseId ? 1 : 0.45,
+                  cursor: selectedPoseId ? 'pointer' : 'not-allowed',
                 }}
               >
-                📸 + Séq.
+                📌 Ajouter
               </button>
+            ) : (
+              selectedPoseId && (
+                <button
+                  type="button"
+                  onClick={onAddPoseToClip}
+                  title="Ajouter la position sélectionnée à la séquence"
+                  style={{
+                    ...smallBtn,
+                    color: 'var(--color-primary)',
+                    borderColor: 'var(--color-primary-40)',
+                  }}
+                >
+                  📌 Ajouter
+                </button>
+              )
             )}
           </div>
         </div>
 
         {keyframes.length === 0 ? (
           <p style={{ ...emptyText, marginTop: 6 }}>
-            Sélectionne une pose puis clique « 📸 + Séq. ».
+            Sélectionne une position, puis clique sur « 📌 Ajouter ».
           </p>
         ) : (
           <>
@@ -224,6 +251,27 @@ export function SequenceSection({
               onHoverIdx={setHoveredKfIdx}
               onClickIdx={handleTimelineClick}
             />
+            {/* Hint "1/2 positions" — débloque le Play (Victor §7.3 : valeur actuelle → valeur cible) */}
+            {isBeginnerMode && keyframes.length === 1 && (
+              <div
+                style={{
+                  marginBottom: 4,
+                  padding: '7px 10px',
+                  borderRadius: 5,
+                  background: 'rgba(139,92,246,0.08)',
+                  border: '1px dashed rgba(139,92,246,0.35)',
+                  fontSize: 11,
+                  color: 'var(--color-text-secondary)',
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong style={{ color: 'var(--color-primary)' }}>1 / 2</strong> — Encore une
+                position ! Sélectionne-en une autre dans la liste au-dessus et clique{' '}
+                <strong style={{ color: 'var(--color-primary)' }}>📌 Ajouter</strong> — le Play sera
+                disponible.
+              </div>
+            )}
+
             <div
               ref={listContainerRef}
               style={{ display: 'flex', flexDirection: 'column', gap: 3 }}
@@ -278,6 +326,22 @@ export function SequenceSection({
                       cursor: onReorderKeyframes ? 'grab' : 'default',
                     }}
                   >
+                    {/* Handle drag visible uniquement en mode expert (Norman §9.2 — affordance découvrable) */}
+                    {!isBeginnerMode && (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--color-text-muted)',
+                          cursor: 'grab',
+                          userSelect: 'none',
+                          flexShrink: 0,
+                          opacity: 0.5,
+                        }}
+                        title="Glissez pour réordonner"
+                      >
+                        ⠿
+                      </span>
+                    )}
                     <span
                       style={{
                         fontSize: 9,
@@ -379,7 +443,7 @@ export function SequenceSection({
                           ))}
                           <button
                             type="button"
-                            title="Bézier custom"
+                            title="Courbe personnalisée — contrôle fin de l'accélération"
                             onClick={() => setBezierPopoverIdx(isBezierOpen ? null : idx)}
                             style={{
                               padding: '1px 4px',
@@ -427,7 +491,7 @@ export function SequenceSection({
                                 fontWeight: 700,
                               }}
                             >
-                              ◠ BÉZIER PRESETS
+                              ✏️ Courbe personnalisée
                             </p>
                             {Object.entries(BEZIER_PRESETS).map(([name, pts]) => (
                               <button
@@ -500,7 +564,9 @@ export function SequenceSection({
             disabled={!canPlay}
             data-tutorial-id="play-button"
             title={
-              !canPlay ? 'Ajoute au moins 2 poses à la séquence pour lancer la lecture' : undefined
+              !canPlay
+                ? 'Ajoute au moins 2 positions à la séquence pour lancer la lecture'
+                : undefined
             }
             style={{
               padding: '6px 14px',
@@ -517,12 +583,35 @@ export function SequenceSection({
           >
             {isPlaying ? '⏸ Pause' : '▶ Play'}
           </button>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-            {selectedClip.fps}&thinsp;fps · {selectedClip.loop ? '🔁 boucle' : '1×'}
+          <span
+            style={{
+              fontSize: 11,
+              color: 'var(--color-text-muted)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <GlossaryTip
+              definition="FPS = images par seconde. Plus c'est élevé, plus l'animation est fluide."
+              example="24 = cinéma · 12 = animation TV"
+            >
+              {selectedClip.fps}&thinsp;fps
+            </GlossaryTip>
+            {' · '}
+            <GlossaryTip
+              definition={
+                selectedClip.loop
+                  ? "L'animation recommence au début automatiquement."
+                  : "L'animation joue une seule fois puis s'arrête."
+              }
+            >
+              {selectedClip.loop ? '🔁 boucle' : '1×'}
+            </GlossaryTip>
           </span>
           {!canPlay && (
             <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-              (2 poses min.)
+              (2 positions min.)
             </span>
           )}
         </div>

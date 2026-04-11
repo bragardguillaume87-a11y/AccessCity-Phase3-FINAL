@@ -14,8 +14,8 @@ interface SliderRowProps {
   value: number;
   min: number;
   max: number;
-  step: number;
-  unit: string;
+  step?: number;
+  unit?: string;
   onChange: (v: number) => void;
   disabled?: boolean;
   ariaLabel?: string;
@@ -27,8 +27,8 @@ export function SliderRow({
   value,
   min,
   max,
-  step,
-  unit,
+  step = 1,
+  unit = '',
   onChange,
   disabled,
   ariaLabel,

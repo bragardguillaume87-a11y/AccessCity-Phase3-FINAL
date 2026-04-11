@@ -44,7 +44,7 @@ export function AutoClipsSection({
           textAlign: 'left',
         }}
       >
-        <span style={{ ...sectionLabel, flex: 1 }}>🔗 Clips auto</span>
+        <span style={{ ...sectionLabel, flex: 1 }}>🎭 Joué automatiquement</span>
         <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>
           {rig.idleClipId || rig.speakClipId ? '✅ configuré' : '— non configuré'}
         </span>
@@ -58,15 +58,15 @@ export function AutoClipsSection({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span
-                style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 42, flexShrink: 0 }}
+                style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 52, flexShrink: 0 }}
               >
-                😴 Idle
+                😴 Au repos
               </span>
               <select
                 value={rig.idleClipId ?? ''}
                 onChange={(e) => onSetIdleClip(rig.id, e.target.value || null)}
                 style={selectStyle}
-                title="Clip joué en boucle quand le personnage est inactif"
+                title="Animation jouée en boucle quand le personnage ne fait rien"
               >
                 <option value="">— aucun —</option>
                 {clips.map((c) => (
@@ -79,15 +79,15 @@ export function AutoClipsSection({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span
-                style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 42, flexShrink: 0 }}
+                style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 52, flexShrink: 0 }}
               >
-                🗣 Parle
+                🗣 En parole
               </span>
               <select
                 value={rig.speakClipId ?? ''}
                 onChange={(e) => onSetSpeakClip(rig.id, e.target.value || null)}
                 style={selectStyle}
-                title="Clip joué quand ce personnage est le speaker actif"
+                title="Animation jouée quand ce personnage parle dans une scène"
               >
                 <option value="">— aucun —</option>
                 {clips.map((c) => (
@@ -106,7 +106,8 @@ export function AutoClipsSection({
                 marginTop: 2,
               }}
             >
-              Ces clips se déclenchent automatiquement dans l'Aperçu du visual novel.
+              Ces animations se lancent toutes seules dans l'aperçu du jeu — sans que tu aies à
+              faire quoi que ce soit.
             </p>
           </div>
         </div>

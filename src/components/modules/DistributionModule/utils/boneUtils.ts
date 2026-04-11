@@ -1,6 +1,26 @@
 import type { Bone } from '@/types/bone';
 import type { FabrikJoint } from '@/utils/fabrik';
 
+// ── Emoji par type d'os ───────────────────────────────────────────────────────
+
+/**
+ * Retourne un emoji représentatif pour un os, détecté depuis son nom.
+ * Miyamoto §1.2 : symboles universels > labels texte.
+ */
+export function getBoneEmoji(name: string): string {
+  const n = name.toLowerCase();
+  if (/torse|corps|thorax|buste/.test(n)) return '🫁';
+  if (/cou/.test(n)) return '🔗';
+  if (/tête|head/.test(n)) return '🪖';
+  if (/av[.\s]*bras|avant.bras|forearm|pince|griffe/.test(n)) return '🤚';
+  if (/épaule|shoulder/.test(n)) return '💪';
+  if (/bras|arm/.test(n)) return '💪';
+  if (/cuisse|thigh/.test(n)) return '🦵';
+  if (/jambe|leg|pied|foot/.test(n)) return '👟';
+  if (/patte|paw/.test(n)) return '🐾';
+  return '🦴';
+}
+
 // ── computeRigBounds ─────────────────────────────────────────────────────────
 
 export interface RigBounds {

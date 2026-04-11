@@ -43,7 +43,8 @@ export function PosesSection({
   onPoseHover,
   onRenamePose,
 }: PosesSectionProps) {
-  const [showPresets, setShowPresets] = useState(false);
+  // Ouvert par défaut — affordance non-découverte = n'existe pas (Norman §9.2)
+  const [showPresets, setShowPresets] = useState(true);
 
   // Flash vert 800ms sur "Mettre à jour" — feedback localisé (Norman §9.3)
   const [poseFlash, setPoseFlash] = useState(false);
@@ -74,6 +75,21 @@ export function PosesSection({
 
   const cancelRenamePose = useCallback(() => setRenamingPoseId(null), []);
 
+  // F2 → renommer la position sélectionnée (standard Spine/DragonBones)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (selectedPoseId && renamingPoseId !== selectedPoseId) {
+        const pose = poses.find((p) => p.id === selectedPoseId);
+        if (pose) startRenamePose(pose);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPoseId, poses, renamingPoseId, startRenamePose]);
+
   const handleUpdatePose = () => {
     onUpdatePose?.();
     uiSounds.minigameDing();
@@ -95,12 +111,12 @@ export function PosesSection({
 
       {/* Header */}
       <div style={rowBetween}>
-        <p style={sectionLabel}>🧍 Poses ({poses.length})</p>
+        <p style={sectionLabel}>🧍 Positions ({poses.length})</p>
         <div style={{ display: 'flex', gap: 4 }}>
           <button
             type="button"
             onClick={onAddPose}
-            title="Capturer la pose actuelle du squelette"
+            title="Capturer la position actuelle du squelette"
             style={smallBtn}
             data-tutorial-id="pose-capture-button"
           >
@@ -269,10 +285,10 @@ export function PosesSection({
           }}
         >
           {[
-            { emoji: '🦴', text: "Pose ton squelette dans l'onglet Squelette" },
-            { emoji: '📸', text: 'Reviens ici → 📸 + pour capturer la pose' },
-            { emoji: '🎬', text: 'Crée un Clip et ajoute ta pose avec 📸 + Séq.' },
-            { emoji: '▶', text: "Ajoute d'autres poses et appuie sur Play !" },
+            { emoji: '🦴', text: "Règle ton squelette dans l'onglet Squelette" },
+            { emoji: '📸', text: 'Reviens ici → 📸 + pour capturer cette position' },
+            { emoji: '🎬', text: 'Crée une Animation et ajoute ta position avec 📌 Ajouter' },
+            { emoji: '▶', text: "Ajoute d'autres positions et appuie sur Play !" },
           ].map((step, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 14, flexShrink: 0 }}>{step.emoji}</span>
@@ -363,13 +379,10 @@ export function PosesSection({
                         e.stopPropagation();
                         startRenamePose(pose);
                       }}
-                      title="Double-clic pour renommer"
+                      title="Double-clic ou F2 pour renommer"
                     >
                       {editingPoseId === pose.id ? '✏️ ' : ''}
                       {pose.name}
-                    </span>
-                    <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                      {Object.keys(pose.boneStates).length}os
                     </span>
                     {Object.keys(pose.spriteVariants ?? {}).length > 0 && (
                       <span
@@ -384,7 +397,7 @@ export function PosesSection({
                 <button
                   type="button"
                   onClick={() => onLoadPose?.(pose.id)}
-                  title="Charger cette pose dans le squelette pour l'éditer"
+                  title="Charger dans le squelette pour modifier → bascule automatiquement sur l'onglet Squelette. Utilise 💾 Mettre à jour pour sauvegarder."
                   style={{
                     background: 'none',
                     border: 'none',
@@ -406,10 +419,11 @@ export function PosesSection({
         </div>
       )}
 
-      {/* Indicateur "sélectionne une pose" en mode débutant quand clip sélectionné */}
-      {!isBeginnerMode && poses.length > 0 && !selectedPoseId && (
+      {/* Indicateur "sélectionne une pose" — visible en TOUS modes quand pertinent */}
+      {poses.length > 0 && !selectedPoseId && (
         <p style={{ ...emptyText, marginTop: 6 }}>
-          ← Sélectionne une pose pour l'ajouter à la séquence
+          ← Clique sur une position pour la sélectionner, puis ajoute-la à la séquence avec{' '}
+          <strong style={{ color: 'var(--color-primary)' }}>📌 Ajouter</strong>
         </p>
       )}
     </div>

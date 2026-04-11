@@ -1,18 +1,11 @@
 import { useCallback, useState } from 'react';
-import { motion } from 'framer-motion';
 import { useRigStore } from '@/stores/rigStore';
-import type { Bone, BoneTool, IKChain } from '@/types/bone';
+import type { BoneTool, IKChain } from '@/types/bone';
 import { BONE_DEFAULT_COLORS, DEFAULT_BONE_LENGTH } from '@/types/bone';
-import { SliderRow } from '@/components/ui/SliderRow';
-import { TemplatePicker } from './TemplatePicker';
-import {
-  findMirrorBone,
-  getBoneChain,
-  getBoneDepth,
-  sortBonesByHierarchy,
-} from '../utils/boneUtils';
+import { getBoneChain } from '../utils/boneUtils';
 import { generateId } from '@/utils/generateId';
-import { uiSounds } from '@/utils/uiSounds';
+import { BoneToolbar } from './BoneEditorRightPanel/components/BoneToolbar';
+import { BoneHierarchyList } from './BoneEditorRightPanel/components/BoneHierarchyList';
 
 interface BoneEditorRightPanelProps {
   characterId: string;
@@ -34,40 +27,6 @@ interface BoneEditorRightPanelProps {
   /** ID de la pose en cours d'édition (depuis DistributionModule) — active la section sprite variant */
   editingPoseId?: string | null;
 }
-
-// ⑤ Emoji par type d'os — détection depuis le nom (Miyamoto §1.2 : symboles universels)
-function getBoneEmoji(name: string): string {
-  const n = name.toLowerCase();
-  if (/torse|corps|thorax|buste/.test(n)) return '🫁';
-  if (/cou/.test(n)) return '🔗';
-  if (/tête|head/.test(n)) return '🪖';
-  if (/av[.\s]*bras|avant.bras|forearm|pince|griffe/.test(n)) return '🤚';
-  if (/épaule|shoulder/.test(n)) return '💪';
-  if (/bras|arm/.test(n)) return '💪';
-  if (/cuisse|thigh/.test(n)) return '🦵';
-  if (/jambe|leg|pied|foot/.test(n)) return '👟';
-  if (/patte|paw/.test(n)) return '🐾';
-  return '🦴';
-}
-
-// Débutant : 2 outils seulement (Nintendo UX — découverte progressive §1.3)
-const BEGINNER_TOOLS: { id: BoneTool; label: string; emoji: string; title: string }[] = [
-  { id: 'select', emoji: '↖', label: 'Choisir un os', title: 'Cliquer pour sélectionner un os' },
-  { id: 'rotate', emoji: '↻', label: 'Faire tourner', title: 'Maintenir pour faire pivoter un os' },
-];
-
-const EXPERT_TOOLS: { id: BoneTool; label: string; emoji: string; title: string }[] = [
-  { id: 'select', emoji: '↖', label: 'Sélect.', title: 'Sélectionner un os' },
-  { id: 'rotate', emoji: '↻', label: 'Pivoter', title: 'Faire pivoter un os' },
-  { id: 'add-bone', emoji: '🦴', label: '+ Os', title: 'Ajouter un os (clic sur canvas)' },
-  { id: 'add-part', emoji: '🖼', label: '+ Part', title: 'Ajouter une partie sprite' },
-  {
-    id: 'ik',
-    emoji: '🎯',
-    label: 'IK',
-    title: 'Tirer le bout du bras — les os suivent tout seuls !',
-  },
-];
 
 /** Ligne de propriété : slider + input numérique clavier + bouton ↺ reset. */
 function BonePropertyRow({
@@ -183,13 +142,10 @@ export function BoneEditorRightPanel({
   const deleteBone = useRigStore((s) => s.deleteBone);
   const addRig = useRigStore((s) => s.addRig);
   const addBone = useRigStore((s) => s.addBone);
-  const addPart = useRigStore((s) => s.addPart);
   const updatePart = useRigStore((s) => s.updatePart);
   const updatePose = useRigStore((s) => s.updatePose);
-  const deletePart = useRigStore((s) => s.deletePart);
   const addIKChain = useRigStore((s) => s.addIKChain);
   const removeIKChain = useRigStore((s) => s.removeIKChain);
-  const addRigFromTemplate = useRigStore((s) => s.addRigFromTemplate);
 
   const editingPose = editingPoseId
     ? (rig?.poses.find((p) => p.id === editingPoseId) ?? null)
@@ -199,43 +155,17 @@ export function BoneEditorRightPanel({
   const parts = rig?.parts ?? [];
   const ikChains = rig?.ikChains ?? [];
 
-  // ── Confirmation suppression (mode débutant) ──────────────────────────────
-  const [pendingDelete, setPendingDelete] = useState(false);
-
-  // ── Reparenting os par drag (P3-C) ────────────────────────────────────────
-  const [dragBoneId, setDragBoneId] = useState<string | null>(null);
-  const [dragOverBoneId, setDragOverBoneId] = useState<string | null>(null);
-
   // ── Sprite section — collapsed par défaut, expand pour réglages fins ───────
   const [spriteExpanded, setSpriteExpanded] = useState(false);
 
-  // ── Template picker ───────────────────────────────────────────────────────
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
-
-  // ── Prompt miroir — proposition d'assigner l'asset retourné à l'os symétrique ──
-  const [mirrorPrompt, setMirrorPrompt] = useState<{
-    mirrorBone: Bone;
-    assetUrl: string;
-    width: number;
-    height: number;
-  } | null>(null);
-
-  const handleDeleteBone = () => {
-    if (!rig || !selectedBoneId) return;
-    if (isBeginnerMode && !pendingDelete) {
-      setPendingDelete(true);
-      return;
-    }
-    deleteBone(rig.id, selectedBoneId);
+  // ── Suppression os — pendingDelete géré dans BoneHierarchyList ───────────
+  const handleBoneDelete = (boneId: string) => {
+    if (!rig) return;
+    deleteBone(rig.id, boneId);
     onSelectBone(null);
-    setPendingDelete(false);
   };
 
   // ── Création rig/os ───────────────────────────────────────────────────────
-  const handleCreateRig = () => {
-    addRig(characterId);
-  };
-
   const handleAddRootBone = () => {
     if (!rig) {
       addRig(characterId);
@@ -335,635 +265,37 @@ export function BoneEditorRightPanel({
     setIkForm(null);
   };
 
-  const toolButtons = isBeginnerMode ? BEGINNER_TOOLS : EXPERT_TOOLS;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0 }}>
       {/* ── Outils ── */}
-      <div
-        data-tutorial-id="bone-tools"
-        style={{ padding: '10px 10px 8px', borderBottom: '1px solid var(--color-border-base)' }}
-      >
-        <p style={sectionLabel}>Outils</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-          {/* Bouton sprite de référence — Spine/DragonBones style */}
-          <button
-            type="button"
-            onClick={onToggleRefImage}
-            title="Afficher/masquer le sprite du personnage derrière le squelette"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '5px 7px',
-              borderRadius: 6,
-              cursor: 'pointer',
-              fontSize: 11,
-              fontWeight: showRefImage ? 700 : 400,
-              border: showRefImage
-                ? '1.5px solid var(--color-primary)'
-                : '1.5px solid var(--color-border-base)',
-              background: showRefImage ? 'var(--color-primary-subtle)' : 'transparent',
-              color: showRefImage ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-              transition: 'background 0.1s, border-color 0.1s',
-            }}
-          >
-            <span>🖼</span>
-            <span>Réf.</span>
-          </button>
-          {/* Sliders Réf. — visibles uniquement quand le sprite de référence est actif */}
-          {showRefImage && (
-            <div
-              style={{
-                gridColumn: '1 / -1',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                marginTop: 2,
-              }}
-            >
-              <SliderRow
-                label="Opacité réf."
-                value={Math.round(refOpacity * 100)}
-                min={10}
-                max={80}
-                step={5}
-                unit="%"
-                onChange={(v) => onRefOpacityChange?.(v / 100)}
-              />
-              <SliderRow
-                label="Taille réf."
-                value={Math.round(refScale * 100)}
-                min={30}
-                max={150}
-                step={10}
-                unit="%"
-                onChange={(v) => onRefScaleChange?.(v / 100)}
-              />
-            </div>
-          )}
-          {toolButtons.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              title={t.title}
-              data-tutorial-id={t.id === 'rotate' ? 'tool-rotate' : undefined}
-              onClick={() => onToolChange(t.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '5px 7px',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: activeTool === t.id ? 700 : 400,
-                border:
-                  activeTool === t.id
-                    ? '1.5px solid var(--color-primary)'
-                    : '1.5px solid var(--color-border-base)',
-                background: activeTool === t.id ? 'var(--color-primary-subtle)' : 'transparent',
-                color: activeTool === t.id ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                transition: 'background 0.1s, border-color 0.1s',
-              }}
-            >
-              <span>{t.emoji}</span>
-              <span>{t.label}</span>
-            </button>
-          ))}
-
-          {/* Boutons Undo/Redo — côte à côte (Meier §10.3 : affordance premier ordre) */}
-          {onUndo && (
-            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 4 }}>
-              <button
-                type="button"
-                onClick={
-                  canUndo
-                    ? () => {
-                        onUndo?.();
-                        uiSounds.advance();
-                      }
-                    : undefined
-                }
-                disabled={!canUndo}
-                title={canUndo ? 'Annuler (Ctrl+Z)' : 'Rien à annuler'}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 5,
-                  padding: '5px 7px',
-                  borderRadius: 6,
-                  cursor: canUndo ? 'pointer' : 'not-allowed',
-                  fontSize: 11,
-                  border: '1.5px solid var(--color-border-hover)',
-                  background: 'transparent',
-                  color: 'var(--color-text-muted)',
-                  opacity: canUndo ? 1 : 0.38,
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                <span>↩</span>
-                <span>Annuler</span>
-              </button>
-              <button
-                type="button"
-                onClick={
-                  canRedo
-                    ? () => {
-                        onRedo?.();
-                        uiSounds.advance();
-                      }
-                    : undefined
-                }
-                disabled={!canRedo}
-                title={canRedo ? 'Rétablir (Ctrl+Shift+Z)' : 'Rien à rétablir'}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 5,
-                  padding: '5px 7px',
-                  borderRadius: 6,
-                  cursor: canRedo ? 'pointer' : 'not-allowed',
-                  fontSize: 11,
-                  border: '1.5px solid var(--color-border-hover)',
-                  background: 'transparent',
-                  color: 'var(--color-text-muted)',
-                  opacity: canRedo ? 1 : 0.38,
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                <span>↪</span>
-                <span>Rétablir</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <BoneToolbar
+        activeTool={activeTool}
+        isBeginnerMode={isBeginnerMode}
+        showRefImage={showRefImage}
+        onToggleRefImage={onToggleRefImage}
+        refScale={refScale}
+        refOpacity={refOpacity}
+        onRefScaleChange={onRefScaleChange}
+        onRefOpacityChange={onRefOpacityChange}
+        canUndo={canUndo}
+        onUndo={onUndo}
+        canRedo={canRedo}
+        onRedo={onRedo}
+        onToolChange={onToolChange}
+      />
 
       {/* ── Hiérarchie des os ── */}
-      <div
-        data-tutorial-id="bone-list"
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '10px 10px 8px',
-          borderBottom: '1px solid var(--color-border-base)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 8,
-          }}
-        >
-          <p style={sectionLabel}>🦴 Os ({bones.length})</p>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {/* Bouton template — toujours présent (cible tutoriel étape 2) */}
-            <button
-              type="button"
-              data-tutorial-id="template-picker-button"
-              onClick={() => setTemplatePickerOpen(true)}
-              title="Utiliser un modèle de squelette"
-              style={{
-                ...smallBtnStyle,
-                border: '1.5px solid var(--color-primary)',
-                color: 'var(--color-primary)',
-                background: 'var(--color-primary-subtle)',
-              }}
-            >
-              🧍 Modèle
-            </button>
-            {bones.length > 0 && (
-              <button
-                type="button"
-                onClick={() => addRigFromTemplate(characterId, 'personnage-simple')}
-                title={
-                  isBeginnerMode
-                    ? 'Remettre le squelette à zéro — tes poses et clips sont conservés !'
-                    : 'Réinitialiser les os depuis le modèle Personnage simple (poses et clips conservés)'
-                }
-                style={{
-                  ...smallBtnStyle,
-                  ...(isBeginnerMode && {
-                    border: '1.5px solid var(--color-warning)',
-                    color: 'var(--color-warning)',
-                  }),
-                }}
-              >
-                {isBeginnerMode ? '↺ Refaire' : '🔄'}
-              </button>
-            )}
-            {/* Pulse quand aucun os — guide le débutant vers la première action (Nijman §8.1) */}
-            <motion.button
-              type="button"
-              data-tutorial-id="add-bone-button"
-              onClick={handleAddRootBone}
-              title="Ajouter os racine"
-              animate={bones.length === 0 ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-              transition={
-                bones.length === 0 ? { repeat: Infinity, duration: 2.2, ease: 'easeInOut' } : {}
-              }
-              style={smallBtnStyle}
-            >
-              🦴 +
-            </motion.button>
-            {selectedBoneId && !pendingDelete && (
-              <button
-                type="button"
-                onClick={handleDeleteBone}
-                title={isBeginnerMode ? 'Supprimer (confirmation requise)' : 'Supprimer cet os'}
-                style={{ ...smallBtnStyle, color: 'var(--color-danger)' }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Confirmation suppression (mode débutant §6b) */}
-        {pendingDelete && isBeginnerMode && (
-          <div
-            style={{
-              padding: '8px 10px',
-              borderRadius: 6,
-              background: 'rgba(239,68,68,0.12)',
-              border: '1px solid var(--color-danger)',
-              marginBottom: 8,
-            }}
-          >
-            <p style={{ fontSize: 11, color: 'var(--color-danger)', marginBottom: 6 }}>
-              ⚠️ Supprimer cet os et ses enfants ?
-            </p>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                onClick={handleDeleteBone}
-                style={{
-                  ...smallBtnStyle,
-                  color: 'var(--color-danger)',
-                  borderColor: 'var(--color-danger)',
-                }}
-              >
-                Oui, supprimer
-              </button>
-              <button type="button" onClick={() => setPendingDelete(false)} style={smallBtnStyle}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        )}
-
-        {bones.length === 0 ? (
-          <p style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-            {rig ? 'Aucun os. Cliquez sur « 🦴 + » ou « 🧍 Modèle ».' : 'Aucun rig. Créez-en un.'}
-          </p>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              maxHeight: 220,
-              overflowY: 'auto',
-            }}
-          >
-            {sortBonesByHierarchy(bones).map((b) => {
-              const boneFirstPart = parts.find((p) => p.boneId === b.id);
-              const depth = getBoneDepth(b, bones);
-              return (
-                <div
-                  key={b.id}
-                  draggable={!isBeginnerMode}
-                  onDragStart={() => {
-                    setDragBoneId(b.id);
-                    setDragOverBoneId(b.id);
-                  }}
-                  onDragEnter={() => setDragOverBoneId(b.id)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDragEnd={() => {
-                    if (rig && dragBoneId && dragOverBoneId && dragBoneId !== dragOverBoneId) {
-                      // Guard anti-cycle : interdire si dragOverBoneId est un descendant de dragBoneId
-                      const wouldCycle = getBoneChain(dragBoneId, dragOverBoneId, bones) !== null;
-                      if (!wouldCycle) {
-                        useRigStore
-                          .getState()
-                          .updateBone(rig.id, dragBoneId, { parentId: dragOverBoneId });
-                        uiSounds.choiceSelect();
-                      }
-                    }
-                    setDragBoneId(null);
-                    setDragOverBoneId(null);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    paddingLeft: depth * 12,
-                    borderRadius: 5,
-                    boxShadow:
-                      dragOverBoneId === b.id && dragBoneId !== b.id
-                        ? '0 0 0 1.5px var(--color-primary)'
-                        : 'none',
-                    opacity: dragBoneId === b.id ? 0.4 : 1,
-                    transition: 'box-shadow 0.1s, opacity 0.1s',
-                    cursor: !isBeginnerMode ? 'grab' : 'default',
-                  }}
-                >
-                  {/* Indicateur de parenté — trait vertical gauche pour os enfants */}
-                  {depth > 0 && (
-                    <span
-                      style={{
-                        fontSize: 9,
-                        color: 'var(--color-text-muted)',
-                        flexShrink: 0,
-                        lineHeight: 1,
-                        marginRight: 1,
-                      }}
-                    >
-                      └
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectBone(b.id);
-                      setPendingDelete(false);
-                      uiSounds.choiceSelect();
-                    }}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '4px 6px',
-                      borderRadius: 5,
-                      cursor: 'pointer',
-                      fontSize: 11,
-                      textAlign: 'left',
-                      minWidth: 0,
-                      border:
-                        b.id === selectedBoneId
-                          ? '1.5px solid var(--color-primary)'
-                          : '1.5px solid transparent',
-                      background:
-                        b.id === selectedBoneId ? 'var(--color-primary-subtle)' : 'transparent',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background: b.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: 10, flexShrink: 0 }}>{getBoneEmoji(b.name)}</span>
-                    <span
-                      style={{
-                        flex: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {b.name}
-                    </span>
-                    {b.parentId === null && (
-                      <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>racine</span>
-                    )}
-                  </button>
-
-                  {/* ④ Slot asset — mode débutant : clic → fichier → addPart */}
-                  {isBeginnerMode && (
-                    <>
-                      {/* Boutons ⇄ flip et ✕ supprimer — visibles uniquement si une part est assignée */}
-                      {boneFirstPart && (
-                        <>
-                          <button
-                            type="button"
-                            title={
-                              boneFirstPart.flipX
-                                ? 'Retirer le miroir horizontal'
-                                : 'Activer le miroir horizontal'
-                            }
-                            onClick={() =>
-                              rig &&
-                              updatePart(rig.id, boneFirstPart.id, { flipX: !boneFirstPart.flipX })
-                            }
-                            style={{
-                              width: 20,
-                              height: 20,
-                              flexShrink: 0,
-                              cursor: 'pointer',
-                              borderRadius: 3,
-                              fontSize: 11,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              border: boneFirstPart.flipX
-                                ? '1px solid var(--color-primary)'
-                                : '1px solid var(--color-border-base)',
-                              background: boneFirstPart.flipX
-                                ? 'var(--color-primary-subtle)'
-                                : 'transparent',
-                              color: boneFirstPart.flipX
-                                ? 'var(--color-primary)'
-                                : 'var(--color-text-muted)',
-                              transition: 'background 0.1s, border-color 0.1s',
-                            }}
-                          >
-                            ⇄
-                          </button>
-                          <button
-                            type="button"
-                            title="Supprimer le sprite de cet os"
-                            onClick={() => rig && deletePart(rig.id, boneFirstPart.id)}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              flexShrink: 0,
-                              cursor: 'pointer',
-                              borderRadius: 3,
-                              fontSize: 11,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              border: '1px solid var(--color-border-base)',
-                              background: 'transparent',
-                              color: 'var(--color-danger)',
-                              transition: 'background 0.1s',
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </>
-                      )}
-                      {/* Vignette + input fichier */}
-                      <label
-                        title={
-                          boneFirstPart
-                            ? 'Changer le sprite de cet os'
-                            : 'Assigner un sprite à cet os'
-                        }
-                        style={{
-                          width: 28,
-                          height: 36,
-                          flexShrink: 0,
-                          cursor: 'pointer',
-                          borderRadius: 4,
-                          overflow: 'hidden',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: boneFirstPart
-                            ? '1px solid var(--color-border-base)'
-                            : '1px dashed var(--color-border-hover)',
-                          fontSize: 11,
-                          color: 'var(--color-text-muted)',
-                        }}
-                      >
-                        {boneFirstPart ? (
-                          <img
-                            src={boneFirstPart.assetUrl}
-                            alt=""
-                            style={{
-                              width: 28,
-                              height: 36,
-                              objectFit: 'contain',
-                              transform: boneFirstPart.flipX ? 'scaleX(-1)' : undefined,
-                            }}
-                          />
-                        ) : (
-                          <span>+</span>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file || !rig) return;
-                            // Capture IDs stables avant la chaîne async (rig peut changer avant img.onload)
-                            const rigId = rig.id;
-                            const boneId = b.id;
-                            const boneName = b.name;
-                            // FileReader → Data URL persistable (blob URLs expirent au refresh)
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              const dataUrl = ev.target?.result as string;
-                              if (!dataUrl) return;
-                              // Lire les dimensions naturelles avant d'ajouter la part
-                              const img = new window.Image();
-                              img.onload = () => {
-                                // Guard : vérifier que le rig existe toujours (stale closure)
-                                const currentRig = useRigStore
-                                  .getState()
-                                  .rigs.find((r) => r.id === rigId);
-                                if (!currentRig) return;
-                                const w = img.naturalWidth || 64;
-                                const h = img.naturalHeight || 88;
-                                addPart(rigId, {
-                                  boneId,
-                                  assetUrl: dataUrl,
-                                  offsetX: 0,
-                                  offsetY: -Math.round(h / 2),
-                                  width: w,
-                                  height: h,
-                                  zOrder: currentRig.parts.filter((p) => p.boneId === boneId)
-                                    .length,
-                                  flipX: false,
-                                });
-                                // Auto-détection de l'os symétrique
-                                const mirror = findMirrorBone(boneName, currentRig.bones);
-                                if (mirror) {
-                                  setMirrorPrompt({
-                                    mirrorBone: mirror,
-                                    assetUrl: dataUrl,
-                                    width: w,
-                                    height: h,
-                                  });
-                                }
-                              };
-                              img.src = dataUrl;
-                            };
-                            reader.readAsDataURL(file);
-                            e.target.value = '';
-                          }}
-                        />
-                      </label>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ── Prompt miroir — Norman §9.2 : contrainte signalée proactivement ── */}
-        {mirrorPrompt && (
-          <div
-            style={{
-              marginTop: 8,
-              padding: '8px 10px',
-              borderRadius: 6,
-              background: 'rgba(139,92,246,0.08)',
-              border: '1px solid var(--color-primary)',
-            }}
-          >
-            <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-              ⇄ Assigner aussi sur <strong>{mirrorPrompt.mirrorBone.name}</strong> (miroir) ?
-            </p>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!rig) return;
-                  addPart(rig.id, {
-                    boneId: mirrorPrompt.mirrorBone.id,
-                    assetUrl: mirrorPrompt.assetUrl,
-                    offsetX: 0,
-                    offsetY: -Math.round(mirrorPrompt.height / 2),
-                    width: mirrorPrompt.width,
-                    height: mirrorPrompt.height,
-                    zOrder: parts.filter((p) => p.boneId === mirrorPrompt.mirrorBone.id).length,
-                    flipX: true,
-                  });
-                  setMirrorPrompt(null);
-                }}
-                style={{
-                  ...smallBtnStyle,
-                  color: 'var(--color-primary)',
-                  borderColor: 'var(--color-primary)',
-                  background: 'var(--color-primary-subtle)',
-                }}
-              >
-                ✓ Oui, ajouter ⇄
-              </button>
-              <button type="button" onClick={() => setMirrorPrompt(null)} style={smallBtnStyle}>
-                Non merci
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!rig && (
-          <button
-            type="button"
-            onClick={handleCreateRig}
-            style={{ ...smallBtnStyle, marginTop: 8, width: '100%', justifyContent: 'center' }}
-          >
-            🆕 Créer un rig
-          </button>
-        )}
-      </div>
+      <BoneHierarchyList
+        rig={rig}
+        bones={bones}
+        parts={parts}
+        selectedBoneId={selectedBoneId}
+        isBeginnerMode={isBeginnerMode}
+        characterId={characterId}
+        onSelectBone={onSelectBone}
+        onAddRootBone={handleAddRootBone}
+        onBoneDelete={handleBoneDelete}
+      />
 
       {/* ── Propriétés de l'os sélectionné ── */}
       {selectedBone && (
@@ -1472,15 +804,6 @@ export function BoneEditorRightPanel({
             </div>
           ))}
         </div>
-      )}
-
-      {/* ── TemplatePicker dialog ── */}
-      {templatePickerOpen && (
-        <TemplatePicker
-          characterId={characterId}
-          open={templatePickerOpen}
-          onClose={() => setTemplatePickerOpen(false)}
-        />
       )}
     </div>
   );

@@ -239,6 +239,18 @@ git checkout -b fix/nom-du-bug         # pour un correctif
 
 > ⚠️ ~50-75% faux positifs sur pattern-matching — **toujours contre-vérifier par grep**.
 
+#### Protocole T3 — délégation obligatoire
+
+**Avant de coder (audit)** : lancer un agent `Explore` pour tout grep/Read d'audit.
+Ne pas auditer inline dans le fil principal — sature le contexte et multiplie les faux positifs.
+Résumer les findings en 3 lignes maximum, puis coder.
+
+**Après typecheck (review)** : lancer un agent `Explore` en reviewer sur les fichiers modifiés.
+Prompt type :
+> *"Lis les fichiers [liste]. Cherche : (1) props unused, (2) getState() pendant le render, (3) `[]` inline dans props memo, (4) keys instables dans les listes. Classe en critical / important / minor. Max 5 items. Aucune flatterie."*
+
+Ne passer à la livraison qu'après avoir traité tous les `critical`.
+
 ---
 
 ### Pendant les modifications
@@ -329,4 +341,6 @@ Le projet utilise `tools/ux-audit-hook.cjs`. Ne pas dupliquer la logique des hoo
 
 ---
 
-**Dernière mise à jour** : 2026-03-31 par Claude Sonnet 4.6
+**Dernière mise à jour** : 2026-04-11 par Claude Sonnet 4.6
+
+- Ajouté §6 : Protocole T3 délégation obligatoire (audit Explore avant coder + reviewer Explore après typecheck)

@@ -20,6 +20,7 @@ import { ClipsSection } from './AnimationRightPanel/ClipsSection';
 import { PosesSection } from './AnimationRightPanel/PosesSection';
 import { SequenceSection } from './AnimationRightPanel/SequenceSection';
 import { AutoClipsSection } from './AnimationRightPanel/AutoClipsSection';
+import { AnimationStatusBar } from './AnimationRightPanel/AnimationStatusBar';
 
 interface AnimationRightPanelProps {
   characterId: string;
@@ -133,6 +134,25 @@ export function AnimationRightPanel({
     setPendingDeletePoseId(null);
   }, [rig, selectedPoseId, pendingDeletePoseId, deletePose, onSelectPose]);
 
+  // Suppr → supprimer la position sélectionnée (priorité) ou l'animation sélectionnée
+  // Standard Spine/DragonBones — guard INPUT/SELECT pour ne pas interférer avec le renommage inline
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      e.preventDefault();
+      if (selectedPoseId) {
+        handleDeletePose();
+      } else if (selectedClipId) {
+        handleDeleteClip();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedClipId, selectedPoseId, handleDeleteClip, handleDeletePose]);
+
   const handleReorderKeyframes = useCallback(
     (fromIdx: number, toIdx: number) => {
       if (!rig || !selectedClipId) return;
@@ -229,7 +249,7 @@ export function AnimationRightPanel({
   if (!rig) {
     return (
       <div style={{ padding: 12, color: 'var(--color-text-muted)', fontSize: 12 }}>
-        Créez d'abord un rig dans l'Éditeur osseux.
+        Crée d'abord un squelette dans l'onglet 🦴 Squelette.
       </div>
     );
   }
@@ -257,7 +277,7 @@ export function AnimationRightPanel({
             flexShrink: 0,
           }}
         >
-          {(['🎬 Clip', '🧍 Poses', '▶ Play'] as const).map((label, i) => {
+          {(['🎬 Animation', '🧍 Positions', '▶ Lecture'] as const).map((label, i) => {
             const stepNum = i + 1;
             const active = step === stepNum;
             const done = step > stepNum;
@@ -307,20 +327,6 @@ export function AnimationRightPanel({
         onRenameClip={handleRenameClip}
       />
 
-      {/* Hint étape 1 → 2 (mode débutant) */}
-      {isBeginnerMode && step === 1 && (
-        <div
-          style={{
-            padding: '10px 12px',
-            fontSize: 11,
-            color: 'var(--color-text-muted)',
-            lineHeight: 1.5,
-          }}
-        >
-          ← Sélectionne un clip pour commencer à créer des poses.
-        </div>
-      )}
-
       {/* ── Étape 2 : Poses ── */}
       {showPoses && (
         <PosesSection
@@ -343,23 +349,6 @@ export function AnimationRightPanel({
         />
       )}
 
-      {/* Hint étape 2 → 3 (mode débutant) */}
-      {isBeginnerMode && step === 2 && (
-        <div
-          style={{
-            padding: '10px 12px',
-            fontSize: 11,
-            color: 'var(--color-text-muted)',
-            lineHeight: 1.5,
-            flexShrink: 0,
-          }}
-        >
-          Crée au moins <strong style={{ color: 'var(--color-text-secondary)' }}>2 poses</strong>{' '}
-          puis ajoute-les à la séquence avec{' '}
-          <strong style={{ color: 'var(--color-primary)' }}>📸 + Séq.</strong>
-        </div>
-      )}
-
       {/* ── Étape 3 : Séquence + Lecture ── */}
       {showSequence && selectedClip && (
         <SequenceSection
@@ -377,6 +366,15 @@ export function AnimationRightPanel({
           onCleanOrphans={handleCleanOrphans}
         />
       )}
+
+      {/* ── Barre de statut contextuelle (remplace les hints éparpillés) ── */}
+      <AnimationStatusBar
+        selectedClipId={selectedClipId}
+        posesCount={poses.length}
+        selectedPoseId={selectedPoseId}
+        keyframesCount={selectedClip?.keyframes?.length ?? 0}
+        isPlaying={isPlaying}
+      />
 
       {/* ── Clips Auto (accordéon, replié par défaut) ── */}
       <AutoClipsSection

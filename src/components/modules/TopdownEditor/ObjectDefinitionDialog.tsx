@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, ChevronDown, ChevronRight, Trash2, Settings } from 'lucide-react';
 import { useMapsStore } from '@/stores/mapsStore';
 import { SPRITE_CATEGORIES, OBJECT_COMPONENT_META } from '@/types/sprite';
+import { SliderRow } from '@/components/ui/SliderRow';
+import { Input } from '@/components/ui/input';
 import { Z_INDEX } from '@/utils/zIndexLayers';
 import type {
   ObjectDefinition,
@@ -111,82 +113,6 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TextInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      style={{
-        width: '100%',
-        background: 'rgba(255,255,255,0.06)',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: 6,
-        padding: '5px 8px',
-        color: 'rgba(255,255,255,0.9)',
-        fontSize: 11,
-        outline: 'none',
-      }}
-    />
-  );
-}
-
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  unit = '',
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  unit?: string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', width: 90, flexShrink: 0 }}>
-        {label}
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ flex: 1, accentColor: '#8b5cf6' }}
-      />
-      <span
-        style={{
-          fontSize: 10,
-          color: 'rgba(255,255,255,0.7)',
-          width: 36,
-          textAlign: 'right',
-          flexShrink: 0,
-        }}
-      >
-        {step < 1 ? value.toFixed(1) : Math.round(value)}
-        {unit}
-      </span>
-    </div>
-  );
-}
-
 function Toggle({
   label,
   value,
@@ -258,10 +184,13 @@ function ComponentEditor({
       return (
         <div>
           <Label>URL de l'image</Label>
-          <TextInput
+          <Input
             value={c.spriteAssetUrl}
-            onChange={(v) => onChange({ spriteAssetUrl: v } as Partial<SpriteComponent>)}
+            onChange={(e) =>
+              onChange({ spriteAssetUrl: e.target.value } as Partial<SpriteComponent>)
+            }
             placeholder="chemin/vers/image.png"
+            style={{ fontSize: 11 }}
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
             {(['srcX', 'srcY', 'srcW', 'srcH'] as const).map((key) => (
@@ -433,26 +362,31 @@ function ComponentEditor({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div>
             <Label>ID de la scène VN</Label>
-            <TextInput
+            <Input
               value={c.sceneId}
-              onChange={(v) => onChange({ sceneId: v } as Partial<DialogueComponent>)}
+              onChange={(e) => onChange({ sceneId: e.target.value } as Partial<DialogueComponent>)}
               placeholder="ex: scene-abc123"
+              style={{ fontSize: 11 }}
             />
           </div>
           <div>
             <Label>Texte par défaut (optionnel)</Label>
-            <TextInput
+            <Input
               value={c.text ?? ''}
-              onChange={(v) => onChange({ text: v } as Partial<DialogueComponent>)}
+              onChange={(e) => onChange({ text: e.target.value } as Partial<DialogueComponent>)}
               placeholder="Bonjour !"
+              style={{ fontSize: 11 }}
             />
           </div>
           <div>
             <Label>Condition de déclenchement (optionnel)</Label>
-            <TextInput
+            <Input
               value={c.condition ?? ''}
-              onChange={(v) => onChange({ condition: v } as Partial<DialogueComponent>)}
+              onChange={(e) =>
+                onChange({ condition: e.target.value } as Partial<DialogueComponent>)
+              }
               placeholder="ex: var.flag_rencontre === true"
+              style={{ fontSize: 11 }}
             />
           </div>
         </div>
@@ -562,10 +496,11 @@ function ComponentEditor({
       return (
         <div>
           <Label>Fichier audio (URL)</Label>
-          <TextInput
+          <Input
             value={c.assetUrl}
-            onChange={(v) => onChange({ assetUrl: v } as Partial<SoundComponent>)}
+            onChange={(e) => onChange({ assetUrl: e.target.value } as Partial<SoundComponent>)}
             placeholder="chemin/vers/son.wav"
+            style={{ fontSize: 11 }}
           />
           <div style={{ marginTop: 8 }}>
             <SliderRow
@@ -650,10 +585,13 @@ function ComponentEditor({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div>
             <Label>Carte de destination (ID)</Label>
-            <TextInput
+            <Input
               value={c.targetMapId}
-              onChange={(v) => onChange({ targetMapId: v } as Partial<PortalComponent>)}
+              onChange={(e) =>
+                onChange({ targetMapId: e.target.value } as Partial<PortalComponent>)
+              }
               placeholder="ex: map-village"
+              style={{ fontSize: 11 }}
             />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -735,10 +673,13 @@ function ComponentEditor({
           {c.locked && (
             <div>
               <Label>Condition de déverrouillage (optionnel)</Label>
-              <TextInput
+              <Input
                 value={c.unlockCondition ?? ''}
-                onChange={(v) => onChange({ unlockCondition: v } as Partial<PortalComponent>)}
+                onChange={(e) =>
+                  onChange({ unlockCondition: e.target.value } as Partial<PortalComponent>)
+                }
                 placeholder="ex: var.clef_obtenue === true"
+                style={{ fontSize: 11 }}
               />
             </div>
           )}

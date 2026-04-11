@@ -22,6 +22,7 @@ import { useMapsStore } from '@/stores/mapsStore';
 import SpriteImportDialog from './SpriteImportDialog';
 import { SPRITE_CATEGORIES, SPRITE_ANIM_GROUPS } from '@/types/sprite';
 import type { SpriteSheetConfig, EntityBehavior } from '@/types/sprite';
+import { drawSpriteFrame, getIdleFramePos } from '@/utils/spriteCanvas';
 import { Z_INDEX } from '@/utils/zIndexLayers';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -29,69 +30,6 @@ import { Z_INDEX } from '@/utils/zIndexLayers';
 /** Tronque un nom technique long (UUID, timestamp) à 15 chars + '…' */
 function truncateName(name: string): string {
   return name.length > 18 ? name.slice(0, 15) + '…' : name;
-}
-
-/**
- * Retourne la position (col, row) de la 1ère frame idle du spritesheet.
- * Priorité : idle_down > idle_up > walk_down > walk_up > frame 0,0
- */
-function getIdleFramePos(config: SpriteSheetConfig): { col: number; row: number } {
-  const PRIO = ['idle_down', 'idle_up', 'walk_down', 'walk_up'] as const;
-  for (const tag of PRIO) {
-    const anim = config.animations[tag as keyof typeof config.animations];
-    if (anim?.frames?.length) {
-      const frame = anim.frames[0];
-      return { col: frame % config.cols, row: Math.floor(frame / config.cols) };
-    }
-  }
-  return { col: 0, row: 0 };
-}
-
-/** Dessine un frame du spritesheet sur un canvas (avec flipX optionnel) */
-function drawSpriteFrame(
-  canvas: HTMLCanvasElement,
-  img: HTMLImageElement,
-  frameIdx: number,
-  cols: number,
-  frameW: number,
-  frameH: number,
-  flipX = false
-): void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
-  const col = frameIdx % Math.max(1, cols);
-  const row = Math.floor(frameIdx / Math.max(1, cols));
-  if (flipX) {
-    ctx.save();
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(
-      img,
-      col * frameW,
-      row * frameH,
-      frameW,
-      frameH,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-    ctx.restore();
-  } else {
-    ctx.drawImage(
-      img,
-      col * frameW,
-      row * frameH,
-      frameW,
-      frameH,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-  }
 }
 
 /**

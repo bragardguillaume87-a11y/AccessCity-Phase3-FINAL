@@ -104,6 +104,8 @@ interface SequenceSectionProps {
   onKeyframeEasing: (index: number, easing: EasingType, bezierPoints?: BezierPoints) => void;
   onPlayToggle: () => void;
   onReorderKeyframes?: (fromIdx: number, toIdx: number) => void;
+  /** Supprime tous les keyframes dont le poseId ne correspond à aucune pose existante */
+  onCleanOrphans?: () => void;
 }
 
 export function SequenceSection({
@@ -118,6 +120,7 @@ export function SequenceSection({
   onKeyframeEasing,
   onPlayToggle,
   onReorderKeyframes,
+  onCleanOrphans,
 }: SequenceSectionProps) {
   const [bezierPopoverIdx, setBezierPopoverIdx] = useState<number | null>(null);
   const [hoveredKfIdx, setHoveredKfIdx] = useState<number | null>(null);
@@ -127,6 +130,7 @@ export function SequenceSection({
   const keyframes = selectedClip.keyframes ?? [];
   const totalDuration = keyframes.reduce((s, kf) => s + kf.duration, 0).toFixed(1);
   const canPlay = keyframes.length >= 2;
+  const orphanCount = keyframes.filter((kf) => !poses.find((p) => p.id === kf.poseId)).length;
 
   // Refs sur chaque ligne pour permettre le scroll depuis la mini-bar
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -156,21 +160,55 @@ export function SequenceSection({
         <div style={rowBetween}>
           <p style={sectionLabel}>
             ⏱ Séquence — {keyframes.length}kf · {totalDuration}s
+            {orphanCount > 0 && (
+              <span
+                title={`${orphanCount} étape(s) pointent vers des poses supprimées`}
+                style={{
+                  marginLeft: 6,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: 'var(--color-danger)',
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.4)',
+                  borderRadius: 3,
+                  padding: '0 4px',
+                  verticalAlign: 'middle',
+                }}
+              >
+                ⚠️ {orphanCount}
+              </span>
+            )}
           </p>
-          {selectedPoseId && (
-            <button
-              type="button"
-              onClick={onAddPoseToClip}
-              title="Ajouter la pose sélectionnée à la séquence"
-              style={{
-                ...smallBtn,
-                color: 'var(--color-primary)',
-                borderColor: 'var(--color-primary-40)',
-              }}
-            >
-              📸 + Séq.
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {orphanCount > 0 && onCleanOrphans && (
+              <button
+                type="button"
+                onClick={onCleanOrphans}
+                title={`Supprimer les ${orphanCount} étape(s) dont la pose est introuvable`}
+                style={{
+                  ...smallBtn,
+                  color: 'var(--color-danger)',
+                  borderColor: 'rgba(239,68,68,0.4)',
+                }}
+              >
+                🧹 Nettoyer
+              </button>
+            )}
+            {selectedPoseId && (
+              <button
+                type="button"
+                onClick={onAddPoseToClip}
+                title="Ajouter la pose sélectionnée à la séquence"
+                style={{
+                  ...smallBtn,
+                  color: 'var(--color-primary)',
+                  borderColor: 'var(--color-primary-40)',
+                }}
+              >
+                📸 + Séq.
+              </button>
+            )}
+          </div>
         </div>
 
         {keyframes.length === 0 ? (
@@ -250,19 +288,40 @@ export function SequenceSection({
                     >
                       {idx + 1}
                     </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--color-text-secondary)',
-                        flex: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 40,
-                      }}
-                    >
-                      {pose?.name ?? 'Pose inconnue'}
-                    </span>
+                    {pose ? (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--color-text-secondary)',
+                          flex: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 40,
+                        }}
+                      >
+                        {pose.name}
+                      </span>
+                    ) : (
+                      <span
+                        title="Cette pose a été supprimée. Cliquez sur 🧹 Nettoyer pour retirer ces étapes."
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: 'var(--color-danger)',
+                          background: 'rgba(239,68,68,0.12)',
+                          border: '1px solid rgba(239,68,68,0.35)',
+                          borderRadius: 3,
+                          padding: '1px 5px',
+                          flex: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ⚠️ Pose supprimée
+                      </span>
+                    )}
 
                     {!isBeginnerMode && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>

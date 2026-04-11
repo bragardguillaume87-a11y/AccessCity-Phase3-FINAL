@@ -186,6 +186,17 @@ export function AnimationRightPanel({
     [rig, selectedClipId, updateClip]
   );
 
+  const handleCleanOrphans = useCallback(() => {
+    if (!rig || !selectedClipId) return;
+    const clip = rig.animationClips.find((c) => c.id === selectedClipId);
+    if (!clip) return;
+    const poseIds = new Set(rig.poses.map((p) => p.id));
+    updateClip(rig.id, selectedClipId, {
+      keyframes: (clip.keyframes ?? []).filter((kf) => poseIds.has(kf.poseId)),
+    });
+    uiSounds.minigameDing();
+  }, [rig, selectedClipId, updateClip]);
+
   const handleKeyframeDuration = useCallback(
     (index: number, duration: number) => {
       if (!rig || !selectedClipId) return;
@@ -363,6 +374,7 @@ export function AnimationRightPanel({
           onKeyframeEasing={handleKeyframeEasing}
           onPlayToggle={onPlayToggle}
           onReorderKeyframes={handleReorderKeyframes}
+          onCleanOrphans={handleCleanOrphans}
         />
       )}
 

@@ -473,10 +473,18 @@ export const useRigStore = create<RigState>()(
                       : kf.poseId,
             }));
 
+            // Nom unique : "Idle Breathing", "Idle Breathing 2", "Idle Breathing 3"...
+            const baseName = generated.clip.name;
+            const existingCount = updatedRig.animationClips.filter(
+              (c) => c.name === baseName || c.name.startsWith(baseName + ' ')
+            ).length;
+            const clipName = existingCount === 0 ? baseName : `${baseName} ${existingCount + 1}`;
+
             const clipId = generateId('clip');
             const clip = {
               id: clipId,
               ...generated.clip,
+              name: clipName,
               poseIds: [neutralId, inhaleId, exhaleId, neutralId],
               keyframes,
             };

@@ -624,7 +624,15 @@ export function BoneEditorRightPanel({
             {rig ? 'Aucun os. Cliquez sur « 🦴 + » ou « 🧍 Modèle ».' : 'Aucun rig. Créez-en un.'}
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              maxHeight: 220,
+              overflowY: 'auto',
+            }}
+          >
             {sortBonesByHierarchy(bones).map((b) => {
               const boneFirstPart = parts.find((p) => p.boneId === b.id);
               const depth = getBoneDepth(b, bones);

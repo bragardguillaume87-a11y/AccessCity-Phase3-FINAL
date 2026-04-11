@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useCharacterForm } from '../../hooks/useCharacterForm';
 import { useMoodPresets } from '../../hooks/useMoodPresets';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Wand2, Settings2 } from 'lucide-react';
@@ -21,6 +17,7 @@ import EditorFooter from './CharacterEditorModal/components/EditorFooter';
 // Expert mode hooks
 import { useCharacterPreview } from './CharacterEditorModal/hooks/useCharacterPreview';
 import { useCharacterCompleteness } from './CharacterEditorModal/hooks/useCharacterCompleteness';
+import CharacterStatsSection from './CharacterEditorModal/components/CharacterStatsSection';
 
 // Wizard mode
 import CharacterWizard from './CharacterWizard';
@@ -63,25 +60,38 @@ export default function CharacterEditorModal({
   character,
   characters,
   onSave,
-  defaultMode = 'wizard'
+  defaultMode = 'wizard',
 }: CharacterEditorModalProps) {
   const [mode, setMode] = useState<EditorMode>(defaultMode);
+  const [wizardDirty, setWizardDirty] = useState(false);
 
-  // Reset mode when modal opens
+  // Reset mode and dirty flag when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setMode(defaultMode);
+    } else {
+      setWizardDirty(false);
     }
   }, [isOpen, defaultMode]);
 
   const handleModeToggle = () => {
-    setMode(prev => prev === 'wizard' ? 'expert' : 'wizard');
+    setMode((prev) => (prev === 'wizard' ? 'expert' : 'wizard'));
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open && wizardDirty && mode === 'wizard') {
+      const confirmClose = window.confirm(
+        'Vous avez des modifications non sauvegardées. Voulez-vous vraiment fermer ?'
+      );
+      if (!confirmClose) return;
+    }
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange} modal={true}>
       <DialogContent
-        className="max-w-7xl h-[90vh] p-0 gap-0 dark bg-background text-foreground"
+        className="max-w-7xl h-[90vh] p-0 gap-0 bg-background text-foreground"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -114,6 +124,7 @@ export default function CharacterEditorModal({
             characters={characters}
             onSave={onSave}
             onClose={onClose}
+            onDirtyChange={setWizardDirty}
           />
         ) : (
           <ExpertModeContent
@@ -137,7 +148,7 @@ function ExpertModeContent({
   character,
   characters,
   onSave,
-  onClose
+  onClose,
 }: {
   character: Partial<Character>;
   characters: Character[];
@@ -155,8 +166,10 @@ function ExpertModeContent({
     removeMood,
     updateSprite,
     renameMood,
+    setIsProtagonist,
+    setInitialStat,
     handleSave,
-    resetForm
+    resetForm,
   } = useCharacterForm(character as Character, characters, onSave);
 
   const moodPresets = [...useMoodPresets()];
@@ -201,7 +214,7 @@ function ExpertModeContent({
     onClose();
   };
 
-  const hasFormErrors = Object.keys(errors).some(key => errors[key as keyof typeof errors]);
+  const hasFormErrors = Object.keys(errors).some((key) => errors[key as keyof typeof errors]);
 
   return (
     <>
@@ -222,7 +235,8 @@ function ExpertModeContent({
                 formData={{
                   name: formData.name,
                   description: formData.description,
-                  id: character.id
+                  id: character.id,
+                  role: formData.role,
                 }}
                 errors={errors}
                 onUpdateField={updateField}
@@ -231,7 +245,7 @@ function ExpertModeContent({
               <MoodManagementSection
                 formData={{
                   moods: formData.moods,
-                  sprites: formData.sprites
+                  sprites: formData.sprites,
                 }}
                 errors={errors}
                 warnings={warnings}
@@ -240,6 +254,13 @@ function ExpertModeContent({
                 onRenameMood={renameMood}
                 onUpdateSprite={updateSprite}
                 moodPresets={moodPresets}
+              />
+
+              <CharacterStatsSection
+                isProtagonist={formData.isProtagonist ?? false}
+                initialStats={formData.initialStats ?? {}}
+                onToggleProtagonist={setIsProtagonist}
+                onUpdateStat={setInitialStat}
               />
             </div>
           </ScrollArea>
@@ -250,7 +271,7 @@ function ExpertModeContent({
           formData={{
             name: formData.name,
             sprites: formData.sprites,
-            moods: formData.moods
+            moods: formData.moods,
           }}
           previewMood={previewMood}
           onPreviewMoodChange={setPreviewMood}

@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
-import type { Scene, Character, SelectedElementType, ModalType } from '@/types';
+import type { Scene, Character, SelectedElementType, ModalType, Dialogue } from '@/types';
 import {
   useUIStore,
   useCharacterActions,
   useSceneActions,
   useDialogueActions,
-  useSceneCharacterActions
+  useSceneCharacterActions,
 } from '../../stores/index';
 import { useScenesStore } from '../../stores/scenesStore';
 import { useDialoguesStore } from '../../stores/dialoguesStore';
@@ -46,31 +46,72 @@ export default function PropertiesPanel({
   const { addDialogue, updateDialogue } = useDialogueActions();
   const { updateSceneCharacter } = useSceneCharacterActions();
   const { addCharacter, updateCharacter } = useCharacterActions();
-  const lastSavedStr = useUIStore(state => state.lastSaved);
-  const isSaving = useUIStore(state => state.isSaving);
+  const lastSavedStr = useUIStore((state) => state.lastSaved);
+  const isSaving = useUIStore((state) => state.isSaving);
 
   // Convert lastSaved from string to number (timestamp) for sub-components
   const lastSaved = lastSavedStr ? new Date(lastSavedStr).getTime() : undefined;
 
   // IMPORTANT: All hooks must be called BEFORE any conditional returns (React rules)
   // Memoized character duplication handler
-  const handleDuplicateCharacter = useCallback((character: Character) => {
-    const existingIds = characters.map(c => c.id);
-    const existingNames = characters.map(c => c.name);
-    const duplicate = duplicateCharacter(character, existingIds, existingNames);
-    addCharacter();
-    updateCharacter(duplicate);
-  }, [characters, addCharacter, updateCharacter]);
+  const handleDuplicateCharacter = useCallback(
+    (character: Character) => {
+      const existingIds = characters.map((c) => c.id);
+      const existingNames = characters.map((c) => c.name);
+      const duplicate = duplicateCharacter(character, existingIds, existingNames);
+      addCharacter();
+      updateCharacter(duplicate);
+    },
+    [characters, addCharacter, updateCharacter]
+  );
 
   // Memoized dialogue duplication handler
-  const handleDuplicateDialogue = useCallback((sceneId: string, dialogueIndex: number) => {
-    const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
-    const dialogue = dialogues[dialogueIndex];
-    if (dialogue) {
-      const duplicated = duplicateDialogue(dialogue);
-      addDialogue(sceneId, duplicated);
-    }
-  }, [addDialogue]);
+  const handleDuplicateDialogue = useCallback(
+    (sceneId: string, dialogueIndex: number) => {
+      const dialogues = useDialoguesStore.getState().getDialoguesByScene(sceneId);
+      const dialogue = dialogues[dialogueIndex];
+      if (dialogue) {
+        const duplicated = duplicateDialogue(dialogue);
+        addDialogue(sceneId, duplicated);
+      }
+    },
+    [addDialogue]
+  );
+
+  // ── Split dialogue ✂️ ────────────────────────────────────────────────────
+  // Reçoit les 2 moitiés de texte, met à jour l'actuel et insère le nouveau après.
+  const handleSplitDialogue = useCallback(
+    (
+      sceneId: string,
+      dialogueIndex: number,
+      text1: string,
+      richText1: string | undefined,
+      text2: string,
+      richText2: string | undefined
+    ) => {
+      const { getDialoguesByScene, insertDialoguesAfter } = useDialoguesStore.getState();
+      const dialogues = getDialoguesByScene(sceneId);
+      const original = dialogues[dialogueIndex];
+      if (!original || !text1 || !text2) return;
+
+      // Dialogue 1 : mettre à jour l'actuel avec la première moitié
+      updateDialogue(sceneId, dialogueIndex, {
+        text: text1,
+        richText: richText1,
+        choices: [], // les choix passent sur le 2e fragment
+      });
+
+      // Dialogue 2 : nouveau dialogue après l'actuel, avec la 2e moitié + choix originaux
+      const newDialogue: Dialogue = {
+        ...original,
+        id: `dialogue-${Date.now()}`,
+        text: text2,
+        richText: richText2,
+      };
+      insertDialoguesAfter(sceneId, dialogueIndex, [newDialogue]);
+    },
+    [updateDialogue]
+  );
 
   // No selection
   if (!selectedElement) {
@@ -92,7 +133,7 @@ export default function PropertiesPanel({
 
   // Character properties
   if (selectedElement.type === 'character') {
-    const character = characters.find(c => c.id === selectedElement.id);
+    const character = characters.find((c) => c.id === selectedElement.id);
     if (!character) {
       return (
         <div className="h-full flex items-center justify-center p-6">
@@ -117,8 +158,8 @@ export default function PropertiesPanel({
   // Scene character placement
   if (selectedElement.type === 'sceneCharacter' && selectedScene) {
     const sceneChars = useSceneElementsStore.getState().getCharactersForScene(selectedScene.id);
-    const sceneChar = sceneChars.find(sc => sc.id === selectedElement.sceneCharacterId);
-    const character = sceneChar ? characters.find(c => c.id === sceneChar.characterId) : null;
+    const sceneChar = sceneChars.find((sc) => sc.id === selectedElement.sceneCharacterId);
+    const character = sceneChar ? characters.find((c) => c.id === sceneChar.characterId) : null;
 
     if (!sceneChar || !character) {
       return (
@@ -160,6 +201,9 @@ export default function PropertiesPanel({
         scenes={scenes}
         onUpdate={updateDialogue}
         onDuplicate={() => handleDuplicateDialogue(selectedScene.id, selectedElement.index)}
+        onSplit={(t1, r1, t2, r2) =>
+          handleSplitDialogue(selectedScene.id, selectedElement.index, t1, r1, t2, r2)
+        }
         onOpenModal={onOpenModal}
         lastSaved={lastSaved}
         isSaving={isSaving}

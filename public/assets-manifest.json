@@ -1,15 +1,39 @@
 {
-  "generated": "2026-02-22T14:23:47.615Z",
+  "generated": "2026-04-11T01:07:27.136Z",
   "version": "1.0.0",
-  "totalAssets": 12,
+  "totalAssets": 35,
   "categories": [
+    "audio",
     "backgrounds",
     "characters",
+    "illustrations",
     "music",
-    "sfx"
+    "sfx",
+    "sprites-2d",
+    "tilesets"
   ],
   "assets": {
+    "audio": [
+      {
+        "id": "audio/lookupmastered-1773613993991",
+        "name": "lookupmastered-1773613993991",
+        "path": "/assets/audio/lookupmastered-1773613993991.mp3",
+        "type": "mp3",
+        "category": "audio",
+        "size": 3001838,
+        "modified": "2026-03-16T03:00:37.552Z"
+      }
+    ],
     "backgrounds": [
+      {
+        "id": "backgrounds/584e6957-9dd1-4ccf-96a7-061c0984069c-1774300496060",
+        "name": "584e6957-9dd1-4ccf-96a7-061c0984069c-1774300496060",
+        "path": "/assets/backgrounds/584e6957-9dd1-4ccf-96a7-061c0984069c-1774300496060.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1223788,
+        "modified": "2026-03-23T21:14:56.069Z"
+      },
       {
         "id": "backgrounds/61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
         "name": "61b0ed26-e785-4e21-94ad-02e881af526a-1769206210715",
@@ -17,7 +41,16 @@
         "type": "png",
         "category": "backgrounds",
         "size": 1273399,
-        "modified": "2026-01-23T22:10:10.806Z"
+        "modified": "2026-03-20T17:10:54.176Z"
+      },
+      {
+        "id": "backgrounds/93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251",
+        "name": "93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251",
+        "path": "/assets/backgrounds/93a37115-8c71-4a48-8f4f-128bf71e91ed-1772393038251.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1748510,
+        "modified": "2026-03-20T17:10:54.180Z"
       },
       {
         "id": "backgrounds/de4d77a4-a43e-42d6-893e-ac7bb79a23b4-1769206204902",
@@ -26,7 +59,7 @@
         "type": "png",
         "category": "backgrounds",
         "size": 1784558,
-        "modified": "2026-01-23T22:10:04.911Z"
+        "modified": "2026-03-20T17:10:54.187Z"
       },
       {
         "id": "backgrounds/ea853930-3cc1-4069-a8b5-d96ecc2497d2-1769206213293",
@@ -35,7 +68,16 @@
         "type": "png",
         "category": "backgrounds",
         "size": 1137731,
-        "modified": "2026-01-23T22:10:13.313Z"
+        "modified": "2026-03-20T17:10:54.194Z"
+      },
+      {
+        "id": "backgrounds/fc2a5199-055e-49e8-b356-7cfea7aeaa41-1774302858604",
+        "name": "fc2a5199-055e-49e8-b356-7cfea7aeaa41-1774302858604",
+        "path": "/assets/backgrounds/fc2a5199-055e-49e8-b356-7cfea7aeaa41-1774302858604.png",
+        "type": "png",
+        "category": "backgrounds",
+        "size": 1274945,
+        "modified": "2026-03-23T21:54:18.621Z"
       }
     ],
     "characters": [
@@ -46,7 +88,7 @@
         "type": "png",
         "category": "characters",
         "size": 111670,
-        "modified": "2026-01-26T22:57:27.359Z"
+        "modified": "2026-03-20T17:10:54.195Z"
       },
       {
         "id": "characters/a-1769628071209",
@@ -55,7 +97,7 @@
         "type": "png",
         "category": "characters",
         "size": 111543,
-        "modified": "2026-01-28T19:21:11.209Z"
+        "modified": "2026-03-20T17:10:54.196Z"
       },
       {
         "id": "characters/aa-1769631637542",
@@ -64,7 +106,7 @@
         "type": "png",
         "category": "characters",
         "size": 119387,
-        "modified": "2026-01-28T20:20:37.546Z"
+        "modified": "2026-03-20T17:10:54.197Z"
       },
       {
         "id": "characters/b-1769628075775",
@@ -73,7 +115,7 @@
         "type": "png",
         "category": "characters",
         "size": 126820,
-        "modified": "2026-01-28T19:21:15.773Z"
+        "modified": "2026-03-20T17:10:54.198Z"
       },
       {
         "id": "characters/bb-1769631641012",
@@ -82,7 +124,7 @@
         "type": "png",
         "category": "characters",
         "size": 133932,
-        "modified": "2026-01-28T20:20:41.014Z"
+        "modified": "2026-03-20T17:10:54.199Z"
       },
       {
         "id": "characters/cc-1769631643290",
@@ -91,18 +133,74 @@
         "type": "png",
         "category": "characters",
         "size": 105689,
-        "modified": "2026-01-28T20:20:43.292Z"
+        "modified": "2026-03-20T17:10:54.200Z"
+      },
+      {
+        "id": "characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460-1774292709204-1774292774301",
+        "name": "f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460-1774292709204-1774292774301",
+        "path": "/assets/characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460-1774292709204-1774292774301.png",
+        "type": "png",
+        "category": "characters",
+        "size": 822643,
+        "modified": "2026-03-23T19:06:14.304Z"
+      },
+      {
+        "id": "characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460-1774295408025",
+        "name": "f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460-1774295408025",
+        "path": "/assets/characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460-1774295408025.png",
+        "type": "png",
+        "category": "characters",
+        "size": 1885370,
+        "modified": "2026-03-23T19:50:08.033Z"
+      },
+      {
+        "id": "characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460",
+        "name": "f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460",
+        "path": "/assets/characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774220786460.png",
+        "type": "png",
+        "category": "characters",
+        "size": 1221165,
+        "modified": "2026-03-22T23:06:26.487Z"
+      },
+      {
+        "id": "characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774309702934",
+        "name": "f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774309702934",
+        "path": "/assets/characters/f5e09d66-31b3-419c-b542-e1dffe84ca4a-1774309702934.png",
+        "type": "png",
+        "category": "characters",
+        "size": 708789,
+        "modified": "2026-03-23T23:48:22.964Z"
+      }
+    ],
+    "illustrations": [
+      {
+        "id": "illustrations/frozenwinter-1774046605870",
+        "name": "frozenwinter-1774046605870",
+        "path": "/assets/illustrations/frozenwinter-1774046605870.ogg",
+        "type": "ogg",
+        "category": "illustrations",
+        "size": 2915468,
+        "modified": "2026-03-20T22:43:25.884Z"
+      },
+      {
+        "id": "illustrations/hope-1774046617628",
+        "name": "hope-1774046617628",
+        "path": "/assets/illustrations/hope-1774046617628.ogg",
+        "type": "ogg",
+        "category": "illustrations",
+        "size": 4639163,
+        "modified": "2026-03-20T22:43:37.685Z"
       }
     ],
     "music": [
       {
-        "id": "music/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196",
-        "name": "ambbirdcampagne-id-0097lasonotheque.fr-1771770197196",
-        "path": "/assets/music/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196.wav",
-        "type": "wav",
+        "id": "music/gymnopdie-no.1-1774046405394",
+        "name": "gymnopdie-no.1-1774046405394",
+        "path": "/assets/music/gymnopdie-no.1-1774046405394.ogg",
+        "type": "ogg",
         "category": "music",
-        "size": 21403284,
-        "modified": "2026-02-22T14:23:17.289Z"
+        "size": 3613929,
+        "modified": "2026-03-20T22:40:05.426Z"
       },
       {
         "id": "music/lookupguitarjazz-1769627898826",
@@ -112,17 +210,138 @@
         "category": "music",
         "size": 3427288,
         "modified": "2026-01-28T19:18:18.892Z"
+      },
+      {
+        "id": "music/lookupmastered-1773773606985",
+        "name": "lookupmastered-1773773606985",
+        "path": "/assets/music/lookupmastered-1773773606985.mp3",
+        "type": "mp3",
+        "category": "music",
+        "size": 3001838,
+        "modified": "2026-03-20T17:10:54.212Z"
+      },
+      {
+        "id": "music/minuet-slower-1774046413763",
+        "name": "minuet-slower-1774046413763",
+        "path": "/assets/music/minuet-slower-1774046413763.ogg",
+        "type": "ogg",
+        "category": "music",
+        "size": 4019823,
+        "modified": "2026-03-20T22:40:13.794Z"
       }
     ],
     "sfx": [
       {
-        "id": "sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770227461",
-        "name": "ambbirdcampagne-id-0097lasonotheque.fr-1771770227461",
-        "path": "/assets/sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770227461.wav",
+        "id": "sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196",
+        "name": "ambbirdcampagne-id-0097lasonotheque.fr-1771770197196",
+        "path": "/assets/sfx/ambbirdcampagne-id-0097lasonotheque.fr-1771770197196.wav",
         "type": "wav",
         "category": "sfx",
         "size": 21403284,
-        "modified": "2026-02-22T14:23:47.562Z"
+        "modified": "2026-03-20T17:10:54.341Z"
+      }
+    ],
+    "sprites-2d": [
+      {
+        "id": "sprites-2d/0b84f4f9-68b1-42d0-94ac-a888f4e4a5e6-1773184589861",
+        "name": "0b84f4f9-68b1-42d0-94ac-a888f4e4a5e6-1773184589861",
+        "path": "/assets/sprites-2d/0b84f4f9-68b1-42d0-94ac-a888f4e4a5e6-1773184589861.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 1451984,
+        "modified": "2026-03-20T17:10:54.347Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773088471211",
+        "name": "characters-1773088471211",
+        "path": "/assets/sprites-2d/characters-1773088471211.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-20T17:10:54.348Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773096409772",
+        "name": "characters-1773096409772",
+        "path": "/assets/sprites-2d/characters-1773096409772.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-20T17:10:54.349Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773184807110",
+        "name": "characters-1773184807110",
+        "path": "/assets/sprites-2d/characters-1773184807110.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-20T17:10:54.349Z"
+      },
+      {
+        "id": "sprites-2d/characters-1773878786745",
+        "name": "characters-1773878786745",
+        "path": "/assets/sprites-2d/characters-1773878786745.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 12754,
+        "modified": "2026-03-20T17:10:54.350Z"
+      },
+      {
+        "id": "sprites-2d/snes---secret-of-evermore---boy---boy-1773185652844",
+        "name": "snes---secret-of-evermore---boy---boy-1773185652844",
+        "path": "/assets/sprites-2d/snes---secret-of-evermore---boy---boy-1773185652844.png",
+        "type": "png",
+        "category": "sprites-2d",
+        "size": 67851,
+        "modified": "2026-03-20T17:10:54.351Z"
+      }
+    ],
+    "tilesets": [
+      {
+        "id": "tilesets/hyptosistile-art-batch-1-1773573693258",
+        "name": "hyptosistile-art-batch-1-1773573693258",
+        "path": "/assets/tilesets/hyptosistile-art-batch-1-1773573693258.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 525029,
+        "modified": "2026-03-20T17:10:54.355Z"
+      },
+      {
+        "id": "tilesets/maple-tree-1773619139729",
+        "name": "maple-tree-1773619139729",
+        "path": "/assets/tilesets/maple-tree-1773619139729.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 2418,
+        "modified": "2026-03-20T17:10:54.356Z"
+      },
+      {
+        "id": "tilesets/sheet-1773081504531",
+        "name": "sheet-1773081504531",
+        "path": "/assets/tilesets/sheet-1773081504531.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 10314,
+        "modified": "2026-03-20T17:10:54.357Z"
+      },
+      {
+        "id": "tilesets/sheet-1773103925043",
+        "name": "sheet-1773103925043",
+        "path": "/assets/tilesets/sheet-1773103925043.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 10314,
+        "modified": "2026-03-20T17:10:54.358Z"
+      },
+      {
+        "id": "tilesets/treestextureshadowsource-1773615448670",
+        "name": "treestextureshadowsource-1773615448670",
+        "path": "/assets/tilesets/treestextureshadowsource-1773615448670.png",
+        "type": "png",
+        "category": "tilesets",
+        "size": 97702,
+        "modified": "2026-03-20T17:10:54.359Z"
       }
     ]
   }

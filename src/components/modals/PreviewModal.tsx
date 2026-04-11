@@ -1,11 +1,5 @@
-
 import PreviewPlayer from '../panels/PreviewPlayer';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Props for PreviewModal component
@@ -17,6 +11,9 @@ export interface PreviewModalProps {
   onClose: () => void;
   /** Initial scene ID to load in preview (optional) */
   initialSceneId?: string;
+  /** ID du dialogue de départ (optionnel).
+   *  null ou absent → premier dialogue de la scène. */
+  initialDialogueId?: string | null;
 }
 
 /**
@@ -34,11 +31,16 @@ export interface PreviewModalProps {
  * />
  * ```
  */
-export default function PreviewModal({ isOpen, onClose, initialSceneId }: PreviewModalProps) {
+export default function PreviewModal({
+  isOpen,
+  onClose,
+  initialSceneId,
+  initialDialogueId,
+}: PreviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 dark bg-background border-border overflow-hidden"
+        className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 bg-background border-border overflow-hidden"
         onEscapeKeyDown={onClose}
       >
         <DialogHeader className="sr-only">
@@ -53,6 +55,7 @@ export default function PreviewModal({ isOpen, onClose, initialSceneId }: Previe
         <div className="absolute inset-0">
           <PreviewPlayer
             initialSceneId={initialSceneId}
+            initialDialogueId={initialDialogueId}
             onClose={onClose}
           />
         </div>

@@ -3,11 +3,16 @@ import {
   Node,
   Edge,
   NodeChange,
+  EdgeChange,
   applyNodeChanges,
+  applyEdgeChanges,
   reconnectEdge,
   Connection,
 } from '@xyflow/react';
 import type { GraphNode } from './graph-utils/types';
+import { useUIStore } from '@/stores/uiStore';
+import { recalculateSerpentineEdges } from '@/config/handleConfig';
+import { isTerminalNode } from '@/utils/textHelpers';
 
 /**
  * Return type of useLocalGraphState hook
@@ -16,28 +21,32 @@ interface UseLocalGraphStateReturn {
   localNodes: GraphNode[];
   localEdges: Edge[];
   onNodesChange: (changes: NodeChange<GraphNode>[]) => void;
+  onEdgesChange: (changes: EdgeChange<Edge>[]) => void;
   onNodeDragStop: (event: React.MouseEvent, node: Node, nodes: Node[]) => void;
   reconnectLocalEdge: (oldEdge: Edge, newConnection: Connection) => void;
 }
 
 /**
- * useLocalGraphState — Manages local node/edge state for ReactFlow
+ * useLocalGraphState — Manages local node/edge state for ReactFlow.
  *
  * Encapsulates:
  * - Local nodes state (synced from Dagre on initial render + dialogues count change)
  * - Local edges state (always synced from Dagre) + ref to avoid stale closures
+ * - Serpentine edge recalculation on node drag (reads serpentineEnabled from UIStore)
  * - onNodesChange handler (drag/select)
  * - onNodeDragStop handler (serpentine edge recalculation)
  * - reconnectLocalEdge helper (edge drag-to-reconnect)
+ *
+ * Previously split into useLocalGraphState + useSerpentineSync — merged for cohesion.
  */
 export function useLocalGraphState(
   dagreNodes: GraphNode[],
   edges: Edge[],
   dialoguesLength: number,
-  serpentineEnabled: boolean,
   editMode: boolean,
-  recalculateEdges: (nodes: Node[], edges: Edge[]) => Edge[],
 ): UseLocalGraphStateReturn {
+  const serpentineEnabled = useUIStore(s => s.serpentineEnabled);
+
   // Local state for node positions (enables manual dragging)
   const [localNodes, setLocalNodes] = useState<GraphNode[]>(dagreNodes);
 
@@ -70,6 +79,26 @@ export function useLocalGraphState(
     setLocalNodes((nds) => applyNodeChanges(changes, nds) as GraphNode[]);
   }, []);
 
+  // Handle edge changes — selection only (removal is handled by store actions, not visual patch)
+  const onEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
+    const nonRemoveChanges = changes.filter(c => c.type !== 'remove');
+    if (nonRemoveChanges.length === 0) return;
+    setLocalEdges((eds) => {
+      const updated = applyEdgeChanges(nonRemoveChanges, eds);
+      localEdgesRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  // Recalculate serpentine edge handles based on current node positions
+  const recalculateEdges = useCallback(
+    (nodes: Node[], currentEdges: Edge[]): Edge[] => {
+      if (!serpentineEnabled || nodes.length === 0) return currentEdges;
+      return recalculateSerpentineEdges(nodes.filter(n => !isTerminalNode(n)), currentEdges);
+    },
+    [serpentineEnabled]
+  );
+
   // Handle node drag stop — recalculate serpentine edge handles
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, _node: Node, nodes: Node[]) => {
@@ -83,13 +112,17 @@ export function useLocalGraphState(
   );
 
   // Helper for drag-to-reconnect on existing edges
+  // ✅ Un seul calcul — ref et state mis à jour ensemble (même pattern que onEdgesChange)
   const reconnectLocalEdge = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      setLocalEdges((els) => reconnectEdge(oldEdge, newConnection, els));
-      localEdgesRef.current = reconnectEdge(oldEdge, newConnection, localEdgesRef.current);
+      setLocalEdges((els) => {
+        const updated = reconnectEdge(oldEdge, newConnection, els);
+        localEdgesRef.current = updated;
+        return updated;
+      });
     },
     []
   );
 
-  return { localNodes, localEdges, onNodesChange, onNodeDragStop, reconnectLocalEdge };
+  return { localNodes, localEdges, onNodesChange, onEdgesChange, onNodeDragStop, reconnectLocalEdge };
 }

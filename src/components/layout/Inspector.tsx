@@ -24,7 +24,6 @@ export default function Inspector({
 }: InspectorProps) {
   return (
     <aside
-      role="complementary"
       aria-label="Scene properties and actions"
       className={className}
     >

@@ -15,8 +15,10 @@
 // ============================================================================
 
 interface PanelWidths {
-  /** Left explorer panel default width (px) */
+  /** Left explorer panel width in Scènes tab (compact) */
   readonly LEFT_DEFAULT: number;
+  /** Left explorer panel width in Dialogues tab (wider) */
+  readonly LEFT_DIALOGUES: number;
   /** Content panel width when showing section content (Fond, Texte, Persos…) */
   readonly CONTENT_SECTION: number;
   /** Content panel width when showing element properties */
@@ -43,9 +45,10 @@ interface PanelMinWidths {
  * Panel 4 is always ICON_BAR wide.
  */
 export const PANEL_WIDTHS: PanelWidths = {
-  LEFT_DEFAULT: 135,
-  CONTENT_SECTION: 320,
-  CONTENT_PROPERTIES: 300,
+  LEFT_DEFAULT: 320, // onglet Scènes — compact (240 → 320)
+  LEFT_DIALOGUES: 550, // onglet Dialogues — plus large pour les bulles SMS
+  CONTENT_SECTION: 420, // section active (Dialogue, Texte, Fond…) — 420px pour EffectRow sans débordement
+  CONTENT_PROPERTIES: 320,
   ICON_BAR: 72,
 } as const;
 
@@ -53,6 +56,6 @@ export const PANEL_WIDTHS: PanelWidths = {
  * Minimum panel widths for resizable panels (react-resizable-panels).
  */
 export const PANEL_MIN_WIDTHS: PanelMinWidths = {
-  LEFT: 80,
+  LEFT: 200, // réduit de 260 → 200 pour permettre panel étroit
   CANVAS: 300,
 } as const;

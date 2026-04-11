@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
+import { getPreviewImage } from '../utils/characterUtils';
 
 /**
  * Props for SelectableCharacterCard component
@@ -18,20 +19,6 @@ export interface SelectableCharacterCardProps {
   onToggle: () => void;
   /** Optional usage badge text (e.g., "Utilisé dans 3 scènes") */
   usageBadge?: string;
-}
-
-/**
- * Get preview image URL for character
- * Returns first available sprite or undefined
- */
-function getPreviewImage(character: Character): string | undefined {
-  if (!character.sprites || !character.moods || character.moods.length === 0) {
-    return undefined;
-  }
-
-  // Try to find sprite for first mood
-  const firstMood = character.moods[0];
-  return character.sprites[firstMood];
 }
 
 /**
@@ -71,12 +58,12 @@ export function SelectableCharacterCard({
       {/* Label wrapper prevents event propagation issues */}
       <label htmlFor={`select-character-${character.id}`} className="block cursor-pointer">
         {/* Preview Image Section - Compact */}
-        <div className="relative aspect-[4/3] bg-black/20 overflow-hidden">
+        <div className="relative aspect-[3/4] bg-black/20 overflow-hidden">
           {previewImage ? (
             <img
               src={previewImage}
               alt={character.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-[center_20%]"
               loading="lazy"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';

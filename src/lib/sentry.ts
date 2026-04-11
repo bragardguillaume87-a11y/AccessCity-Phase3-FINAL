@@ -68,7 +68,7 @@ export function initSentry(): void {
     },
   });
 
-  console.info('[Sentry] Initialized successfully');
+  console.info('[Sentry] Initialized successfully'); // eslint-disable-line no-console
 }
 
 // Export Sentry for use in components

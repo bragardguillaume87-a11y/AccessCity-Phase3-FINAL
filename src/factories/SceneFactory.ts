@@ -29,6 +29,7 @@
  */
 
 import type { Scene, SceneCharacter, Dialogue, Prop, TextBox, SceneAudio } from '@/types';
+import { generateId } from '@/utils/generateId';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { SceneSchema, validate } from '@/schemas/validation';
@@ -72,7 +73,7 @@ export class SceneFactory {
    * @returns Unique scene ID
    */
   private static generateId(): string {
-    return `scene-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    return generateId('scene');
   }
 
   /**

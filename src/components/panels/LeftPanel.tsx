@@ -1,21 +1,22 @@
 import React, { Suspense } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import { Film, MessageSquare } from 'lucide-react';
-import ScenesSidebar from './ScenesSidebar';
+import { Film } from 'lucide-react';
+import { motion } from 'framer-motion';
 import DialoguesPanel from './DialoguesPanel';
-import { useScenesStore, useUIStore } from '../../stores/index';
+import { LeftPanelJumpBar } from './LeftPanelJumpBar';
+import { useUIStore } from '../../stores/index';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
-import { useSceneWithElements, useAllScenesWithElements } from '@/stores/selectors';
+import { useSceneWithElements } from '@/stores/selectors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { DialogueWizard } from '../dialogue-editor/DialogueWizard';
+import { DialogueComposerV2 as DialogueComposer } from '../dialogue-editor/DialogueComposerV2';
 import { useIsCosmosTheme } from '@/hooks/useGraphTheme';
 import { useCosmosEffects } from '@/components/features/CosmosEffects';
 import type { Dialogue } from '@/types';
+import { isCinematicScene } from '@/types';
 
 // PHASE 4 (Option 4): Lazy load DialogueGraphModal for bundle optimization
 // This modal contains ReactFlow, Dagre, and theme system (~300KB)
 const DialogueGraphModal = React.lazy(() =>
-  import('../modals/DialogueGraphModal').then(module => ({ default: module.DialogueGraphModal }))
+  import('../modals/DialogueGraphModal').then((module) => ({ default: module.DialogueGraphModal }))
 );
 
 /**
@@ -35,18 +36,13 @@ export interface LeftPanelProps {
   onSceneSelect?: (sceneId: string) => void;
 }
 
-export default function LeftPanel({
-  activeTab,
-  onTabChange,
-  onDialogueSelect,
-  onSceneSelect,
-}: LeftPanelProps) {
+export default function LeftPanel({ onDialogueSelect, onSceneSelect }: LeftPanelProps) {
   // Zustand stores
-  const scenes = useScenesStore((state) => state.scenes); // SceneMetadata[] (pour ScenesSidebar)
-  const scenesWithElements = useAllScenesWithElements(); // Scene[] avec dialogues (pour DialogueWizard)
   const selectedSceneForEdit = useUIStore((state) => state.selectedSceneForEdit);
+  const setScenesBrowserOpen = useUIStore((state) => state.setScenesBrowserOpen);
   const setSelectedSceneForEdit = useUIStore((state) => state.setSelectedSceneForEdit);
   const selectedScene = useSceneWithElements(selectedSceneForEdit);
+  const isCinematicSelected = isCinematicScene(selectedScene);
   const addDialogue = useDialoguesStore((state) => state.addDialogue);
   const addDialogues = useDialoguesStore((state) => state.addDialogues);
   const insertDialoguesAfter = useDialoguesStore((state) => state.insertDialoguesAfter);
@@ -58,18 +54,17 @@ export default function LeftPanel({
   const editDialogueIndex = useUIStore((state) => state.dialogueWizardEditIndex);
   const setEditDialogueIndex = useUIStore((state) => state.setDialogueWizardEditIndex);
 
+  // DialogueGraph modal
+  const setGraphModalOpen = useUIStore((state) => state.setDialogueGraphModalOpen);
+  const setGraphSelectedScene = useUIStore((state) => state.setDialogueGraphSelectedScene);
+
   // PHASE 4: Cosmos theme effects for node creation celebration
   const isCosmosTheme = useIsCosmosTheme();
   const { celebrateNodeCreation } = useCosmosEffects();
 
-  // Gestionnaire de changement d'onglet
-  const handleTabChange = (newTab: string) => {
-    const tab = newTab as 'scenes' | 'dialogues';
-    onTabChange(tab);
-  };
-
   const handleWizardSave = (dialogues: Dialogue[]) => {
-    if (!selectedScene || dialogues.length === 0) return;
+    // Guard: cinematic scenes do not store dialogues in dialoguesStore
+    if (!selectedScene || dialogues.length === 0 || isCinematicSelected) return;
 
     if (editDialogueIndex !== undefined) {
       // Edit mode: update the main dialogue
@@ -103,64 +98,124 @@ export default function LeftPanel({
 
   return (
     <>
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
-      >
-        {/* Tabs Header — compact vertical (icon + micro-label) pour tenir dans 160px */}
-        <TabsList className="w-full grid grid-cols-2 rounded-none border-b border-[var(--color-border-base)] bg-transparent p-0 h-auto">
-          <TabsTrigger
-            value="scenes"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 flex flex-col gap-1 px-2"
+      <div className="h-full flex flex-col bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]">
+        {/* ── Compact scene header — replaces "Scènes" tab ──
+            Shows the active scene thumbnail + title + clapperboard button → ScenesBrowser.
+            ⚠️ min-h-0 obligatoire sur le wrapper flex pour que DialoguesPanel scroll correctement. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderBottom: '1px solid var(--color-border-base)',
+            flexShrink: 0,
+          }}
+        >
+          {/* Scene thumbnail 16:9 — données réelles depuis le store (Will Wright §4.1) */}
+          <div
+            style={{
+              width: 44,
+              height: 28,
+              borderRadius: 4,
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
           >
-            <Film className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs leading-none font-semibold truncate">Scènes</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="dialogues"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--color-primary)] data-[state=active]:bg-[var(--color-bg-hover)] transition-all duration-200 h-12 flex flex-col gap-1 px-2"
+            {selectedScene?.backgroundUrl ? (
+              <img
+                src={selectedScene.backgroundUrl}
+                alt=""
+                aria-hidden="true"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                }}
+              />
+            )}
+          </div>
+
+          {/* Clapperboard button → open ScenesBrowser (Norman §9.1 — affordance visible) */}
+          <motion.button
+            onClick={() => setScenesBrowserOpen(true)}
+            whileHover={{ scale: 1.1, y: -1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              flexShrink: 0,
+              background: 'rgba(139,92,246,0.12)',
+              border: '1.5px solid rgba(139,92,246,0.3)',
+              color: 'var(--color-primary)',
+              cursor: 'pointer',
+            }}
+            title="Toutes les scènes — Storyboard"
+            aria-label="Ouvrir le navigateur de scènes"
           >
-            <MessageSquare className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs leading-none font-semibold truncate">Dial.</span>
-          </TabsTrigger>
-        </TabsList>
+            <Film size={13} />
+          </motion.button>
+        </div>
 
-        {/* Tabs Content avec animations fade-in */}
-        <TabsContent value="scenes" className="flex-1 m-0 animate-in fade-in duration-200">
-          <div className="h-full overflow-y-auto overflow-x-hidden">
-            <ScenesSidebar
-              scenes={scenes}
-              selectedSceneId={selectedSceneForEdit}
-              onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
-            />
-          </div>
-        </TabsContent>
+        {/* ── Dialogues panel (always visible) ──
+            ⚠️ flex-1 min-h-0 : DialoguesPanel gère son propre scroll interne. */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {isCinematicSelected ? (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-3">
+              <Film className="w-8 h-8 text-violet-400 opacity-40" aria-hidden="true" />
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Scène cinématique
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                Les dialogues ne sont pas disponibles pour ce type de scène. Utilisez l&apos;Éditeur
+                Cinématique pour créer des événements.
+              </p>
+            </div>
+          ) : (
+            <DialoguesPanel onDialogueSelect={onDialogueSelect} />
+          )}
+        </div>
 
-        <TabsContent value="dialogues" className="flex-1 m-0 animate-in fade-in duration-200">
-          <div className="h-full overflow-y-auto overflow-x-hidden">
-            <DialoguesPanel
-              onDialogueSelect={onDialogueSelect}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+        {/* HUD Compact — nav scènes/dialogues + info row */}
+        <LeftPanelJumpBar
+          activeTab="dialogues"
+          onSceneSelect={onSceneSelect || setSelectedSceneForEdit}
+          onDialogueSelect={onDialogueSelect}
+        />
+      </div>
 
       {/* DialogueWizard Modal - Outside Tabs to survive unmounts */}
-      <Dialog open={wizardOpen} onOpenChange={(open) => {
-        setWizardOpen(open);
-        if (!open) setEditDialogueIndex(undefined);
-      }}>
-        <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0">
+      <Dialog
+        open={wizardOpen}
+        onOpenChange={(open) => {
+          setWizardOpen(open);
+          if (!open) setEditDialogueIndex(undefined);
+        }}
+      >
+        <DialogContent
+          className="max-w-[90vw] p-0 gap-0 max-h-[90vh] [&>button.absolute]:hidden"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>
               {editDialogueIndex !== undefined
-                ? 'Modifier un dialogue avec l\'assistant'
+                ? "Modifier un dialogue avec l'assistant"
                 : 'Créer un nouveau dialogue'}
             </DialogTitle>
           </DialogHeader>
           {selectedScene ? (
-            <DialogueWizard
+            <DialogueComposer
               sceneId={selectedScene.id}
               dialogueIndex={editDialogueIndex}
               dialogue={
@@ -168,9 +223,13 @@ export default function LeftPanel({
                   ? selectedScene.dialogues[editDialogueIndex]
                   : undefined
               }
-              scenes={scenesWithElements}
               onSave={handleWizardSave}
               onClose={() => setWizardOpen(false)}
+              onOpenGraph={() => {
+                setWizardOpen(false);
+                setGraphSelectedScene(selectedScene.id);
+                setGraphModalOpen(true);
+              }}
             />
           ) : (
             <div className="p-8 text-center">Aucune scène sélectionnée</div>

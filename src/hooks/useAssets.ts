@@ -1,8 +1,18 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { logger } from '../utils/logger';
+import { isTauriEditor, convertFileSrcIfNeeded } from '../utils/tauri';
+import type { Asset } from '@/types';
 
 /**
- * Hook to load and filter assets from JSON manifest
+ * Hook to load and filter assets from JSON manifest.
+ *
+ * Supports two backends :
+ *  - Web  : fetch('/assets-manifest.json') + Express server (localhost:3001)
+ *  - Tauri: invoke('list_user_assets') + native Rust commands
+ *
+ * ⚠️ Source of truth for Asset type: @/types/assets.ts
+ * id = asset.path (unique key, computed here — not in consumers)
  */
 
 // ============================================================================
@@ -14,11 +24,12 @@ interface UseAssetsOptions {
   autoLoad?: boolean;
 }
 
-interface Asset {
+/** Raw asset from manifest (before id/url enrichment) */
+interface RawAsset {
   name: string;
   path: string;
   category: string;
-  [key: string]: unknown;
+  source?: string;
 }
 
 interface AssetsManifest {
@@ -26,7 +37,7 @@ interface AssetsManifest {
   version: string;
   totalAssets: number;
   categories: string[];
-  assets: Record<string, Asset[]>;
+  assets: Record<string, RawAsset[]>;
 }
 
 interface DeleteAssetsResult {
@@ -60,11 +71,24 @@ interface UseAssetsReturn {
 }
 
 // ============================================================================
-// HOOK
+// HELPERS
 // ============================================================================
 
-// Server URL for asset operations (upload server)
 const ASSET_SERVER_URL = 'http://localhost:3001';
+
+function emptyManifest(): AssetsManifest {
+  return {
+    generated: new Date().toISOString(),
+    version: '1.0.0',
+    totalAssets: 0,
+    categories: [],
+    assets: {},
+  };
+}
+
+// ============================================================================
+// HOOK
+// ============================================================================
 
 export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
   const { category = null, autoLoad = true } = options;
@@ -75,60 +99,81 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
   const [error, setError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
+  // ── Load manifest ─────────────────────────────────────────────────────────
+
   const loadManifest = useCallback(() => {
     let isMounted = true;
-    const abortController = new AbortController();
 
     setLoading(true);
     setError(null);
 
+    if (isTauriEditor()) {
+      // ── Tauri mode : merge bundled assets + user AppData assets ───────────
+      // 1. fetch() lit le manifest des assets embarqués dans le bundle Tauri
+      // 2. invoke() lit les assets uploadés par l'utilisateur dans AppData
+      Promise.all([
+        fetch('/assets-manifest.json?t=' + Date.now())
+          .then(r => r.ok ? r.json() as Promise<AssetsManifest> : emptyManifest() as AssetsManifest)
+          .catch(() => emptyManifest() as AssetsManifest),
+        invoke<string>('list_user_assets')
+          .then(json => JSON.parse(json) as AssetsManifest)
+          .catch(() => emptyManifest() as AssetsManifest),
+      ])
+        .then(([bundled, user]) => {
+          if (!isMounted) return;
+          // Fusionner : combiner les assets des deux sources par catégorie
+          const merged: AssetsManifest = { ...bundled };
+          const allCategories = new Set([
+            ...(bundled.categories || []),
+            ...(user.categories || []),
+          ]);
+          merged.categories = Array.from(allCategories);
+          merged.assets = { ...bundled.assets };
+          for (const [cat, assets] of Object.entries(user.assets || {})) {
+            merged.assets[cat] = [...(merged.assets[cat] || []), ...assets];
+          }
+          merged.totalAssets = Object.values(merged.assets).reduce((n, a) => n + a.length, 0);
+          setManifest(merged);
+          setLoading(false);
+        })
+        .catch(err => {
+          if (!isMounted) return;
+          logger.error('[useAssets] Tauri load error:', err);
+          setManifest(emptyManifest());
+          setError('Impossible de lire les assets. ' + String(err));
+          setLoading(false);
+        });
+
+      return () => { isMounted = false; };
+    }
+
+    // ── Web mode : fetch static manifest ────────────────────────────────────
+    const abortController = new AbortController();
+
     fetch('/assets-manifest.json?t=' + Date.now(), {
-      signal: abortController.signal
+      signal: abortController.signal,
     })
       .then(res => {
         if (!isMounted) return null;
-
         if (!res.ok) {
-          // Fallback: empty manifest if 404 or other HTTP error
           logger.warn('[useAssets] Manifest not found (HTTP ' + res.status + '), using empty fallback');
-          return {
-            generated: new Date().toISOString(),
-            version: '1.0.0',
-            totalAssets: 0,
-            categories: [],
-            assets: {}
-          };
+          return emptyManifest();
         }
         return res.json();
       })
       .then(data => {
         if (!isMounted || !data) return;
-
         setManifest(data);
         setLoading(false);
-
-        // Warning if manifest is empty
         if (data.totalAssets === 0) {
           logger.warn('[useAssets] Assets manifest is empty. Add files to /public/assets/ and regenerate manifest.');
         }
       })
       .catch(err => {
         if (!isMounted) return;
-
-        // Ignore abort errors (expected when component unmounts)
         if (err.name === 'AbortError') return;
-
         logger.error('[useAssets] Error loading manifest:', err);
-
-        // Fallback: empty manifest if network error
-        setManifest({
-          generated: new Date().toISOString(),
-          version: '1.0.0',
-          totalAssets: 0,
-          categories: [],
-          assets: {}
-        });
-
+        setManifest(emptyManifest());
         setError('Unable to load assets manifest. Using empty library.');
         setLoading(false);
       });
@@ -149,11 +194,8 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     setReloadTrigger(prev => prev + 1);
   }, []);
 
-  /**
-   * Delete assets from the server
-   * @param paths - Array of asset paths to delete (e.g., ['/assets/backgrounds/image.png'])
-   * @returns Promise with deletion results
-   */
+  // ── Delete assets ─────────────────────────────────────────────────────────
+
   const deleteAssets = useCallback(async (paths: string[]): Promise<DeleteAssetsResult> => {
     if (paths.length === 0) {
       return { success: false, deleted: [], count: 0, message: 'No paths provided' };
@@ -163,28 +205,29 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${ASSET_SERVER_URL}/api/assets`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ paths }),
-      });
+      let result: DeleteAssetsResult;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
+      if (isTauriEditor()) {
+        // Tauri : invoke Rust command (paths = absolute filesystem paths)
+        const json = await invoke<string>('delete_assets_editor', { paths });
+        result = JSON.parse(json);
+      } else {
+        // Web : Express server
+        const response = await fetch(`${ASSET_SERVER_URL}/api/assets`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || `HTTP error ${response.status}`);
+        }
+        result = await response.json();
       }
 
-      const result: DeleteAssetsResult = await response.json();
-
-      // Reload manifest after successful deletion
       if (result.count > 0) {
         logger.info(`[useAssets] Deleted ${result.count} asset(s), reloading manifest...`);
-        // Small delay to allow server to regenerate manifest
-        setTimeout(() => {
-          setReloadTrigger(prev => prev + 1);
-        }, 500);
+        setTimeout(() => setReloadTrigger(prev => prev + 1), 300);
       }
 
       setDeleting(false);
@@ -199,17 +242,13 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
         deleted: [],
         errors: [{ path: 'all', error: errorMessage }],
         count: 0,
-        message: errorMessage
+        message: errorMessage,
       };
     }
   }, []);
 
-  /**
-   * Move an asset to a different category
-   * @param assetPath - Current asset path (e.g., '/assets/illustrations/image.png')
-   * @param newCategory - Target category ('backgrounds', 'characters', 'illustrations')
-   * @returns Promise with move result including new path
-   */
+  // ── Move asset ────────────────────────────────────────────────────────────
+
   const moveAsset = useCallback(async (assetPath: string, newCategory: string): Promise<MoveAssetResult> => {
     if (!assetPath || !newCategory) {
       return { success: false, message: 'Asset path and new category are required' };
@@ -219,27 +258,32 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${ASSET_SERVER_URL}/api/assets/move`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ path: assetPath, newCategory }),
-      });
+      let result: MoveAssetResult;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
+      if (isTauriEditor()) {
+        // Tauri : invoke Rust command (oldPath = absolute filesystem path)
+        const json = await invoke<string>('move_asset_editor', {
+          oldPath: assetPath,
+          newCategory,
+        });
+        result = JSON.parse(json);
+      } else {
+        // Web : Express server
+        const response = await fetch(`${ASSET_SERVER_URL}/api/assets/move`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: assetPath, newCategory }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || `HTTP error ${response.status}`);
+        }
+        result = await response.json();
       }
 
-      const result: MoveAssetResult = await response.json();
-
-      // Reload manifest after successful move
       if (result.success) {
         logger.info(`[useAssets] Moved asset to ${newCategory}, reloading manifest...`);
-        setTimeout(() => {
-          setReloadTrigger(prev => prev + 1);
-        }, 500);
+        setTimeout(() => setReloadTrigger(prev => prev + 1), 300);
       }
 
       setMoving(false);
@@ -249,28 +293,31 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
       logger.error('[useAssets] Move error:', err);
       setError(errorMessage);
       setMoving(false);
-      return {
-        success: false,
-        message: errorMessage,
-        error: errorMessage
-      };
+      return { success: false, message: errorMessage, error: errorMessage };
     }
   }, []);
 
-  const assets = useMemo(() => {
+  // ── Derived assets list ───────────────────────────────────────────────────
+
+  const assets = useMemo((): Asset[] => {
     if (!manifest || !manifest.assets) return [];
 
-    let filtered: Asset[] = [];
+    let filtered: RawAsset[];
 
     if (category && manifest.assets[category]) {
-      // Filter by category
       filtered = manifest.assets[category];
     } else {
-      // All assets, all categories combined
       filtered = Object.values(manifest.assets).flat();
     }
 
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    // Enrichir chaque asset avec id + url (source unique de ces champs)
+    return filtered
+      .map(asset => ({
+        ...asset,
+        id: asset.path,
+        url: convertFileSrcIfNeeded(asset.path),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [manifest, category]);
 
   const categories = useMemo(() => {
@@ -288,7 +335,7 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
     deleteAssets,
     deleting,
     moveAsset,
-    moving
+    moving,
   };
 }
 
@@ -298,9 +345,6 @@ export function useAssets(options: UseAssetsOptions = {}): UseAssetsReturn {
 
 /**
  * Get recently used assets from localStorage
- * @param type - Asset type (backgrounds, characters, etc.)
- * @param maxItems - Maximum number of items to retrieve
- * @returns Array of recent asset paths
  */
 export function getRecentAssets(type: string, _maxItems: number = 6): string[] {
   try {
@@ -314,17 +358,13 @@ export function getRecentAssets(type: string, _maxItems: number = 6): string[] {
 
 /**
  * Add an asset to the recent history
- * @param type - Asset type
- * @param assetPath - Path to the asset
- * @param maxItems - Maximum items to keep in history
- * @returns Updated history array
  */
 export function addToRecentAssets(type: string, assetPath: string, maxItems: number = 6): string[] {
   try {
     const history = getRecentAssets(type, maxItems);
     const newHistory = [
       assetPath,
-      ...history.filter(path => path !== assetPath)
+      ...history.filter(path => path !== assetPath),
     ].slice(0, maxItems);
 
     localStorage.setItem(`accesscity-recent-${type}`, JSON.stringify(newHistory));

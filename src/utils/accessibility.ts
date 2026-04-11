@@ -7,15 +7,6 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Generate a unique ID for ARIA relationships
- * @param prefix - Prefix for the ID
- * @returns Unique ID string
- */
-export function generateAriaId(prefix: string = 'aria'): string {
-  return `${prefix}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
  * Announce a message to screen readers
  * Uses ARIA live regions for dynamic content updates
  *
@@ -215,16 +206,6 @@ export const KEYBOARD_SHORTCUTS = {
   // Command palette
   commandPalette: { key: 'k', modifiers: ['ctrl'] },
 } as const;
-
-/**
- * Format keyboard shortcut for display
- * @param shortcut - Shortcut object from KEYBOARD_SHORTCUTS
- * @returns Formatted string (e.g., "Ctrl+S")
- */
-export function formatShortcut(shortcut: { key: string; modifiers: readonly string[] }): string {
-  const parts = [...shortcut.modifiers.map(m => m.charAt(0).toUpperCase() + m.slice(1)), shortcut.key];
-  return parts.join('+');
-}
 
 /**
  * Check if a keyboard event matches a shortcut

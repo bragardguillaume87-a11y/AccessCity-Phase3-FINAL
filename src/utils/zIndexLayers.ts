@@ -27,6 +27,15 @@ interface ZIndexLayers {
   readonly ALERT_DIALOG: number;
   readonly ONBOARDING: number;
   readonly TOAST: number;
+  // Context menus (canvas, scene editor) — above all editor layers
+  readonly CONTEXT_MENU: number;
+  // Preview player overlays (DiceOverlay, MinigameOverlay)
+  readonly PREVIEW_OVERLAY: number;
+  // Topdown Editor — full-screen module, must sit above all app UI
+  readonly TOPDOWN_BASE: number;
+  readonly TOPDOWN_OVERLAY: number;
+  readonly TOPDOWN_BACKDROP: number;
+  readonly TOPDOWN_DIALOG: number;
 }
 
 export type ZIndexLayerKey = keyof ZIndexLayers;
@@ -41,8 +50,8 @@ export const Z_INDEX: ZIndexLayers = {
   CANVAS_BACKGROUND: 0,
   CANVAS_CHARACTER_MIN: 1,
   CANVAS_CHARACTER_MAX: 10,
-  CANVAS_PROPS: 15,           // Props (emoji objects) - between characters and dialogue overlay
-  CANVAS_TEXTBOXES: 18,       // Text boxes - above props, below dialogue overlay
+  CANVAS_PROPS: 15, // Props (emoji objects) - between characters and dialogue overlay
+  CANVAS_TEXTBOXES: 18, // Text boxes - above props, below dialogue overlay
   CANVAS_DIALOGUE_OVERLAY: 20,
   CANVAS_FLOATING_BUTTONS: 30,
 
@@ -60,6 +69,18 @@ export const Z_INDEX: ZIndexLayers = {
 
   // Toasts - Notifications temporaires au-dessus de tout
   TOAST: 90,
+
+  // Context menus — menus contextuels canvas (clic droit sur personnage, entité)
+  CONTEXT_MENU: 9999,
+
+  // Preview overlays — DiceOverlay, MinigameOverlay (dans le PreviewPlayer)
+  PREVIEW_OVERLAY: 50,
+
+  // Topdown Editor — éditeur 2D plein-écran, au-dessus de toute l'UI applicative
+  TOPDOWN_BASE: 9990,
+  TOPDOWN_OVERLAY: 9995,
+  TOPDOWN_BACKDROP: 9998,
+  TOPDOWN_DIALOG: 9999,
 } as const;
 
 // ============================================================================
@@ -79,7 +100,9 @@ export const Z_INDEX: ZIndexLayers = {
 export function getZIndexClass(layer: ZIndexLayerKey): string {
   const zIndex = Z_INDEX[layer];
   if (zIndex === undefined) {
-    logger.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
+    logger.warn(
+      `⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`
+    );
     return `z-[${Z_INDEX.DIALOG_BASE}]`;
   }
   return `z-[${zIndex}]`;
@@ -98,7 +121,9 @@ export function getZIndexClass(layer: ZIndexLayerKey): string {
 export function getZIndexValue(layer: ZIndexLayerKey): number {
   const zIndex = Z_INDEX[layer];
   if (zIndex === undefined) {
-    logger.warn(`⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`);
+    logger.warn(
+      `⚠️ zIndexLayers: Layer "${layer}" n'existe pas. Utilisation de DIALOG_BASE par défaut.`
+    );
     return Z_INDEX.DIALOG_BASE;
   }
   return zIndex;

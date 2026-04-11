@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Gamepad2, BarChart3 } from 'lucide-react';
-import { useSettingsStore } from '@/stores/settingsStore';
+import { useIsKidMode } from '@/hooks/useIsKidMode';
 import type { SettingsFormData } from '../hooks/useSettingsImportExport';
 
 /**
@@ -14,6 +14,8 @@ export interface GameSettingsSectionProps {
   formData: SettingsFormData;
   /** Callback when a variable changes (varName, field, value) */
   onVariableChange: (varName: string, field: string, value: number) => void;
+  /** Callback for non-variable field changes */
+  onFieldChange: (section: string, field: string, value: string | boolean | number) => void;
 }
 
 /**
@@ -36,10 +38,10 @@ export interface GameSettingsSectionProps {
  */
 export function GameSettingsSection({
   formData,
-  onVariableChange
+  onVariableChange,
+  onFieldChange,
 }: GameSettingsSectionProps): React.ReactElement {
-  const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
-  const setEnableStatsHUD = useSettingsStore(s => s.setEnableStatsHUD);
+  const isKid = useIsKidMode();
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -63,8 +65,8 @@ export function GameSettingsSection({
               </div>
             </div>
             <Switch
-              checked={enableStatsHUD}
-              onCheckedChange={setEnableStatsHUD}
+              checked={formData.game.enableStatsHUD ?? false}
+              onCheckedChange={(v) => onFieldChange('game', 'enableStatsHUD', v)}
               aria-label="Activer l'affichage des stats en jeu"
             />
           </div>
@@ -80,14 +82,14 @@ export function GameSettingsSection({
           >
             <CardContent className="p-4">
               <h4 className="font-semibold mb-3 text-primary">{varName}</h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className={`grid gap-4 ${isKid ? 'grid-cols-1' : 'grid-cols-3'}`}>
                 {/* Initial Value */}
                 <div>
                   <label
                     htmlFor={`${varName}-initial`}
                     className="block text-xs font-semibold text-muted-foreground mb-1"
                   >
-                    Valeur initiale
+                    {isKid ? 'Points de départ' : 'Valeur initiale'}
                   </label>
                   <Input
                     id={`${varName}-initial`}
@@ -98,7 +100,8 @@ export function GameSettingsSection({
                   />
                 </div>
 
-                {/* Minimum Value */}
+                {/* Minimum Value — Pro mode only */}
+                {!isKid && (
                 <div>
                   <label
                     htmlFor={`${varName}-min`}
@@ -114,8 +117,10 @@ export function GameSettingsSection({
                     className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
                   />
                 </div>
+                )}
 
-                {/* Maximum Value */}
+                {/* Maximum Value — Pro mode only */}
+                {!isKid && (
                 <div>
                   <label
                     htmlFor={`${varName}-max`}
@@ -131,6 +136,7 @@ export function GameSettingsSection({
                     className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
                   />
                 </div>
+                )}
               </div>
             </CardContent>
           </Card>

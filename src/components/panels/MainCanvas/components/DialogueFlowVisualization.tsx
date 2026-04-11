@@ -1,4 +1,3 @@
-
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { List, Network } from 'lucide-react';
 import DialogueGraph from '../../../features/DialogueGraph';
@@ -23,7 +22,7 @@ export function DialogueFlowVisualization({
   viewMode,
   onViewModeChange,
   onDialogueClick,
-  onOpenModal
+  onOpenModal,
 }: DialogueFlowVisualizationProps) {
   const dialogues = selectedScene.dialogues || [];
 
@@ -32,14 +31,27 @@ export function DialogueFlowVisualization({
       {/* Header with toggle buttons */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          <svg
+            className="w-5 h-5 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+            />
           </svg>
           Déroulement
         </h3>
 
         {/* View mode toggle */}
-        <Tabs value={viewMode} onValueChange={(value) => onViewModeChange(value as 'visual' | 'graph')}>
+        <Tabs
+          value={viewMode}
+          onValueChange={(value) => onViewModeChange(value as 'visual' | 'graph')}
+        >
           <TabsList>
             <TabsTrigger value="visual">
               <List className="h-4 w-4" />
@@ -56,7 +68,10 @@ export function DialogueFlowVisualization({
       {/* Conditional rendering: Visual list or Graph view */}
       {viewMode === 'graph' ? (
         // Graph view with ReactFlow
-        <div className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background" style={{ height: `${LAYOUT.DIALOGUE_FLOW_MODAL_HEIGHT}px` }}>
+        <div
+          className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background"
+          style={{ height: `${LAYOUT.DIALOGUE_FLOW_MODAL_HEIGHT}px` }}
+        >
           <DialogueGraph
             selectedScene={selectedScene}
             selectedElement={selectedElement}
@@ -68,13 +83,14 @@ export function DialogueFlowVisualization({
         // Visual list view
         <div className="space-y-4">
           {dialogues.map((dialogue, idx) => {
-            const isSelected = selectedElement?.type === 'dialogue' &&
+            const isSelected =
+              selectedElement?.type === 'dialogue' &&
               selectedElement?.sceneId === selectedScene.id &&
               selectedElement?.index === idx;
 
             return (
               <div
-                key={idx}
+                key={dialogue.id}
                 onClick={() => onDialogueClick(selectedScene.id, idx)}
                 className={`rounded-lg border-2 p-4 transition-all cursor-pointer ${
                   isSelected
@@ -90,23 +106,22 @@ export function DialogueFlowVisualization({
                     <div className="text-xs font-semibold text-blue-400 mb-1">
                       {dialogue.speaker || 'Unknown'}
                     </div>
-                    <p className="text-sm text-foreground">
-                      {dialogue.text || '(empty dialogue)'}
-                    </p>
+                    <p className="text-sm text-foreground">{dialogue.text || '(empty dialogue)'}</p>
                     {dialogue.choices && dialogue.choices.length > 0 && (
                       <div className="mt-3 space-y-2">
                         <div className="text-xs font-semibold text-muted-foreground uppercase">
                           Choices:
                         </div>
-                        {dialogue.choices.map((choice, cIdx) => (
+                        {dialogue.choices.map((choice) => (
                           <div
-                            key={cIdx}
+                            key={choice.id}
                             className="text-sm text-muted-foreground pl-4 border-l-2 border-border hover:border-blue-500 transition-colors"
                           >
                             {choice.text}
                             {choice.effects && choice.effects.length > 0 && (
                               <span className="ml-2 text-xs text-amber-500">
-                                ({choice.effects.length} effet{choice.effects.length !== 1 ? 's' : ''})
+                                ({choice.effects.length} effet
+                                {choice.effects.length !== 1 ? 's' : ''})
                               </span>
                             )}
                           </div>

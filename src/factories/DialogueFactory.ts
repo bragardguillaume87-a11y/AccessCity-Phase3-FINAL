@@ -28,7 +28,8 @@
  * ```
  */
 
-import type { Dialogue, DialogueChoice, DialogueAudio } from '@/types';
+import type { Dialogue, DialogueChoice, DialogueAudio, MinigameConfig } from '@/types';
+import { generateId } from '@/utils/generateId';
 import { AUDIO_DEFAULTS } from '@/config/constants';
 import { logger } from '@/utils/logger';
 import { DialogueSchema, validate } from '@/schemas/validation';
@@ -46,8 +47,16 @@ export interface CreateDialogueOptions {
   choices?: DialogueChoice[];
   /** Optional sound effect to play when dialogue appears */
   sfx?: DialogueAudio;
+  /** Optional procedural voice preset ID (ex: 'homme-neutre', 'femme-joyeuse') */
+  voicePreset?: string;
+  /** Optional mood ID for the speaker during this dialogue (ex: 'happy', 'angry') */
+  speakerMood?: string;
   /** Optional custom ID (auto-generated if not provided) */
   id?: string;
+  /** Optional minigame config — used when dialogue triggers a mini-game */
+  minigame?: MinigameConfig;
+  /** Optional visual subtype (phonecall, normal) */
+  dialogueSubtype?: 'normal' | 'phonecall';
 }
 
 /**
@@ -64,7 +73,7 @@ export class DialogueFactory {
    * @returns Unique dialogue ID
    */
   private static generateId(): string {
-    return `dialogue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    return generateId('dialogue');
   }
 
   /**
@@ -81,7 +90,11 @@ export class DialogueFactory {
       text,
       choices = [],
       sfx,
+      voicePreset,
+      speakerMood,
       id = this.generateId(),
+      minigame,
+      dialogueSubtype,
     } = options;
 
     // Validate with Zod schema
@@ -92,6 +105,10 @@ export class DialogueFactory {
       text: text.trim(),
       choices,
       ...(sfx && { sfx }),
+      ...(voicePreset && { voicePreset }),
+      ...(speakerMood && { speakerMood }),
+      ...(minigame && { minigame }),
+      ...(dialogueSubtype && { dialogueSubtype }),
     });
 
     logger.debug(`[DialogueFactory] Created dialogue: ${id} (speaker: ${speaker})`);
@@ -107,10 +124,7 @@ export class DialogueFactory {
    * @param text - Dialogue text
    * @returns New Dialogue object
    */
-  static createText(
-    speaker: string,
-    text: string
-  ): Dialogue {
+  static createText(speaker: string, text: string): Dialogue {
     return this.create({
       speaker,
       text,
@@ -126,11 +140,7 @@ export class DialogueFactory {
    * @param choices - Array of choice options
    * @returns New Dialogue object
    */
-  static createWithChoices(
-    speaker: string,
-    text: string,
-    choices: DialogueChoice[]
-  ): Dialogue {
+  static createWithChoices(speaker: string, text: string, choices: DialogueChoice[]): Dialogue {
     if (!choices || choices.length === 0) {
       logger.warn('[DialogueFactory] Creating choice dialogue with no choices');
     }
@@ -177,10 +187,7 @@ export class DialogueFactory {
    * @param overrides - Properties to override
    * @returns New Dialogue object (cloned with overrides)
    */
-  static clone(
-    source: Dialogue,
-    overrides: Partial<CreateDialogueOptions> = {}
-  ): Dialogue {
+  static clone(source: Dialogue, overrides: Partial<CreateDialogueOptions> = {}): Dialogue {
     return this.create({
       speaker: source.speaker,
       text: source.text,

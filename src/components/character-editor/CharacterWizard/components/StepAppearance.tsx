@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAssets, getRecentAssets, addToRecentAssets } from '@/hooks/useAssets';
-import { Palette, Search, Clock, Sparkles } from 'lucide-react';
+import { Palette, Search, Clock, Sparkles, Wand2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import EncouragingMessage from './EncouragingMessage';
+import { BgRemovalDialog } from '@/components/ui/BgRemovalDialog';
+import { blobToFile } from '@/utils/backgroundRemoval';
+import { useAssetUpload } from '@/components/modals/AssetsLibraryModal/hooks/useAssetUpload';
 
 interface StepAppearanceProps {
   currentSprite: string;
@@ -22,7 +25,7 @@ export function StepAppearance({
   currentSprite,
   characterName,
   onSelectSprite,
-  onValidChange
+  onValidChange,
 }: StepAppearanceProps) {
   const { assets: characterAssets, loading: loadingChars } = useAssets({ category: 'characters' });
   const { assets: allAssets, loading: loadingAll, error } = useAssets({});
@@ -34,6 +37,28 @@ export function StepAppearance({
   const [recentAssets, setRecentAssets] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [bgRemovalOpen, setBgRemovalOpen] = useState(false);
+
+  // Upload du résultat de suppression de fond → sélectionner automatiquement le nouveau sprite
+  const { uploadFiles } = useAssetUpload({
+    category: 'characters',
+    onUploadComplete: (files) => {
+      if (files[0]) {
+        const newUrl = files[0].path;
+        handleSelect(newUrl);
+      }
+    },
+  });
+
+  const handleBgRemovalSave = useCallback(
+    async (blob: Blob) => {
+      const filename = currentSprite.split('/').pop() ?? 'sprite';
+      const file = blobToFile(blob, filename);
+      await uploadFiles([file]);
+      setBgRemovalOpen(false);
+    },
+    [currentSprite, uploadFiles]
+  );
 
   // Load recent assets
   useEffect(() => {
@@ -49,9 +74,10 @@ export function StepAppearance({
   }, [isValid, onValidChange]);
 
   // Filter assets
-  const filteredAssets = assets.filter(asset =>
-    asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.path.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredAssets = assets.filter(
+    (asset) =>
+      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.path.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSelect = (assetPath: string) => {
@@ -101,8 +127,27 @@ export function StepAppearance({
               {currentSprite.split('/').pop()}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setBgRemovalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-primary/40 text-primary hover:bg-primary/15 transition-colors"
+            title="Supprimer le fond de ce sprite"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Fond ✨
+          </button>
           <Sparkles className="h-6 w-6 text-primary animate-sparkle" />
         </div>
+      )}
+
+      {/* BgRemovalDialog */}
+      {bgRemovalOpen && currentSprite && (
+        <BgRemovalDialog
+          imageUrl={currentSprite}
+          imageName={currentSprite.split('/').pop() ?? 'sprite'}
+          onSave={handleBgRemovalSave}
+          onClose={() => setBgRemovalOpen(false)}
+        />
       )}
 
       {/* Search toggle */}
@@ -135,11 +180,15 @@ export function StepAppearance({
             Images récentes
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-            {recentAssets.map((assetPath, idx) => (
+            {recentAssets.map((assetPath) => (
               <SpriteCard
-                key={idx}
+                key={assetPath}
                 path={assetPath}
-                isSelected={assetPath === currentSprite}
+                isSelected={
+                  assetPath === currentSprite ||
+                  // Fallback : ancien localStorage (path) vs nouveau currentSprite (URL)
+                  assetPath.split(/[/\\]/).pop() === currentSprite.split(/[/\\]/).pop()
+                }
                 onClick={() => handleSelect(assetPath)}
               />
             ))}
@@ -158,25 +207,25 @@ export function StepAppearance({
               Aucune image trouvée
             </div>
           ) : (
-            filteredAssets.map((asset, idx) => (
-              <SpriteCard
-                key={idx}
-                path={asset.path}
-                name={asset.name}
-                isSelected={asset.path === currentSprite}
-                onClick={() => handleSelect(asset.path)}
-              />
-            ))
+            filteredAssets.map((asset) => {
+              const assetUrl = asset.url ?? asset.path;
+              return (
+                <SpriteCard
+                  key={asset.path}
+                  path={assetUrl}
+                  name={asset.name}
+                  isSelected={assetUrl === currentSprite || asset.path === currentSprite}
+                  onClick={() => handleSelect(assetUrl)}
+                />
+              );
+            })
           )}
         </div>
       </div>
 
       {/* Helper message */}
       {!isValid && (
-        <EncouragingMessage
-          type="info"
-          message="Clique sur une image pour la sélectionner !"
-        />
+        <EncouragingMessage type="info" message="Clique sur une image pour la sélectionner !" />
       )}
     </div>
   );
@@ -198,11 +247,11 @@ function SpriteCard({ path, name, isSelected, onClick }: SpriteCardProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "relative aspect-square rounded-xl overflow-hidden transition-all duration-200 touch-target-large",
-        "border-2 bg-card hover:scale-105 active:scale-95",
+        'relative aspect-square rounded-xl overflow-hidden transition-all duration-200 touch-target-large',
+        'border-2 bg-card hover:scale-105 active:scale-95',
         isSelected
-          ? "border-primary ring-4 ring-primary/30 animate-gentle-pulse"
-          : "border-border hover:border-primary/50"
+          ? 'border-primary ring-4 ring-primary/30 animate-gentle-pulse'
+          : 'border-border hover:border-primary/50'
       )}
       title={name || path}
     >
@@ -211,7 +260,8 @@ function SpriteCard({ path, name, isSelected, onClick }: SpriteCardProps) {
         alt={name || path}
         className="w-full h-full object-contain p-2"
         onError={(e) => {
-          (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%232f3436" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23a3a3a3">?</text></svg>';
+          (e.currentTarget as HTMLImageElement).src =
+            'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%232f3436" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23a3a3a3">?</text></svg>';
         }}
       />
       {isSelected && (

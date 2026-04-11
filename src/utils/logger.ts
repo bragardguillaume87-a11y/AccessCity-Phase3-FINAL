@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Centralized Logging Utility
  *
@@ -128,33 +129,3 @@ export const logger = {
   }
 };
 
-/**
- * Performance logger for tracking component render times
- * @param componentName - Name of the component
- * @param callback - Function to measure
- * @returns Result of the callback
- */
-export const logPerformance = <T>(componentName: string, callback: () => T): T => {
-  if (isDevelopment) {
-    const startTime = performance.now();
-    const result = callback();
-    const endTime = performance.now();
-    logger.debug(`[PERF] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`);
-    return result;
-  }
-  return callback();
-};
-
-/**
- * Redux/Zustand action logger
- * @param storeName - Store name
- * @param actionName - Action name
- * @param payload - Action payload
- */
-export const logStoreAction = (storeName: string, actionName: string, payload: unknown): void => {
-  if (isDevelopment) {
-    logger.group(`📦 ${storeName}.${actionName}`);
-    logger.debug('Payload:', payload);
-    logger.groupEnd();
-  }
-};

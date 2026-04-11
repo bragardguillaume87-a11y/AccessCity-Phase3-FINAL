@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import type { ComplexityLevel, FullscreenMode, SectionId, ModalContext } from '@/types';
+import type {
+  ComplexityLevel,
+  FullscreenMode,
+  SectionId,
+  ModalContext,
+  EditorMode,
+  StudioModule,
+} from '@/types';
 
 /**
  * UI Store
@@ -42,7 +49,7 @@ function persistThemeId(themeId: string): void {
 /**
  * SERP-5: Serpentine configuration type
  */
-export interface SerpentineConfig {
+interface SerpentineConfig {
   enabled: boolean;
   mode: 'auto-y' | 'by-count' | 'branch-aware';
   direction: 'zigzag' | 'grid';
@@ -90,7 +97,7 @@ function persistSerpentineConfig(config: SerpentineConfig): void {
 /**
  * Pro mode configuration type
  */
-export interface ProModeConfig {
+interface ProModeConfig {
   enabled: boolean;
   direction: 'TB' | 'LR';
 }
@@ -107,7 +114,9 @@ function getPersistedProConfig(): ProModeConfig {
         direction: validDirs.includes(parsed.direction) ? parsed.direction : 'TB',
       };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { enabled: false, direction: 'TB' };
 }
 
@@ -115,7 +124,33 @@ function persistProConfig(config: ProModeConfig): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(PRO_MODE_CONFIG_KEY, JSON.stringify(config));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Editor mode persistence (kid / pro)
+ */
+const EDITOR_MODE_KEY = 'accesscity-editor-mode';
+
+function getPersistedEditorMode(): EditorMode {
+  if (typeof window === 'undefined') return 'pro';
+  try {
+    const stored = localStorage.getItem(EDITOR_MODE_KEY);
+    return stored === 'kid' ? 'kid' : 'pro';
+  } catch {
+    return 'pro';
+  }
+}
+
+function persistEditorMode(mode: EditorMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(EDITOR_MODE_KEY, mode);
+  } catch {
+    /* ignore */
+  }
 }
 
 // ============================================================================
@@ -145,6 +180,9 @@ interface UIState {
   dialogueWizardInitialComplexity: ComplexityLevel | null;
   dialogueGraphModalOpen: boolean;
   dialogueGraphSelectedScene: string | null;
+  // Cinematic editor
+  cinematicEditorOpen: boolean;
+  cinematicEditorSceneId: string | null;
   graphThemeId: string;
   // SERP-5: Serpentine layout configuration
   serpentineEnabled: boolean;
@@ -155,10 +193,12 @@ interface UIState {
   proModeEnabled: boolean;
   proModeDirection: 'TB' | 'LR';
   proCollapseEnabled: boolean;
-  proExpandedClusters: string[];  // IDs of expanded clusters (all collapsed by default)
+  proExpandedClusters: string[]; // IDs of expanded clusters (all collapsed by default)
   proPaginationEnabled: boolean;
   proPageSize: number;
   proCurrentPage: number;
+  // Scenes browser overlay
+  scenesBrowserOpen: boolean;
 
   // ── Layout actions ───────────────────────────────────────────────────
   setFullscreenMode: (mode: FullscreenMode) => void;
@@ -167,6 +207,7 @@ interface UIState {
   setModalContext: (ctx: ModalContext) => void;
   setShowProblemsPanel: (show: boolean) => void;
   setCommandPaletteOpen: (open: boolean | string) => void;
+  setScenesBrowserOpen: (open: boolean) => void;
 
   // Actions
   setSelectedSceneId: (sceneId: string | null) => void;
@@ -181,13 +222,14 @@ interface UIState {
   clearDialogueWizardInitialComplexity: () => void;
   setDialogueGraphModalOpen: (open: boolean) => void;
   setDialogueGraphSelectedScene: (sceneId: string | null) => void;
+  // Cinematic editor actions
+  setCinematicEditorOpen: (open: boolean, sceneId?: string | null) => void;
   setGraphThemeId: (themeId: string) => void;
   // SERP-5: Serpentine layout actions
   setSerpentineEnabled: (enabled: boolean) => void;
   setSerpentineMode: (mode: 'auto-y' | 'by-count' | 'branch-aware') => void;
   setSerpentineDirection: (direction: 'zigzag' | 'grid') => void;
   setSerpentineGroupSize: (size: number) => void;
-  updateSerpentineConfig: (updates: Partial<SerpentineConfig>) => void;
   // Pro mode actions
   setProModeEnabled: (enabled: boolean) => void;
   setProModeDirection: (direction: 'TB' | 'LR') => void;
@@ -198,6 +240,13 @@ interface UIState {
   setProPaginationEnabled: (enabled: boolean) => void;
   setProPageSize: (size: number) => void;
   setProCurrentPage: (page: number) => void;
+  // Editor mode (kid/pro)
+  editorMode: EditorMode;
+  setEditorMode: (mode: EditorMode) => void;
+
+  // Studio module switcher (non-persistent — resets to 'vn-editor' on each launch)
+  activeModule: StudioModule;
+  setActiveModule: (module: StudioModule) => void;
 }
 
 // ============================================================================
@@ -232,20 +281,27 @@ export const useUIStore = create<UIState>()(
         dialogueWizardInitialComplexity: null,
         dialogueGraphModalOpen: false,
         dialogueGraphSelectedScene: null,
-        graphThemeId: getPersistedThemeId(),  // PHASE 4: Persist theme selection
+        cinematicEditorOpen: false,
+        cinematicEditorSceneId: null,
+        graphThemeId: getPersistedThemeId(), // PHASE 4: Persist theme selection
         // SERP-5: Serpentine layout state (persisted)
         serpentineEnabled: serpentineConfig.enabled,
         serpentineMode: serpentineConfig.mode,
         serpentineDirection: serpentineConfig.direction,
         serpentineGroupSize: serpentineConfig.groupSize,
+        // Editor mode state (persisted)
+        editorMode: getPersistedEditorMode(),
+        // Studio module (non-persistent — always start on vn-editor)
+        activeModule: 'vn-editor' as StudioModule,
         // Pro mode state (persisted)
         proModeEnabled: proConfig.enabled,
         proModeDirection: proConfig.direction,
-        proCollapseEnabled: true,  // Clusters collapsed by default in Pro mode
-        proExpandedClusters: [],   // All collapsed initially
+        proCollapseEnabled: false, // Nodes expanded by default — clustering is opt-in
+        proExpandedClusters: [],
         proPaginationEnabled: false,
         proPageSize: 8,
         proCurrentPage: 0,
+        scenesBrowserOpen: false,
 
         // Layout actions
         setFullscreenMode: (mode) => {
@@ -272,176 +328,250 @@ export const useUIStore = create<UIState>()(
           set({ commandPaletteOpen: open }, false, 'ui/setCommandPaletteOpen');
         },
 
+        setScenesBrowserOpen: (open) => {
+          set({ scenesBrowserOpen: open }, false, 'ui/setScenesBrowserOpen');
+        },
+
         // Actions
         setSelectedSceneId: (sceneId) => {
           set({ selectedSceneId: sceneId }, false, 'ui/setSelectedSceneId');
         },
 
-      setSelectedSceneForEdit: (sceneId) => {
-        set({ selectedSceneForEdit: sceneId }, false, 'ui/setSelectedSceneForEdit');
-      },
+        setSelectedSceneForEdit: (sceneId) => {
+          set({ selectedSceneForEdit: sceneId }, false, 'ui/setSelectedSceneForEdit');
+        },
 
-      setLastSaved: (date) => {
-        set({ lastSaved: date }, false, 'ui/setLastSaved');
-      },
+        setLastSaved: (date) => {
+          set({ lastSaved: date }, false, 'ui/setLastSaved');
+        },
 
-      setIsSaving: (isSaving) => {
-        set({ isSaving }, false, 'ui/setIsSaving');
-      },
+        setIsSaving: (isSaving) => {
+          set({ isSaving }, false, 'ui/setIsSaving');
+        },
 
-      setAnnouncement: (message) => {
-        set({ announcement: message }, false, 'ui/setAnnouncement');
-      },
+        setAnnouncement: (message) => {
+          set({ announcement: message }, false, 'ui/setAnnouncement');
+        },
 
-      setUrgentAnnouncement: (message) => {
-        set({ urgentAnnouncement: message }, false, 'ui/setUrgentAnnouncement');
-      },
+        setUrgentAnnouncement: (message) => {
+          set({ urgentAnnouncement: message }, false, 'ui/setUrgentAnnouncement');
+        },
 
-      setDialogueWizardOpen: (open) => {
-        set({ dialogueWizardOpen: open }, false, 'ui/setDialogueWizardOpen');
-      },
+        setDialogueWizardOpen: (open) => {
+          set({ dialogueWizardOpen: open }, false, 'ui/setDialogueWizardOpen');
+        },
 
-      setDialogueWizardEditIndex: (index) => {
-        set({ dialogueWizardEditIndex: index }, false, 'ui/setDialogueWizardEditIndex');
-      },
+        setDialogueWizardEditIndex: (index) => {
+          set({ dialogueWizardEditIndex: index }, false, 'ui/setDialogueWizardEditIndex');
+        },
 
-      setDialogueWizardInitialComplexity: (complexity) => {
-        set({ dialogueWizardInitialComplexity: complexity }, false, 'ui/setDialogueWizardInitialComplexity');
-      },
+        setDialogueWizardInitialComplexity: (complexity) => {
+          set(
+            { dialogueWizardInitialComplexity: complexity },
+            false,
+            'ui/setDialogueWizardInitialComplexity'
+          );
+        },
 
-      clearDialogueWizardInitialComplexity: () => {
-        set({ dialogueWizardInitialComplexity: null }, false, 'ui/clearDialogueWizardInitialComplexity');
-      },
+        clearDialogueWizardInitialComplexity: () => {
+          set(
+            { dialogueWizardInitialComplexity: null },
+            false,
+            'ui/clearDialogueWizardInitialComplexity'
+          );
+        },
 
-      setDialogueGraphModalOpen: (open) => {
-        set({ dialogueGraphModalOpen: open }, false, 'ui/setDialogueGraphModalOpen');
-      },
+        setDialogueGraphModalOpen: (open) => {
+          set({ dialogueGraphModalOpen: open }, false, 'ui/setDialogueGraphModalOpen');
+        },
 
-      setDialogueGraphSelectedScene: (sceneId) => {
-        set({ dialogueGraphSelectedScene: sceneId }, false, 'ui/setDialogueGraphSelectedScene');
-      },
+        setDialogueGraphSelectedScene: (sceneId) => {
+          set({ dialogueGraphSelectedScene: sceneId }, false, 'ui/setDialogueGraphSelectedScene');
+        },
 
-      setGraphThemeId: (themeId) => {
-        persistThemeId(themeId);  // PHASE 4: Persist to localStorage
-        set({ graphThemeId: themeId }, false, 'ui/setGraphThemeId');
-      },
+        setCinematicEditorOpen: (open, sceneId) => {
+          set(
+            {
+              cinematicEditorOpen: open,
+              cinematicEditorSceneId: sceneId !== undefined ? sceneId : null,
+            },
+            false,
+            'ui/setCinematicEditorOpen'
+          );
+        },
 
-      // SERP-5: Serpentine layout actions
-      updateSerpentineConfig: (updates) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = {
-            enabled: updates.enabled ?? state.serpentineEnabled,
-            mode: updates.mode ?? state.serpentineMode,
-            direction: updates.direction ?? state.serpentineDirection,
-            groupSize: updates.groupSize ?? state.serpentineGroupSize,
-          };
-          persistSerpentineConfig(newConfig);
-          return {
-            serpentineEnabled: newConfig.enabled,
-            serpentineMode: newConfig.mode,
-            serpentineDirection: newConfig.direction,
-            serpentineGroupSize: newConfig.groupSize,
-          };
-        }, false, 'ui/updateSerpentineConfig');
-      },
+        setGraphThemeId: (themeId) => {
+          persistThemeId(themeId); // PHASE 4: Persist to localStorage
+          set({ graphThemeId: themeId }, false, 'ui/setGraphThemeId');
+        },
 
-      setSerpentineEnabled: (enabled) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = { enabled, mode: state.serpentineMode, direction: state.serpentineDirection, groupSize: state.serpentineGroupSize };
-          persistSerpentineConfig(newConfig);
-          // Mutual exclusion: disable Pro when serpentine is enabled
-          if (enabled && state.proModeEnabled) {
-            const newProConfig: ProModeConfig = { enabled: false, direction: state.proModeDirection };
-            persistProConfig(newProConfig);
-            return { serpentineEnabled: enabled, proModeEnabled: false };
-          }
-          return { serpentineEnabled: enabled };
-        }, false, 'ui/setSerpentineEnabled');
-      },
+        // SERP-5: Serpentine layout actions
+        setSerpentineEnabled: (enabled) => {
+          set(
+            (state) => {
+              const newConfig: SerpentineConfig = {
+                enabled,
+                mode: state.serpentineMode,
+                direction: state.serpentineDirection,
+                groupSize: state.serpentineGroupSize,
+              };
+              persistSerpentineConfig(newConfig);
+              // Mutual exclusion: disable Pro when serpentine is enabled
+              if (enabled && state.proModeEnabled) {
+                const newProConfig: ProModeConfig = {
+                  enabled: false,
+                  direction: state.proModeDirection,
+                };
+                persistProConfig(newProConfig);
+                return { serpentineEnabled: enabled, proModeEnabled: false };
+              }
+              return { serpentineEnabled: enabled };
+            },
+            false,
+            'ui/setSerpentineEnabled'
+          );
+        },
 
-      setSerpentineMode: (mode) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = { enabled: state.serpentineEnabled, mode, direction: state.serpentineDirection, groupSize: state.serpentineGroupSize };
-          persistSerpentineConfig(newConfig);
-          return { serpentineMode: mode };
-        }, false, 'ui/setSerpentineMode');
-      },
+        setSerpentineMode: (mode) => {
+          set(
+            (state) => {
+              const newConfig: SerpentineConfig = {
+                enabled: state.serpentineEnabled,
+                mode,
+                direction: state.serpentineDirection,
+                groupSize: state.serpentineGroupSize,
+              };
+              persistSerpentineConfig(newConfig);
+              return { serpentineMode: mode };
+            },
+            false,
+            'ui/setSerpentineMode'
+          );
+        },
 
-      setSerpentineDirection: (direction) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = { enabled: state.serpentineEnabled, mode: state.serpentineMode, direction, groupSize: state.serpentineGroupSize };
-          persistSerpentineConfig(newConfig);
-          return { serpentineDirection: direction };
-        }, false, 'ui/setSerpentineDirection');
-      },
+        setSerpentineDirection: (direction) => {
+          set(
+            (state) => {
+              const newConfig: SerpentineConfig = {
+                enabled: state.serpentineEnabled,
+                mode: state.serpentineMode,
+                direction,
+                groupSize: state.serpentineGroupSize,
+              };
+              persistSerpentineConfig(newConfig);
+              return { serpentineDirection: direction };
+            },
+            false,
+            'ui/setSerpentineDirection'
+          );
+        },
 
-      setSerpentineGroupSize: (size) => {
-        set((state) => {
-          const newConfig: SerpentineConfig = { enabled: state.serpentineEnabled, mode: state.serpentineMode, direction: state.serpentineDirection, groupSize: size };
-          persistSerpentineConfig(newConfig);
-          return { serpentineGroupSize: size };
-        }, false, 'ui/setSerpentineGroupSize');
-      },
+        setSerpentineGroupSize: (size) => {
+          set(
+            (state) => {
+              const newConfig: SerpentineConfig = {
+                enabled: state.serpentineEnabled,
+                mode: state.serpentineMode,
+                direction: state.serpentineDirection,
+                groupSize: size,
+              };
+              persistSerpentineConfig(newConfig);
+              return { serpentineGroupSize: size };
+            },
+            false,
+            'ui/setSerpentineGroupSize'
+          );
+        },
 
-      // Pro mode actions (mutually exclusive with serpentine)
-      setProModeEnabled: (enabled) => {
-        set((state) => {
-          const newProConfig: ProModeConfig = { enabled, direction: state.proModeDirection };
-          persistProConfig(newProConfig);
-          // Mutual exclusion: disable serpentine when Pro is enabled
-          if (enabled && state.serpentineEnabled) {
-            const newSerpConfig: SerpentineConfig = { enabled: false, mode: state.serpentineMode, direction: state.serpentineDirection, groupSize: state.serpentineGroupSize };
-            persistSerpentineConfig(newSerpConfig);
-            return { proModeEnabled: enabled, serpentineEnabled: false };
-          }
-          return { proModeEnabled: enabled };
-        }, false, 'ui/setProModeEnabled');
-      },
+        // Pro mode actions (mutually exclusive with serpentine)
+        setProModeEnabled: (enabled) => {
+          set(
+            (state) => {
+              const newProConfig: ProModeConfig = { enabled, direction: state.proModeDirection };
+              persistProConfig(newProConfig);
+              // Mutual exclusion: disable serpentine when Pro is enabled
+              if (enabled && state.serpentineEnabled) {
+                const newSerpConfig: SerpentineConfig = {
+                  enabled: false,
+                  mode: state.serpentineMode,
+                  direction: state.serpentineDirection,
+                  groupSize: state.serpentineGroupSize,
+                };
+                persistSerpentineConfig(newSerpConfig);
+                return { proModeEnabled: enabled, serpentineEnabled: false };
+              }
+              return { proModeEnabled: enabled };
+            },
+            false,
+            'ui/setProModeEnabled'
+          );
+        },
 
-      setProModeDirection: (direction) => {
-        set((state) => {
-          const newConfig: ProModeConfig = { enabled: state.proModeEnabled, direction };
-          persistProConfig(newConfig);
-          return { proModeDirection: direction };
-        }, false, 'ui/setProModeDirection');
-      },
+        setProModeDirection: (direction) => {
+          set(
+            (state) => {
+              const newConfig: ProModeConfig = { enabled: state.proModeEnabled, direction };
+              persistProConfig(newConfig);
+              return { proModeDirection: direction };
+            },
+            false,
+            'ui/setProModeDirection'
+          );
+        },
 
-      setProCollapseEnabled: (enabled) => {
-        set({ proCollapseEnabled: enabled }, false, 'ui/setProCollapseEnabled');
-      },
+        setProCollapseEnabled: (enabled) => {
+          set({ proCollapseEnabled: enabled }, false, 'ui/setProCollapseEnabled');
+        },
 
-      toggleClusterExpanded: (clusterId) => {
-        set((state) => {
-          const expanded = state.proExpandedClusters;
-          const isExpanded = expanded.includes(clusterId);
-          return {
-            proExpandedClusters: isExpanded
-              ? expanded.filter(id => id !== clusterId)
-              : [...expanded, clusterId],
-          };
-        }, false, 'ui/toggleClusterExpanded');
-      },
+        toggleClusterExpanded: (clusterId) => {
+          set(
+            (state) => {
+              const expanded = state.proExpandedClusters;
+              const isExpanded = expanded.includes(clusterId);
+              return {
+                proExpandedClusters: isExpanded
+                  ? expanded.filter((id) => id !== clusterId)
+                  : [...expanded, clusterId],
+              };
+            },
+            false,
+            'ui/toggleClusterExpanded'
+          );
+        },
 
-      collapseAllClusters: () => {
-        set({ proExpandedClusters: [] }, false, 'ui/collapseAllClusters');
-      },
+        collapseAllClusters: () => {
+          set({ proExpandedClusters: [] }, false, 'ui/collapseAllClusters');
+        },
 
-      expandAllClusters: (clusterIds) => {
-        set({ proExpandedClusters: clusterIds }, false, 'ui/expandAllClusters');
-      },
+        expandAllClusters: (clusterIds) => {
+          set({ proExpandedClusters: clusterIds }, false, 'ui/expandAllClusters');
+        },
 
-      setProPaginationEnabled: (enabled) => {
-        set({ proPaginationEnabled: enabled, proCurrentPage: 0 }, false, 'ui/setProPaginationEnabled');
-      },
+        setProPaginationEnabled: (enabled) => {
+          set(
+            { proPaginationEnabled: enabled, proCurrentPage: 0 },
+            false,
+            'ui/setProPaginationEnabled'
+          );
+        },
 
-      setProPageSize: (size) => {
-        set({ proPageSize: size, proCurrentPage: 0 }, false, 'ui/setProPageSize');
-      },
+        setProPageSize: (size) => {
+          set({ proPageSize: size, proCurrentPage: 0 }, false, 'ui/setProPageSize');
+        },
 
-      setProCurrentPage: (page) => {
-        set({ proCurrentPage: page }, false, 'ui/setProCurrentPage');
-      },
-    };
+        setProCurrentPage: (page) => {
+          set({ proCurrentPage: page }, false, 'ui/setProCurrentPage');
+        },
+
+        setEditorMode: (mode) => {
+          persistEditorMode(mode);
+          set({ editorMode: mode }, false, 'ui/setEditorMode');
+        },
+
+        setActiveModule: (module) => {
+          set({ activeModule: module }, false, 'ui/setActiveModule');
+        },
+      };
     }),
     { name: 'UIStore' }
   )

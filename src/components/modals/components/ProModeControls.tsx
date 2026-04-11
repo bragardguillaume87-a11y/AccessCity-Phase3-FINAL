@@ -146,16 +146,18 @@ export function ProModeControls() {
                 </button>
               </div>
 
-              {/* Pagination toggle */}
+              {/* Pagination toggle — active par défaut, le Pro peut la désactiver */}
               <div>
                 <button
                   onClick={() => setProPaginationEnabled(!proPaginationEnabled)}
                   className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="text-sm">
-                    <span className="font-medium">Pagination</span>
+                    <span className="font-medium">Pagination automatique</span>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      Affiche les dialogues par pages
+                      {proPaginationEnabled
+                        ? 'Active — divise les grands dialogues en pages'
+                        : 'Désactivée — tous les nœuds visibles'}
                     </div>
                   </div>
                   <div className={`w-8 h-5 rounded-full transition-colors flex items-center ${
@@ -167,7 +169,7 @@ export function ProModeControls() {
                 {proPaginationEnabled && (
                   <div className="px-2 pt-2">
                     <div className="text-xs font-medium text-muted-foreground mb-1">
-                      Dialogues par page : {proPageSize}
+                      Nœuds par page : {proPageSize}
                     </div>
                     <div className="flex gap-1">
                       {[6, 8, 10, 12].map(size => (

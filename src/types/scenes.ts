@@ -1,5 +1,10 @@
-import type { Condition, DiceCheck, Effect } from './game';
+import type { Condition, DiceCheck, Effect, MinigameConfig } from './game';
 import type { SceneAudio, DialogueAudio, AmbientAudio } from './audio';
+import type { CinematicEvent, CinematicTracks } from './cinematic';
+import type { SceneEffectConfig } from './sceneEffect';
+
+/** Type de scène : dialogue interactif ou cinématique auto-play */
+export type SceneType = 'standard' | 'cinematic';
 
 /**
  * CSS filter overrides applied to the scene background image only.
@@ -38,6 +43,31 @@ export interface SceneMetadata {
   ambientTracks?: [AmbientAudio?, AmbientAudio?];
   /** CSS filter applied to background image only. Characters and UI are unaffected. */
   backgroundFilter?: BackgroundFilter;
+  /** Scene type: 'standard' (click-to-advance dialogues) or 'cinematic' (auto-play event sequence). Default: 'standard'. */
+  sceneType?: SceneType;
+  /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. */
+  cinematicEvents?: CinematicEvent[];
+  /** Multi-track timeline (nouveau format NLE). Remplace cinematicEvents quand présent. */
+  cinematicTracks?: CinematicTracks;
+  /** Couleur de la pastille dans le filmstrip (hex). Défaut: --color-primary. */
+  color?: string;
+  /**
+   * Effet atmosphérique de la scène VN (pluie, brouillard, neige…).
+   * Rendu via <SceneEffectCanvas> overlay sur le fond de la scène.
+   * Absent → pas d'effet.
+   */
+  sceneEffect?: SceneEffectConfig;
+}
+
+/**
+ * Type guard — retourne true si la scène est une cinématique auto-play.
+ * Utiliser partout où sceneType === 'cinematic' est testé pour centraliser la logique.
+ *
+ * @example
+ * if (isCinematicScene(selectedScene)) { ... }
+ */
+export function isCinematicScene(scene: { sceneType?: SceneType } | null | undefined): boolean {
+  return scene?.sceneType === 'cinematic';
 }
 
 export interface Position {
@@ -63,8 +93,23 @@ export interface DialogueBoxStyle {
   fontSize?: number;
   /** Box background opacity 0–1 (default: 0.75) */
   boxOpacity?: number;
-  /** Box vertical position (default: 'bottom') */
-  position?: 'bottom' | 'top' | 'center';
+  /**
+   * Box position preset (default: 'bottom').
+   * 'custom' uses positionX / positionY (percentages 0–100).
+   */
+  position?:
+    | 'bottom'
+    | 'bottom-left'
+    | 'bottom-right'
+    | 'top'
+    | 'top-left'
+    | 'top-right'
+    | 'center'
+    | 'custom';
+  /** Custom horizontal position 0–100% (used only when position === 'custom'). Default: 50. */
+  positionX?: number;
+  /** Custom vertical position 0–100% (used only when position === 'custom'). Default: 75. */
+  positionY?: number;
   /** Show speaker portrait thumbnail 48×48px (default: true) */
   showPortrait?: boolean;
   /** Speaker name alignment: 'auto' = left/right based on sprite position (default: 'auto') */
@@ -77,12 +122,68 @@ export interface DialogueBoxStyle {
   portraitOffsetY?: number;
   /** Portrait zoom factor 1.0–3.0 (default: 1.0). Scale CSS + overflow-hidden. */
   portraitScale?: number;
+  /** Box background color as hex (default: '#030712'). Combined with boxOpacity. */
+  bgColor?: string;
+  /** Main dialogue text color as hex (default: '#ffffff'). */
+  textColor?: string;
+  /** Border color as hex (default: '#ffffff'). Opacity derived from borderStyle. */
+  borderColor?: string;
+  /** Box border radius preset (default: 'xl' = 24px). */
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Layout preset: 'classique' = all-in-one box (default), 'visual' = separate nameplate tab + text box */
+  layout?: 'classique' | 'visual';
+  /**
+   * Transition entre dialogues (paramètre global projet uniquement).
+   * - 'aucune'  : swap instantané (comportement legacy)
+   * - 'fondu'   : fade opacity, boîte fixe — discret, adapté aux rythmes rapides
+   * - 'glisse'  : fade + léger slide vertical — style VN japonais
+   * Défaut : 'fondu'
+   */
+  dialogueTransition?: 'aucune' | 'fondu' | 'glisse';
+  // ── Nom du personnage ─────────────────────────────────────────────────────
+  /** Police du nom (ID parmi NAME_FONTS dans config/nameFonts.ts — défaut : 'georgia') */
+  nameFont?: string;
+  /**
+   * Couleur du nom en hex. Vide ou absent = utiliser speakerColor (couleur auto par personnage).
+   * Ex : '#ffffff' forcer blanc, '#ffd700' or.
+   */
+  nameColor?: string;
+  /** Preset d'ombre du nom (défaut : 'glow') */
+  nameShadow?: 'none' | 'subtle' | 'glow' | 'hard' | 'neon';
+  /** Espacement des lettres du nom en px (0–8, défaut : 1.5) */
+  nameLetterSpacing?: number;
+  // ── Boîte narrateur (dialogues sans speaker) ──────────────────────────────
+  /** Fond de la boîte narrateur en hex (défaut : '#070a1a' — bleu nuit Octopath). */
+  narratorBgColor?: string;
+  /** Couleur du texte narrateur en hex (défaut : '#ede8d5' — crème Octopath). */
+  narratorTextColor?: string;
+  /** Couleur de la bordure et des ornements narrateur en hex (défaut : '#c9a84c' — or). */
+  narratorBorderColor?: string;
+  /** Opacité du fond narrateur 0–1 (défaut : 0.93). */
+  narratorBgOpacity?: number;
+  /** Police du texte narrateur (ID parmi NAME_FONTS — défaut : 'crimson-pro'). */
+  narratorFont?: string;
+  /** Texte narrateur en italique (défaut : true). */
+  narratorItalic?: boolean;
+  /** Alignement du texte narrateur (défaut : 'center'). */
+  narratorAlign?: 'left' | 'center';
+  /** Afficher les séparateurs ornementaux ✦ haut et bas (défaut : true). */
+  narratorShowSeparators?: boolean;
+  // ── Dimensionnement de la boîte ──────────────────────────────────────────────
+  /** Largeur de la boîte en % du canvas (défaut : 76). Plage : 40–100. */
+  boxWidth?: number;
 }
 
 export interface Dialogue {
   id: string;
   speaker: string;
   text: string;
+  /**
+   * Texte enrichi en HTML (gras, couleurs) — set par le Surligneur dans TextTab.
+   * Toujours synchronisé avec `text` (version plain text pour le typewriter).
+   * Si absent, le rendu utilise `text` directement.
+   */
+  richText?: string;
   choices: DialogueChoice[];
   sfx?: DialogueAudio;
   nextDialogueId?: string;
@@ -90,13 +191,29 @@ export interface Dialogue {
   speakerMood?: string;
   /** Overrides mood per character for this specific dialogue. Key = sceneCharacterId, value = mood id. */
   characterMoods?: Record<string, string>;
+  /**
+   * Profil vocal procédural pour le typewriter blip (ex: 'homme-neutre', 'femme-joyeuse', 'robot').
+   * Aucun fichier audio requis — synthèse Web Audio API.
+   * @see src/utils/voiceProfiles.ts
+   */
+  voicePreset?: string;
   stageDirections?: string;
   conditions?: Condition[];
   /** Per-dialogue dialogue box style override (merged with project defaults). */
   boxStyle?: DialogueBoxStyle;
+  /** Marque ce dialogue comme nœud de conclusion intentionnel (fin de l'histoire). */
+  isConclusion?: boolean;
+  /** Config mini-jeu — uniquement quand ComplexityLevel === 'minigame'. */
+  minigame?: MinigameConfig;
+  /**
+   * Sous-type visuel du dialogue.
+   * - 'phonecall' : vignette sombre, icône téléphone, fond neutre.
+   * - 'normal'    : rendu standard (défaut).
+   */
+  dialogueSubtype?: 'normal' | 'phonecall';
 }
 
-export type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
+type ChoiceActionType = 'continue' | 'sceneJump' | 'diceCheck';
 
 export interface DialogueChoice {
   id: string;
@@ -106,15 +223,8 @@ export interface DialogueChoice {
   nextSceneId?: string;
   nextDialogueId?: string;
   diceCheck?: DiceCheck;
-}
-
-/** Determine the action type of a choice from its data (backwards compatible) */
-export function getChoiceActionType(choice: DialogueChoice): ChoiceActionType | 'none' {
-  if (choice.actionType) return choice.actionType;
-  if (choice.diceCheck) return 'diceCheck';
-  if (choice.nextSceneId) return 'sceneJump';
-  if (choice.nextDialogueId) return 'continue';
-  return 'none';
+  /** Conditions de visibilité — le choix est masqué si une condition échoue. Vide = toujours visible. */
+  conditions?: Condition[];
 }
 
 export interface SceneCharacter {
@@ -160,4 +270,12 @@ export interface Scene {
   ambientTracks?: [AmbientAudio?, AmbientAudio?];
   /** CSS filter applied to background image only. Inherited from SceneMetadata. */
   backgroundFilter?: BackgroundFilter;
+  /** Scene type: 'standard' (click-to-advance dialogues) or 'cinematic' (auto-play event sequence). Default: 'standard'. */
+  sceneType?: SceneType;
+  /** Ordered sequence of cinematic events. Only used when sceneType === 'cinematic'. Inherited from SceneMetadata. */
+  cinematicEvents?: CinematicEvent[];
+  /** Multi-track timeline (nouveau format NLE). Inherited from SceneMetadata. */
+  cinematicTracks?: CinematicTracks;
+  /** Effet atmosphérique de la scène. Inherited from SceneMetadata. */
+  sceneEffect?: SceneEffectConfig;
 }

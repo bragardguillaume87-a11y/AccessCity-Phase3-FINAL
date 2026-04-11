@@ -11,7 +11,10 @@ import { useCallback, useMemo } from 'react';
 import { useScenesStore } from '../scenesStore';
 import { useDialoguesStore } from '../dialoguesStore';
 import { useSceneElementsStore } from '../sceneElementsStore';
-import type { SceneMetadata } from '../../types';
+import type { SceneMetadata, SceneCharacter } from '../../types';
+
+// Module-level fallback — référence stable pour React.memo et Zustand
+const EMPTY_SCENE_CHARACTERS: SceneCharacter[] = [];
 
 // ============================================================================
 // SCENE SELECTORS
@@ -33,67 +36,39 @@ import type { SceneMetadata } from '../../types';
 export function useSceneById(sceneId: string | null | undefined): SceneMetadata | undefined {
   return useScenesStore(
     useCallback(
-      (state) => (sceneId ? state.scenes.find((s) => s.id === sceneId) : undefined),
+      (state) => (sceneId ? state?.scenes?.find((s) => s.id === sceneId) : undefined),
       [sceneId]
     )
   );
 }
 
 /**
- * Select all scenes — métadonnées uniquement (stable reference).
+ * Récupère les personnages placés sur une scène.
  *
- * ⚠️ Retourne SceneMetadata[] (pas Scene[]) — dialogues/characters ABSENTS.
- * Pour toutes les scènes complètes → useAllScenesWithElements()
+ * ⚠️ Retourne les SceneCharacter (positions, moods) — pas les Character du projet.
+ * Pour les données de personnage (nom, sprites) → combiner avec useCharacters().
+ *
+ * Abonne uniquement à sceneElementsStore (pas de surcoût scenesStore/dialoguesStore).
+ *
+ * @example
+ * const sceneChars = useSceneCharacters(sceneId);
+ * // sceneChars[i].characterId → id dans charactersStore
  */
-export function useScenes(): SceneMetadata[] {
-  return useScenesStore((state) => state.scenes);
-}
-
-/**
- * Select scenes count (optimized - doesn't re-render on scene content changes).
- */
-export function useScenesCount(): number {
-  return useScenesStore((state) => state.scenes.length);
-}
-
-/**
- * Select scene IDs only (lightweight selector for lists).
- */
-export function useSceneIds(): string[] {
-  return useScenesStore(
-    useCallback((state) => state.scenes.map((s) => s.id), [])
+export function useSceneCharacters(sceneId: string | null | undefined): SceneCharacter[] {
+  return useSceneElementsStore(
+    useCallback(
+      (s) =>
+        sceneId
+          ? (s?.elementsByScene[sceneId]?.characters ?? EMPTY_SCENE_CHARACTERS)
+          : EMPTY_SCENE_CHARACTERS,
+      [sceneId]
+    )
   );
 }
 
 // ============================================================================
 // ACTIONS SELECTORS (stable references)
 // ============================================================================
-
-/**
- * Select scene actions (stable references).
- * Use object destructuring for specific actions.
- *
- * Note: updateScene et reorderScenes acceptent SceneMetadata (plus Partial<Scene>).
- * Pour modifier dialogues → dialoguesStore | Pour characters → sceneElementsStore
- */
-export function useSceneActions() {
-  const addScene = useScenesStore((state) => state.addScene);
-  const updateScene = useScenesStore((state) => state.updateScene);
-  const deleteScene = useScenesStore((state) => state.deleteScene);
-  const reorderScenes = useScenesStore((state) => state.reorderScenes);
-  const setSceneBackground = useScenesStore((state) => state.setSceneBackground);
-
-  return useMemo(
-    () => ({
-      addScene,
-      updateScene,
-      deleteScene,
-      reorderScenes,
-      setSceneBackground,
-    }),
-    [addScene, updateScene, deleteScene, reorderScenes, setSceneBackground]
-  );
-}
 
 /**
  * Select dialogue actions (stable references).

@@ -78,7 +78,7 @@ export default function SkipToContent({ targetId: _targetId = 'main-content' }: 
           white-space: nowrap;
           border-width: 0;
         }
-        .focus\:not-sr-only:focus {
+        .focus\\:not-sr-only:focus {
           position: static;
           width: auto;
           height: auto;

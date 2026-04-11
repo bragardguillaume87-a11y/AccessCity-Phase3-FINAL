@@ -8,9 +8,11 @@ yarn-error.log*
 # Playwright outputs
 test-results/
 playwright-report/
-*.png
 *.webm
 **/trace.zip
+# PNG exclus uniquement pour les outputs Playwright (pas les assets projet)
+playwright-report/**/*.png
+test-results/**/*.png
 
 # Coverage
 coverage/
@@ -20,7 +22,11 @@ coverage/
 .cache/
 dist/
 dist-ssr/
+dist-player-tauri/
 tmp/
+
+# Tauri build artifacts (commiter uniquement public/player-win.exe)
+src-tauri/target/
 
 # OS artifacts
 Thumbs.db
@@ -52,10 +58,5 @@ resultats*
 # Perplexity context files (compilation documents for external AI)
 .perplexity-context/
 
-# User-uploaded audio assets (large binaries — not tracked in git)
-public/assets/music/*.wav
-public/assets/music/*.mp3
-public/assets/music/*.ogg
-public/assets/sfx/*.wav
-public/assets/sfx/*.mp3
-public/assets/sfx/*.ogg
+# Assets uploadés — tous trackés dans git pour sync entre machines
+# (supprimer cette section si les fichiers deviennent trop volumineux → passer à Git LFS)

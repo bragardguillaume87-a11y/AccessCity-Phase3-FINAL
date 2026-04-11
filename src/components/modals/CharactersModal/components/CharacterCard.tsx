@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Star, Copy, Trash2 } from 'lucide-react';
+import { Users, Star, Copy, Trash2, Eye, Image } from 'lucide-react';
 import type { Character } from '@/types';
 import type { CharacterStats } from '../hooks/useCharacterStats';
+import { getPreviewImage } from '../utils/characterUtils';
 
 /**
  * Validation error interface (compatible with V1)
@@ -33,20 +34,6 @@ export interface CharacterCardProps {
   onDuplicate: (characterId: string) => void;
   /** Callback when delete is clicked */
   onDelete: (character: Character) => void;
-}
-
-/**
- * Get preview image URL for character
- * Returns first available sprite or undefined
- */
-function getPreviewImage(character: Character): string | undefined {
-  if (!character.sprites || !character.moods || character.moods.length === 0) {
-    return undefined;
-  }
-
-  // Try to find sprite for first mood
-  const firstMood = character.moods[0];
-  return character.sprites[firstMood];
 }
 
 /**
@@ -112,15 +99,15 @@ export function CharacterCard({
       onClick={() => onClick(character)}
     >
       {/* Preview Image Section */}
-      <div className="relative aspect-[4/3] bg-black/20 overflow-hidden">
-        {/* ✨ NOUVEAU : Gradient overlay pour meilleure lisibilité */}
+      <div className="relative aspect-[3/4] bg-black/20 overflow-hidden">
+        {/* Gradient overlay pour meilleure lisibilité */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none z-10" />
 
         {previewImage ? (
           <img
             src={previewImage}
             alt={character.name}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover object-[center_20%] transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
@@ -208,17 +195,12 @@ export function CharacterCard({
         </h3>
         <div className="flex items-center gap-2 text-[11px] text-slate-400">
           <span className="flex items-center gap-1">
-            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"></path>
-            </svg>
+            <Eye className="h-3 w-3" />
             {stats.moodCount} humeur{stats.moodCount > 1 ? 's' : ''}
           </span>
           <span className="text-slate-600">•</span>
           <span className="flex items-center gap-1">
-            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path>
-            </svg>
+            <Image className="h-3 w-3" />
             {stats.spriteCount} sprite{stats.spriteCount > 1 ? 's' : ''}
           </span>
         </div>

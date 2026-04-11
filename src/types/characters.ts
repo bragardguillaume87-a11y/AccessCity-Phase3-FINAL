@@ -6,6 +6,27 @@ export interface Character {
   moods: string[];
   /** Voice preset used for text blips during dialogue. Defaults to 'narrator' if unset. */
   voicePreset?: string;
+  /**
+   * Marque ce personnage comme protagoniste (joueur).
+   * Ses `initialStats` seront utilisées comme stats de départ dans le PreviewPlayer.
+   * Un seul personnage devrait avoir ce flag à true.
+   */
+  isProtagonist?: boolean;
+  /**
+   * Stats de jeu initiales (physique/mentale 0-100).
+   * Actives uniquement si `isProtagonist = true`.
+   * Valeur par défaut : 100 pour chaque stat si non renseignée.
+   */
+  initialStats?: {
+    physique?: number;
+    mentale?: number;
+  };
+  /**
+   * Rôle du personnage — affecte le rendu de la textbox.
+   * - 'narrator' : textbox pleine largeur, pas de portrait, texte centré.
+   * - 'speaker'  : rendu standard (défaut).
+   */
+  role?: 'speaker' | 'narrator';
 }
 
 export interface MoodPreset {

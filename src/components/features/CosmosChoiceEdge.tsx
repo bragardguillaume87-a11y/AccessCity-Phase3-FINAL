@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { BaseEdge, Edge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from '@xyflow/react';
 import { COSMOS_COLORS, COSMOS_DIMENSIONS, COSMOS_ANIMATIONS } from '@/config/cosmosConstants';
 
@@ -16,7 +16,7 @@ const dim = COSMOS_DIMENSIONS.choiceBubble;
  * - Cosmic gradient styling
  * - Shows full choice text in bubble
  */
-export function CosmosChoiceEdge({
+export const CosmosChoiceEdge = React.memo(function CosmosChoiceEdge({
   id,
   sourceX,
   sourceY,
@@ -116,4 +116,4 @@ export function CosmosChoiceEdge({
       </EdgeLabelRenderer>
     </>
   );
-}
+});

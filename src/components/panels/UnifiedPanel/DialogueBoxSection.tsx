@@ -1,87 +1,662 @@
-import { useCallback } from 'react';
-import { MessageSquare, AlignLeft, AlignRight, Eye, EyeOff, RotateCcw } from 'lucide-react';
-import { useSettingsStore } from '@/stores';
-import type { DialogueBoxStyle } from '@/types/scenes';
+import { useState, useRef, useEffect } from 'react';
+import { hashStringToColor } from '@/components/ui/DialogueBox';
+import { AnimatePresence } from 'framer-motion';
+import { ChevronDown, User, MessageSquare, GitBranch, Plus, Scissors } from 'lucide-react';
+import { useSelectionStore } from '@/stores/selectionStore';
+import { useDialoguesStore } from '@/stores/dialoguesStore';
+import { useCharactersStore } from '@/stores/charactersStore';
+import { useScenesStore } from '@/stores/scenesStore';
+import { useSceneWithElements } from '@/stores/selectors';
+import { isDialogueSelection } from '@/stores/selectionStore.types';
+import { ChoiceEditor } from '../PropertiesPanel/components/ChoiceEditor';
+import { InlineAccordion } from '@/components/ui/InlineAccordion';
+import type { Dialogue } from '@/types';
+import { SplitConfirmModal } from './DialogueBoxSection/components/SplitConfirmModal';
+import { MoodsSection } from './DialogueBoxSection/components/MoodsSection';
+import { SfxPanel } from './DialogueBoxSection/components/SfxPanel';
 
-/** Défauts affichés dans les contrôles quand la valeur n'est pas encore définie */
-const UI_DEFAULTS: Required<DialogueBoxStyle> = {
-  typewriterSpeed: 40,
-  fontSize: 15,
-  boxOpacity: 0.75,
-  position: 'bottom',
-  showPortrait: true,
-  speakerAlign: 'auto',
-  borderStyle: 'subtle',
-  portraitOffsetX: 50,
-  portraitOffsetY: 0,
-  portraitScale: 1,
-};
+// ── Palette 8 couleurs (surligneur) ──────────────────────────────────────────
+const RICH_COLORS = [
+  { label: 'Blanc', hex: '#ffffff' },
+  { label: 'Jaune', hex: '#fbbf24' },
+  { label: 'Rouge', hex: '#f87171' },
+  { label: 'Vert', hex: '#4ade80' },
+  { label: 'Bleu', hex: '#60a5fa' },
+  { label: 'Orange', hex: '#fb923c' },
+  { label: 'Violet', hex: '#c084fc' },
+  { label: 'Rose', hex: '#f472b6' },
+] as const;
 
 // ============================================================================
-// SUB-COMPONENTS
+// DIALOGUE COURANT — propriétés du dialogue sélectionné
 // ============================================================================
 
-interface SliderRowProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  onChange: (v: number) => void;
-  ariaLabel: string;
-}
+/**
+ * DialogueEditorInner — lit le dialogue sélectionné depuis les stores et permet son édition.
+ * Monté uniquement quand un dialogue est actif (via DialogueCurrentSection).
+ */
+function DialogueEditorInner({ sceneId, index }: { sceneId: string; index: number }) {
+  const updateDialogue = useDialoguesStore((s) => s.updateDialogue);
+  const insertDialoguesAfter = useDialoguesStore((s) => s.insertDialoguesAfter);
+  const dialogue = useDialoguesStore((s) => s.getDialoguesByScene(sceneId)[index]);
+  const characters = useCharactersStore((s) => s.characters);
+  const scenes = useScenesStore((s) => s.scenes);
+  const scene = useSceneWithElements(sceneId);
 
-function SliderRow({ label, value, min, max, step, unit, onChange, ariaLabel }: SliderRowProps) {
+  const [choicesOpen, setChoicesOpen] = useState(false);
+  // Split preview — null = mode édition normal, non-null = mode confirmation
+  const [splitPreview, setSplitPreview] = useState<{ text1: string; text2: string } | null>(null);
+
+  // Couleur de texte — style Word : popover grille
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [lastUsedColor, setLastUsedColor] = useState('#ffffff');
+  const colorPickerRef = useRef<HTMLDivElement>(null);
+
+  // ── Rich text editor ──────────────────────────────────────────────────────
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isComposing = useRef(false);
+
+  // Init contenteditable depuis richText ou text au montage / changement de dialogue
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el || !dialogue) return;
+    const target = dialogue.richText || dialogue.text || '';
+    if (el.innerHTML !== target) el.innerHTML = target;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogue?.id]);
+
+  // Fermer le color picker sur clic extérieur
+  useEffect(() => {
+    if (!colorPickerOpen) return;
+    const close = (e: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
+        setColorPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [colorPickerOpen]);
+
+  if (!dialogue) return null;
+
+  const speaker = characters.find((c) => c.id === dialogue.speaker);
+  const speakerName = speaker?.name || '—';
+  const speakerColor = hashStringToColor(dialogue.speaker || speakerName);
+
+  const handleUpdate = (updates: Partial<Dialogue>) => {
+    updateDialogue(sceneId, index, updates);
+  };
+
+  // Sync contenteditable → store (text plain + richText HTML)
+  const syncContent = () => {
+    const el = editorRef.current;
+    if (!el) return;
+    const raw = el.innerHTML;
+    const plain = el.innerText;
+    handleUpdate({
+      text: plain,
+      richText:
+        raw === plain
+          ? undefined
+          : raw
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/on\w+="[^"]*"/gi, '')
+              .replace(/javascript:/gi, ''),
+    });
+  };
+
+  const applyBold = () => {
+    editorRef.current?.focus();
+    document.execCommand('bold');
+    syncContent();
+  };
+  const applyColor = (hex: string) => {
+    editorRef.current?.focus();
+    document.execCommand('foreColor', false, hex);
+    syncContent();
+  };
+  const removeFormat = () => {
+    editorRef.current?.focus();
+    document.execCommand('removeFormat');
+    syncContent();
+  };
+
+  // ── Split au curseur ✂️ ───────────────────────────────────────────────────
+  // Étape 1 : calcule les deux parties et passe en mode prévisualisation
+  const handleSplitClick = () => {
+    const el = editorRef.current;
+    if (!el || !dialogue) return;
+    const sel = window.getSelection();
+    let splitPos: number;
+    if (!sel || sel.rangeCount === 0) {
+      splitPos = Math.floor(el.innerText.length / 2);
+    } else {
+      const range = sel.getRangeAt(0);
+      const preRange = document.createRange();
+      preRange.selectNodeContents(el);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      splitPos = preRange.toString().length;
+    }
+    const plain = el.innerText;
+    const text1 = plain.slice(0, splitPos).trim();
+    const text2 = plain.slice(splitPos).trim();
+    if (!text1 || !text2) return;
+    setSplitPreview({ text1, text2 });
+  };
+
+  // Étape 2a : confirmer — exécute le split dans les stores
+  const confirmSplit = () => {
+    if (!splitPreview || !dialogue) return;
+    const { text1, text2 } = splitPreview;
+    handleUpdate({ text: text1, richText: undefined, choices: [] });
+    // Fix : sync manuel du contenteditable (useEffect ne se déclenche que sur dialogue.id change)
+    if (editorRef.current) editorRef.current.innerHTML = text1;
+    const newDialogue: Dialogue = {
+      ...dialogue,
+      id: `dialogue-${Date.now()}`,
+      text: text2,
+      richText: undefined,
+    };
+    insertDialoguesAfter(sceneId, index, [newDialogue]);
+    setSplitPreview(null);
+  };
+
+  // Étape 2b : annuler — retour au mode édition normal
+  const cancelSplit = () => setSplitPreview(null);
+
+  const choiceCount = dialogue.choices?.length ?? 0;
+  const sceneChars = scene?.characters ?? [];
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</label>
-        <span className="text-xs text-[var(--color-text-muted)]">{value} {unit}</span>
+    <>
+      {/* Personnage */}
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: '10px 12px',
+        }}
+      >
+        <div className="sp-row mb-1">
+          <span className="flex items-center gap-1">
+            <User className="w-3 h-3 text-blue-400" aria-hidden="true" />
+            Personnage
+          </span>
+        </div>
+        <select
+          value={dialogue.speaker || ''}
+          onChange={(e) => handleUpdate({ speaker: e.target.value })}
+          className="w-full px-2.5 py-1.5 bg-[var(--color-bg-base)] border border-[var(--color-border-base)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+        >
+          <option value="">— Aucun —</option>
+          {characters.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 accent-[var(--color-primary)] cursor-pointer"
-        aria-label={ariaLabel}
+
+      {/* Humeurs */}
+      <MoodsSection
+        dialogue={dialogue}
+        handleUpdate={handleUpdate}
+        characters={characters}
+        sceneChars={sceneChars}
       />
-    </div>
+
+      {/* Texte */}
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: '10px 12px',
+        }}
+      >
+        <div className="sp-row mb-1">
+          <span className="flex items-center gap-1">
+            <MessageSquare className="w-3 h-3 text-violet-400" aria-hidden="true" />
+            Texte
+          </span>
+          {/* ✂️ Split */}
+          <button
+            type="button"
+            onClick={handleSplitClick}
+            title="Couper ce dialogue en deux au curseur"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              padding: '2px 6px',
+              borderRadius: 4,
+              fontSize: 10,
+              border: '1px solid var(--color-border-hover)',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: 'var(--color-text-muted)',
+              transition: 'color 0.1s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-muted)')}
+          >
+            <Scissors size={10} /> Couper
+          </button>
+        </div>
+
+        {/* Barre de formatage — style Word */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 4 }}>
+          {/* Gras */}
+          <button
+            type="button"
+            title="Gras"
+            onClick={applyBold}
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 5,
+              border: '1px solid var(--color-border-hover)',
+              background: 'var(--color-bg-hover)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.1s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-active)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-hover)';
+            }}
+          >
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 900,
+                fontFamily: 'Georgia, serif',
+                color: 'var(--color-text-primary)',
+                lineHeight: 1,
+              }}
+            >
+              B
+            </span>
+          </button>
+
+          {/* Italique */}
+          <button
+            type="button"
+            title="Italique"
+            onClick={() => {
+              editorRef.current?.focus();
+              document.execCommand('italic');
+              syncContent();
+            }}
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 5,
+              border: '1px solid var(--color-border-hover)',
+              background: 'var(--color-bg-hover)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.1s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-active)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-hover)';
+            }}
+          >
+            <span
+              style={{
+                fontSize: 13,
+                fontStyle: 'italic',
+                fontWeight: 700,
+                fontFamily: 'Georgia, serif',
+                color: 'var(--color-text-primary)',
+                lineHeight: 1,
+              }}
+            >
+              I
+            </span>
+          </button>
+
+          {/* Séparateur */}
+          <div
+            style={{
+              width: 1,
+              height: 16,
+              background: 'var(--color-border-base)',
+              margin: '0 2px',
+              flexShrink: 0,
+            }}
+          />
+
+          {/* Couleur — style Word : bouton A + barre colorée + popover grille */}
+          <div ref={colorPickerRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              title="Couleur du texte"
+              onClick={() => setColorPickerOpen((o) => !o)}
+              style={{
+                width: 36,
+                height: 26,
+                borderRadius: 5,
+                padding: '3px 4px',
+                border: `1px solid ${colorPickerOpen ? 'var(--color-border-focus)' : 'var(--color-border-hover)'}`,
+                background: colorPickerOpen ? 'var(--color-bg-active)' : 'var(--color-bg-hover)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                transition: 'background 0.1s, border-color 0.1s',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: 'Georgia, serif',
+                  color: 'var(--color-text-primary)',
+                  lineHeight: 1,
+                }}
+              >
+                A
+              </span>
+              <span
+                style={{
+                  width: 16,
+                  height: 3,
+                  borderRadius: 1.5,
+                  background: lastUsedColor,
+                  flexShrink: 0,
+                }}
+              />
+            </button>
+            {colorPickerOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  zIndex: 200,
+                  background: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-hover)',
+                  borderRadius: 8,
+                  padding: 8,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 18px)',
+                  gap: 4,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.55)',
+                }}
+              >
+                {RICH_COLORS.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    title={c.label}
+                    onClick={() => {
+                      applyColor(c.hex);
+                      setLastUsedColor(c.hex);
+                      setColorPickerOpen(false);
+                    }}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 4,
+                      background: c.hex,
+                      cursor: 'pointer',
+                      border:
+                        c.hex === '#ffffff'
+                          ? '1.5px solid rgba(255,255,255,0.25)'
+                          : '1.5px solid transparent',
+                      transition: 'transform 0.1s, box-shadow 0.1s',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = `0 0 0 2px ${c.hex}88`;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Séparateur */}
+          <div
+            style={{
+              width: 1,
+              height: 16,
+              background: 'var(--color-border-base)',
+              margin: '0 2px',
+              flexShrink: 0,
+            }}
+          />
+
+          {/* Effacer formatage */}
+          <button
+            type="button"
+            title="Effacer le formatage"
+            onClick={removeFormat}
+            style={{
+              height: 26,
+              padding: '0 8px',
+              borderRadius: 5,
+              border: '1px solid var(--color-border-hover)',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: 'var(--color-text-muted)',
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              transition: 'color 0.1s, background 0.1s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--color-text-primary)';
+              (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-hover)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted)';
+              (e.currentTarget as HTMLElement).style.background = 'transparent';
+            }}
+          >
+            Effacer
+          </button>
+        </div>
+
+        {/* Zone d'édition contenteditable */}
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onCompositionStart={() => {
+            isComposing.current = true;
+          }}
+          onCompositionEnd={() => {
+            isComposing.current = false;
+            syncContent();
+          }}
+          onInput={() => {
+            if (!isComposing.current) syncContent();
+          }}
+          onBlur={syncContent}
+          onFocus={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary)';
+          }}
+          onBlurCapture={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-base)';
+          }}
+          style={{
+            minHeight: 72,
+            padding: '6px 10px',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border-base)',
+            borderRadius: 8,
+            fontSize: 12,
+            color: 'var(--color-text-primary)',
+            lineHeight: 1.55,
+            outline: 'none',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            cursor: 'text',
+          }}
+        />
+        <p style={{ fontSize: 9, color: 'var(--color-text-muted)', marginTop: 2 }}>
+          Sélectionner du texte → B ou couleur · ✂️ Couper = diviser au curseur
+        </p>
+      </div>
+
+      {/* Choix */}
+      <div
+        style={{
+          marginBottom: 8,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setChoicesOpen((v) => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        >
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              background: 'rgba(139,92,246,0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <GitBranch className="w-3 h-3 text-purple-400" aria-hidden="true" />
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px',
+              color: 'var(--color-text-primary)',
+              flex: 1,
+            }}
+          >
+            Choix {choiceCount > 0 ? `(${choiceCount})` : ''}
+          </span>
+          <ChevronDown
+            className={`h-3 w-3 text-[var(--color-text-muted)] transition-transform duration-200 ${choicesOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <InlineAccordion isOpen={choicesOpen}>
+          <div className="px-3 pb-3 pt-1 space-y-2">
+            <button
+              type="button"
+              onClick={() =>
+                handleUpdate({
+                  choices: [
+                    ...(dialogue.choices || []),
+                    {
+                      id: `choice-${Date.now()}`,
+                      text: 'Nouveau choix',
+                      nextSceneId: '',
+                      effects: [],
+                    },
+                  ],
+                })
+              }
+              className="w-full flex items-center justify-center gap-1 py-1.5 rounded border border-dashed border-[var(--color-border-base)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Ajouter un choix
+            </button>
+            {choiceCount > 0 &&
+              dialogue.choices.map((choice, ci) => (
+                <ChoiceEditor
+                  key={ci}
+                  choice={choice}
+                  choiceIndex={ci}
+                  onUpdate={(idx, updated) => {
+                    const next = [...dialogue.choices];
+                    next[idx] = updated;
+                    handleUpdate({ choices: next });
+                  }}
+                  onDelete={(idx) =>
+                    handleUpdate({ choices: dialogue.choices.filter((_, i) => i !== idx) })
+                  }
+                  scenes={scenes}
+                  currentSceneId={sceneId}
+                />
+              ))}
+          </div>
+        </InlineAccordion>
+      </div>
+
+      {/* SFX + Voix procédurale */}
+      <SfxPanel dialogue={dialogue} handleUpdate={handleUpdate} />
+
+      {/* ── Modale de confirmation du découpage ── */}
+      <AnimatePresence>
+        {splitPreview && (
+          <SplitConfirmModal
+            text1={splitPreview.text1}
+            text2={splitPreview.text2}
+            speakerName={speakerName}
+            speakerColor={speakerColor}
+            dialogueIndex={index}
+            onConfirm={confirmSplit}
+            onCancel={cancelSplit}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
-interface ToggleGroupProps<T extends string> {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-}
+/**
+ * DialogueCurrentSection — wrapper conditionnel.
+ * Monte DialogueEditorInner uniquement quand un dialogue est actif dans selectionStore.
+ */
+function DialogueCurrentSection() {
+  const selectedElement = useSelectionStore((s) => s.selectedElement);
 
-function ToggleGroup<T extends string>({ label, value, options, onChange }: ToggleGroupProps<T>) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</p>
-      <div className="flex gap-1">
-        {options.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={[
-              'flex-1 text-xs py-1.5 px-2 rounded-lg border transition-colors',
-              value === opt.value
-                ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]',
-            ].join(' ')}
-            aria-pressed={value === opt.value}
-          >
-            {opt.label}
-          </button>
-        ))}
+  if (!isDialogueSelection(selectedElement)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+        <MessageSquare
+          className="w-8 h-8 text-[var(--color-text-secondary)] mb-3"
+          aria-hidden="true"
+        />
+        <p className="text-xs text-[var(--color-text-secondary)]">
+          Sélectionne un dialogue dans la liste pour éditer ses propriétés
+        </p>
       </div>
-    </div>
+    );
+  }
+
+  const { sceneId, index } = selectedElement;
+
+  return (
+    <section className="sp-sec" aria-label="Dialogue sélectionné">
+      <h3 className="sp-lbl">DIALOGUE {String(index + 1).padStart(2, '00')}</h3>
+      <DialogueEditorInner sceneId={sceneId} index={index} />
+    </section>
   );
 }
 
@@ -90,253 +665,15 @@ function ToggleGroup<T extends string>({ label, value, options, onChange }: Togg
 // ============================================================================
 
 /**
- * DialogueBoxSection — Panneau de personnalisation globale de la boîte de dialogue.
+ * DialogueBoxSection — Panneau d'édition du dialogue sélectionné.
  *
- * Les valeurs modifiées ici s'appliquent à toutes les scènes du projet.
- * Chaque dialogue peut ensuite les écraser via `dialogue.boxStyle` (override dans le wizard).
- *
- * Persisté dans : settingsStore.projectSettings.game.dialogueBoxDefaults
+ * Affiche les propriétés du dialogue actif : Personnage, Humeurs, Texte, Choix, SFX.
+ * Les paramètres globaux (Aperçu, Style, Apparence, Portrait) sont dans TextSection (icône "Style").
  */
 export function DialogueBoxSection() {
-  const dialogueBoxDefaults = useSettingsStore(s => s.projectSettings.game.dialogueBoxDefaults);
-  const updateDialogueBoxDefaults = useSettingsStore(s => s.updateDialogueBoxDefaults);
-
-  // Valeurs effectives (defaults du store ou UI_DEFAULTS si non défini)
-  const cfg: Required<DialogueBoxStyle> = {
-    ...UI_DEFAULTS,
-    ...dialogueBoxDefaults,
-  };
-
-  const update = useCallback((patch: Partial<DialogueBoxStyle>) => {
-    updateDialogueBoxDefaults(patch);
-  }, [updateDialogueBoxDefaults]);
-
-  const resetPortrait = useCallback(() => {
-    update({ portraitOffsetX: 50, portraitOffsetY: 0, portraitScale: 1 });
-  }, [update]);
-
   return (
-    <div className="p-3 space-y-4">
-
-      {/* Intro */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
-        <MessageSquare className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-        <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-          Personnalise la boîte de dialogue pour toutes les scènes du projet.
-          Chaque dialogue peut ensuite avoir ses propres réglages.
-        </p>
-      </div>
-
-      {/* === Texte === */}
-      <section aria-labelledby="dlgbox-text-heading">
-        <h3
-          id="dlgbox-text-heading"
-          className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2"
-        >
-          ✏️ Texte
-        </h3>
-        <div className="space-y-3">
-          <SliderRow
-            label="Vitesse de frappe"
-            value={cfg.typewriterSpeed}
-            min={20}
-            max={120}
-            step={5}
-            unit="ms/car"
-            onChange={(v) => update({ typewriterSpeed: v })}
-            ariaLabel={`Vitesse de frappe : ${cfg.typewriterSpeed} ms par caractère`}
-          />
-          <SliderRow
-            label="Taille du texte"
-            value={cfg.fontSize}
-            min={12}
-            max={24}
-            step={1}
-            unit="px"
-            onChange={(v) => update({ fontSize: v })}
-            ariaLabel={`Taille du texte : ${cfg.fontSize} pixels`}
-          />
-          {/* Aperçu en temps réel — visible sans scène active */}
-          <div
-            className="px-3 py-2 rounded-lg bg-black/70 border border-white/10 backdrop-blur-sm"
-            aria-hidden="true"
-          >
-            <p style={{ fontSize: `${cfg.fontSize}px` }} className="text-white leading-relaxed">
-              — Bonjour ! Je suis Léa, ton guide.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
-
-      {/* === Apparence === */}
-      <section aria-labelledby="dlgbox-style-heading">
-        <h3
-          id="dlgbox-style-heading"
-          className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2"
-        >
-          🎨 Apparence
-        </h3>
-        <div className="space-y-3">
-          <SliderRow
-            label="Opacité du fond"
-            value={Math.round(cfg.boxOpacity * 100)}
-            min={40}
-            max={95}
-            step={5}
-            unit="%"
-            onChange={(v) => update({ boxOpacity: v / 100 })}
-            ariaLabel={`Opacité du fond : ${Math.round(cfg.boxOpacity * 100)} %`}
-          />
-
-          <ToggleGroup
-            label="Bordure"
-            value={cfg.borderStyle}
-            options={[
-              { value: 'none',      label: 'Aucune' },
-              { value: 'subtle',    label: 'Subtile' },
-              { value: 'prominent', label: 'Marquée' },
-            ]}
-            onChange={(v) => update({ borderStyle: v })}
-          />
-
-          <ToggleGroup
-            label="Position de la boîte"
-            value={cfg.position}
-            options={[
-              { value: 'bottom', label: 'Bas' },
-              { value: 'center', label: 'Centre' },
-              { value: 'top',    label: 'Haut' },
-            ]}
-            onChange={(v) => update({ position: v })}
-          />
-        </div>
-      </section>
-
-      <div className="border-t border-[var(--color-border-base)]" aria-hidden="true" />
-
-      {/* === Speaker === */}
-      <section aria-labelledby="dlgbox-speaker-heading">
-        <h3
-          id="dlgbox-speaker-heading"
-          className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2"
-        >
-          🎭 Speaker
-        </h3>
-        <div className="space-y-3">
-
-          {/* Portrait toggle */}
-          <button
-            onClick={() => update({ showPortrait: !cfg.showPortrait })}
-            className={[
-              'w-full flex items-center gap-2 text-xs py-2 px-3 rounded-lg border transition-colors',
-              cfg.showPortrait
-                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
-                : 'bg-[var(--color-bg-base)] border-[var(--color-border-base)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]',
-            ].join(' ')}
-            aria-pressed={cfg.showPortrait}
-          >
-            {cfg.showPortrait
-              ? <><Eye className="w-4 h-4" aria-hidden="true" /> Portrait affiché (48×48px)</>
-              : <><EyeOff className="w-4 h-4" aria-hidden="true" /> Portrait masqué</>
-            }
-          </button>
-
-          {/* Cadrage portrait — visible uniquement si portrait activé */}
-          {cfg.showPortrait && (
-            <div className="space-y-2.5 pl-2 border-l-2 border-[var(--color-primary)]/30">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-                  🖼️ Cadrage portrait
-                </p>
-                <button
-                  onClick={resetPortrait}
-                  className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                  title="Réinitialiser le cadrage"
-                  aria-label="Réinitialiser le cadrage du portrait"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" aria-hidden="true" />
-                  Réinitialiser
-                </button>
-              </div>
-
-              <SliderRow
-                label="Pan horizontal"
-                value={cfg.portraitOffsetX}
-                min={0}
-                max={100}
-                step={5}
-                unit="%"
-                onChange={(v) => update({ portraitOffsetX: v })}
-                ariaLabel={`Pan horizontal du portrait : ${cfg.portraitOffsetX} %`}
-              />
-              <SliderRow
-                label="Pan vertical"
-                value={cfg.portraitOffsetY}
-                min={0}
-                max={100}
-                step={5}
-                unit="%"
-                onChange={(v) => update({ portraitOffsetY: v })}
-                ariaLabel={`Pan vertical du portrait : ${cfg.portraitOffsetY} %`}
-              />
-              <SliderRow
-                label="Zoom"
-                value={cfg.portraitScale}
-                min={1}
-                max={3}
-                step={0.1}
-                unit="×"
-                onChange={(v) => update({ portraitScale: Math.round(v * 10) / 10 })}
-                ariaLabel={`Zoom du portrait : ${cfg.portraitScale} ×`}
-              />
-              <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
-                Masque non-destructif — déplace et zoome sans recadrer l'image originale.
-              </p>
-            </div>
-          )}
-
-          {/* Speaker name alignment */}
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Alignement du nom</p>
-            <div className="flex gap-1">
-              <button
-                onClick={() => update({ speakerAlign: 'auto' })}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border transition-colors',
-                  cfg.speakerAlign === 'auto'
-                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                    : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]',
-                ].join(' ')}
-                aria-pressed={cfg.speakerAlign === 'auto'}
-                title="Gauche si sprite x<50%, droite sinon"
-              >
-                <AlignLeft className="w-3 h-3" aria-hidden="true" />
-                <AlignRight className="w-3 h-3 -ml-1.5" aria-hidden="true" />
-                Auto
-              </button>
-              <button
-                onClick={() => update({ speakerAlign: 'left' })}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-lg border transition-colors',
-                  cfg.speakerAlign === 'left'
-                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                    : 'bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-base)] hover:border-[var(--color-primary)]',
-                ].join(' ')}
-                aria-pressed={cfg.speakerAlign === 'left'}
-              >
-                <AlignLeft className="w-3 h-3" aria-hidden="true" />
-                Toujours gauche
-              </button>
-            </div>
-            <p className="text-[10px] text-[var(--color-text-muted)] leading-tight">
-              Auto : nom à gauche si le sprite est dans la moitié gauche du canvas, à droite sinon.
-            </p>
-          </div>
-        </div>
-      </section>
-
+    <div>
+      <DialogueCurrentSection />
     </div>
   );
 }

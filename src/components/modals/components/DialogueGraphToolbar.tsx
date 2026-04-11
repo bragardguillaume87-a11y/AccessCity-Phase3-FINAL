@@ -1,4 +1,4 @@
-import { Trash2, Copy, Workflow, ArrowDown, ArrowRight, Undo2, Redo2 } from 'lucide-react';
+import { Trash2, Copy, Workflow, ArrowDown, ArrowRight, Undo2, Redo2, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SerpentineControls } from './SerpentineControls'; // SERP-6: Serpentine layout controls
 import { ProModeControls } from './ProModeControls';
@@ -41,8 +41,12 @@ export interface DialogueGraphToolbarProps {
   canUndo: boolean;
   /** Whether redo is available */
   canRedo: boolean;
-  /** Is the properties panel currently open? Adjusts toolbar position */
-  isPanelOpen?: boolean;
+  /** Number of integrity issues found (shows badge on bell) */
+  integrityIssueCount?: number;
+  /** Callback when bell is clicked */
+  onToggleIntegrityPanel?: () => void;
+  /** Whether the integrity panel is currently open */
+  integrityPanelOpen?: boolean;
 }
 
 export function DialogueGraphToolbar({
@@ -56,15 +60,14 @@ export function DialogueGraphToolbar({
   onRedo,
   canUndo,
   canRedo,
-  isPanelOpen = false,
+  integrityIssueCount = 0,
+  onToggleIntegrityPanel,
+  integrityPanelOpen = false,
 }: DialogueGraphToolbarProps) {
   return (
     <div
       className="absolute top-4 flex items-center gap-2 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl px-3 py-2 z-10 shadow-xl transition-all duration-300"
-      style={{
-        // When panel is open (30% width), position toolbar to the left of the panel
-        right: isPanelOpen ? 'calc(30% + 1rem)' : '1rem',
-      }}
+      style={{ right: '1rem' }}
       role="toolbar"
       aria-label="Actions de l'éditeur nodal"
     >
@@ -174,6 +177,33 @@ export function DialogueGraphToolbar({
 
       {/* Pro Mode Controls */}
       <ProModeControls />
+
+      {/* Séparateur visuel */}
+      <div className="h-6 w-px bg-border" aria-hidden="true" />
+
+      {/* Integrity checker bell */}
+      {onToggleIntegrityPanel && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleIntegrityPanel}
+          title="Cherche les oublis"
+          aria-label="Vérifier les éléments incomplets ou vides"
+          aria-pressed={integrityPanelOpen}
+          className={`relative hover:bg-accent transition-colors ${integrityPanelOpen ? 'bg-accent' : ''}`}
+        >
+          <Bell className={`w-4 h-4 ${integrityIssueCount > 0 ? 'text-orange-400' : ''}`} aria-hidden="true" />
+          {integrityIssueCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none"
+              aria-label={`${integrityIssueCount} oublis`}
+            >
+              {integrityIssueCount > 9 ? '9+' : integrityIssueCount}
+            </span>
+          )}
+          <span className="ml-2 text-xs font-medium">Oublis</span>
+        </Button>
+      )}
 
     </div>
   );

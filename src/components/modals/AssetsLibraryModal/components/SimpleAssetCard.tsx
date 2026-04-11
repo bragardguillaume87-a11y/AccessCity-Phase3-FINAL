@@ -1,13 +1,30 @@
+import { memo, useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ImageIcon, Users as UsersIcon, Palette, MapPin, Trash2, Eye } from 'lucide-react';
+import {
+  ImageIcon,
+  Users as UsersIcon,
+  Palette,
+  MapPin,
+  Trash2,
+  Eye,
+  Pencil,
+  Wand2,
+} from 'lucide-react';
 import type { Asset } from '@/types';
+import { BgRemovalDialog } from '@/components/ui/BgRemovalDialog';
+import { blobToFile } from '@/utils/backgroundRemoval';
+import { useAssetUpload } from '../hooks/useAssetUpload';
+
+// Catégories d'images qui supportent la suppression de fond (pas audio, pas tilesets 2D)
+const IMAGE_CATEGORIES = ['characters', 'illustrations', 'backgrounds'];
 
 export interface SimpleAssetCardProps {
   asset: Asset;
   onClick: () => void;
   onDelete?: () => void;
+  onRename?: (newName: string) => void;
   isSelectionMode?: boolean;
   onSelectBackground?: () => void;
 }
@@ -24,15 +41,52 @@ export function SimpleAssetCard({
   asset,
   onClick,
   onDelete,
+  onRename,
   isSelectionMode = false,
-  onSelectBackground
+  onSelectBackground,
 }: SimpleAssetCardProps) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const [bgRemovalOpen, setBgRemovalOpen] = useState(false);
+
+  // Upload du résultat pour remplacer l'original (même catégorie, même nom → écrase)
+  const { uploadFiles } = useAssetUpload({ category: asset.category });
+
+  const showBgRemoval = IMAGE_CATEGORIES.includes(asset.category) && !isSelectionMode;
+
+  const handleBgRemovalSave = useCallback(
+    async (blob: Blob) => {
+      const file = blobToFile(blob, asset.name);
+      await uploadFiles([file]);
+    },
+    [asset.name, uploadFiles]
+  );
+
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenameDraft(asset.name);
+    setIsRenaming(true);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const confirmRename = () => {
+    if (renameDraft.trim() && renameDraft.trim() !== asset.name) {
+      onRename?.(renameDraft.trim());
+    }
+    setIsRenaming(false);
+  };
+
   const getCategoryIcon = () => {
     switch (asset.category) {
-      case 'backgrounds': return <ImageIcon className="h-3 w-3" />;
-      case 'characters': return <UsersIcon className="h-3 w-3" />;
-      case 'illustrations': return <Palette className="h-3 w-3" />;
-      default: return null;
+      case 'backgrounds':
+        return <ImageIcon className="h-3 w-3" />;
+      case 'characters':
+        return <UsersIcon className="h-3 w-3" />;
+      case 'illustrations':
+        return <Palette className="h-3 w-3" />;
+      default:
+        return null;
     }
   };
 
@@ -62,12 +116,13 @@ export function SimpleAssetCard({
         onClick={isSelectionMode ? handleSelect : handlePreview}
       >
         <img
-          src={asset.path}
+          src={asset.url ?? asset.path}
           alt={asset.name}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="150"%3E%3Crect fill="%23374151" width="200" height="150"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-size="14"%3EImage%3C/text%3E%3C/svg%3E';
+            (e.target as HTMLImageElement).src =
+              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="150"%3E%3Crect fill="%23374151" width="200" height="150"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-size="14"%3EImage%3C/text%3E%3C/svg%3E';
           }}
         />
 
@@ -93,9 +148,36 @@ export function SimpleAssetCard({
 
       {/* Footer - Name + Actions */}
       <div className="p-2.5 space-y-2">
-        <p className="text-xs font-semibold truncate text-foreground" title={asset.name}>
-          {asset.name}
-        </p>
+        {isRenaming ? (
+          <input
+            ref={renameInputRef}
+            value={renameDraft}
+            onChange={(e) => setRenameDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmRename();
+              if (e.key === 'Escape') setIsRenaming(false);
+            }}
+            onBlur={confirmRename}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full text-xs bg-slate-700 border border-primary rounded px-1.5 py-0.5 text-white outline-none focus:ring-1 focus:ring-primary"
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-1 min-w-0 group/name">
+            <p className="text-xs font-semibold truncate text-foreground flex-1" title={asset.name}>
+              {asset.name}
+            </p>
+            {onRename && !isSelectionMode && (
+              <button
+                onClick={startRename}
+                className="opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0 text-slate-500 hover:text-slate-200 p-0.5 rounded"
+                title="Renommer"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons - Always visible, not on overlay */}
         {!isSelectionMode && (
@@ -109,6 +191,20 @@ export function SimpleAssetCard({
               <Eye className="h-3.5 w-3.5 mr-1" />
               Voir
             </Button>
+            {showBgRemoval && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBgRemovalOpen(true);
+                }}
+                title="Supprimer le fond ✨"
+              >
+                <Wand2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {onDelete && (
               <Button
                 size="sm"
@@ -122,6 +218,18 @@ export function SimpleAssetCard({
           </div>
         )}
       </div>
+
+      {/* BgRemovalDialog — portail, hors du flux de la card */}
+      {bgRemovalOpen && (
+        <BgRemovalDialog
+          imageUrl={asset.url ?? asset.path}
+          imageName={asset.name}
+          onSave={handleBgRemovalSave}
+          onClose={() => setBgRemovalOpen(false)}
+        />
+      )}
     </Card>
   );
 }
+
+export default memo(SimpleAssetCard);

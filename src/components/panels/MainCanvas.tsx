@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Film } from 'lucide-react';
 import { buildFilterCSS } from '@/utils/backgroundFilter';
+import SceneEffectCanvas from '@/components/ui/SceneEffectCanvas';
 import { getSceneDuration, getDialogueIndexAtTime } from '@/utils/dialogueDuration';
 import { useSceneElementsStore } from '@/stores/sceneElementsStore';
 import { useDialoguesStore } from '@/stores/dialoguesStore';
@@ -15,7 +17,9 @@ import type {
   SelectedElementType,
   ModalContext,
   Prop,
-  TextBox
+  TextBox,
+  DialogueChoice,
+  Dialogue,
 } from '@/types';
 import type { CanvasProp } from './MainCanvas/components/PropElement';
 import type { CanvasTextBox } from './MainCanvas/components/TextBoxElement';
@@ -31,7 +35,6 @@ import { useCanvasDragDrop } from './MainCanvas/hooks/useCanvasDragDrop';
 import { useContextMenu } from './MainCanvas/hooks/useContextMenu';
 import { useCanvasActions } from './MainCanvas/hooks/useCanvasActions';
 import { EmptySceneState } from './MainCanvas/components/EmptySceneState';
-import { SceneHeader } from './MainCanvas/components/SceneHeader';
 import { CanvasGridOverlay } from './MainCanvas/components/CanvasGridOverlay';
 import { NoBackgroundPlaceholder } from './MainCanvas/components/NoBackgroundPlaceholder';
 import { DropZoneIndicator } from './MainCanvas/components/DropZoneIndicator';
@@ -40,22 +43,63 @@ import { CharacterSprite } from './MainCanvas/components/CharacterSprite';
 import { PropElement } from './MainCanvas/components/PropElement';
 import { TextBoxElement } from './MainCanvas/components/TextBoxElement';
 import { DialoguePreviewOverlay } from './MainCanvas/components/DialoguePreviewOverlay';
-import { SceneInfoBar } from './MainCanvas/components/SceneInfoBar';
 // import { DialogueFlowVisualization } from './MainCanvas/components/DialogueFlowVisualization'; // masquée — doublon avec graphe Panel 3
-import { QuickActionsBar } from './MainCanvas/components/QuickActionsBar';
 import { logger } from '../../utils/logger';
 import { CANVAS_PRESENTATION } from '@/config/canvas';
 
 const EMPTY_CHARACTERS: SceneCharacter[] = [];
 const EMPTY_TEXTBOXES: TextBox[] = [];
 const EMPTY_PROPS: Prop[] = [];
+// ⚠️ EMPTY_DIALOGUES must be module-level (not inline []) to avoid useSyncExternalStore getSnapshot instability.
+// `|| []` inside a Zustand selector creates a new array on every getSnapshot call → React 18 infinite loop.
+const EMPTY_DIALOGUES: Dialogue[] = [];
+
+/**
+ * Placeholder affiché dans le canvas quand la scène sélectionnée est de type 'cinematic'.
+ * Les scènes cinématiques utilisent l'Éditeur Cinématique modal — pas le canvas standard.
+ */
+function CinematicScenePlaceholder({
+  sceneId,
+  sceneTitle,
+}: {
+  sceneId: string;
+  sceneTitle: string;
+}) {
+  const setCinematicEditorOpen = useUIStore((s) => s.setCinematicEditorOpen);
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-5 text-center p-8 select-none">
+      <Film className="w-14 h-14 text-violet-400 opacity-50" aria-hidden="true" />
+      <div>
+        <p className="font-semibold text-base text-[var(--color-text-primary)]">{sceneTitle}</p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Scène cinématique</p>
+      </div>
+      <p className="text-sm text-[var(--color-text-muted)] max-w-sm leading-relaxed">
+        Les scènes cinématiques s'éditent dans l'Éditeur Cinématique dédié.
+        <br />
+        Le canvas standard n'est pas disponible pour ce type de scène.
+      </p>
+      <button
+        type="button"
+        onClick={() => setCinematicEditorOpen(true, sceneId)}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors shadow-md"
+      >
+        <Film className="w-4 h-4" aria-hidden="true" />
+        Ouvrir l'Éditeur Cinématique
+      </button>
+    </div>
+  );
+}
 
 /**
  * Calcule les dimensions explicites du canvas (équivalent "object-fit: contain").
  * Remplace le combo CSS `width:100% + aspectRatio:16/9 + maxHeight:100%` qui
  * ne garantit pas un comportement "contain" correct quand la hauteur est contrainte.
  */
-function computeCanvasSize(centerW: number, centerH: number, zoom: number): { width: number; height: number } {
+function computeCanvasSize(
+  centerW: number,
+  centerH: number,
+  zoom: number
+): { width: number; height: number } {
   if (centerW === 0 || centerH === 0) {
     return { width: 320, height: Math.round(320 / CANVAS_PRESENTATION.ASPECT_RATIO) };
   }
@@ -78,8 +122,8 @@ export default function MainCanvas({
   onSelectDialogue,
 }: MainCanvasProps) {
   // fullscreenMode + setFullscreenMode read from store (no prop drilling)
-  const fullscreenMode = useUIStore(s => s.fullscreenMode);
-  const setFullscreenMode = useUIStore(s => s.setFullscreenMode);
+  const fullscreenMode = useUIStore((s) => s.fullscreenMode);
+  const setFullscreenMode = useUIStore((s) => s.setFullscreenMode);
 
   // Local openModal handler — delegates to store for internal use
   const handleOpenModal = useCallback((modal: string, context: unknown = {}) => {
@@ -91,29 +135,32 @@ export default function MainCanvas({
   const [canvasNode, setCanvasNode] = useState<HTMLDivElement | null>(null);
   const [canvasRef, canvasDimensions] = useCanvasDimensions();
   const [centerDivRef, centerSize] = useCanvasDimensions();
-  const { currentDialogueText, currentTime, setCurrentTime } = useDialogueSync(selectedElement, selectedScene);
+  const { currentDialogueText, currentTime, setCurrentTime } = useDialogueSync(
+    selectedElement,
+    selectedScene
+  );
 
   const sceneId = selectedScene?.id;
   const sceneCharacters = useSceneElementsStore((s) =>
-    sceneId ? (s.elementsByScene[sceneId]?.characters || EMPTY_CHARACTERS) : EMPTY_CHARACTERS
+    sceneId ? s.elementsByScene[sceneId]?.characters || EMPTY_CHARACTERS : EMPTY_CHARACTERS
   );
   const sceneTextBoxes = useSceneElementsStore((s) =>
-    sceneId ? (s.elementsByScene[sceneId]?.textBoxes || EMPTY_TEXTBOXES) : EMPTY_TEXTBOXES
+    sceneId ? s.elementsByScene[sceneId]?.textBoxes || EMPTY_TEXTBOXES : EMPTY_TEXTBOXES
   );
   const sceneProps = useSceneElementsStore((s) =>
-    sceneId ? (s.elementsByScene[sceneId]?.props || EMPTY_PROPS) : EMPTY_PROPS
+    sceneId ? s.elementsByScene[sceneId]?.props || EMPTY_PROPS : EMPTY_PROPS
   );
   const dialoguesCount = useDialoguesStore((s) =>
-    sceneId ? (s.dialoguesByScene[sceneId]?.length || 0) : 0
+    sceneId ? s.dialoguesByScene[sceneId]?.length || 0 : 0
   );
   // ⚠️ selectedScene.dialogues est TOUJOURS [] (Phase 3 store split).
   // Utiliser ce sélecteur réactif pour toutes les lectures de dialogues.
   const sceneDialogues = useDialoguesStore((s) =>
-    sceneId ? (s.dialoguesByScene[sceneId] || []) : []
+    sceneId ? s.dialoguesByScene[sceneId] || EMPTY_DIALOGUES : EMPTY_DIALOGUES
   );
 
-  const enableStatsHUD = useSettingsStore(s => s.enableStatsHUD);
-  const variables = useSettingsStore(s => s.variables) as GameStats;
+  const enableStatsHUD = useSettingsStore((s) => s.enableStatsHUD);
+  const variables = useSettingsStore((s) => s.variables) as GameStats;
 
   const viewState = useCanvasViewState();
   const canvasSize = computeCanvasSize(centerSize.width, centerSize.height, viewState.canvasZoom);
@@ -124,12 +171,13 @@ export default function MainCanvas({
   });
   const selection = useCanvasSelection({
     selectedScene,
-    selectedElement,
-    onSelectDialogue
+    onSelectDialogue,
   });
 
-  const selectedElementSceneId = selectedElement?.type === 'dialogue' || selectedElement?.type === 'sceneCharacter'
-    ? selectedElement.sceneId : null;
+  const selectedElementSceneId =
+    selectedElement?.type === 'dialogue' || selectedElement?.type === 'sceneCharacter'
+      ? selectedElement.sceneId
+      : null;
 
   // Auto-select first dialogue when scene changes or gains dialogues
   useEffect(() => {
@@ -141,7 +189,13 @@ export default function MainCanvas({
       logger.info(`[MainCanvas] Auto-selecting first dialogue for scene: ${selectedScene.id}`);
       onSelectDialogue(selectedScene.id, 0);
     }
-  }, [selectedScene?.id, dialoguesCount, selectedElement?.type, selectedElementSceneId, onSelectDialogue]);
+  }, [
+    selectedScene?.id,
+    dialoguesCount,
+    selectedElement?.type,
+    selectedElementSceneId,
+    onSelectDialogue,
+  ]);
 
   const dragDrop = useCanvasDragDrop({
     selectedScene,
@@ -151,8 +205,8 @@ export default function MainCanvas({
       addCharacterToScene: actions.addCharacterToScene,
       addTextBoxToScene: actions.addTextBoxToScene,
       addPropToScene: actions.addPropToScene,
-      setShowAddCharacterModal
-    }
+      setShowAddCharacterModal,
+    },
   });
 
   const contextMenu = useContextMenu({
@@ -162,15 +216,18 @@ export default function MainCanvas({
     sceneCharacters,
     actions: {
       updateSceneCharacter: actions.updateSceneCharacter,
-      removeCharacterFromScene: actions.removeCharacterFromScene
+      removeCharacterFromScene: actions.removeCharacterFromScene,
     },
-    onOpenModal: handleOpenModal
+    onOpenModal: handleOpenModal,
   });
 
-  const composedCanvasRef = useCallback((node: HTMLDivElement | null) => {
-    canvasRef(node);
-    setCanvasNode(node);
-  }, [canvasRef]);
+  const composedCanvasRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      canvasRef(node);
+      setCanvasNode(node);
+    },
+    [canvasRef]
+  );
 
   useCanvasKeyboard({
     selectedCharacterId: selection.selectedCharacterId,
@@ -179,52 +236,61 @@ export default function MainCanvas({
     characters: actions.characters,
     removeCharacterFromScene: actions.removeCharacterFromScene,
     updateSceneCharacter: actions.updateSceneCharacter,
-    setSelectedCharacterId: selection.setSelectedCharacterId
+    setSelectedCharacterId: selection.setSelectedCharacterId,
   });
+
+  // Destructure stable Zustand methods so useCallback deps don't need `actions` (unstable object)
+  const {
+    updateSceneCharacter,
+    updateProp,
+    removePropFromScene,
+    updateTextBox,
+    removeTextBoxFromScene,
+  } = actions;
 
   const handleUpdateCharacterPosition = useCallback(
     (sceneCharId: string, updates: Partial<SceneCharacter>) => {
       if (selectedScene?.id) {
-        actions.updateSceneCharacter(selectedScene.id, sceneCharId, updates);
+        updateSceneCharacter(selectedScene.id, sceneCharId, updates);
       }
     },
-    [selectedScene?.id, actions.updateSceneCharacter]
+    [selectedScene?.id, updateSceneCharacter]
   );
 
   const handleUpdateProp = useCallback(
     (propId: string, updates: Partial<Prop>) => {
       if (selectedScene?.id) {
-        actions.updateProp(selectedScene.id, propId, updates);
+        updateProp(selectedScene.id, propId, updates);
       }
     },
-    [selectedScene?.id, actions.updateProp]
+    [selectedScene?.id, updateProp]
   );
 
   const handleRemoveProp = useCallback(
     (propId: string) => {
       if (selectedScene?.id) {
-        actions.removePropFromScene(selectedScene.id, propId);
+        removePropFromScene(selectedScene.id, propId);
       }
     },
-    [selectedScene?.id, actions.removePropFromScene]
+    [selectedScene?.id, removePropFromScene]
   );
 
   const handleUpdateTextBox = useCallback(
     (textBoxId: string, updates: Partial<TextBox>) => {
       if (selectedScene?.id) {
-        actions.updateTextBox(selectedScene.id, textBoxId, updates);
+        updateTextBox(selectedScene.id, textBoxId, updates);
       }
     },
-    [selectedScene?.id, actions.updateTextBox]
+    [selectedScene?.id, updateTextBox]
   );
 
   const handleRemoveTextBox = useCallback(
     (textBoxId: string) => {
       if (selectedScene?.id) {
-        actions.removeTextBoxFromScene(selectedScene.id, textBoxId);
+        removeTextBoxFromScene(selectedScene.id, textBoxId);
       }
     },
-    [selectedScene?.id, actions.removeTextBoxFromScene]
+    [selectedScene?.id, removeTextBoxFromScene]
   );
 
   // Active mood overrides from the currently selected dialogue (characterMoods field)
@@ -237,25 +303,25 @@ export default function MainCanvas({
   //       pas le mood "base" de la scène qui peut différer du mood initial du jeu
   const activeMoodOverrides = useMemo<Record<string, string>>(() => {
     if (selectedElement?.type === 'dialogue' && selectedElement.sceneId === selectedScene?.id) {
-      // Mode Dialogues : afficher les moods du dialogue sélectionné
+      // Mode Dialogues : appliquer les moods du dialogue sélectionné
       const dialogue = sceneDialogues[selectedElement.index];
       return dialogue?.characterMoods || {};
     }
-    // Mode Scènes (ou aucun dialogue sélectionné) : afficher les moods du premier dialogue
-    // pour que le canvas soit cohérent avec ce que le joueur verra au lancement
-    const firstDialogue = sceneDialogues[0];
-    return firstDialogue?.characterMoods || {};
+    // Mode Scènes : pas d'override — sceneChar.mood (géré par CharacterMoodPicker) fait foi
+    return {};
   }, [selectedElement, selectedScene?.id, sceneDialogues]);
 
   // ID du sceneCharacter qui parle dans le dialogue sélectionné
   // Utilisé pour déclencher l'animation isSpeaking sur le bon sprite
   const speakingSceneCharId = useMemo<string | null>(() => {
-    if (selectedElement?.type !== 'dialogue' || selectedElement.sceneId !== selectedScene?.id) return null;
+    if (selectedElement?.type !== 'dialogue' || selectedElement.sceneId !== selectedScene?.id)
+      return null;
     const dialogue = sceneDialogues[selectedElement.index];
     if (!dialogue?.speaker) return null;
-    const sc = sceneCharacters.find(c =>
-      c.characterId === dialogue.speaker ||
-      actions.characters.find(ch => ch.id === c.characterId)?.name === dialogue.speaker
+    const sc = sceneCharacters.find(
+      (c) =>
+        c.characterId === dialogue.speaker ||
+        actions.characters.find((ch) => ch.id === c.characterId)?.name === dialogue.speaker
     );
     return sc?.id ?? null;
   }, [selectedElement, selectedScene?.id, sceneDialogues, sceneCharacters, actions.characters]);
@@ -279,6 +345,28 @@ export default function MainCanvas({
     [setCurrentTime, sceneId, selectedScene?.id, onSelectDialogue]
   );
 
+  /**
+   * Gère le clic sur un bouton de choix dans l'overlay éditeur.
+   * Navigue vers le dialogue lié (nextDialogueId) si défini, sinon vers le suivant.
+   * ✅ getState() dans un handler → lecture ponctuelle correcte (CLAUDE.md §6.7)
+   */
+  const handleChoiceNavigation = useCallback(
+    (choice: DialogueChoice) => {
+      if (!selectedScene?.id || !onSelectDialogue) return;
+      if (choice.nextDialogueId) {
+        const idx = sceneDialogues.findIndex((d) => d.id === choice.nextDialogueId);
+        if (idx !== -1) {
+          onSelectDialogue(selectedScene.id, idx);
+          return;
+        }
+      }
+      // Fallback : dialogue suivant (pas de nextDialogueId ou ID introuvable)
+      selection.handleDialogueNavigate('next');
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selection est un objet Zustand stable; selection.handleDialogueNavigate suffit
+    [selectedScene?.id, sceneDialogues, onSelectDialogue, selection.handleDialogueNavigate]
+  );
+
   const handlePlayPause = useCallback(() => {
     const newIsPlaying = !viewState.isPlaying;
     viewState.setIsPlaying(newIsPlaying);
@@ -292,73 +380,73 @@ export default function MainCanvas({
         onSelectDialogue?.(selectedScene.id, 0);
       }
     }
-  }, [viewState.isPlaying, viewState.setIsPlaying, selectedScene, selectedElement, onSelectDialogue]);
+  }, [viewState, selectedScene, selectedElement, onSelectDialogue, dialoguesCount]);
 
-  const handleCloseAddCharacterModal = useCallback(
-    () => setShowAddCharacterModal(false),
-    []
-  );
+  const handleCloseAddCharacterModal = useCallback(() => setShowAddCharacterModal(false), []);
 
   if (!selectedScene) {
     return <EmptySceneState />;
   }
 
+  // Cinematic scenes have their own editor — the standard canvas is not applicable
+  if (selectedScene.sceneType === 'cinematic') {
+    return (
+      <CinematicScenePlaceholder sceneId={selectedScene.id} sceneTitle={selectedScene.title} />
+    );
+  }
+
   return (
-    <div className="h-full flex flex-col">
-      <SceneHeader
-        scene={selectedScene}
-        dialoguesCount={dialoguesCount}
-        fullscreenMode={fullscreenMode}
-        onFullscreenChange={setFullscreenMode}
-      />
-
-      {/* Zone canvas + lecteur — flex-col simple, pas de librairie tierce */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-
-        {/* Canvas — flex-1 prend tout l'espace vertical disponible */}
-        <div ref={centerDivRef} className="flex-1 min-h-0 p-6 flex items-center justify-center overflow-hidden" style={{ backgroundColor: CANVAS_PRESENTATION.SURROUND_COLOR }}>
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Canvas — flex-1 prend tout l'espace vertical disponible */}
+      <div
+        ref={centerDivRef}
+        className="flex-1 min-h-0 p-6 flex items-center justify-center overflow-hidden"
+        style={{ backgroundColor: CANVAS_PRESENTATION.SURROUND_COLOR }}
+      >
+        <div
+          className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
+          style={{
+            width: `${canvasSize.width}px`,
+            height: `${canvasSize.height}px`,
+            minWidth: '320px',
+          }}
+        >
           <div
-            className="rounded-xl overflow-hidden border-2 border-border shadow-xl bg-background transition-all duration-150"
-            style={{
-              width: `${canvasSize.width}px`,
-              height: `${canvasSize.height}px`,
-              minWidth: '320px',
-            }}
+            ref={composedCanvasRef}
+            className={`relative w-full h-full bg-background transition-all ${
+              dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
+            } ${dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''}`}
+            onDragOver={dragDrop.handleDragOver}
+            onDragLeave={dragDrop.handleDragLeave}
+            onDrop={dragDrop.handleDrop}
           >
-            <div
-              ref={composedCanvasRef}
-              className={`relative w-full h-full bg-background transition-all ${
-                dragDrop.isDragOver ? 'ring-4 ring-blue-500/50 ring-inset' : ''
-              } ${
-                dragDrop.dropFeedback === 'background' ? 'ring-4 ring-green-500 ring-inset' : ''
-              }`}
-              onDragOver={dragDrop.handleDragOver}
-              onDragLeave={dragDrop.handleDragLeave}
-              onDrop={dragDrop.handleDrop}
-            >
-              {/* ── Fond — div séparée pour que le filtre n'affecte PAS les personnages ── */}
-              {selectedScene.backgroundUrl && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundImage: `url(${selectedScene.backgroundUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    filter: buildFilterCSS(selectedScene.backgroundFilter),
-                  }}
-                />
-              )}
+            {/* ── Fond — div séparée pour que le filtre n'affecte PAS les personnages ── */}
+            {selectedScene.backgroundUrl && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: `url(${selectedScene.backgroundUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: buildFilterCSS(selectedScene.backgroundFilter),
+                }}
+              />
+            )}
 
-              <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
+            {/* Effet atmosphérique — overlay canvas entre le fond et les personnages */}
+            <SceneEffectCanvas effect={selectedScene.sceneEffect} />
 
-              <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
+            <DropZoneIndicator isDragOver={dragDrop.isDragOver} dragType={dragDrop.dragType} />
 
-              {!selectedScene.backgroundUrl && (
-                <NoBackgroundPlaceholder onSetBackground={actions.handleSetBackground} />
-              )}
+            <CanvasGridOverlay enabled={viewState.gridEnabled && canvasDimensions.width > 0} />
 
-              {canvasDimensions.width > 0 && sceneCharacters.map((sceneChar) => {
-                const character = actions.characters.find(c => c.id === sceneChar.characterId);
+            {!selectedScene.backgroundUrl && (
+              <NoBackgroundPlaceholder onSetBackground={actions.handleSetBackground} />
+            )}
+
+            {canvasDimensions.width > 0 &&
+              sceneCharacters.map((sceneChar) => {
+                const character = actions.characters.find((c) => c.id === sceneChar.characterId);
                 if (!character) return null;
 
                 return (
@@ -376,18 +464,27 @@ export default function MainCanvas({
                     onUpdatePosition={handleUpdateCharacterPosition}
                     onFlipHorizontal={() => contextMenu.handleFlipHorizontal(sceneChar.id)}
                     onRemove={() => contextMenu.handleRemove(sceneChar.id)}
-                    onPositionChange={(x, y) => selectedScene?.id && actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { position: { x, y } })}
-                    onScaleChange={(scale) => selectedScene?.id && actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { scale })}
+                    onPositionChange={(x, y) =>
+                      selectedScene?.id &&
+                      actions.updateSceneCharacter(selectedScene.id, sceneChar.id, {
+                        position: { x, y },
+                      })
+                    }
+                    onScaleChange={(scale) =>
+                      selectedScene?.id &&
+                      actions.updateSceneCharacter(selectedScene.id, sceneChar.id, { scale })
+                    }
                   />
                 );
               })}
 
-              {canvasDimensions.width > 0 && sceneProps.map((prop) => {
+            {canvasDimensions.width > 0 &&
+              sceneProps.map((prop) => {
                 const canvasProp: CanvasProp = {
                   id: prop.id,
                   emoji: prop.assetUrl,
                   position: prop.position,
-                  size: prop.size
+                  size: prop.size,
                 };
                 return (
                   <PropElement
@@ -401,7 +498,8 @@ export default function MainCanvas({
                 );
               })}
 
-              {canvasDimensions.width > 0 && sceneTextBoxes.map((textBox) => {
+            {canvasDimensions.width > 0 &&
+              sceneTextBoxes.map((textBox) => {
                 const canvasTextBox: CanvasTextBox = {
                   id: textBox.id,
                   text: textBox.content,
@@ -410,7 +508,7 @@ export default function MainCanvas({
                   color: textBox.style?.color as string | undefined,
                   textAlign: textBox.style?.textAlign as string | undefined,
                   position: textBox.position,
-                  size: textBox.size
+                  size: textBox.size,
                 };
                 return (
                   <TextBoxElement
@@ -424,62 +522,66 @@ export default function MainCanvas({
                 );
               })}
 
-              <CanvasFloatingControls
-                gridEnabled={viewState.gridEnabled}
-                onToggleGrid={viewState.setGridEnabled}
-              />
+            <CanvasFloatingControls
+              gridEnabled={viewState.gridEnabled}
+              onToggleGrid={viewState.setGridEnabled}
+              fullscreenMode={fullscreenMode}
+              onFullscreenChange={setFullscreenMode}
+            />
 
-              {enableStatsHUD && (
-                <div className="absolute top-4 left-4 z-10">
-                  <CompactStatHUD
-                    physique={variables[GAME_STATS.PHYSIQUE] ?? 100}
-                    mentale={variables[GAME_STATS.MENTALE] ?? 100}
-                    scaleFactor={canvasSize.width > 0 ? canvasSize.width / REFERENCE_CANVAS_WIDTH : 1}
-                  />
-                </div>
-              )}
+            {enableStatsHUD && (
+              <div className="absolute top-4 left-4 z-10">
+                <CompactStatHUD
+                  physique={variables[GAME_STATS.PHYSIQUE] ?? 100}
+                  mentale={variables[GAME_STATS.MENTALE] ?? 100}
+                  scaleFactor={canvasSize.width > 0 ? canvasSize.width / REFERENCE_CANVAS_WIDTH : 1}
+                />
+              </div>
+            )}
 
-              {selectedElement?.type === 'dialogue' && selectedElement?.sceneId === selectedScene.id && (() => {
-                const dialogue = selectedScene.dialogues[selectedElement.index];
+            {selectedElement?.type === 'dialogue' &&
+              selectedElement?.sceneId === selectedScene.id &&
+              (() => {
+                const dialogue = sceneDialogues[selectedElement.index];
                 if (!dialogue) return null;
 
-                const speaker = actions.characters.find(c => c.id === dialogue.speaker);
+                const speaker = actions.characters.find((c) => c.id === dialogue.speaker);
                 const speakerName = speaker?.name || dialogue.speaker || 'Unknown';
 
                 return (
                   <DialoguePreviewOverlay
                     dialogue={dialogue}
                     dialogueIndex={selectedElement.index}
-                    totalDialogues={selectedScene.dialogues.length}
+                    totalDialogues={sceneDialogues.length}
                     speakerName={speakerName}
                     currentDialogueText={currentDialogueText}
                     onNavigate={selection.handleDialogueNavigate}
+                    onChoose={handleChoiceNavigation}
                     isAutoPlaying={viewState.isPlaying}
                     onAutoPlayComplete={() => viewState.setIsPlaying(false)}
                     canvasWidth={canvasSize.width}
                   />
                 );
               })()}
-            </div>
           </div>
         </div>
+      </div>
 
-        {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
-        <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
-          <SceneInfoBar charactersCount={sceneCharacters.length} dialoguesCount={dialoguesCount} />
-          <TimelinePlayhead
-            currentTime={currentTime}
-            duration={sceneDuration}
-            dialogues={selectedScene?.dialogues || []}
-            onSeek={handleSeek}
-            onPlayPause={handlePlayPause}
-            isPlaying={viewState.isPlaying}
-            canvasZoom={viewState.canvasZoom}
-            onZoomIn={viewState.zoomIn}
-            onZoomOut={viewState.zoomOut}
-            onResetZoom={viewState.resetZoom}
-          />
-          {/* DialogueFlowVisualization masquée — doublon avec le graphe de dialogues (Panel 3)
+      {/* Lecteur — hauteur naturelle (flex-shrink-0), toujours collé sous le canvas */}
+      <div className="flex-shrink-0 flex flex-col bg-background border-t border-border overflow-hidden">
+        <TimelinePlayhead
+          currentTime={currentTime}
+          duration={sceneDuration}
+          dialogues={sceneDialogues}
+          onSeek={handleSeek}
+          onPlayPause={handlePlayPause}
+          isPlaying={viewState.isPlaying}
+          canvasZoom={viewState.canvasZoom}
+          onZoomIn={viewState.zoomIn}
+          onZoomOut={viewState.zoomOut}
+          onResetZoom={viewState.resetZoom}
+        />
+        {/* DialogueFlowVisualization masquée — doublon avec le graphe de dialogues (Panel 3)
           {dialoguesCount > 0 && (
             <div className="max-h-48 overflow-y-auto border-t border-border">
               <DialogueFlowVisualization
@@ -493,15 +595,10 @@ export default function MainCanvas({
             </div>
           )}
           */}
-        </div>
-
       </div>
 
-      <QuickActionsBar
-        sceneId={selectedScene.id}
-        onAddDialogue={actions.handleAddDialogue}
-        onSetBackground={actions.handleSetBackground}
-      />
+      {/* Zone réservée — espace pour futur widget sous la timeline */}
+      <div className="flex-shrink-0 h-[72px] bg-background border-t border-border/50" />
 
       {contextMenu.contextMenuData && (
         <CharacterContextMenu
@@ -530,4 +627,3 @@ export default function MainCanvas({
     </div>
   );
 }
-

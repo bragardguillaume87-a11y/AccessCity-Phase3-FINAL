@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import { toAbsoluteAssetPath } from '../utils/pathUtils';
-import type { SceneMetadata } from '../types';
+import { generateId } from '../utils/generateId';
+import type { SceneMetadata, SceneType, CinematicTracks } from '../types';
 import { useDialoguesStore } from './dialoguesStore';
 import { useSceneElementsStore } from './sceneElementsStore';
+import { useUIStore } from './uiStore';
 
 /**
  * Scenes Store
@@ -44,14 +47,22 @@ interface ScenesState {
   getAllScenes: () => SceneMetadata[];
 
   // Actions: CRUD
-  addScene: () => string;
-  updateScene: (sceneId: string, patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)) => void;
+  addScene: (sceneType?: SceneType) => string;
+  updateScene: (
+    sceneId: string,
+    patch: Partial<SceneMetadata> | ((scene: SceneMetadata) => Partial<SceneMetadata>)
+  ) => void;
   deleteScene: (sceneId: string) => void;
   reorderScenes: (newScenesOrder: SceneMetadata[]) => void;
   setSceneBackground: (sceneId: string, backgroundUrl: string) => void;
+  /** Met à jour les pistes multi-canaux (nouveau format NLE). */
+  updateCinematicTracks: (sceneId: string, tracks: CinematicTracks) => void;
 
   // Batch operations (performance)
   batchUpdateScenes: (updates: Array<{ sceneId: string; patch: Partial<SceneMetadata> }>) => void;
+
+  // Import (remplacement complet pour restauration de projet)
+  importScenes: (scenes: SceneMetadata[]) => void;
 }
 
 // ============================================================================
@@ -84,12 +95,7 @@ const SAMPLE_SCENES: SceneMetadata[] = [
 // HELPERS
 // ============================================================================
 
-/**
- * Génère un ID unique pour scène
- */
-function generateSceneId(): string {
-  return `scene-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+const generateSceneId = () => generateId('scene');
 
 /**
  * Crée une scène vide avec defaults (métadonnées uniquement)
@@ -98,13 +104,18 @@ function generateSceneId(): string {
  * Utiliser dialoguesStore.addDialogue() et sceneElementsStore.addCharacterToScene()
  * pour ajouter du contenu après création.
  */
-function createEmptyScene(): SceneMetadata {
-  return {
+function createEmptyScene(sceneType?: SceneType): SceneMetadata {
+  const base: SceneMetadata = {
     id: generateSceneId(),
-    title: 'Nouvelle Scène',
+    title: sceneType === 'cinematic' ? 'Nouvelle Cinématique' : 'Nouvelle Scène',
     description: '',
     backgroundUrl: '',
   };
+  if (sceneType === 'cinematic') {
+    base.sceneType = 'cinematic';
+    base.cinematicEvents = [];
+  }
+  return base;
 }
 
 // ============================================================================
@@ -152,8 +163,8 @@ export const useScenesStore = create<ScenesState>()(
            * const sceneId = addScene();
            * console.log(sceneId); // 'scene-abc123...'
            */
-          addScene: () => {
-            const newScene = createEmptyScene();
+          addScene: (sceneType) => {
+            const newScene = createEmptyScene(sceneType);
 
             set(
               (state) => ({
@@ -251,6 +262,24 @@ export const useScenesStore = create<ScenesState>()(
             );
           },
 
+          /**
+           * Met à jour les pistes multi-canaux d'une scène cinématique (nouveau format NLE).
+           *
+           * Remplace l'objet CinematicTracks complet — utilisé par l'éditeur multi-pistes
+           * après chaque drag/resize/ajout/suppression de bloc.
+           */
+          updateCinematicTracks: (sceneId, tracks) => {
+            set(
+              (state) => ({
+                scenes: state.scenes.map((s) =>
+                  s.id === sceneId ? { ...s, cinematicTracks: tracks } : s
+                ),
+              }),
+              false,
+              'scenes/updateCinematicTracks'
+            );
+          },
+
           // ============================================================
           // ACTIONS: DELETE
           // ============================================================
@@ -274,6 +303,13 @@ export const useScenesStore = create<ScenesState>()(
             // CASCADE DELETE: Supprimer les données associées (synchrone)
             useDialoguesStore.getState().deleteAllDialoguesForScene(sceneId);
             useSceneElementsStore.getState().deleteAllElementsForScene(sceneId);
+
+            // Invalider les références orphelines dans uiStore
+            const ui = useUIStore.getState();
+            if (ui.selectedSceneId === sceneId) ui.setSelectedSceneId(null);
+            if (ui.selectedSceneForEdit === sceneId) ui.setSelectedSceneForEdit(null);
+            if (ui.dialogueGraphSelectedScene === sceneId) ui.setDialogueGraphSelectedScene(null);
+            if (ui.cinematicEditorSceneId === sceneId) ui.setCinematicEditorOpen(false, null);
           },
 
           // ============================================================
@@ -294,6 +330,10 @@ export const useScenesStore = create<ScenesState>()(
               'scenes/reorderScenes'
             );
           },
+
+          importScenes: (scenes) => {
+            set(() => ({ scenes }), false, 'scenes/importScenes');
+          },
         })),
         { name: 'ScenesStore' }
       ),
@@ -306,17 +346,25 @@ export const useScenesStore = create<ScenesState>()(
           if (version < 3) {
             // Migration v2 → v3 : Extraire dialogues/characters/etc.
             // Les données seront dans les nouveaux stores
-            type LegacyScene = { id: string; title: string; description?: string; backgroundUrl?: string };
+            type LegacyScene = {
+              id: string;
+              title: string;
+              description?: string;
+              backgroundUrl?: string;
+            };
             const state = persistedState as { scenes?: LegacyScene[] };
             return {
               ...state,
-              scenes: state.scenes?.map((scene): SceneMetadata => ({
-                id: scene.id,
-                title: scene.title,
-                description: scene.description || '',
-                backgroundUrl: scene.backgroundUrl || '',
-                // Post-Phase 3 : plus d'arrays vides dans le store
-              })) || [],
+              scenes:
+                state.scenes?.map(
+                  (scene): SceneMetadata => ({
+                    id: scene.id,
+                    title: scene.title,
+                    description: scene.description || '',
+                    backgroundUrl: scene.backgroundUrl || '',
+                    // Post-Phase 3 : plus d'arrays vides dans le store
+                  })
+                ) || [],
             };
           }
           // v3 → v4 : Supprimer les arrays vestigiaux (dialogues[], characters[], etc.)
@@ -327,7 +375,7 @@ export const useScenesStore = create<ScenesState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

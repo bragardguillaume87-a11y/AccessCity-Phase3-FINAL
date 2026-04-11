@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist, createJSONStorage } from 'zustand/middleware';
 import { temporal } from 'zundo';
+import { shallow } from 'zustand/shallow';
 import type { SceneCharacter, TextBox, Prop } from '../types';
+import { generateId } from '../utils/generateId';
 
 /** Scene Elements Store — Repository pattern for visual elements per scene */
 
-export interface SceneElements {
+interface SceneElements {
   characters: SceneCharacter[];
   textBoxes: TextBox[];
   props: Prop[];
@@ -48,10 +50,9 @@ interface SceneElementsState {
   removePropFromScene: (sceneId: string, propId: string) => void;
   updateProp: (sceneId: string, propId: string, updates: Partial<Prop>) => void;
   deleteAllElementsForScene: (sceneId: string) => void;
-}
 
-function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Import (remplacement complet pour restauration de projet)
+  importElementsByScene: (data: Record<string, SceneElements>) => void;
 }
 
 function createEmptyElements(): SceneElements {
@@ -65,19 +66,43 @@ function createEmptyElements(): SceneElements {
 const SAMPLE_ELEMENTS: Record<string, SceneElements> = {
   scenetest01: {
     characters: [
-      { id: 'scene-char-player-01', characterId: 'player', mood: 'neutral', position: { x: 20, y: 50 }, size: { width: 200, height: 300 }, entranceAnimation: 'fadeIn', exitAnimation: 'none' },
-      { id: 'scene-char-counsellor-01', characterId: 'counsellor', mood: 'neutral', position: { x: 80, y: 50 }, size: { width: 200, height: 300 }, entranceAnimation: 'slideInRight', exitAnimation: 'none' }
+      {
+        id: 'scene-char-player-01',
+        characterId: 'player',
+        mood: 'neutral',
+        position: { x: 20, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'fadeIn',
+        exitAnimation: 'none',
+      },
+      {
+        id: 'scene-char-counsellor-01',
+        characterId: 'counsellor',
+        mood: 'neutral',
+        position: { x: 80, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'slideInRight',
+        exitAnimation: 'none',
+      },
     ],
     textBoxes: [],
-    props: []
+    props: [],
   },
   scenetest02: {
     characters: [
-      { id: 'scene-char-player-02', characterId: 'player', mood: 'neutral', position: { x: 20, y: 50 }, size: { width: 200, height: 300 }, entranceAnimation: 'fadeIn', exitAnimation: 'none' }
+      {
+        id: 'scene-char-player-02',
+        characterId: 'player',
+        mood: 'neutral',
+        position: { x: 20, y: 50 },
+        size: { width: 200, height: 300 },
+        entranceAnimation: 'fadeIn',
+        exitAnimation: 'none',
+      },
     ],
     textBoxes: [],
-    props: []
-  }
+    props: [],
+  },
 };
 
 export const useSceneElementsStore = create<SceneElementsState>()(
@@ -353,7 +378,9 @@ export const useSceneElementsStore = create<SceneElementsState>()(
                     ...state.elementsByScene,
                     [sceneId]: {
                       ...elements,
-                      props: elements.props.map((p) => (p.id === propId ? { ...p, ...updates } : p)),
+                      props: elements.props.map((p) =>
+                        p.id === propId ? { ...p, ...updates } : p
+                      ),
                     },
                   },
                 };
@@ -375,6 +402,10 @@ export const useSceneElementsStore = create<SceneElementsState>()(
               'sceneElements/deleteAllElementsForScene'
             );
           },
+
+          importElementsByScene: (data) => {
+            set(() => ({ elementsByScene: data }), false, 'sceneElements/importElementsByScene');
+          },
         })),
         { name: 'SceneElementsStore' }
       ),
@@ -386,7 +417,7 @@ export const useSceneElementsStore = create<SceneElementsState>()(
     ),
     {
       limit: 50,
-      equality: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      equality: shallow,
     }
   )
 );

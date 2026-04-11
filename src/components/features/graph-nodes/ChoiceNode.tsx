@@ -3,8 +3,8 @@ import { GitBranch } from 'lucide-react';
 import type { DialogueNodeData } from '@/types';
 import { useGraphTheme } from '@/hooks/useGraphTheme';
 import { useNodeLayout } from '@/hooks/useNodeLayout';
-import { truncateChoicePreview, getIssueStatus } from '@/utils/textHelpers';
-import { COSMOS_ANIMATIONS, NODE_FONT } from '@/config/cosmosConstants';
+import { truncate, truncateChoicePreview, getIssueStatus } from '@/utils/textHelpers';
+import { COSMOS_ANIMATIONS, NODE_FONT, TRUNCATION } from '@/config/cosmosConstants';
 import { COLORS } from '@/config/colors';
 import { BaseNode } from './BaseNode';
 import {
@@ -23,19 +23,19 @@ interface ChoiceNodeProps {
  * ChoiceNode - Dialogue node with branching choices
  * Uses BaseNode for shared shell, adds choice-specific content as children.
  */
-export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: ChoiceNodeProps): React.JSX.Element {
+export const ChoiceNode = React.memo(function ChoiceNode({
+  data,
+  selected,
+}: ChoiceNodeProps): React.JSX.Element {
   const { choices = [], issues = [] } = data;
   const theme = useGraphTheme();
   const layout = useNodeLayout(data.serpentine, theme);
 
   const themeColors = theme.nodes.choice;
   const { hasErrors, hasWarnings } = getIssueStatus(issues);
-  const borderColor = hasErrors || hasWarnings
-    ? (hasErrors ? COLORS.ERROR : COLORS.WARNING)
-    : themeColors.border;
-  const textColor = hasErrors || hasWarnings
-    ? COLORS.TEXT_WHITE
-    : themeColors.text;
+  const borderColor =
+    hasErrors || hasWarnings ? (hasErrors ? COLORS.ERROR : COLORS.WARNING) : themeColors.border;
+  const textColor = hasErrors || hasWarnings ? COLORS.TEXT_WHITE : themeColors.text;
 
   return (
     <BaseNode
@@ -51,30 +51,81 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
       ariaExpanded={choices.length > 0}
       textMarginBottom="8px"
       choices={choices}
-      choiceHandlePosition={layout.choiceHandles.position}
     >
-      {/* Choices preview */}
-      <div style={CHOICE_PREVIEW_CONTAINER_STYLE}>
-        {choices.slice(0, 3).map((choice, i) => (
-          <span
-            key={choice.id}
-            style={{
-              ...CHOICE_BADGE_BASE_STYLE,
-              backgroundColor: `${CHOICE_COLORS[i % CHOICE_COLORS.length]}20`,
-              border: `2px solid ${CHOICE_COLORS[i % CHOICE_COLORS.length]}`,
-              color: CHOICE_COLORS[i % CHOICE_COLORS.length],
-            }}
-          >
-            {theme.icons?.useEmoji && <span>✨</span>}
-            {truncateChoicePreview(choice.text, `Choix ${i + 1}`)}
-          </span>
+      {/* Choices — Blender-style full-width rows or legacy badges */}
+      {choices.length > 0 &&
+        (themeColors.headerBg ? (
+          // Blender theme: full-width rows with colored dot + full text
+          <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}25` }}>
+            {choices.map((choice, i) => {
+              const dotColor = CHOICE_COLORS[i % CHOICE_COLORS.length];
+              return (
+                <div
+                  key={choice.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '5px 2px',
+                    borderBottom: i < choices.length - 1 ? `1px solid ${borderColor}15` : undefined,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: dotColor,
+                      flexShrink: 0,
+                      boxShadow: `0 0 5px ${dotColor}80`,
+                    }}
+                  />
+                  <span
+                    style={{ fontSize: 12, color: textColor, flex: 1, lineHeight: 1.4 }}
+                    title={choice.text && choice.text.length > 42 ? choice.text : undefined}
+                  >
+                    {truncate(choice.text, 42, `Choix ${i + 1}`)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // Legacy themes: badge layout
+          <div style={CHOICE_PREVIEW_CONTAINER_STYLE}>
+            {choices.slice(0, 3).map((choice, i) => (
+              <span
+                key={choice.id}
+                style={{
+                  ...CHOICE_BADGE_BASE_STYLE,
+                  backgroundColor: `${CHOICE_COLORS[i % CHOICE_COLORS.length]}20`,
+                  border: `2px solid ${CHOICE_COLORS[i % CHOICE_COLORS.length]}`,
+                  color: CHOICE_COLORS[i % CHOICE_COLORS.length],
+                }}
+                title={
+                  choice.text && choice.text.length > TRUNCATION.choicePreview
+                    ? choice.text
+                    : undefined
+                }
+              >
+                {theme.icons?.useEmoji && <span>✨</span>}
+                {truncateChoicePreview(choice.text, `Choix ${i + 1}`)}
+              </span>
+            ))}
+            {choices.length > 3 && (
+              <span
+                style={{
+                  fontSize: `${NODE_FONT.badge}px`,
+                  color: textColor,
+                  opacity: 0.7,
+                  padding: '4px 8px',
+                }}
+              >
+                +{choices.length - 3}
+              </span>
+            )}
+          </div>
         ))}
-        {choices.length > 3 && (
-          <span style={{ fontSize: `${NODE_FONT.badge}px`, color: textColor, opacity: 0.7, padding: '4px 8px' }}>
-            +{choices.length - 3}
-          </span>
-        )}
-      </div>
 
       {/* Y-shape indicator */}
       <div
@@ -85,7 +136,7 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
           [layout.branchLines.indicatorSide]: '8px',
           width: `${NODE_FONT.icon}px`,
           height: `${NODE_FONT.icon}px`,
-          opacity: 0.5,
+          opacity: 0.7,
           transition: COSMOS_ANIMATIONS.transitionNormal,
           pointerEvents: 'none',
           zIndex: 10,
@@ -95,7 +146,7 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
           <path
             d="M12 4 L12 10 M8 16 L12 10 M16 16 L12 10"
             stroke={borderColor}
-            strokeWidth="2.5"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -103,39 +154,40 @@ export const ChoiceNode = React.memo(function ChoiceNode({ data, selected }: Cho
       </div>
 
       {/* Branch lines */}
-      {choices.length > 1 && (() => {
-        const { edgeX, innerX } = layout.branchLines;
-        return (
-          <svg className="choice-branch-lines" style={BRANCH_LINES_SVG_STYLE}>
-            <line
-              x1={edgeX}
-              y1={`${((0 + 1) / (choices.length + 1)) * 100}%`}
-              x2={edgeX}
-              y2={`${((choices.length) / (choices.length + 1)) * 100}%`}
-              stroke={borderColor}
-              strokeWidth="2"
-              strokeDasharray="4 2"
-              className="branch-connector"
-            />
-            {choices.map((choice, idx) => {
-              const topPos = ((idx + 1) / (choices.length + 1)) * 100;
-              return (
-                <line
-                  key={choice.id}
-                  x1={innerX}
-                  y1={`${topPos}%`}
-                  x2={edgeX}
-                  y2={`${topPos}%`}
-                  stroke={borderColor}
-                  strokeWidth="2"
-                  strokeDasharray="4 2"
-                  className="branch-line"
-                />
-              );
-            })}
-          </svg>
-        );
-      })()}
+      {choices.length > 1 &&
+        (() => {
+          const { edgeX, innerX } = layout.branchLines;
+          return (
+            <svg className="choice-branch-lines" style={BRANCH_LINES_SVG_STYLE}>
+              <line
+                x1={edgeX}
+                y1={`${((0 + 1) / (choices.length + 1)) * 100}%`}
+                x2={edgeX}
+                y2={`${(choices.length / (choices.length + 1)) * 100}%`}
+                stroke={borderColor}
+                strokeWidth="2"
+                strokeDasharray="4 2"
+                className="branch-connector"
+              />
+              {choices.map((choice, idx) => {
+                const topPos = ((idx + 1) / (choices.length + 1)) * 100;
+                return (
+                  <line
+                    key={choice.id}
+                    x1={innerX}
+                    y1={`${topPos}%`}
+                    x2={edgeX}
+                    y2={`${topPos}%`}
+                    stroke={borderColor}
+                    strokeWidth="2"
+                    strokeDasharray="4 2"
+                    className="branch-line"
+                  />
+                );
+              })}
+            </svg>
+          );
+        })()}
     </BaseNode>
   );
 });

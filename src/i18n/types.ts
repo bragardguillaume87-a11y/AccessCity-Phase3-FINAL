@@ -58,8 +58,6 @@ export interface EditorTranslations {
   assets: string;
   preview: string;
   settings: string;
-  noScene: string;
-  noDialogue: string;
   addScene: string;
   addDialogue: string;
   addCharacter: string;
@@ -78,9 +76,7 @@ export interface DialogueEditorTranslations {
   sfxLabel: string;
   sfxVolume: string;
   sfxChange: string;
-  sfxAdd: string;
   moodsLabel: string;
-  moodDefault: string;
   infoLabel: string;
   noChoices: string;
   noChoicesHint: string;
@@ -89,20 +85,13 @@ export interface DialogueEditorTranslations {
 }
 
 /**
- * Graph-specific translations (node/edge labels, accessibility)
+ * Kid mode UI translations (simplified labels for 8-10 year old users)
  */
-export interface GraphTranslations {
-  startBadge: string;
-  endBadge: string;
-  startAriaLabel: string;
-  endAriaLabel: string;
-  rowLabel: string;
-  nextBelow: string;
-  flowContinues: string;
-  convergenceLabel: string;
-  choiceAriaLabel: string;
-  emptyDialogue: string;
-  sceneJumpLabel: string;
+export interface KidModeTranslations {
+  preview: string;     // TopBar : 'Tester l'histoire'
+  resources: string;   // TopBar : 'Images & sons'
+  more: string;        // TopBar : 'Plus...'
+  kidLabel: string;    // ModeSwitcher : 'Mode Élève'
 }
 
 /**
@@ -112,8 +101,8 @@ export interface Translations {
   gameStats: GameStatsTranslations;
   common: CommonTranslations;
   editor: EditorTranslations;
-  graph: GraphTranslations;
   dialogueEditor: DialogueEditorTranslations;
+  kidMode: KidModeTranslations;
 }
 
 // ============================================================================
@@ -137,5 +126,5 @@ export type TranslationPath =
   | `gameStats.${keyof GameStatsTranslations}`
   | `common.${keyof CommonTranslations}`
   | `editor.${keyof EditorTranslations}`
-  | `graph.${keyof GraphTranslations}`
-  | `dialogueEditor.${keyof DialogueEditorTranslations}`;
+  | `dialogueEditor.${keyof DialogueEditorTranslations}`
+  | `kidMode.${keyof KidModeTranslations}`;
